@@ -1,11 +1,12 @@
 // screens/ProfileUltra.js
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Image, TouchableOpacity,
   RefreshControl, Animated, Share, Linking, Alert, Dimensions, FlatList
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
+import KniBottomNav from '../components/KniBottomNav';
 
 /* ===== THEME ===== */
 const C = {
@@ -49,7 +50,6 @@ const hotelsPreview = [
     photo:'https://lux-life.digital/wp-content/uploads/2019/09/turkish-hotel.jpg'
   },
 ];
-
 const reviews = [
   { id:'r1', from:'Rahul S. (Tech)', stars:5, text:'Always keeps equipment logs ready. Smooth visit.' },
   { id:'r2', from:'Mehul K. (Tech)', stars:4, text:'Prompt approvals and clear instructions.' },
@@ -65,112 +65,67 @@ const Stars = ({value=0,size=12})=>(
   </View>
 );
 
-/* ===== MAIN ===== */
-export default function ProfileScreen() {
+/* ====== SKELETON PRIMITIVES (no extra libs) ====== */
+const BASE = '#E9EEF5';
+const HILITE = '#F6F8FC';
+
+function useShimmer() {
+  const x = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.timing(x, { toValue: 1, duration: 1400, useNativeDriver: true })
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [x]);
+  return x.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-W, W]
+  });
+}
+
+const Shimmer = ({style}) => {
+  const translateX = useShimmer();
+  return (
+    <View style={[{backgroundColor:BASE, overflow:'hidden'}, style]}>
+      <Animated.View
+        style={[
+          StyleSheet.absoluteFill,
+          { transform:[{translateX}], opacity:0.7 }
+        ]}
+      >
+        {/* simple angled highlight bar */}
+        <View style={{flex:1, transform:[{skewX:'-18deg'}]}}>
+          <View style={{width:W*0.35, height:'100%', backgroundColor:HILITE, opacity:0.75}}/>
+        </View>
+      </Animated.View>
+    </View>
+  );
+};
+
+const SkelCircle = ({size=64, style}) => (
+  <Shimmer style={[{width:size, height:size, borderRadius:size/2}, style]} />
+);
+const SkelBox = ({w='100%', h=16, r=12, style}) => (
+  <Shimmer style={[{width:w, height:h, borderRadius:r}, style]} />
+);
+
+/* ===== SCREEN ===== */
+export default function ProfileScreen(navigation) {
   const insets = useSafeAreaInsets();
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const pulse = useRef(new Animated.Value(0.5)).current;
 
   useEffect(()=>{
-    const t = setTimeout(()=>setLoading(false),700);
-    const loop = Animated.loop(Animated.sequence([
-      Animated.timing(pulse,{toValue:1,duration:900,useNativeDriver:false}),
-      Animated.timing(pulse,{toValue:0.5,duration:900,useNativeDriver:false})
-    ]));
-    loop.start();
-    return ()=>{ clearTimeout(t); loop.stop(); };
+    const t = setTimeout(()=>setLoading(false), 1200);
+    return ()=> clearTimeout(t);
   },[]);
 
   const onRefresh=()=>{
     setRefreshing(true); setLoading(true);
     setTimeout(()=>{ setRefreshing(false); setLoading(false); }, 900);
   };
-
-  /* Collapsible + Sticky + INSTANT MERGE + STATS FADE-OUT */
-  const H = 260;                 // HERO HEIGHT
-  const scrollY = useRef(new Animated.Value(0)).current;
-
-  // Parallax hero image
-  const headerScale = scrollY.interpolate({
-    inputRange: [-80, 0, H, H+1],
-    outputRange: [1.15, 1, 1, 1],
-  });
-  const headerTranslate = scrollY.interpolate({
-    inputRange: [0, H/2, H],
-    outputRange: [0, -20, -40],
-    extrapolate:'clamp'
-  });
-
-  // Sticky appears very early
-  const stickyOpacity = scrollY.interpolate({
-    inputRange: [6, 28],
-    outputRange: [0, 1],
-    extrapolate: 'clamp',
-  });
-
-  // ---- MERGE TUNING ----
-  const MERGE_GAP   = 28;   // overlap distance
-  const MERGE_START = 0;    // start immediately
-  const MERGE_END   = 35;   // complete merge in ~18px
-  const STATS_FADE_OUT_END = MERGE_END + 80; // after merge, stats fade-out by ~100px total
-
-  const mergeProgress = scrollY.interpolate({
-    inputRange: [MERGE_START, MERGE_END],
-    outputRange: [0, 1],
-    extrapolate: 'clamp',
-  });
-
-  // Profile strip moves DOWN & fades OUT
-  const heroBottomTranslateY = mergeProgress.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, MERGE_GAP],
-  });
-  const heroBottomOpacity = mergeProgress.interpolate({
-    inputRange: [0, 1],
-    outputRange: [1, 0],
-  });
-
-  // Stats: UP to merge, then keep going UP a bit and fade OUT
-  const statsTranslateY = scrollY.interpolate({
-    inputRange: [MERGE_START, MERGE_END, STATS_FADE_OUT_END],
-    outputRange: [MERGE_GAP, -MERGE_GAP, -MERGE_GAP - 32],
-    extrapolate: 'clamp',
-  });
-  const statsOpacity = scrollY.interpolate({
-    inputRange: [MERGE_START, MERGE_END, STATS_FADE_OUT_END],
-    outputRange: [0.92, 0.02, 0],
-    extrapolate: 'clamp',
-  });
-  const statsElevation = scrollY.interpolate({
-    inputRange: [MERGE_START, MERGE_END, STATS_FADE_OUT_END],
-    outputRange: [0, 6, 0],
-    extrapolate: 'clamp',
-  });
-  const statsScale = scrollY.interpolate({
-    inputRange: [MERGE_START, MERGE_END, STATS_FADE_OUT_END],
-    outputRange: [0.98, 1, 0.98],
-    extrapolate: 'clamp',
-  });
-
-  /* Animated counters */
-  const hotelsAnim = useRef(new Animated.Value(0)).current;
-  const reqAnim = useRef(new Animated.Value(0)).current;
-  const rateAnim = useRef(new Animated.Value(0)).current;
-  useEffect(()=>{
-    if(!loading){
-      Animated.stagger(180,[
-        Animated.timing(hotelsAnim,{toValue:user.hotelsCount,duration:700,useNativeDriver:false}),
-        Animated.timing(reqAnim,{toValue:user.requests,duration:700,useNativeDriver:false}),
-        Animated.timing(rateAnim,{toValue:user.rating,duration:700,useNativeDriver:false}),
-      ]).start();
-    }
-  },[loading]);
-
-  const hotelsVal = hotelsAnim.interpolate({ inputRange:[0, user.hotelsCount], outputRange:[0, user.hotelsCount]});
-  const reqVal    = reqAnim.interpolate({ inputRange:[0, user.requests],    outputRange:[0, user.requests]});
-  const rateVal   = rateAnim.interpolate({ inputRange:[0, user.rating],     outputRange:[0, user.rating]});
 
   const viewPDF = async ()=>{
     try {
@@ -179,149 +134,215 @@ export default function ProfileScreen() {
       else Alert.alert('Unable to open', 'Install a PDF viewer to open the certificate.');
     } catch {}
   };
-  const shareReferral = async ()=>{
-    try { await Share.share({ message:`Use my KNI referral • ${user.referral}` }); } catch {}
-  };
+  const shareReferral = async ()=>{ try { await Share.share({ message:`Use my KNI referral • ${user.referral}` }); } catch {} };
 
   const initial = user.name?.[0]?.toUpperCase() ?? 'U';
   const CARD_W = W * 0.88;
   const GAP = 14;
+  const hotelsData = [...hotelsPreview, { id:'more', type:'more' }];
 
   return (
     <SafeAreaView style={{flex:1, backgroundColor:C.bg}} edges={['top','left','right']}>
-      <Animated.ScrollView
-        scrollEventThrottle={16}
-        onScroll={Animated.event(
-          [{nativeEvent:{contentOffset:{y:scrollY}}}],
-          {useNativeDriver:true}
-        )}
+      <ScrollView
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} tintColor={C.primary}/>}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
         showsVerticalScrollIndicator={false}
+        stickyHeaderIndices={[1]}
       >
-        {/* HERO */}
-        <Animated.View style={{transform:[{translateY:headerTranslate}]}}>
-          <View style={[st.hero, { height: H }]}>
-            <Animated.Image
-              source={{ uri: user.cover }}
-              style={[StyleSheet.absoluteFillObject, { transform: [{ scale: headerScale }] }]}
-              resizeMode="cover"
-            />
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.28)' }]} />
-
-            {/* Decorative */}
+        {/* 0) HERO */}
+        {loading ? (
+          <View style={[st.hero, { height:220, overflow:'hidden' }]}>
+            <Shimmer style={StyleSheet.absoluteFillObject}/>
             <View style={st.blobA}/>
             <View style={st.blobB}/>
-
-            {/* Profile strip (merges DOWN & fades) */}
-            <Animated.View
-              style={[
-                st.heroBottomWrap,
-                { transform: [{ translateY: heroBottomTranslateY }], opacity: heroBottomOpacity }
-              ]}
-            >
-              <View style={st.avatarWrap}>
-                <View style={st.avatar}>
-                  <Text style={st.avatarTxt}>{initial}</Text>
-                </View>
-                <View style={st.verifyPill}>
-                  <Icon name="shield-checkmark" size={14} color="#fff"/>
-                  <Text style={st.verifyTxt}>KNI Verified</Text>
-                </View>
-              </View>
-              <View style={{flex:1, marginLeft:12}}>
-                <Text style={st.name}>{user.name}</Text>
-                <Text style={st.meta}>{user.email}</Text>
-                <Text style={st.meta}>{user.phone}</Text>
-              </View>
-            </Animated.View>
-          </View>
-        </Animated.View>
-
-        {/* STATS: slides UP to merge, then fades OUT upward */}
-        {loading ? (
-          <View style={{paddingHorizontal:16, marginTop:12}}>
-            <Animated.View style={[st.skelLine,{opacity:pulse,height:96,borderRadius:R}]}/>
-            <Animated.View style={[st.skelLine,{opacity:pulse,height:130,marginTop:12}]}/>
           </View>
         ) : (
-          <>
-            <Animated.View
-              style={{
-                transform: [{ translateY: statsTranslateY }, { scale: statsScale }],
-                opacity: statsOpacity,
-                elevation: statsElevation,
-                zIndex: 10
-              }}
-            >
-              <View style={st.statsGlass}>
+          <View style={[st.hero, { height: 220 }]}>
+            <Image source={{ uri: user.cover }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.28)' }]} />
+            <View style={st.blobA}/>
+            <View style={st.blobB}/>
+            <View style={{position:'absolute', left:16, bottom:16, right:16}}>
+              <Text style={{color:'#fff', fontWeight:'900', fontSize:20}}>Welcome back</Text>
+              <Text style={{color:'#FFFFFFDD', marginTop:4}}>Keep your kitchen running like a pro 🔧</Text>
+            </View>
+          </View>
+        )}
+
+        {/* 1) STICKY: PROFILE + STATS */}
+        <View style={st.stickyWrap}>
+          {loading ? (
+            <View style={{padding:16}}>
+              <View style={{flexDirection:'row', alignItems:'center'}}>
+                <View style={{alignItems:'center'}}>
+                  <SkelCircle size={72}/>
+                  <SkelBox w={84} h={22} r={999} style={{marginTop:8}}/>
+                </View>
+                <View style={{flex:1, marginLeft:12}}>
+                  <SkelBox w={'60%'} h={22}/>
+                  <SkelBox w={'70%'} h={14} style={{marginTop:10}}/>
+                  <SkelBox w={'50%'} h={14} style={{marginTop:8}}/>
+                </View>
+              </View>
+              {/* stats row */}
+              <View style={[st.statsGlass, { marginTop:14 }]}>
+                <View style={st.statCell}>
+                  <SkelCircle size={30}/>
+                  <SkelBox w={40} h={14} style={{marginTop:8}}/>
+                  <SkelBox w={48} h={10} style={{marginTop:6}}/>
+                </View>
+                <View style={st.vline}/>
+                <View style={st.statCell}>
+                  <SkelCircle size={30}/>
+                  <SkelBox w={40} h={14} style={{marginTop:8}}/>
+                  <SkelBox w={58} h={10} style={{marginTop:6}}/>
+                </View>
+                <View style={st.vline}/>
+                <View style={st.statCell}>
+                  <SkelCircle size={30}/>
+                  <SkelBox w={40} h={14} style={{marginTop:8}}/>
+                  <SkelBox w={68} h={10} style={{marginTop:6}}/>
+                </View>
+              </View>
+            </View>
+          ) : (
+            <>
+              <View style={st.heroBottomWrap}>
+                <View style={st.avatarWrap}>
+                  <View style={st.avatar}><Text style={st.avatarTxt}>{initial}</Text></View>
+                  <View style={st.verifyPill}><Icon name="shield-checkmark" size={14} color="#fff"/><Text style={st.verifyTxt}>KNI Verified</Text></View>
+                </View>
+                <View style={{flex:1, marginLeft:12}}>
+                  <Text style={st.name}>{user.name}</Text>
+                  <Text style={st.meta}>{user.email}</Text>
+                  <Text style={st.meta}>{user.phone}</Text>
+                </View>
+              </View>
+
+              <View style={[st.statsGlass, { marginTop:10, marginBottom:8 }]}>
                 <View style={st.statCell}>
                   <View style={st.statIcon}><Icon name="business-outline" size={16} color={C.primary}/></View>
-                  <Animated.Text style={st.statNum}>
-                    {hotelsVal.__getValue ? Math.round(hotelsVal.__getValue()) : user.hotelsCount}
-                  </Animated.Text>
+                  <Text style={st.statNum}>{user.hotelsCount}</Text>
                   <Text style={st.statLbl}>Hotels</Text>
                 </View>
                 <View style={st.vline}/>
                 <View style={st.statCell}>
                   <View style={st.statIcon}><Icon name="clipboard-outline" size={16} color={C.primary}/></View>
-                  <Animated.Text style={st.statNum}>
-                    {reqVal.__getValue ? Math.round(reqVal.__getValue()) : user.requests}
-                  </Animated.Text>
+                  <Text style={st.statNum}>{user.requests}</Text>
                   <Text style={st.statLbl}>Requests</Text>
                 </View>
                 <View style={st.vline}/>
                 <View style={st.statCell}>
                   <View style={st.statIcon}><Icon name="star" size={16} color="#F59E0B"/></View>
-                  <Animated.Text style={st.statNum}>
-                    {rateVal.__getValue ? rateVal.__getValue().toFixed(1) : user.rating}
-                  </Animated.Text>
+                  <Text style={st.statNum}>{user.rating.toFixed(1)}</Text>
                   <Text style={st.statLbl}>Avg rating</Text>
                 </View>
               </View>
-            </Animated.View>
+            </>
+          )}
+        </View>
 
-            {/* FSSAI CARD */}
-            <View style={st.cardGlass}>
-              <Text style={st.h2}>FSSAI</Text>
-              <View style={st.row}>
-                <View style={st.rowLeft}><Icon name="document-text-outline" size={18} color={C.ink}/><Text style={st.rowLbl}>Number</Text></View>
-                <Text style={st.rowVal}>{user.fssaiNo}</Text>
+        {/* 2) REST: FSSAI, Hotels, Reviews */}
+        {/* FSSAI CARD */}
+        {loading ? (
+          <View style={st.cardGlass}>
+            <SkelBox w={90} h={18}/>
+            <View style={{marginTop:12}}>
+              <View style={[st.row,{paddingVertical:6}]}>
+                <View style={st.rowLeft}><SkelCircle size={22}/><SkelBox w={80} h={14} style={{marginLeft:8}}/></View>
+                <SkelBox w={160} h={16}/>
               </View>
-              <View style={st.row}>
-                <View style={st.rowLeft}><Icon name="link-outline" size={18} color={C.ink}/><Text style={st.rowLbl}>Certificate</Text></View>
-                <TouchableOpacity onPress={viewPDF} style={st.viewBtn}>
-                  <Icon name="document-outline" size={14} color="#fff"/><Text style={st.viewTxt}>View PDF</Text>
-                </TouchableOpacity>
+              <View style={[st.row,{paddingVertical:6}]}>
+                <View style={st.rowLeft}><SkelCircle size={22}/><SkelBox w={90} h={14} style={{marginLeft:8}}/></View>
+                <SkelBox w={84} h={32} r={12}/>
               </View>
-              <View style={st.sep}/>
-              <View style={{flexDirection:'row',alignItems:'center',marginTop:6}}>
-                <View style={st.refChip}>
-                  <Icon name="gift-outline" size={16} color={C.primary}/>
-                  <Text style={st.refTxt}>{user.referral}</Text>
+            </View>
+            <View style={st.sep}/>
+            <View style={{flexDirection:'row', alignItems:'center', marginTop:10}}>
+              <SkelBox w={130} h={36} r={999}/>
+              <SkelBox w={88} h={36} r={12} style={{marginLeft:10}}/>
+            </View>
+          </View>
+        ) : (
+          <View style={st.cardGlass}>
+            <Text style={st.h2}>FSSAI</Text>
+            <View style={st.row}>
+              <View style={st.rowLeft}><Icon name="document-text-outline" size={18} color={C.ink}/><Text style={st.rowLbl}>Number</Text></View>
+              <Text style={st.rowVal}>{user.fssaiNo}</Text>
+            </View>
+            <View style={st.row}>
+              <View style={st.rowLeft}><Icon name="link-outline" size={18} color={C.ink}/><Text style={st.rowLbl}>Certificate</Text></View>
+              <TouchableOpacity onPress={viewPDF} style={st.viewBtn}>
+                <Icon name="document-outline" size={14} color="#fff"/><Text style={st.viewTxt}>View PDF</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={st.sep}/>
+            <View style={{flexDirection:'row',alignItems:'center',marginTop:6}}>
+              <View style={st.refChip}>
+                <Icon name="gift-outline" size={16} color={C.primary}/>
+                <Text style={st.refTxt}>{user.referral}</Text>
+              </View>
+              <TouchableOpacity onPress={shareReferral} style={st.shareBtn}>
+                <Icon name="share-social-outline" size={16} color="#fff"/><Text style={st.shareTxt}>Share</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* HOTELS */}
+        <View style={st.sectionHdr}>
+          <Text style={st.sectionTitle}>Your hotels</Text>
+          {!loading && (
+            <TouchableOpacity onPress={()=>Alert.alert('Add Hotel')}>
+              <Text style={st.link}>Add new</Text>
+            </TouchableOpacity>
+          )}
+          {loading && <SkelBox w={80} h={16}/>}
+        </View>
+
+        {loading ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal:16, gap:GAP, marginBottom:16 }}
+          >
+            {Array.from({length:3}).map((_,i)=>(
+              <View key={i} style={[st.hotelHeroCard, { width: W*0.88 }]}>
+                <Shimmer style={StyleSheet.absoluteFillObject}/>
+                <View style={[st.hotelHeroBody,{backgroundColor:'#FFFFFFE6'}]}>
+                  <SkelBox w={'60%'} h={16}/>
+                  <SkelBox w={'50%'} h={12} style={{marginTop:8}}/>
+                  <SkelBox w={70} h={12} style={{marginTop:10}}/>
                 </View>
-                <TouchableOpacity onPress={shareReferral} style={st.shareBtn}>
-                  <Icon name="share-social-outline" size={16} color="#fff"/><Text style={st.shareTxt}>Share</Text>
-                </TouchableOpacity>
               </View>
-            </View>
-
-            {/* HOTELS — Premium carousel */}
-            <View style={st.sectionHdr}>
-              <Text style={st.sectionTitle}>Your hotels</Text>
-              <TouchableOpacity onPress={()=>Alert.alert('Add Hotel')}><Text style={st.link}>Add new</Text></TouchableOpacity>
-            </View>
-
-            <FlatList
-              data={hotelsPreview}
-              keyExtractor={(i)=>i.id}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              snapToInterval={CARD_W + GAP}
-              decelerationRate="fast"
-              contentContainerStyle={{ paddingHorizontal:16,marginBottom:16 }}
-              ItemSeparatorComponent={()=><View style={{width:GAP}}/>}
-              renderItem={({item:h})=>(
+            ))}
+          </ScrollView>
+        ) : (
+          <FlatList
+            data={hotelsData}
+            keyExtractor={(i)=>i.id}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            snapToInterval={CARD_W + GAP}
+            decelerationRate="fast"
+            contentContainerStyle={{ paddingHorizontal:16,marginBottom:16 }}
+            ItemSeparatorComponent={()=><View style={{width:GAP}}/>}
+            renderItem={({item:h})=>{
+              if (h.type === 'more') {
+                return (
+                  <TouchableOpacity
+                    activeOpacity={0.9}
+                    onPress={()=>Alert.alert('View more', 'Open hotels list')}
+                    style={[st.hotelHeroCard, { width: CARD_W, alignItems:'center', justifyContent:'center', backgroundColor:'#FFF' }]}
+                  >
+                    <View style={st.viewMoreBox}>
+                      <Icon name="chevron-forward-circle-outline" size={36} color={C.ink}/>
+                      <Text style={st.viewMoreTxt}>View more</Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              }
+              return (
                 <View style={[st.hotelHeroCard, { width: CARD_W }]}>
                   {h.photo
                     ? <Image source={{uri:h.photo}} style={st.hotelHeroImg}/>
@@ -329,18 +350,15 @@ export default function ProfileScreen() {
                         <Icon name="image-outline" size={28} color="#9CA3AF"/>
                       </View>
                   }
-
                   <View style={st.heroOverlay} />
-
-                  <View style={st.cardActionBar}>
+                  {/* <View style={st.cardActionBar}>
                     <TouchableOpacity onPress={()=>Alert.alert('Edit', h.name)} style={st.cardIconBtn}>
                       <Icon name="create-outline" size={16} color="#111827"/>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={()=>Alert.alert('Delete', h.name)} style={st.cardIconBtn}>
                       <Icon name="trash-outline" size={16} color="#111827"/>
                     </TouchableOpacity>
-                  </View>
-
+                  </View> */}
                   <View style={st.hotelHeroBody}>
                     <Text style={st.hotelHeroName} numberOfLines={1}>{h.name}</Text>
                     <Text style={st.hotelHeroAddr} numberOfLines={1}>{h.address}</Text>
@@ -350,69 +368,53 @@ export default function ProfileScreen() {
                     </View>
                   </View>
                 </View>
-              )}
-            />
-
-            {/* REVIEWS */}
-            <View style={[st.sectionHdr,{marginTop:16}]}>
-              <Text style={st.sectionTitle}>What pros say</Text>
-            </View>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ paddingHorizontal:16, gap:10,marginBottom:16, paddingTop:6 }}
-            >
-              {reviews.map(r=>(
-                <View key={r.id} style={st.revPill}>
-                  <Text style={st.revFromMini} numberOfLines={1}>{r.from}</Text>
-                  <Text style={st.revTxtMini} numberOfLines={3}>{r.text}</Text>
-                  <View style={{marginTop:6}}><Stars value={r.stars} size={12}/></View>
-                </View>
-              ))}
-            </ScrollView>
-          </>
+              );
+            }}
+          />
         )}
-      </Animated.ScrollView>
 
-      {/* STICKY HEADER */}
-      <Animated.View
-        pointerEvents="box-none"
-        style={[
-          st.stickyBar,
-          {
-            paddingTop: Math.max(insets.top, 8),
-            opacity: stickyOpacity,
-            transform: [{
-              translateY: stickyOpacity.interpolate({
-                inputRange:[0,1],
-                outputRange:[-10,0]
-              })
-            }]
-          }
-        ]}
-      >
-        <View style={st.stickyInner}>
-          <View style={st.stickyLeft}>
-            <View style={st.stickyAvatar}><Text style={st.stickyAvatarTxt}>{user.name[0]}</Text></View>
-            <Text style={st.stickyName} numberOfLines={1}>{user.name}</Text>
-          </View>
-
-          <View style={st.stickyStats}>
-            <View style={st.stickyChip}>
-              <Icon name="business-outline" size={14} color={C.ink}/>
-              <Text style={st.stickyChipTxt}>{user.hotelsCount}</Text>
-            </View>
-            <View style={st.stickyChip}>
-              <Icon name="clipboard-outline" size={14} color={C.ink}/>
-              <Text style={st.stickyChipTxt}>{user.requests}</Text>
-            </View>
-            <View style={st.stickyChip}>
-              <Icon name="star" size={14} color="#F59E0B"/>
-              <Text style={st.stickyChipTxt}>{user.rating}</Text>
-            </View>
-          </View>
+        {/* REVIEWS */}
+        <View style={[st.sectionHdr,{marginTop:16}]}>
+          <Text style={st.sectionTitle}>What pros say</Text>
         </View>
-      </Animated.View>
+        {loading ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal:16, gap:10, marginBottom:16, paddingTop:6 }}
+          >
+            {Array.from({length:3}).map((_,i)=>(
+              <View key={i} style={st.revPill}>
+                <SkelBox w={'60%'} h={14}/>
+                <SkelBox w={'90%'} h={12} style={{marginTop:8}}/>
+                <SkelBox w={'70%'} h={12} style={{marginTop:6}}/>
+                <SkelBox w={80} h={12} style={{marginTop:10}}/>
+              </View>
+            ))}
+          </ScrollView>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal:16, gap:10,marginBottom:16, paddingTop:6 }}
+          >
+            {reviews.map(r=>(
+              <View key={r.id} style={st.revPill}>
+                <Text style={st.revFromMini} numberOfLines={1}>{r.from}</Text>
+                <Text style={st.revTxtMini} numberOfLines={3}>{r.text}</Text>
+                <View style={{marginTop:6}}><Stars value={r.stars} size={12}/></View>
+              </View>
+            ))}
+          </ScrollView>
+        )}
+      </ScrollView>
+
+      <KniBottomNav
+        navigation={navigation}
+        active="profile"
+        cartCount={3}
+        notifCount={2}
+      />
     </SafeAreaView>
   );
 }
@@ -421,20 +423,25 @@ export default function ProfileScreen() {
 const st = StyleSheet.create({
   // HERO
   hero:{ width:'100%', borderBottomLeftRadius:28, borderBottomRightRadius:28, overflow:'hidden', justifyContent:'flex-end' },
-  heroBottomWrap:{ flexDirection:'row', alignItems:'center', padding:16, backgroundColor:'#FFFFFFE6' },
-
   blobA:{ position:'absolute', width:160, height:160, borderRadius:100, backgroundColor:'#EF3A3A33', top:-30, left:-30 },
   blobB:{ position:'absolute', width:220, height:220, borderRadius:120, backgroundColor:'#1D225422', bottom:-70, right:-50 },
 
+  // Sticky background
+  stickyWrap:{ backgroundColor:'#ffffffff', borderBottomWidth:1, borderBottomColor:'#EEF2F7' },
+
+  // Profile strip
+  heroBottomWrap:{ flexDirection:'row', alignItems:'center', padding:16, backgroundColor:'rgba(255, 255, 255, 1)' },
   avatarWrap:{ alignItems:'center' },
   avatar:{ width:72, height:72, borderRadius:22, backgroundColor:'#FFE8E8', alignItems:'center', justifyContent:'center',
     borderWidth:2, borderColor:'#FFFFFFAA', shadowColor:'#000', shadowOpacity:0.2, shadowRadius:8, elevation:6 },
   avatarTxt:{ color:C.primary, fontSize:30, fontWeight:'900' },
   name:{ color:C.ink, fontWeight:'900', fontSize:22 },
   meta:{ color:C.muted, marginTop:2 },
+  verifyPill:{ flexDirection:'row', alignItems:'center', backgroundColor:C.ok, paddingHorizontal:10, paddingVertical:6, borderRadius:999, marginTop:8 },
+  verifyTxt:{ color:'#fff', marginLeft:6, fontWeight:'800', fontSize:12 },
 
-  // glass stats (iOS shadow; Android gets elevation via Animated)
-  statsGlass:{ marginTop:-18, marginHorizontal:16, backgroundColor:'#FFFFFFCC', borderRadius:R, borderWidth:1, borderColor:'#EEF2F7',
+  // Stats
+  statsGlass:{ marginHorizontal:16, backgroundColor:'#FFFFFFCC', borderRadius:R, borderWidth:1, borderColor:'#EEF2F7',
     flexDirection:'row', alignItems:'center', paddingVertical:14, paddingHorizontal:12,
     shadowColor:'#000', shadowOpacity:0.12, shadowRadius:10, shadowOffset:{ width:0, height:6 } },
   statCell:{ flex:1, alignItems:'center' },
@@ -462,65 +469,29 @@ const st = StyleSheet.create({
   sectionTitle:{ color:C.ink, fontWeight:'900', fontSize:18 },
   link:{ color:C.primary, fontWeight:'900' },
 
-  // HOTELS — hero carousel cards
-  hotelHeroCard:{
-    height: 200,
-    borderRadius:R,
-    overflow:'hidden',
-    borderWidth:1, borderColor:'#EEF2F7',
-    backgroundColor:'#fff',
-    shadowColor:'#000', shadowOpacity:0.08, shadowRadius:8, elevation:5
-  },
+  // Hotels – cards
+  hotelHeroCard:{ height: 200, borderRadius:R, overflow:'hidden', borderWidth:1, borderColor:'#EEF2F7', backgroundColor:'#fff',
+    shadowColor:'#000', shadowOpacity:0.08, shadowRadius:8, elevation:5 },
   hotelHeroImg:{ ...StyleSheet.absoluteFillObject, width:'100%', height:'100%' },
   heroOverlay:{ ...StyleSheet.absoluteFillObject, backgroundColor:'rgba(0,0,0,0.20)' },
-  hotelHeroBody:{
-    position:'absolute', left:14, right:14, bottom:12,
-    backgroundColor:'#FFFFFFEE',
-    borderRadius:14, padding:12, borderWidth:1, borderColor:'#EEF2F7'
-  },
+  hotelHeroBody:{ position:'absolute', left:14, right:14, bottom:12, backgroundColor:'#FFFFFFEE',
+    borderRadius:14, padding:12, borderWidth:1, borderColor:'#EEF2F7' },
   hotelHeroName:{ color:C.text, fontWeight:'900', fontSize:16 },
   hotelHeroAddr:{ color:C.muted, fontSize:12, marginTop:2 },
-
-  cardActionBar:{
-    position:'absolute', right:10, top:10, flexDirection:'row', gap:6,
-    backgroundColor:'#FFFFFFCC', borderRadius:999, padding:6, borderWidth:1, borderColor:'#EEF2F7'
-  },
-  cardIconBtn:{
-    width:28, height:28, borderRadius:8, backgroundColor:'#F8FAFC', alignItems:'center', justifyContent:'center',
-    borderWidth:1, borderColor:'#E5E7EB'
-  },
+  cardActionBar:{ position:'absolute', right:10, top:10, flexDirection:'row', gap:6, backgroundColor:'#FFFFFFCC',
+    borderRadius:999, padding:6, borderWidth:1, borderColor:'#EEF2F7' },
+  cardIconBtn:{ width:28, height:28, borderRadius:8, backgroundColor:'#F8FAFC', alignItems:'center', justifyContent:'center',
+    borderWidth:1, borderColor:'#E5E7EB' },
   hotelRateTxt:{ color:C.muted, fontSize:12 },
 
+  // "View more"
+  viewMoreBox:{ alignItems:'center', justifyContent:'center', borderWidth:2, borderStyle:'dashed', borderColor:'#CBD5E1',
+    paddingVertical:26, paddingHorizontal:18, borderRadius:16, backgroundColor:'#FFFFFFF2' },
+  viewMoreTxt:{ marginTop:8, fontWeight:'900', color:C.ink, fontSize:16 },
+
   // reviews – pills
-  revPill:{
-    width: W*0.7, backgroundColor:'#FFF', borderRadius:16, borderWidth:1, borderColor:'#EEF2F7',
-    padding:12, shadowColor:'#000', shadowOpacity:0.04, shadowRadius:6, elevation:2
-  },
+  revPill:{ width: W*0.7, backgroundColor:'#FFF', borderRadius:16, borderWidth:1, borderColor:'#EEF2F7', padding:12,
+    shadowColor:'#000', shadowOpacity:0.04, shadowRadius:6, elevation:2 },
   revFromMini:{ color:C.ink, fontWeight:'900', marginBottom:4 },
   revTxtMini:{ color:C.text, lineHeight:18 },
-
-  // skeletons
-  skelLine:{ backgroundColor:'#E9EEF5', borderRadius:14, marginHorizontal:16, marginBottom:12 },
-
-  // STICKY header
-  stickyBar:{ position:'absolute', left:0, right:0, top:0, zIndex:30 },
-  stickyInner:{
-    marginHorizontal:12, borderRadius:14, paddingHorizontal:12, paddingVertical:10,
-    backgroundColor:'#FFFFFFEE', borderWidth:1, borderColor:'#EEF2F7',
-    flexDirection:'row', alignItems:'center', justifyContent:'space-between'
-  },
-  stickyLeft:{ flexDirection:'row', alignItems:'center' },
-  stickyAvatar:{ width:28, height:28, borderRadius:8, backgroundColor:'#FFE8E8', alignItems:'center', justifyContent:'center', marginRight:8 },
-  stickyAvatarTxt:{ color:C.primary, fontWeight:'900' },
-  stickyName:{ color:C.ink, fontWeight:'900', maxWidth:140 },
-
-  stickyStats:{ flexDirection:'row', alignItems:'center', gap:6 },
-  stickyChip:{
-    flexDirection:'row', alignItems:'center', gap:6,
-    backgroundColor:'#F8FAFC', borderRadius:999, paddingHorizontal:10, paddingVertical:6,
-    borderWidth:1, borderColor:'#EEF2F7'
-  },
-  verifyPill:{ flexDirection:'row', alignItems:'center', backgroundColor:C.ok, paddingHorizontal:10, paddingVertical:6, borderRadius:999, marginTop:8 },
-  verifyTxt:{ color:'#fff', marginLeft:6, fontWeight:'800', fontSize:12 },
-  stickyChipTxt:{ color:C.ink, fontWeight:'800' },
 });

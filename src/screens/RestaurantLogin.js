@@ -1,149 +1,216 @@
-import React, { useState } from 'react';
+// screens/RestaurantLogin.js
+import React, { useMemo, useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  StatusBar,
-  Image,
+  View, Text, TextInput, TouchableOpacity, StyleSheet,
+  StatusBar, Image, KeyboardAvoidingView, Platform
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 
-const RestaurantLogin = ({ navigation }) => {
+const C = {
+  primary:'#EF3A3A', ink:'#1D2254', bg:'#F5F7FA', card:'#FFFFFF',
+  text:'#0F172A', muted:'#6B7280', border:'#E5E7EB'
+};
+
+export default function RestaurantLogin({ navigation }) {
+  const insets = useSafeAreaInsets();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [secureText, setSecureText] = useState(true);
+  const [secure, setSecure] = useState(true);
+  const [error, setError] = useState('');
+
+  const validate = () => {
+    if (!email?.trim() || !password?.trim()) {
+      setError('Please enter both email/phone and password.');
+      return false;
+    }
+    setError('');
+    return true;
+  };
 
   const handleLogin = () => {
-    if (email && password) {
-      navigation.replace('Home');
-    } else {
-      alert('Please enter both email and password.');
-    }
+    if (!validate()) return;
+    // TODO: plug your API here
+    navigation.replace('Home');
+  };
+
+  const handleGoogle = async () => {
+    // UI only (wire up @react-native-google-signin/google-signin later)
+    // TODO: configure GoogleSignin and call GoogleSignin.signIn();
+    navigation.replace('Home');
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar backgroundColor="#F5F7FA" barStyle="dark-content" />
-      
-      <Image
-        source={require('../assets/images/kni-logo.png')}
-        style={styles.logo}
-      />
+    <SafeAreaView style={{ flex:1, backgroundColor:C.bg }} edges={['top','left','right']}>
+      <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
 
-      <Text style={styles.title}>Restaurant Owner Login</Text>
+      {/* animated-feel gradient header */}
+      <LinearGradient
+        colors={['#FFEEEE', '#FFD6D6', '#EF3A3A']}
+        start={{x:0.1,y:0}}
+        end={{x:1,y:1}}
+        style={[styles.header, { paddingTop: insets.top + 12 }]}
+      >
+        
+      </LinearGradient>
 
-      {/* Email Input */}
-      <View style={styles.inputWrapper}>
-        <Icon name="mail-outline" size={20} color="#888" style={styles.icon} />
-        <TextInput
-          placeholder="Email or Phone"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          style={styles.input}
-          placeholderTextColor="#999"
-        />
-      </View>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex:1 }}
+      >
+        {/* glass card */}
+        <View style={styles.cardWrap}>
+          <View style={styles.card}>
+            <View style={styles.brandPill}>
+          
+          <Image source={require('../assets/images/kni-logo.png')} style={styles.logoSmall}/>
+        </View>
+            <Text style={styles.title}>Restaurant Owner Login</Text>
 
-      {/* Password Input */}
-      <View style={styles.inputWrapper}>
-        <Icon name="lock-closed-outline" size={20} color="#888" style={styles.icon} />
-        <TextInput
-          placeholder="Password"
-          secureTextEntry={secureText}
-          value={password}
-          onChangeText={setPassword}
-          style={styles.input}
-          placeholderTextColor="#999"
-        />
-        <TouchableOpacity onPress={() => setSecureText(!secureText)} style={styles.eyeIcon}>
-          <Icon name={secureText ? 'eye-off-outline' : 'eye-outline'} size={20} color="#888" />
-        </TouchableOpacity>
-      </View>
+            {/* email */}
+            <View style={styles.inputWrap}>
+              <Icon name="mail-outline" size={18} color="#9CA3AF" />
+              <TextInput
+                placeholder="Email or Phone"
+                placeholderTextColor="#9CA3AF"
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                style={styles.input}
+              />
+            </View>
 
-      {/* Login Button */}
-      <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-        <Text style={styles.loginText}>Login</Text>
-      </TouchableOpacity>
+            {/* password */}
+            <View style={styles.inputWrap}>
+              <Icon name="lock-closed-outline" size={18} color="#9CA3AF" />
+              <TextInput
+                placeholder="Password"
+                placeholderTextColor="#9CA3AF"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={secure}
+                style={styles.input}
+              />
+              <TouchableOpacity onPress={()=>setSecure(s=>!s)} hitSlop={{top:8,bottom:8,left:8,right:8}}>
+                <Icon name={secure ? 'eye-off-outline' : 'eye-outline'} size={18} color="#9CA3AF" />
+              </TouchableOpacity>
+            </View>
 
-      <Text style={styles.footerText}>
-  Don’t have an account?{' '}
-  <Text style={{ color: '#EF3A3A', fontWeight: '600' }} onPress={() => navigation.navigate('RestaurantRegister')}>
-            Register
+            {/* subtle error (no default alert) */}
+            {!!error && <Text style={styles.error}>{error}</Text>}
+
+            {/* primary CTA */}
+            <TouchableOpacity style={styles.primaryBtn} onPress={handleLogin}>
+              <Text style={styles.primaryTxt}>Login</Text>
+            </TouchableOpacity>
+
+            {/* divider */}
+            <View style={styles.dividerRow}>
+              <View style={styles.divider} />
+              <Text style={styles.dividerTxt}>or continue with</Text>
+              <View style={styles.divider} />
+            </View>
+
+            {/* Google button */}
+            <TouchableOpacity style={styles.googleBtn} onPress={handleGoogle}>
+              <View style={styles.googleIcon}>
+                <Icon name="logo-google" size={18} color="#4285F4" />
+              </View>
+              <Text style={styles.googleTxt}>Sign in with Google</Text>
+            </TouchableOpacity>
+
+            {/* secondary row */}
+            <View style={styles.bottomRow}>
+              <TouchableOpacity onPress={()=>navigation.navigate('RestaurantRegister')}>
+                <Text style={styles.linkRed}>Create an account</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={()=>navigation.navigate('RestaurantOnboarding')}>
+                <Text style={styles.linkMuted}>Forgot password?</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
+        {/* terms */}
+        <View style={[styles.terms, { paddingBottom: insets.bottom + 8 }]}>
+          <Text style={styles.termsTxt}>
+            By continuing you agree to our <Text style={styles.linkMuted}>Terms</Text> & <Text style={styles.linkMuted}>Privacy</Text>.
           </Text>
-</Text>
-    </View>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
-};
-
-export default RestaurantLogin;
+}
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F7FA',
-    justifyContent: 'center',
-    padding: 24,
+  header:{
+    height: 140,
+    justifyContent:'flex-end',
+    paddingHorizontal:16,
   },
-  logo: {
-    width: 100,
-    height: 100,
-    alignSelf: 'center',
-    marginBottom: 12,
-    resizeMode: 'contain',
+  brandPill:{
+    width:'80%',
+    zIndex:10,
+    height:60,
+    justifyContent:'center',
+    alignSelf:'center',
+    alignItems:'center',
   },
-  title: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1D2254',
-    textAlign: 'center',
-    marginBottom: 30,
+  logoSmall:{ width:120, height:120, resizeMode:'contain' },
+
+  cardWrap:{ flex:1, alignItems:'center', marginTop:-28 },
+  card:{
+    width:'90%',
+    backgroundColor:'rgba(255,255,255,0.9)',
+    borderRadius:20,
+    borderWidth:1, borderColor:'#EEF2F7',
+    padding:18,
+    shadowColor:'#000', shadowOpacity:0.08, shadowRadius:18, elevation:6,
   },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF',
-    borderColor: '#DDD',
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    marginBottom: 15,
+  title:{ fontSize:22, fontWeight:'900', color:'#1D2254', textAlign:'center',marginTop:16, marginBottom:14 },
+
+  inputWrap:{
+    flexDirection:'row', alignItems:'center',
+    backgroundColor:'#fff',
+    borderWidth:1, borderColor:'#E5E7EB',
+    borderRadius:14,
+    paddingHorizontal:12, paddingVertical:12,
+    marginBottom:12,
   },
-  icon: {
-    marginRight: 8,
+  input:{ flex:1, marginLeft:10, color:'#0F172A' },
+
+  error:{ color:'#DC2626', fontWeight:'700', marginBottom:8, textAlign:'center' },
+
+  primaryBtn:{
+    backgroundColor:'#EF3A3A',
+    borderRadius:14, paddingVertical:14,
+    alignItems:'center', marginTop:2,
+    shadowColor:'#EF3A3A', shadowOpacity:0.35, shadowRadius:10, elevation:4,
   },
-  input: {
-    flex: 1,
-    color: '#000',
-    fontSize: 15,
+  primaryTxt:{ color:'#fff', fontWeight:'900', letterSpacing:0.2 },
+
+  dividerRow:{ flexDirection:'row', alignItems:'center', marginVertical:14 },
+  divider:{ flex:1, height:1, backgroundColor:'#E5E7EB' },
+  dividerTxt:{ marginHorizontal:8, color:'#6B7280', fontWeight:'700' },
+
+  googleBtn:{
+    flexDirection:'row', alignItems:'center', justifyContent:'center',
+    backgroundColor:'#fff',
+    borderRadius:14, borderWidth:1, borderColor:'#E5E7EB',
+    paddingVertical:12,
   },
-  eyeIcon: {
-    paddingLeft: 10,
+  googleIcon:{
+    width:28, height:28, borderRadius:8, backgroundColor:'#F1F5FF',
+    alignItems:'center', justifyContent:'center', marginRight:8,
   },
-  loginButton: {
-    backgroundColor: '#EF3A3A',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 5,
-    shadowColor: '#EF3A3A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  loginText: {
-    color: '#FFF',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  footerText: {
-    textAlign: 'center',
-    marginTop: 30,
-    color: '#666',
-    fontSize: 13,
-  },
+  googleTxt:{ color:'#1D2254', fontWeight:'800' },
+
+  bottomRow:{ marginTop:14, flexDirection:'row', justifyContent:'space-between' },
+  linkRed:{ color:'#EF3A3A', fontWeight:'800' },
+  linkMuted:{ color:'#6B7280', fontWeight:'700' },
+
+  terms:{ alignItems:'center', paddingHorizontal:16, marginTop:8 },
+  termsTxt:{ color:'#94A3B8', textAlign:'center' },
 });

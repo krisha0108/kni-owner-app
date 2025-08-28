@@ -87,6 +87,133 @@ const useBottomSheet = () => {
   return { open, y, show, hide };
 };
 
+/* ------------------------- STRUCTURE SKELETON ------------------------- */
+function SkeletonRequestNow({ insetsBottom }) {
+  const pulse = useRef(new Animated.Value(0.6)).current;
+  useEffect(()=>{
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse,{toValue:1,duration:900,useNativeDriver:false}),
+      Animated.timing(pulse,{toValue:0.6,duration:900,useNativeDriver:false}),
+    ]));
+    loop.start(); return ()=>loop.stop();
+  },[]);
+
+  const CARD_W = Math.min(W*0.82, 340);
+  const GAP = 14;
+
+  const SvcTag = () => (
+    <View style={[sk.svcTag]}>
+      <Animated.View style={[sk.dot,{opacity:pulse}]} />
+      <Animated.View style={[sk.lineSm,{width:90,opacity:pulse}]} />
+      <Animated.View style={[sk.lineXs,{width:60,opacity:pulse}]} />
+    </View>
+  );
+
+  const EqSkelCard = () => (
+    <View style={[st.eqCardOuter,{ width:CARD_W }]}>
+      <View style={st.eqCard}>
+        {/* hero + chip + toggle + bottom band */}
+        <Animated.View style={[sk.hero,{opacity:pulse}]}/>
+        <View style={sk.eqBadgeRow}>
+          <Animated.View style={[sk.chip,{opacity:pulse}]}/>
+          <Animated.View style={[sk.toggle,{opacity:pulse}]}/>
+        </View>
+        <View style={sk.eqHeroBand}>
+          <Animated.View style={[sk.lineMd,{width:'55%',opacity:pulse}]}/>
+          <Animated.View style={[sk.lineXs,{width:120,marginTop:6,opacity:pulse}]}/>
+        </View>
+
+        {/* body: tags + total */}
+        <View style={st.eqBody}>
+          <View style={{flexDirection:'row', flexWrap:'wrap', gap:8}}>
+            <SvcTag/><SvcTag/><SvcTag/>
+          </View>
+          <View style={st.eqTotalRow}>
+            <Animated.View style={[sk.lineXs,{width:100,opacity:pulse}]}/>
+            <Animated.View style={[sk.lineMd,{width:80,opacity:pulse}]}/>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+
+  return (
+    <>
+      {/* Equip carousel skeleton (centered, 3 cards) */}
+      <View style={{paddingVertical:10}}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal:(W - CARD_W)/2 }}
+        >
+          <EqSkelCard/>
+          <View style={{width:GAP}}/>
+          <EqSkelCard/>
+          <View style={{width:GAP}}/>
+          <EqSkelCard/>
+        </ScrollView>
+      </View>
+
+      {/* Payment summary */}
+      <View style={st.sumCard}>
+        <Animated.View style={[sk.h2,{width:150,opacity:pulse}]}/>
+        {[0,1].map(i=>(
+          <View style={st.row} key={'itm'+i}>
+            <Animated.View style={[sk.lineSm,{width:120,opacity:pulse}]}/>
+            <Animated.View style={[sk.lineSm,{width:80,opacity:pulse}]}/>
+          </View>
+        ))}
+        <View style={st.sep}/>
+        <View style={st.row}>
+          <Animated.View style={[sk.lineMd,{width:140,opacity:pulse}]}/>
+          <Animated.View style={[sk.lineMd,{width:100,opacity:pulse}]}/>
+        </View>
+        <View style={st.row}>
+          <Animated.View style={[sk.lineSm,{width:120,opacity:pulse}]}/>
+          <Animated.View style={[sk.lineSm,{width:80,opacity:pulse}]}/>
+        </View>
+        <View style={st.sep}/>
+        <View style={st.rowBig}>
+          <Animated.View style={[sk.lineLg,{width:160,opacity:pulse}]}/>
+          <Animated.View style={[sk.lineLg,{width:120,opacity:pulse}]}/>
+        </View>
+      </View>
+
+      {/* Policy card */}
+      <View style={st.card}>
+        <Animated.View style={[sk.h2,{width:180,opacity:pulse}]}/>
+        <Animated.View style={[sk.para,{marginTop:6,opacity:pulse}]}/>
+        <Animated.View style={[sk.para,{marginTop:6,width:'85%',opacity:pulse}]}/>
+        <Animated.View style={[sk.lineSm,{marginTop:10,width:120,opacity:pulse}]}/>
+      </View>
+
+      {/* Tip pills */}
+      <View style={st.card}>
+        <Animated.View style={[sk.h2,{width:240,opacity:pulse}]}/>
+        <View style={{flexDirection:'row',marginTop:10}}>
+          <Animated.View style={[sk.pill,{opacity:pulse}]}/>
+          <Animated.View style={[sk.pill,{marginLeft:8,opacity:pulse}]}/>
+          <Animated.View style={[sk.pill,{marginLeft:8,opacity:pulse}]}/>
+        </View>
+        <Animated.View style={[sk.para,{marginTop:8,width:'70%',opacity:pulse}]}/>
+      </View>
+
+      {/* Address row */}
+      <View style={st.addr}>
+        <Animated.View style={[sk.iconSq,{opacity:pulse}]}/>
+        <Animated.View style={[sk.lineMd,{flex:1,marginHorizontal:8,opacity:pulse}]}/>
+        <Animated.View style={[sk.iconSm,{opacity:pulse}]}/>
+      </View>
+
+      {/* Sticky CTA skeleton */}
+      <View style={[st.cta,{ paddingBottom: insetsBottom>0?insetsBottom:12 }]}>
+        <Animated.View style={[sk.lineXs,{width:140,opacity:pulse}]}/>
+        <Animated.View style={[sk.ctaBtn,{opacity:pulse}]}/>
+      </View>
+    </>
+  );
+}
+
 /* =============================== MAIN ================================ */
 export default function RequestNowPremium({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -94,14 +221,9 @@ export default function RequestNowPremium({ navigation }) {
   /* skeleton + refresh */
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const pulse = useRef(new Animated.Value(0.5)).current;
   useEffect(()=>{
     const t = setTimeout(()=>setLoading(false), 650);
-    const loop = Animated.loop(Animated.sequence([
-      Animated.timing(pulse,{toValue:1,duration:800,useNativeDriver:false}),
-      Animated.timing(pulse,{toValue:0.5,duration:800,useNativeDriver:false}),
-    ]));
-    loop.start(); return ()=>{clearTimeout(t); loop.stop();};
+    return ()=>clearTimeout(t);
   },[]);
   const onRefresh = ()=>{
     setRefreshing(true); setLoading(true);
@@ -126,14 +248,15 @@ export default function RequestNowPremium({ navigation }) {
       };
     }));
   };
-const RESTAURANTS = [
-  { id:'r1', name:'Spice Hub', address:'SG Highway, Ahmedabad', fssai:'10718004001234', approved:true,
-    photo:'https://images.unsplash.com/photo-1541542684-4a72a5e25a4e?q=80&w=1200&auto=format&fit=crop' },
-  { id:'r2', name:'Café Verde', address:'Law Garden, Ahmedabad', fssai:'10718004005678', approved:false,
-    photo:'https://images.unsplash.com/photo-1498654200943-1088dd4438ae?q=80&w=1200&auto=format&fit=crop' },
-  { id:'r3', name:'Tandoor Tales', address:'Bodakdev, Ahmedabad', fssai:'10718004007890', approved:true,
-    photo:'https://images.unsplash.com/photo-1466978913421-dad2ebd01d17?q=80&w=1200&auto=format&fit=crop' },
-];
+
+  const RESTAURANTS = [
+    { id:'r1', name:'Spice Hub', address:'SG Highway, Ahmedabad', fssai:'10718004001234', approved:true,
+      photo:'https://images.unsplash.com/photo-1541542684-4a72a5e25a4e?q=80&w=1200&auto=format&fit=crop' },
+    { id:'r2', name:'Café Verde', address:'Law Garden, Ahmedabad', fssai:'10718004005678', approved:false,
+      photo:'https://images.unsplash.com/photo-1498654200943-1088dd4438ae?q=80&w=1200&auto=format&fit=crop' },
+    { id:'r3', name:'Tandoor Tales', address:'Bodakdev, Ahmedabad', fssai:'10718004007890', approved:true,
+      photo:'https://images.unsplash.com/photo-1466978913421-dad2ebd01d17?q=80&w=1200&auto=format&fit=crop' },
+  ];
 
   /* totals */
   const totals = useMemo(()=>{
@@ -144,16 +267,15 @@ const RESTAURANTS = [
     return { itemTotal, fee, gst, grand: itemTotal + fee + gst, count: chosen.length };
   },[equip]);
 
-  /* tips (no custom; tap again to clear) */
+  /* tips */
   const [tip, setTip] = useState(0);
   const tipTap = (v)=> setTip(prev => prev===v ? 0 : v);
   const tips = [50,75,100];
 
   /* calendar + restaurant bottom-sheets */
-  const PAD = 16;            // horizontal padding you use around the grid
-const COL_GAP = 8;         // desired gap between days
-const CELL = Math.floor((W - PAD*2 - COL_GAP*6) / 7);
-
+  const PAD = 16;
+  const COL_GAP = 8;
+  const CELL = Math.floor((W - PAD*2 - COL_GAP*6) / 7);
 
   const calBS = useBottomSheet();
   const restBS = useBottomSheet();
@@ -241,12 +363,7 @@ const CELL = Math.floor((W - PAD*2 - COL_GAP*6) / 7);
         showsVerticalScrollIndicator={false}
       >
         {loading ? (
-          <View style={{padding:16}}>
-            <Animated.View style={[st.skelHero,{opacity:pulse}]}/>
-            <Animated.View style={[st.skelLine,{opacity:pulse,width:'70%'}]}/>
-            <Animated.View style={[st.skelLine,{opacity:pulse,width:'50%'}]}/>
-            <Animated.View style={[st.skelCard,{opacity:pulse}]}/>
-          </View>
+          <SkeletonRequestNow insetsBottom={insets.bottom} />
         ) : (
           <>
             {/* Equip carousel */}
@@ -359,28 +476,28 @@ const CELL = Math.floor((W - PAD*2 - COL_GAP*6) / 7);
                 const rows = [];
                 while(cells.length) rows.push(cells.splice(0,7));
                 return rows.map((wk,ri)=>(
-                  <View key={ri} style={[st.weekRow, { columnGap: COL_GAP }]}>
+                  <View key={ri} style={[st.weekRow, { columnGap: 8 }]}>
                     {wk.map((cell,ci)=>{
-  if(!cell) {
-    return (
-      <View
-        key={ci}
-        style={[st.dayEmpty, { width: CELL, height: CELL }]}   // ← add width+height
-      />
-    );
-  }
-  const sel = selectedDate && new Date(selectedDate).toDateString()===cell.toDateString();
-  return (
-    <TouchableOpacity
-      key={ci}
-      style={[st.day, sel && st.dayOn, { width: CELL, height: CELL }]} // ← add width+height
-      onPress={()=>setSelectedDate(cell)}
-    >
-      <Text style={[st.dayTxt, sel && st.dayTxtOn]}>{cell.getDate()}</Text>
-    </TouchableOpacity>
-  );
-})}
-
+                      if(!cell) {
+                        return (
+                          <View
+                            key={ci}
+                            style={[st.dayEmpty, { width: Math.floor((W - 16*2 - 8*6) / 7), height: Math.floor((W - 16*2 - 8*6) / 7) }]}
+                          />
+                        );
+                      }
+                      const sel = selectedDate && new Date(selectedDate).toDateString()===cell.toDateString();
+                      const CELL = Math.floor((W - 16*2 - 8*6) / 7);
+                      return (
+                        <TouchableOpacity
+                          key={ci}
+                          style={[st.day, sel && st.dayOn, { width: CELL, height: CELL }]}
+                          onPress={()=>setSelectedDate(cell)}
+                        >
+                          <Text style={[st.dayTxt, sel && st.dayTxtOn]}>{cell.getDate()}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
                   </View>
                 ));
               })()}
@@ -472,11 +589,6 @@ const st = StyleSheet.create({
     borderWidth:1, borderColor:'#EEF2F7' },
   hTitle:{ fontSize:24, fontWeight:'900', color:C.ink },
 
-  /* skeleton */
-  skelHero:{ height:220, backgroundColor:'#E9EEF5', borderRadius:R, marginBottom:12, marginHorizontal:16 },
-  skelLine:{ height:14, backgroundColor:'#E9EEF5', borderRadius:8, marginBottom:10, marginHorizontal:16 },
-  skelCard:{ height:120, backgroundColor:'#E9EEF5', borderRadius:R, marginHorizontal:16 },
-
   /* equipment carousel */
   eqCardOuter:{ backgroundColor:'transparent' },
   eqCard:{ backgroundColor:C.card, borderRadius:R, overflow:'hidden', borderWidth:1, borderColor:'#EEF2F7' },
@@ -553,12 +665,12 @@ const st = StyleSheet.create({
   dowRow:{ flexDirection:'row', justifyContent:'space-between', marginTop:8 },
   dowTxt:{ width:(100/7)+'%', textAlign:'center', color:C.muted, fontWeight:'800' },
   weekRow:{ flexDirection:'row', justifyContent:'flex-start', marginTop:8 },
-day:{ aspectRatio:1, borderRadius:12, backgroundColor:'#F8FAFC',
-      borderWidth:1, borderColor:'#E2E8F0', alignItems:'center', justifyContent:'center' },
-        dayOn:{ backgroundColor:'#FFE8E8', borderColor:'#FECACA' },
+  day:{ aspectRatio:1, borderRadius:12, backgroundColor:'#F8FAFC',
+    borderWidth:1, borderColor:'#E2E8F0', alignItems:'center', justifyContent:'center' },
+  dayOn:{ backgroundColor:'#FFE8E8', borderColor:'#FECACA' },
   dayTxt:{ color:C.ink, fontWeight:'800' },
   dayTxtOn:{ color:C.primary },
-dayEmpty:{ aspectRatio:1 },
+  dayEmpty:{ aspectRatio:1 },
 
   /* restaurants */
   rest:{ flexDirection:'row', borderWidth:1, borderColor:'#EEF2F7', backgroundColor:'#fff', borderRadius:14, padding:10, marginBottom:10, marginHorizontal:16 },
@@ -570,11 +682,13 @@ dayEmpty:{ aspectRatio:1 },
   badgeOk:{ backgroundColor:C.ok, borderColor:C.ok },
   badgeWarn:{ backgroundColor:'#FFE8E8', borderColor:'#FECACA' },
   badgeTxt:{ marginLeft:6, fontSize:11, color:'#111827', fontWeight:'900' },
-/* tips */
+
+  /* tips */
   tip:{ backgroundColor:'#fff', borderWidth:1, borderColor:'#E5E7EB', paddingHorizontal:14, paddingVertical:10, borderRadius:12, marginRight:8, flexDirection:'row', alignItems:'center' },
   tipOn:{ backgroundColor:'#F4EBFF', borderColor:'#E9D5FF' },
   tipTxt:{ color:C.ink, fontWeight:'800' }, tipTxtOn:{ color:'#6D28D9' },
   tipBadge:{ marginLeft:8, backgroundColor:'#D1FAE5', color:'#065F46', fontSize:10, paddingHorizontal:8, paddingVertical:2, borderRadius:8, overflow:'hidden', fontWeight:'800' },
+
   /* success modal */
   doneWrap:{ flex:1, backgroundColor:'rgba(0,0,0,0.35)', justifyContent:'center', alignItems:'center' },
   doneCard:{ width:'84%', backgroundColor:'#fff', borderRadius:18, padding:18, alignItems:'center' },
@@ -584,3 +698,31 @@ dayEmpty:{ aspectRatio:1 },
   doneBtn:{ backgroundColor:C.primary, paddingHorizontal:16, paddingVertical:10, borderRadius:12, marginTop:12 },
   doneBtnTxt:{ color:'#fff', fontWeight:'900' },
 });
+
+/* ------------ skeleton styles (structure-matched placeholders) ---------- */
+const sk = StyleSheet.create({
+  hero:{ height:150, backgroundColor:'#E9EEF5' },
+  eqBadgeRow:{ position:'absolute', left:12, right:12, top:12, height:28, flexDirection:'row', justifyContent:'space-between' },
+  chip:{ width:90, height:28, borderRadius:999, backgroundColor:'#FFF1F1', borderWidth:1, borderColor:'#FECACA' },
+  toggle:{ width:110, height:28, borderRadius:999, backgroundColor:'#F1F5F9', borderWidth:1, borderColor:'#E2E8F0' },
+  eqHeroBand:{ position:'absolute', left:12, right:12, bottom:10, backgroundColor:'#FFFFFFE6', padding:8, borderRadius:12 },
+
+  h2:{ height:20, borderRadius:8, backgroundColor:'#E9EEF5' },
+  para:{ height:12, borderRadius:6, backgroundColor:'#E9EEF5', width:'95%' },
+
+  lineLg:{ height:18, borderRadius:8, backgroundColor:'#E9EEF5' },
+  lineMd:{ height:14, borderRadius:8, backgroundColor:'#E9EEF5' },
+  lineSm:{ height:12, borderRadius:8, backgroundColor:'#E9EEF5' },
+  lineXs:{ height:10, borderRadius:8, backgroundColor:'#E9EEF5' },
+
+  svcTag:{ flexDirection:'row', alignItems:'center', gap:8, paddingHorizontal:12, paddingVertical:10, borderRadius:12, backgroundColor:'#F1F5F9', borderWidth:1, borderColor:'#E2E8F0' },
+  dot:{ width:8, height:8, borderRadius:999, backgroundColor:'#CBD5E1' },
+
+  pill:{ width:90, height:40, borderRadius:12, backgroundColor:'#F1F5F9', borderWidth:1, borderColor:'#E2E8F0' },
+
+  iconSq:{ width:18, height:18, borderRadius:6, backgroundColor:'#E5E7EB' },
+  iconSm:{ width:18, height:18, borderRadius:9, backgroundColor:'#E5E7EB' },
+
+  ctaBtn:{ width:150, height:44, borderRadius:14, backgroundColor:'#F1F5F9', borderWidth:1, borderColor:'#E2E8F0' },
+});
+  

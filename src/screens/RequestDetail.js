@@ -100,6 +100,180 @@ const FAQItem = React.memo(({ f }) => {
   );
 });
 
+/* ---------- SKELETON ---------- */
+function SkeletonRequestDetail({ insetsBottom, width }) {
+  const pulse = useRef(new Animated.Value(0.6)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1, duration: 900, useNativeDriver: false }),
+        Animated.timing(pulse, { toValue: 0.6, duration: 900, useNativeDriver: false }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, []);
+
+  const ServiceChip = () => (
+    <View style={[st.serviceChip, { width: Math.min(240, width * 0.7) }]}>
+      <View style={{ flex: 1 }}>
+        <Animated.View style={[sk.lineMd, { width: '70%', opacity: pulse }]} />
+        <Animated.View style={[sk.lineSm, { width: 80, marginTop: 6, opacity: pulse }]} />
+      </View>
+      <Animated.View style={[sk.btnPill, { opacity: pulse }]} />
+    </View>
+  );
+
+  const TechCard = () => (
+    <View style={st.techCard}>
+      <Animated.View style={[sk.avatar, { opacity: pulse }]} />
+      <View style={{ flex: 1, marginLeft: 10 }}>
+        <Animated.View style={[sk.lineMd, { width: '70%', opacity: pulse }]} />
+        <Animated.View style={[sk.lineXs, { width: 90, marginTop: 6, opacity: pulse }]} />
+      </View>
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top','left','right']}>
+      {/* HERO skeleton with actions, progress, title band & rating pill */}
+      <View style={{ backgroundColor: C.card, borderBottomLeftRadius: R, borderBottomRightRadius: R, overflow: 'hidden' }}>
+        <Animated.View style={[sk.hero, { opacity: pulse }]} />
+        <View style={[st.actionsWrap, { paddingTop: 8 }]}>
+          <View style={sk.glassBtn} />
+          <View style={[sk.glassBtn, { marginLeft: 8 }]} />
+        </View>
+        <View style={{ position: 'absolute', left: '5%', right: '5%', bottom: 70, height: 4, backgroundColor: '#FFFFFF55', borderRadius: 3 }} />
+        <View style={st.heroBottom}>
+          <View style={{ flex: 1 }}>
+            <Animated.View style={[sk.lineLg, { width: '60%', opacity: pulse }]} />
+            <Animated.View style={[sk.lineSm, { width: 140, marginTop: 6, opacity: pulse }]} />
+          </View>
+          <View style={sk.ratingPill} />
+        </View>
+      </View>
+
+      <ScrollView contentContainerStyle={{ paddingBottom: insetsBottom + 100 }} showsVerticalScrollIndicator={false}>
+        {/* About */}
+        <View style={st.section}>
+          <Animated.View style={[sk.h2, { width: 100, opacity: pulse }]} />
+          <Animated.View style={[sk.para, { width: '95%', marginTop: 8, opacity: pulse }]} />
+          <Animated.View style={[sk.para, { width: '85%', marginTop: 6, opacity: pulse }]} />
+        </View>
+
+        {/* Services chips */}
+        <View style={st.section}>
+          <Animated.View style={[sk.h2, { width: 130, opacity: pulse }]} />
+          <Animated.View style={[sk.lineXs, { width: 220, marginTop: 6, opacity: pulse }]} />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 16, marginTop: 10 }}>
+            {[0,1,2].map(i => <ServiceChip key={i} />)}
+          </ScrollView>
+        </View>
+
+        {/* Included / Not Included */}
+        <View style={st.section}>
+          <Animated.View style={[sk.h2, { width: 160, opacity: pulse }]} />
+          <View style={st.wrapPills}>
+            {[0,1,2].map(i => <View key={`in-${i}`} style={[sk.pill, { backgroundColor:'#ECFDF5', borderColor:'#D1FAE5' }]} />)}
+          </View>
+
+          <Animated.View style={[sk.h2, { width: 140, marginTop: 14, opacity: pulse }]} />
+          <View style={st.wrapPills}>
+            {[0,1,2].map(i => <View key={`ex-${i}`} style={[sk.pill, { backgroundColor:'#FFF1F1', borderColor:'#FEE2E2' }]} />)}
+          </View>
+        </View>
+
+        {/* Conditions */}
+        <View style={st.section}>
+          <Animated.View style={[sk.h2, { width: 120, opacity: pulse }]} />
+          {[0,1,2].map(i=>(
+            <View key={i} style={{ flexDirection:'row', marginBottom:10, marginTop: i===0?8:0 }}>
+              <View style={sk.iconWarn} />
+              <Animated.View style={[sk.para, { width:'85%', marginLeft:8, opacity:pulse }]} />
+            </View>
+          ))}
+        </View>
+
+        {/* Process stepper */}
+        <View style={st.section}>
+          <Animated.View style={[sk.h2, { width: 120, opacity: pulse }]} />
+          <View style={{ marginTop: 4 }}>
+            {[0,1,2,3].map((i)=>(
+              <View key={i} style={st.stepRow}>
+                <View style={st.stepRail}>
+                  <View style={sk.dot} />
+                  {i<3 && <View style={st.stepLine} />}
+                </View>
+                <View style={st.stepCard}>
+                  <View style={sk.stepIcon} />
+                  <View style={{ flex:1 }}>
+                    <Animated.View style={[sk.lineMd, { width:'60%', opacity:pulse }]} />
+                    <Animated.View style={[sk.lineSm, { width:'80%', marginTop:6, opacity:pulse }]} />
+                  </View>
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* Technicians grid */}
+        <View style={st.section}>
+          <Animated.View style={[sk.h2, { width: 150, opacity: pulse }]} />
+          <View style={{ flexDirection:'row', gap:10, marginTop:8 }}>
+            <View style={{ flex:1 }}><TechCard/></View>
+            <View style={{ flex:1 }}><TechCard/></View>
+          </View>
+        </View>
+
+        {/* FAQs */}
+        <View style={st.section}>
+          <Animated.View style={[sk.h2, { width: 70, opacity: pulse }]} />
+          {[0,1,2].map(i=>(
+            <View key={i} style={st.faqItem}>
+              <Animated.View style={[sk.lineMd, { width:'70%', opacity:pulse }]} />
+              <Animated.View style={[sk.para, { width:'95%', marginTop:8, opacity:pulse }]} />
+            </View>
+          ))}
+        </View>
+
+        {/* Reviews */}
+        <View style={st.section}>
+          <Animated.View style={[sk.h2, { width: 90, opacity: pulse }]} />
+          {[0,1,2].map(i=>(
+            <View key={i} style={st.revCard}>
+              <Animated.View style={[sk.lineMd, { width:'40%', opacity:pulse }]} />
+              <Animated.View style={[sk.para, { width:'90%', marginTop:8, opacity:pulse }]} />
+            </View>
+          ))}
+          <View style={sk.outlineBtn} />
+        </View>
+
+        {/* Provide */}
+        <View style={st.section}>
+          <Animated.View style={[sk.h2, { width: 150, opacity: pulse }]} />
+          <View style={st.provideRow}>
+            {[0,1,2,3].map(i=>(
+              <View key={i} style={[st.provide,{ width:'48%' }]}>
+                <View style={sk.provideIcon}/>
+                <Animated.View style={[sk.lineSm, { width:'60%', opacity:pulse }]} />
+              </View>
+            ))}
+          </View>
+        </View>
+      </ScrollView>
+
+      {/* Sticky cart */}
+      <View style={[st.cartBar, { paddingBottom: insetsBottom > 0 ? insetsBottom : 12 }]}>
+        <View style={{ flex:1 }}>
+          <Animated.View style={[sk.lineXs, { width: 120, opacity: pulse }]} />
+          <Animated.View style={[sk.lineMd, { width: 80, marginTop:6, opacity: pulse }]} />
+        </View>
+        <View style={sk.primaryBtn} />
+      </View>
+    </SafeAreaView>
+  );
+}
+
 /* ---------- MAIN ---------- */
 export default function RequestDetail({ navigation, route }) {
   const insets = useSafeAreaInsets();
@@ -116,19 +290,19 @@ export default function RequestDetail({ navigation, route }) {
   /* HERO — single image + progress at bottom (90% width) */
   const [idx, setIdx] = useState(0);
   const bar = useRef(new Animated.Value(0)).current;
-  const PROG = 10000; // 10 sec
+  const PROG = 10000;
+
   const run = useCallback(() => {
     bar.setValue(0);
-    Animated.timing(bar, { toValue: 1, duration: PROG, easing: Easing.linear, useNativeDriver: false }).start(({ finished }) => {
-      if (finished) setIdx((p) => (p + 1) % storyImages.length);
-    });
+    Animated.timing(bar, { toValue: 1, duration: PROG, easing: Easing.linear, useNativeDriver: false })
+      .start(({ finished }) => { if (finished) setIdx((p) => (p + 1) % storyImages.length); });
   }, []);
-  useEffect(() => { run(); return () => bar.stopAnimation(); }, []);
-  useEffect(() => { run(); }, [idx]);
 
-  /* Skeleton */
+  /* Skeleton + pause hero while skeleton is shown */
   const [loading, setLoading] = useState(true);
+  const showSkel = loading;
   useEffect(() => { const t = setTimeout(() => setLoading(false), 700); return () => clearTimeout(t); }, []);
+  useEffect(() => { bar.stopAnimation(); if (!showSkel) run(); return () => bar.stopAnimation(); }, [idx, showSkel, run]);
 
   /* Cart */
   const [cart, setCart] = useState({});
@@ -142,21 +316,11 @@ export default function RequestDetail({ navigation, route }) {
 
   const shareIt = async () => { try { await Share.share({ title: item.title, message: `${item.title} • ${item.category}\n${item.desc}\n\nKNI – Pro Kitchen Services` }); } catch {} };
 
-  if (loading) {
-    return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top', 'left', 'right']}>
-        <View style={{ padding: 16 }}>
-          <View style={st.skelHero} />
-          <View style={[st.skelLine, { width: '70%', marginTop: 16 }]} />
-          <View style={[st.skelLine, { width: '50%' }]} />
-          <View style={[st.skelCard]} />
-          <View style={[st.skelCard]} />
-        </View>
-      </SafeAreaView>
-    );
+  /* RENDER */
+  if (showSkel) {
+    return <SkeletonRequestDetail insetsBottom={insets.bottom} width={width} />;
   }
 
-  /* RENDER */
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top', 'left', 'right']}>
       {/* HERO */}
@@ -232,7 +396,7 @@ export default function RequestDetail({ navigation, route }) {
           />
         </View>
 
-        {/* Included / Not included — WRAPPED pills (no horizontal scroll) */}
+        {/* Included / Not included */}
         <View style={st.section}>
           <Text style={st.sectionTitle}>What’s included</Text>
           <View style={st.wrapPills}>
@@ -253,7 +417,7 @@ export default function RequestDetail({ navigation, route }) {
           </View>
         </View>
 
-        {/* Conditions (vertical list) */}
+        {/* Conditions */}
         <View style={st.section}>
           <Text style={st.sectionTitle}>Conditions</Text>
           {conditions.map((t, i) => (
@@ -264,7 +428,7 @@ export default function RequestDetail({ navigation, route }) {
           ))}
         </View>
 
-        {/* Our process — PREMIUM VERTICAL STEPPER */}
+        {/* Process */}
         <View style={st.section}>
           <Text style={st.sectionTitle}>Our process</Text>
           <View style={st.stepper}>
@@ -286,7 +450,7 @@ export default function RequestDetail({ navigation, route }) {
           </View>
         </View>
 
-        {/* Top technicians — 2-column grid (responsive) */}
+        {/* Technicians */}
         <View style={st.section}>
           <Text style={st.sectionTitle}>Top technicians</Text>
           <FlatList
@@ -295,6 +459,7 @@ export default function RequestDetail({ navigation, route }) {
             numColumns={2}
             columnWrapperStyle={{ gap: 10 }}
             contentContainerStyle={{ paddingBottom: 4 }}
+            scrollEnabled={false}
             renderItem={({ item: t }) => (
               <View style={st.techCard}>
                 <ImageBackground source={{ uri: t.avatar }} style={st.techPic} imageStyle={{ borderRadius: 12 }} />
@@ -310,13 +475,13 @@ export default function RequestDetail({ navigation, route }) {
           />
         </View>
 
-        {/* FAQs (stable) */}
+        {/* FAQs */}
         <View style={st.section}>
           <Text style={st.sectionTitle}>FAQs</Text>
           {faqs.map((f) => <FAQItem key={f.id} f={f} />)}
         </View>
 
-        {/* Reviews — vertical cards */}
+        {/* Reviews */}
         <View style={st.section}>
           <Text style={st.sectionTitle}>Reviews</Text>
           {reviews.map((r) => (
@@ -330,7 +495,7 @@ export default function RequestDetail({ navigation, route }) {
           <TouchableOpacity style={st.outlineBtn}><Text style={st.outlineTxt}>View all reviews</Text></TouchableOpacity>
         </View>
 
-        {/* What we provide */}
+        {/* Provide */}
         <View style={st.section}>
           <Text style={st.sectionTitle}>What we provide</Text>
           <View style={st.provideRow}>
@@ -427,10 +592,12 @@ const st = StyleSheet.create({
   faqQ: { color: C.text, fontWeight: '700', fontSize: 14 },
   faqA: { color: C.muted, marginTop: 8, lineHeight: 20 },
 
-  /* reviews (vertical) */
+  /* reviews */
   revCard: { backgroundColor: C.card, borderRadius: 14, borderWidth: 1, borderColor: '#EEF2F7', padding: 12, marginBottom: 10 },
   revName: { color: C.text, fontWeight: '700' },
   revTxt: { color: C.text, marginTop: 2 },
+  outlineBtn:{ borderWidth:1, borderColor:'#CBD5E1', borderRadius:12, paddingVertical:12, alignItems:'center', marginTop:6, backgroundColor:'#fff' },
+  outlineTxt:{ color:'#334155', fontWeight:'900' },
 
   /* provide */
   provideRow: { flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginTop: 6 },
@@ -444,9 +611,37 @@ const st = StyleSheet.create({
   cartAmt: { color: C.ink, fontSize: 18, fontWeight: '800' },
   primaryBtn: { backgroundColor: C.primary, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 18 },
   primaryTxt: { color: '#fff', fontWeight: '800' },
+});
 
-  /* skeletons */
-  skelHero: { height: 240, backgroundColor: '#E9EEF5', borderRadius: R },
-  skelLine: { height: 14, backgroundColor: '#E9EEF5', borderRadius: 8, marginTop: 10 },
-  skelCard: { height: 80, backgroundColor: '#E9EEF5', borderRadius: 14, marginTop: 12 },
+/* ---------- Skeleton styles ---------- */
+const sk = StyleSheet.create({
+  hero: { height: 260, backgroundColor: '#E9EEF5' },
+
+  glassBtn:{ backgroundColor:'#FFFFFFEE', width:38, height:38, borderRadius:12, borderWidth:1, borderColor:'#FFFFFF99' },
+  ratingPill:{ width:90, height:28, borderRadius:999, backgroundColor:'#F1F5F9' },
+
+  h2:{ height:20, borderRadius:8, backgroundColor:'#E9EEF5' },
+  para:{ height:12, borderRadius:6, backgroundColor:'#E9EEF5' },
+
+  lineLg:{ height:18, borderRadius:8, backgroundColor:'#E9EEF5' },
+  lineMd:{ height:14, borderRadius:8, backgroundColor:'#E9EEF5' },
+  lineSm:{ height:12, borderRadius:8, backgroundColor:'#E9EEF5' },
+  lineXs:{ height:10, borderRadius:8, backgroundColor:'#E9EEF5' },
+
+  btnPill:{ width:78, height:32, borderRadius:999, backgroundColor:'#F1F5F9', borderWidth:1, borderColor:'#E2E8F0', marginLeft:10 },
+
+  pill:{ height:32, borderRadius:999, borderWidth:1, width:160 },
+
+  iconWarn:{ width:18, height:18, borderRadius:6, backgroundColor:'#FEF3C7' },
+
+  dot:{ width:24, height:24, borderRadius:12, backgroundColor:'#FFE8E8' },
+  stepIcon:{ width:34, height:34, borderRadius:12, backgroundColor:'#FFF1F1', marginRight:10 },
+
+  avatar:{ width:54, height:54, borderRadius:12, backgroundColor:'#E9EEF5' },
+
+  provideIcon:{ width:36, height:36, borderRadius:12, backgroundColor:'#F1F5F9', marginRight:10 },
+
+  outlineBtn:{ height:48, borderRadius:12, borderWidth:1, borderColor:'#CBD5E1', backgroundColor:'#fff', marginTop:6 },
+
+  primaryBtn:{ width:160, height:44, borderRadius:14, backgroundColor:'#F1F5F9', borderWidth:1, borderColor:'#E2E8F0' },
 });

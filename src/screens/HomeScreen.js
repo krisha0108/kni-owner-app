@@ -1,311 +1,451 @@
-import React, { useRef } from 'react';
+// screens/HomePremium.js
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated, FlatList
+  View, Text, StyleSheet, Image, ImageBackground, TouchableOpacity,
+  ScrollView, FlatList, Animated, Easing, RefreshControl, Linking,
+  useWindowDimensions
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
-import LottieView from 'lottie-react-native';
+import KniBottomNav from '../components/KniBottomNav';
 
-const Home = ({ navigation }) => {
-  const scrollY = useRef(new Animated.Value(0)).current;
+/* ---------------- THEME ---------------- */
+const C = {
+  primary:'#EF3A3A', ink:'#1D2254', text:'#0F172A', muted:'#6B7280',
+  bg:'#F5F7FA', card:'#FFFFFF', border:'#E5E7EB', ok:'#10B981', info:'#3B82F6'
+};
+const R = 20;
 
-  const headerHeight = scrollY.interpolate({
-    inputRange: [0, 100],
-    outputRange: [100, 60],
-    extrapolate: 'clamp',
-  });
-
- const heroBanners = [
-  require('../assets/images/kitchen.jpeg'),
-  require('../assets/images/repair.jpeg'),
-  require('../assets/images/meals.jpeg'),
+/* ---------------- DEMO CONTENT ---------------- */
+const HERO = [
+  { id:'h1', img:'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=80&w=1600&auto=format&fit=crop',
+    tag:'New', title:'KNI Partner Program', sub:'Earn more with priority jobs.', cta:'Know more', link:'https://kniexample.com/partners' },
+  { id:'h2', img:'https://prd-webrepository.tomorrow.city/images/pnliwdxhy0tx/rAZeuMrD6IPLVV0Xe91zy/5345a43a55c0c5dd595ca39c2a0f3dcb/smart-ticketing-23.jpg',
+    tag:'Feature', title:'Smart Tickets', sub:'Auto-assigning & live ETA.', cta:'See how', link:'https://kniexample.com/features' },
+  { id:'h3', img:'https://media.istockphoto.com/id/1071461664/photo/having-a-tour-through-the-city-streets.jpg?s=612x612&w=0&k=20&c=nlr914eKeQkYVpv7UgKCGU1oWLd97eRCi5e3jRggEhw=',
+    tag:'Guide', title:'Kitchen deep-clean checklist', sub:'2-min video for busy owners.', cta:'Watch', link:'https://youtu.be/dQw4w9WgXcQ' },
 ];
 
+const SPONSORED = [
+  { id:'s1', brand:'Transrentals', img:'https://www.spinny.com/blog/wp-content/uploads/2024/09/videoframe_0.webp',
+    line:'Vehicle rentals marketplace', link:'https://transrentals.in/' },
+  { id:'s2', brand:'Apollo Equipments', img:'https://images.jdmagicbox.com/comp/ahmedabad/s3/079pxx79.xx79.200819003419.f7s3/catalogue/apollo-kitchen-equipments-and-services-pvt-ltd-vatva-gidc-ahmedabad-commercial-kitchen-equipment-manufacturers-qpznuwhw6w.jpg',
+    line:'Worlds best equiments', link:'https://apolloequipments.com/' },
+  { id:'s3', brand:'KNI', img:'https://dynamic-media-cdn.tripadvisor.com/media/photo-o/27/d5/bb/74/lounge.jpg?w=900&h=500&s=1',
+    line:'Restaurant Solution', link:'https://kitchennetworkinternational.com/' },
+];
 
-  const carouselItems = [
-    { title: 'Deep Cleaning - Aug 10' },
-    { title: 'Chimney Repair - Aug 12' },
-    { title: 'Inspection - Aug 15' },
-  ];
+const GUIDES = [
+  { id:'g1', thumb:'https://img.freepik.com/free-vector/group-tourists-travelling-with-guide-holding-flag-flat-illustration_74855-18752.jpg?semt=ais_hybrid&w=740&q=80', title:'How to raise a perfect service request', min:2, link:'https://youtu.be/FcywwLSXJDs?si=7zIO295TftZSOq_x' },
+  { id:'g2', thumb:'https://www.launch-marketing.com/wp-content/uploads/2020/08/GettyImages-1140693058-1024x655.jpg', title:'Preventive care: fridge & deep freezer', min:3, link:'https://youtu.be/p_eq98EINOI?si=OLTusNTYI2XkcizY' },
+  { id:'g3', thumb:'https://orioly.com/wp-content/uploads/2016/12/qualities-of-a-good-tour-guide-cover-illustration.png', title:'KNI billing & GST tips', min:1, link:'https://youtu.be/uBoijwzuY5s?si=QExUV1Y44Mt4iYtC' },
+];
 
-  const activities = [
-    { id: 1, text: 'Oven Repair Request Submitted.', time: '2 hours ago' },
-    { id: 2, text: 'Fridge Cleaning Completed.', time: 'Yesterday' },
-    { id: 3, text: 'Ticket #122 Resolved.', time: 'Aug 3' },
-  ];
+const FEED = [
+  { id:'n1', icon:'construct-outline', txt:'2 tickets assigned today', tone:'ok' },
+  { id:'n2', icon:'information-circle-outline', txt:'New: real-time technician ETA', tone:'info' },
+  { id:'n3', icon:'shield-checkmark-outline', txt:'KNI Verified benefits updated', tone:'ok' },
+];
 
-  const activeTab = 'home';
+/* ---------------- HELPERS ---------------- */
+const open = async (url)=>{ try{ await Linking.openURL(url);}catch{} };
 
+/* ======================================================================= */
+export default function HomePremium({ navigation }) {
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+
+  /* skeleton + refresh */
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const showSkel = loading || refreshing;
+
+  const pulse = useRef(new Animated.Value(0.5)).current;
+  useEffect(()=>{
+    const t = setTimeout(()=>setLoading(false), 700);
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse,{toValue:1,duration:850,useNativeDriver:false}),
+      Animated.timing(pulse,{toValue:0.5,duration:850,useNativeDriver:false}),
+    ]));
+    loop.start(); return ()=>{ clearTimeout(t); loop.stop(); };
+  },[]);
+  const onRefresh = ()=>{
+    setRefreshing(true);
+    setLoading(true);
+    setTimeout(()=>{ setRefreshing(false); setLoading(false); }, 900);
+  };
+
+  /* hero “story” */
+  const [heroIdx, setHeroIdx] = useState(0);
+  const bar = useRef(new Animated.Value(0)).current;
+  const DURATION = 10000;
+
+  const cycle = useCallback(()=>{
+    bar.setValue(0);
+    Animated.timing(bar, { toValue:1, duration:DURATION, easing:Easing.linear, useNativeDriver:false })
+      .start(({finished})=>{
+        if(!finished) return;
+        setHeroIdx(i => (i+1)%HERO.length);
+      });
+  },[]);
+
+  // start/stop progress only when not showing skeleton
+  useEffect(()=>{
+    bar.stopAnimation();
+    if (!showSkel) cycle();
+    return ()=>bar.stopAnimation();
+  },[heroIdx, showSkel, cycle]);
+
+  /* quick navs */
+  const goSupport     = ()=> navigation.navigate?.('SupportCenter');
+  const goRestaurants = ()=> navigation.navigate?.('Restaurants');
+  const goGuide       = ()=> open(GUIDES[0].link);
+
+  /* ----------- RENDER ----------- */
   return (
-    <View style={styles.screen}>
-      <Animated.View style={[styles.header, { height: headerHeight }]}> 
-        <View>
-          <Text style={styles.greeting}>Hi, Saurav 👋</Text>
-          <Text style={styles.subGreeting}>Saurav’s Kitchen</Text>
+    <SafeAreaView style={{flex:1, backgroundColor:C.bg}} edges={['top','left','right']}>
+      {/* Top bar */}
+      <View style={[st.top, { paddingTop:6 }]}>
+        <View style={{flexDirection:'row', alignItems:'center'}}>
+          <Image source={require('../assets/images/logo.png')} resizeMode='contain' style={{width:130, height:40, borderRadius:8, marginRight:8}}/>
         </View>
-        <View style={styles.statusBadge}>
-          <Icon name="checkmark-circle" size={18} color="#2ecc71" />
-          <Text style={styles.statusText}>Approved</Text>
+        <View style={{flexDirection:'row', alignItems:'center'}}>
+          <TouchableOpacity onPress={()=>navigation.navigate?.('Notifications')} style={st.hBtn}>
+            <Icon name="notifications-outline" size={18} color={C.ink}/>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={()=>navigation.navigate?.('RequestNow')} style={st.hBtn}>
+            <Icon name="cart-outline" size={18} color={C.ink}/>
+          </TouchableOpacity>
         </View>
-      </Animated.View>
+      </View>
 
-      <Animated.ScrollView
-        style={styles.container}
-        contentContainerStyle={{ paddingBottom: 120 }}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: false }
-        )}
+      <ScrollView
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} tintColor={C.primary}/>}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
+        showsVerticalScrollIndicator={false}
       >
-       <ScrollView
-  horizontal
-  pagingEnabled
-  showsHorizontalScrollIndicator={false}
-  style={styles.heroContainer}
->
-  {heroBanners.map((image, i) => (
-    <View key={i} style={styles.heroSlide}>
-      <Animated.Image source={image} style={styles.heroImage} resizeMode="cover" />
-    </View>
-  ))}
-</ScrollView>
+        {showSkel ? (
+          <SkeletonHome width={width} pulse={pulse} />
+        ) : (
+          <>
+            {/* HERO */}
+            <View style={{paddingHorizontal:16}}>
+              <ImageBackground
+                source={{uri:HERO[heroIdx].img}}
+                style={[st.hero,{height: 220}]}
+                imageStyle={{borderRadius:R}}
+              >
+                <View style={[StyleSheet.absoluteFill,{backgroundColor:'rgba(0,0,0,0.28)',borderRadius:R}]}/>
+                <View style={st.heroBadge}>
+                  <Text style={st.heroBadgeTxt}>{HERO[heroIdx].tag}</Text>
+                </View>
+                <View style={st.heroText}>
+                  <Text style={st.heroH}>{HERO[heroIdx].title}</Text>
+                  <Text style={st.heroP}>{HERO[heroIdx].sub}</Text>
+                  <TouchableOpacity onPress={()=>open(HERO[heroIdx].link)} style={st.heroBtn}>
+                    <Text style={st.heroBtnTxt}>{HERO[heroIdx].cta}</Text>
+                    <Icon name="arrow-forward" size={14} color="#fff"/>
+                  </TouchableOpacity>
+                </View>
 
-
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
-        <View style={styles.actionGrid}>
-          {[{ label: 'Request', icon: 'hammer-outline' },
-            { label: 'Bills', icon: 'receipt-outline' },
-            { label: 'Tickets', icon: 'ticket-outline' },
-            { label: 'Dashboard', icon: 'analytics-outline' },
-            { label: 'Settings', icon: 'settings-outline' },
-            { label: 'Support', icon: 'call-outline' }].map((item, i) => (
-              <TouchableOpacity key={i} style={styles.actionBtn} onPress={() => {
-    if (item.label === 'Dashboard') {
-      navigation.navigate('OwnerDashboard');
-    } else {
-       if (item.label === 'Request') {
-      navigation.navigate('Request')
-       
-    }
-    if (item.label === 'Bills') {
-      navigation.navigate('Profile')
-    }
-    }
-  }}>
-                <Icon name={item.icon} size={26} color="#EF3A3A" />
-                <Text style={styles.actionText}>{item.label}</Text>
-              </TouchableOpacity>
-          ))}
-        </View>
-
-        <Text style={styles.sectionTitle}>Upcoming Services</Text>
-        <FlatList
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          data={carouselItems}
-          keyExtractor={(item, index) => index.toString()}
-          renderItem={({ item }) => (
-            <View style={styles.carouselCard}>
-              <Icon name="calendar-outline" size={20} color="#EF3A3A" style={{ marginBottom: 6 }} />
-              <Text style={styles.carouselText}>{item.title}</Text>
+                {/* progress near bottom */}
+                <View style={st.heroProgWrap}>
+                  <Animated.View style={[
+                    st.heroProgBar,
+                    { width: bar.interpolate({inputRange:[0,1], outputRange:['0%','100%']}) }
+                  ]}/>
+                </View>
+              </ImageBackground>
             </View>
-          )}
-          contentContainerStyle={{ paddingLeft: 4 }}
-        />
 
-        <Text style={styles.sectionTitle}>Activity Timeline</Text>
-        {activities.map((item) => (
-          <View key={item.id} style={styles.timelineItem}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Icon name="checkmark-done-circle" size={20} color="#EF3A3A" style={{ marginRight: 8 }} />
-              <Text style={styles.activityText}>{item.text}</Text>
+            {/* Quick navigation */}
+            <View style={st.quickRow}>
+              <QuickNav icon="headset-outline" label="Support" onPress={goSupport}/>
+              <QuickNav icon="storefront-outline" label="Restaurants" onPress={goRestaurants}/>
+              <QuickNav icon="play-circle-outline" label="Guide" onPress={goGuide}/>
             </View>
-            <Text style={styles.activityTime}>{item.time}</Text>
+
+            {/* Notifications / highlights */}
+            <View style={{paddingHorizontal:16, marginTop:20}}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {FEED.map(f=>(
+                  <View key={f.id} style={[
+                    st.pill,
+                    f.tone==='ok' ? {backgroundColor:'#ECFDF5', borderColor:'#D1FAE5'} : {backgroundColor:'#EFF6FF', borderColor:'#BFDBFE'}
+                  ]}>
+                    <Icon name={f.icon} size={14} color={f.tone==='ok'?C.ok:C.info}/>
+                    <Text style={st.pillTxt}>{f.txt}</Text>
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+
+            {/* Sponsored */}
+            <View style={st.sectionHdr}>
+              <Text style={st.sectionTitle}>Sponsored</Text>
+            </View>
+            <FlatList
+              horizontal
+              data={SPONSORED}
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(i)=>i.id}
+              contentContainerStyle={{ paddingHorizontal:16, paddingBottom:2 }}
+              renderItem={({item})=>(
+                <TouchableOpacity onPress={()=>open(item.link)} activeOpacity={0.9} style={[st.adCard,{ width: Math.min(320, width*0.8) }]}>
+                  <Image source={{uri:item.img}} style={st.adImg}/>
+                  <View style={st.adBottom}>
+                    <View style={st.adTag}><Text style={st.adTagTxt}>Ad</Text></View>
+                    <Text style={st.adBrand} numberOfLines={1}>{item.brand}</Text>
+                    <Text style={st.adLine} numberOfLines={1}>{item.line}</Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+            />
+
+            {/* Guides */}
+            <View style={st.sectionHdr}>
+              <Text style={st.sectionTitle}>Quick guides</Text>
+              <TouchableOpacity onPress={goGuide}><Text style={st.link}>View all</Text></TouchableOpacity>
+            </View>
+            <FlatList
+              horizontal
+              data={GUIDES}
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(i)=>i.id}
+              contentContainerStyle={{ paddingHorizontal:16 }}
+              renderItem={({item})=>(
+                <TouchableOpacity onPress={()=>open(item.link)} style={[st.guideCard,{ width: Math.min(280, width*0.72) }]}>
+                  <ImageBackground source={{uri:item.thumb}} style={st.guideImg} imageStyle={{borderTopLeftRadius:R,borderTopRightRadius:R}}>
+                    <View style={st.play}>
+                      <Icon name="play" size={14} color="#fff"/>
+                    </View>
+                  </ImageBackground>
+                  <View style={{padding:12}}>
+                    <Text style={st.guideTitle} numberOfLines={2}>{item.title}</Text>
+                    <View style={{flexDirection:'row',alignItems:'center',marginTop:6}}>
+                      <Icon name="time-outline" size={14} color={C.muted}/><Text style={st.guideMeta}>  {item.min} min</Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              )}
+            />
+
+            {/* Announcements */}
+            <View style={st.sectionHdr}>
+              <Text style={st.sectionTitle}>From KNI</Text>
+            </View>
+            <View style={{paddingHorizontal:16}}>
+              <Announcement
+                icon="rocket-outline"
+                title="Faster approvals"
+                text="Keep your restaurant profile complete to unlock same-day service."
+              />
+              <Announcement
+                icon="sparkles-outline"
+                title="New: Inventory Timeline"
+                text="Track spend & parts history across all equipment."
+              />
+            </View>
+          </>
+        )}
+      </ScrollView>
+
+      <KniBottomNav navigation={navigation} active="home" cartCount={3} notifCount={2} />
+    </SafeAreaView>
+  );
+}
+
+/* ---------------- SKELETON (STRUCTURE-MATCHED) ---------------- */
+function SkeletonHome({ width, pulse }) {
+  return (
+    <>
+      {/* HERO */}
+      <View style={{paddingHorizontal:16}}>
+        <Animated.View style={[stSK.hero, { opacity:pulse }]}>
+          <View style={stSK.heroBadge}/>
+          <View style={stSK.heroText}>
+            <View style={[stSK.lineLg,{width:'60%'}]}/>
+            <View style={[stSK.lineSm,{width:'45%', marginTop:6}]}/>
+            <View style={stSK.btnPrimary}/>
+          </View>
+          <View style={stSK.heroProg}/>
+        </Animated.View>
+      </View>
+
+      {/* Quick nav (3 tiles) */}
+      <View style={st.quickRow}>
+        {[0,1,2].map(i=>(
+          <View key={i} style={st.qItem}>
+            <Animated.View style={[stSK.qIcon, { opacity:pulse }]} />
+            <Animated.View style={[stSK.lineXs, { opacity:pulse, width:60, marginTop:6 }]} />
           </View>
         ))}
+      </View>
 
-        <View style={styles.tipContainer}>
-          <LottieView
-            source={require('../assets/images/tip.json')}
-            autoPlay loop
-            style={{ width: 50, height: 50 }}
-          />
-          <Text style={styles.tipText}>💡 Tip: Update your restaurant profile regularly for faster approvals.</Text>
-        </View>
-      </Animated.ScrollView>
+      {/* Feed pills row */}
+      <View style={{paddingHorizontal:16, marginTop:20}}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {[0,1,2].map(i=>(
+            <Animated.View key={i} style={[stSK.pill, { opacity:pulse }]} />
+          ))}
+        </ScrollView>
+      </View>
 
-      <View style={styles.footer}>
-        {[{ icon: 'home', label: 'Home', key: 'home' },
-          { icon: 'newspaper', label: 'Feed', key: 'feed' },
-          { icon: 'add-circle', label: 'Request', key: 'request' },
-          { icon: 'person', label: 'Profile', key: 'profile' }].map((item, i) => (
-            <TouchableOpacity key={i} style={styles.footerItem}>
-              <Icon
-                name={item.icon}
-                size={24}
-                color={activeTab === item.key ? '#EF3A3A' : '#999'}
-              />
-              <Text style={[styles.footerLabel, activeTab === item.key && { color: '#EF3A3A', fontWeight: '700' }]}>
-                {item.label}
-              </Text>
-            </TouchableOpacity>
+      {/* Sponsored header */}
+      <View style={st.sectionHdr}>
+        <Animated.View style={[stSK.h2, { opacity:pulse, width:140 }]} />
+      </View>
+      {/* Sponsored cards */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal:16, paddingBottom:2 }}>
+        {[0,1].map(i=>(
+          <View key={i} style={[st.adCard,{ width: Math.min(320, width*0.8) }]}>
+            <Animated.View style={[stSK.adImg, { opacity:pulse }]} />
+            <View style={st.adBottom}>
+              <View style={stSK.adTag}/>
+              <Animated.View style={[stSK.lineMd, { opacity:pulse, width:'50%', marginTop:6 }]} />
+              <Animated.View style={[stSK.lineSm, { opacity:pulse, width:'70%', marginTop:6 }]} />
+            </View>
+          </View>
+        ))}
+      </ScrollView>
+
+      {/* Guides header */}
+      <View style={st.sectionHdr}>
+        <Animated.View style={[stSK.h2, { opacity:pulse, width:160 }]} />
+        <Animated.View style={[stSK.linkSm, { opacity:pulse }]} />
+      </View>
+      {/* Guide cards */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal:16 }}>
+        {[0,1,2].map(i=>(
+          <View key={i} style={[st.guideCard,{ width: Math.min(280, width*0.72) }]}>
+            <Animated.View style={[stSK.guideImg, { opacity:pulse }]} />
+            <View style={{padding:12}}>
+              <Animated.View style={[stSK.lineMd, { opacity:pulse, width:'80%' }]} />
+              <Animated.View style={[stSK.lineXs, { opacity:pulse, width:70, marginTop:8 }]} />
+            </View>
+          </View>
+        ))}
+      </ScrollView>
+
+      {/* From KNI header */}
+      <View style={st.sectionHdr}>
+        <Animated.View style={[stSK.h2, { opacity:pulse, width:120 }]} />
+      </View>
+      {/* Announcement cards */}
+      <View style={{paddingHorizontal:16}}>
+        {[0,1].map(i=>(
+          <View key={i} style={st.annCard}>
+            <Animated.View style={[stSK.annIcon, { opacity:pulse }]} />
+            <View style={{flex:1}}>
+              <Animated.View style={[stSK.lineMd, { opacity:pulse, width:'60%' }]} />
+              <Animated.View style={[stSK.lineSm, { opacity:pulse, width:'80%', marginTop:6 }]} />
+            </View>
+          </View>
         ))}
       </View>
-    </View>
+    </>
   );
-};
+}
 
-export default Home;
+/* ---------------- SUB-COMPONENTS ---------------- */
+const QuickNav = ({ icon, label, onPress }) => (
+  <TouchableOpacity onPress={onPress} style={st.qItem} activeOpacity={0.9}>
+    <View style={st.qIcon}><Icon name={icon} size={18} color={C.primary}/></View>
+    <Text style={st.qTxt}>{label}</Text>
+  </TouchableOpacity>
+);
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#F5F7FA',
-  },
-  container: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
-  },
-  header: {
-    backgroundColor: '#F5F7FA',
-    paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  greeting: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#1D2254',
-  },
-  subGreeting: {
-    color: '#666',
-    fontSize: 14,
-    marginTop: 2,
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#eafaf1',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 20,
-  },
-  statusText: {
-    color: '#2ecc71',
-    marginLeft: 6,
-    fontWeight: '600',
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 12,
-    color: '#1D2254',
-    marginTop: 10,
-  },
-  actionGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  actionBtn: {
-    backgroundColor: '#fff',
-    width: '30%',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 15,
-    elevation: 2,
-  },
-  actionText: {
-    fontSize: 13,
-    marginTop: 6,
-    fontWeight: '600',
-    color: '#1D2254',
-  },
-  carouselCard: {
-    backgroundColor: '#fff',
-    padding: 16,
-    marginBottom:20,
-    borderRadius: 14,
-    elevation: 3,
-    marginRight: 12,
-    width: 260,
-    alignItems: 'flex-start',
-  },
-  carouselText: {
-    fontSize: 14,
-    color: '#333',
-  },
-  timelineItem: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 10,
-    elevation: 2,
-  },
-  activityText: {
-    fontSize: 14,
-    color: '#333',
-    fontWeight: '500',
-  },
-  activityTime: {
-    fontSize: 12,
-    color: '#999',
-    marginTop: 4,
-  },
-  tipContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 14,
-    alignItems: 'center',
-    elevation: 3,
-  },
-  tipText: {
-    marginLeft: 12,
-    color: '#333',
-    fontSize: 14,
-    flex: 1,
-  },
-  footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#fff',
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderColor: '#ddd',
-    elevation: 10,
-  },
-  footerItem: {
-    alignItems: 'center',
-  },
-  footerLabel: {
-    fontSize: 12,
-    color: '#1D2254',
-    marginTop: 2,
-  },
-  heroContainer: {
-    marginBottom: 25,
-  },
-  heroSlide: {
-  width: 320,
-  marginRight: 20,
-  borderRadius: 10,
-  overflow: 'hidden',
-  elevation: 3,
-},
+const Announcement = ({ icon, title, text }) => (
+  <View style={st.annCard}>
+    <View style={st.annIcon}><Icon name={icon} size={16} color={C.primary}/></View>
+    <View style={{flex:1}}>
+      <Text style={st.annTitle}>{title}</Text>
+      <Text style={st.annText}>{text}</Text>
+    </View>
+  </View>
+);
 
-heroImage: {
-  width: '100%',
-  height:200,
-  borderRadius: 10,
-},
+/* ---------------- STYLES ---------------- */
+const st = StyleSheet.create({
+  top:{ flexDirection:'row', alignItems:'center', justifyContent:'space-between', paddingHorizontal:16, paddingBottom:10 },
+  title:{ color:C.ink, fontWeight:'900', fontSize:22 },
+  hBtn:{ width:38, height:38, borderRadius:12, borderWidth:1, borderColor:'#EEF2F7', backgroundColor:'#fff', alignItems:'center', justifyContent:'center' },
 
+  // hero
+  hero:{ borderRadius:R, overflow:'hidden', marginTop:6 },
+  heroBadge:{ position:'absolute', left:12, top:12, backgroundColor:'#FFFFFFE6', paddingHorizontal:10, paddingVertical:6, borderRadius:999 },
+  heroBadgeTxt:{ color:C.ink, fontWeight:'900', fontSize:12 },
+  heroText:{ position:'absolute', left:12, right:12, bottom:40 },
+  heroH:{ color:'#fff', fontWeight:'900', fontSize:20 },
+  heroP:{ color:'#E5E7EB', marginTop:2 },
+  heroBtn:{ marginTop:10, alignSelf:'flex-start', backgroundColor:C.primary, borderRadius:12, paddingHorizontal:12, paddingVertical:8, flexDirection:'row', alignItems:'center', gap:8 },
+  heroBtnTxt:{ color:'#fff', fontWeight:'900' },
+  heroProgWrap:{ position:'absolute', left:12, right:12, bottom:10, height:3, backgroundColor:'#FFFFFF55', borderRadius:2, overflow:'hidden' },
+  heroProgBar:{ height:3, backgroundColor:'#fff' },
+
+  // quick nav
+  quickRow:{ flexDirection:'row', justifyContent:'space-between', paddingHorizontal:16, marginTop:20, gap:10 },
+  qItem:{ flex:1, backgroundColor:'#fff', borderRadius:16, borderWidth:1, borderColor:'#EEF2F7', padding:12, alignItems:'center' },
+  qIcon:{ width:36, height:36, borderRadius:12, backgroundColor:'#FFE8E8', alignItems:'center', justifyContent:'center', marginBottom:8 },
+  qTxt:{ color:C.ink, fontWeight:'900' },
+
+  // pills
+  pill:{ flexDirection:'row', alignItems:'center', gap:6, paddingHorizontal:12, paddingVertical:8, borderRadius:999, borderWidth:1, marginRight:8 },
+  pillTxt:{ color:C.ink, fontWeight:'700' },
+
+  // sections
+  sectionHdr:{ paddingHorizontal:16, marginTop:14, marginBottom:14, flexDirection:'row', alignItems:'center', justifyContent:'space-between' },
+  sectionTitle:{ color:C.ink, fontWeight:'900', fontSize:18 },
+  link:{ color:C.primary, fontWeight:'900' },
+
+  // ads
+  adCard:{ backgroundColor:'#fff', borderRadius:R, borderWidth:1, borderColor:'#EEF2F7', marginRight:12, overflow:'hidden' },
+  adImg:{ width:'100%', height:120 },
+  adBottom:{ padding:12, position:'relative' },
+  adTag:{ position:'absolute', right:10, top:-18, backgroundColor:'#111827', paddingHorizontal:8, paddingVertical:4, borderRadius:8 },
+  adTagTxt:{ color:'#fff', fontSize:10, fontWeight:'800' },
+  adBrand:{ color:C.ink, fontWeight:'900', fontSize:16, marginTop:2 },
+  adLine:{ color:C.muted, marginTop:2 },
+
+  // guides
+  guideCard:{ backgroundColor:'#fff', borderRadius:R, borderWidth:1, borderColor:'#EEF2F7', marginRight:12, overflow:'hidden' },
+  guideImg:{ width:'100%', height:130, alignItems:'center', justifyContent:'center' },
+  play:{ width:34, height:34, borderRadius:17, backgroundColor:'rgba(0,0,0,0.55)', alignItems:'center', justifyContent:'center' },
+  guideTitle:{ color:C.text, fontWeight:'900' },
+  guideMeta:{ color:C.muted, fontWeight:'700' },
+
+  // announcements
+  annCard:{ backgroundColor:'#fff', borderRadius:R, borderWidth:1, borderColor:'#EEF2F7', padding:12, flexDirection:'row', alignItems:'center', gap:10, marginTop:10 },
+  annIcon:{ width:32, height:32, borderRadius:10, backgroundColor:'#FFE8E8', alignItems:'center', justifyContent:'center' },
+  annTitle:{ color:C.ink, fontWeight:'900' },
+  annText:{ color:C.muted, marginTop:2 },
+});
+
+/* ------------ SKELETON STYLES (structure-matched) ------------ */
+const stSK = StyleSheet.create({
+  hero:{ height:220, backgroundColor:'#E9EEF5', borderRadius:R, marginTop:6, overflow:'hidden' },
+  heroBadge:{ position:'absolute', left:12, top:12, width:70, height:28, borderRadius:999, backgroundColor:'#FFFFFFE6' },
+  heroText:{ position:'absolute', left:12, right:12, bottom:40 },
+  heroProg:{ position:'absolute', left:12, right:12, bottom:10, height:3, backgroundColor:'#FFFFFF55', borderRadius:2 },
+  btnPrimary:{ marginTop:10, width:110, height:36, borderRadius:12, backgroundColor:'#F1F5F9', borderWidth:1, borderColor:'#E2E8F0' },
+
+  qIcon:{ width:36, height:36, borderRadius:12, backgroundColor:'#F1F5F9' },
+
+  pill:{ width:180, height:36, borderRadius:999, backgroundColor:'#EFF6FF', borderWidth:1, borderColor:'#BFDBFE', marginRight:8 },
+
+  h2:{ height:20, borderRadius:8, backgroundColor:'#E9EEF5' },
+  linkSm:{ width:70, height:16, borderRadius:6, backgroundColor:'#F1F5F9', borderWidth:1, borderColor:'#E2E8F0' },
+
+  adImg:{ width:'100%', height:120, backgroundColor:'#E9EEF5' },
+  adTag:{ position:'absolute', right:10, top:-18, width:28, height:18, borderRadius:6, backgroundColor:'#111827' },
+
+  guideImg:{ width:'100%', height:130, backgroundColor:'#E9EEF5' },
+
+  annIcon:{ width:32, height:32, borderRadius:10, backgroundColor:'#F1F5F9' },
+
+  // lines
+  lineLg:{ height:20, borderRadius:8, backgroundColor:'#E9EEF5' },
+  lineMd:{ height:14, borderRadius:8, backgroundColor:'#E9EEF5' },
+  lineSm:{ height:12, borderRadius:8, backgroundColor:'#E9EEF5' },
+  lineXs:{ height:10, borderRadius:8, backgroundColor:'#E9EEF5' },
 });

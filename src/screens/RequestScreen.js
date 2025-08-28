@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
+import KniBottomNav from '../components/KniBottomNav';
 
 /* ---------------- Theme ---------------- */
 const COLORS = {
@@ -34,7 +35,7 @@ const CATEGORIES = [
 ];
 
 const RAW_FEED = [
-  { id: '1', title: 'Commercial Fridge Service', category: 'Fridge',
+  { id: '1', title: 'Commercial Fridge..', category: 'Fridge',
     desc: 'Cooling issues, gas refill, thermostat faults & preventive maintenance.',
     image: 'https://s3-us-west-2.amazonaws.com/speedybrandimages/tmp_ba6cd8e2-3942-4d4b-bebc-a273130e6b29.webp',
     rating: 4.8, requests: 225 },
@@ -61,26 +62,67 @@ const RAW_FEED = [
 ];
 
 /* ---------------- Skeleton ---------------- */
+/* ---------------- Better Skeleton (mirrors real card) ---------------- */
 const SkeletonCard = ({ width }) => {
-  const pulse = useRef(new Animated.Value(0.4)).current;
+  const pulse = useRef(new Animated.Value(0.6)).current;
+
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulse, { toValue: 1, duration: 900, useNativeDriver: false }),
-        Animated.timing(pulse, { toValue: 0.4, duration: 900, useNativeDriver: false }),
+        Animated.timing(pulse, { toValue: 0.6, duration: 900, useNativeDriver: false }),
       ])
     );
     loop.start();
     return () => loop.stop();
   }, []);
+
   return (
     <View style={[styles.card, { width }]}>
-      <Animated.View style={[styles.skelImage, { opacity: pulse }]} />
-      <Animated.View style={[styles.skelLine, { width: '80%', opacity: pulse }]} />
-      <Animated.View style={[styles.skelLine, { width: '60%', opacity: pulse }]} />
+      {/* Image area (same height & radius) */}
+      <Animated.View style={[styles.skelImage, { opacity: pulse }]}>
+        {/* rating badge placeholder (same position & shape) */}
+        <View style={styles.skelBadge} />
+        {/* dim overlay placeholder (keeps same stacking) */}
+        <View style={styles.skelOverlay} />
+      </Animated.View>
+
+      {/* Body paddings same as real card */}
+      <View style={styles.skelBody}>
+        {/* Title 2 lines same spacing */}
+        <Animated.View style={[styles.skelLineTitle, { opacity: pulse }]} />
+        <Animated.View style={[styles.skelLineTitleShort, { opacity: pulse }]} />
+
+        {/* Desc 2 lines */}
+        <Animated.View style={[styles.skelLineDesc, { opacity: pulse }]} />
+        <Animated.View style={[styles.skelLineDescShort, { opacity: pulse }]} />
+
+        {/* Meta row: left chip & right requests */}
+        <View style={styles.metaRow}>
+          <View style={styles.metaLeft}>
+            <View style={styles.skelMetaIcon} />
+            <Animated.View style={[styles.skelMetaText, { opacity: pulse }]} />
+          </View>
+          <View style={styles.metaRight}>
+            <View style={styles.skelMetaIconSmall} />
+            <Animated.View style={[styles.skelMetaTextSmall, { opacity: pulse }]} />
+          </View>
+        </View>
+
+        {/* CTA row: pill left, chevron right space reserved */}
+        <View style={styles.ctaRow}>
+          <View style={styles.skelPill}>
+            <View style={styles.skelPillIcon} />
+            <Animated.View style={[styles.skelPillText, { opacity: pulse }]} />
+          </View>
+          {/* reserve chevron space so width/align match */}
+          <View style={{ width: 20, height: 20 }} />
+        </View>
+      </View>
     </View>
   );
 };
+
 
 /* ---------------- Screen ---------------- */
 export default function RequestScreen({ navigation }) {
@@ -141,7 +183,7 @@ export default function RequestScreen({ navigation }) {
         <TouchableOpacity
           style={styles.helpBtn}
           hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
-          onPress={() => navigation.navigate('Support')}
+          onPress={() => navigation.navigate('SupportCenter')}
         >
           <Icon name="chatbubbles-outline" size={18} color={COLORS.primary} />
           <Text style={styles.helpTxt}>Help</Text>
@@ -185,7 +227,7 @@ export default function RequestScreen({ navigation }) {
           keyExtractor={(i) => String(i)}
           numColumns={numColumns}
           columnWrapperStyle={{ paddingHorizontal: H_MARGIN, columnGap: GAP }}
-          contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
           ListHeaderComponent={Header}
           stickyHeaderIndices={[0]}           // ← Pinned header
           renderItem={() => <SkeletonCard width={cardW} />}
@@ -197,7 +239,7 @@ export default function RequestScreen({ navigation }) {
           keyExtractor={(i) => i.id}
           numColumns={numColumns}
           columnWrapperStyle={{ paddingHorizontal: H_MARGIN, columnGap: GAP }}
-          contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
           ListHeaderComponent={Header}
           stickyHeaderIndices={[0]}           // ← Pinned header
           renderItem={({ item }) => (
@@ -246,7 +288,7 @@ export default function RequestScreen({ navigation }) {
           data={[]}
           ListHeaderComponent={Header}
           stickyHeaderIndices={[0]}
-          contentContainerStyle={{ paddingBottom: insets.bottom + 20, flex: 1, justifyContent: 'center', alignItems: 'center' }}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 120, flex: 1, justifyContent: 'center', alignItems: 'center' }}
           ListEmptyComponent={
             <View style={styles.empty}>
               <Icon name="search-circle-outline" size={64} color="#CBD5E1" />
@@ -257,6 +299,13 @@ export default function RequestScreen({ navigation }) {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} tintColor={COLORS.primary} />}
         />
       )}
+
+      <KniBottomNav
+    navigation={navigation}
+    active="h"
+    cartCount={3}        // optional
+    notifCount={2}       // optional (I surface on Profile tab)
+  />
     </SafeAreaView>
   );
 }
@@ -330,10 +379,57 @@ const styles = StyleSheet.create({
   pill: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.primary, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
   pillText: { marginLeft: 6, color: '#fff', fontSize: 11, fontWeight: '700' },
 
-  // skeletons
-  skelImage: { width: '100%', height: 120, backgroundColor: '#E9EEF5', borderTopLeftRadius: 18, borderTopRightRadius: 18 },
-  skelLine: { height: 12, backgroundColor: '#E9EEF5', borderRadius: 6, marginTop: 10, marginHorizontal: 12 },
+  /* ---------- skeleton internals matching real layout ---------- */
+  skelBody: { paddingHorizontal: 12, paddingBottom: 12 },
 
+  // title (approx same height/spacing as two lines of 14px bold)
+  skelLineTitle: {
+    height: 14, backgroundColor: '#E9EEF5', borderRadius: 6, marginTop: 10, width: '92%',
+  },
+  skelLineTitleShort: {
+    height: 14, backgroundColor: '#E9EEF5', borderRadius: 6, marginTop: 8, width: '70%',
+  },
+
+  // description (12px two lines)
+  skelLineDesc: {
+    height: 12, backgroundColor: '#E9EEF5', borderRadius: 6, marginTop: 8, width: '95%',
+  },
+  skelLineDescShort: {
+    height: 12, backgroundColor: '#E9EEF5', borderRadius: 6, marginTop: 6, width: '75%',
+  },
+
+  // meta placeholders
+  skelMetaIcon: { width: 14, height: 14, borderRadius: 7, backgroundColor: '#E9EEF5' },
+  skelMetaText: { width: 60, height: 12, borderRadius: 6, marginLeft: 6, backgroundColor: '#E9EEF5' },
+
+  skelMetaIconSmall: { width: 14, height: 14, borderRadius: 7, backgroundColor: '#E9EEF5' },
+  skelMetaTextSmall: { width: 50, height: 12, borderRadius: 6, marginLeft: 6, backgroundColor: '#E9EEF5' },
+
+  // pill button placeholder
+  skelPill: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: '#E9EEF5',
+  },
+  skelPillIcon: { width: 14, height: 14, borderRadius: 7, backgroundColor: '#FFFFFF33' },
+  skelPillText: { width: 70, height: 12, borderRadius: 6, marginLeft: 6, backgroundColor: '#FFFFFF33' },
+
+  // image + overlay + badge placeholders (mirror real)
+  skelImage: {
+    width: '100%', height: 120, backgroundColor: '#E9EEF5',
+    borderTopLeftRadius: 18, borderTopRightRadius: 18, overflow: 'hidden',
+    justifyContent: 'flex-start',
+  },
+  skelBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#00000033',
+    width: 64, height: 24,
+    borderBottomRightRadius: 10, borderTopLeftRadius: 18,
+    marginTop: 0, // same as real badge position
+  },
+  skelOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(29,34,84,0.10)', // same tint as real overlay
+  },
   empty: { alignItems: 'center' },
   emptyTitle: { marginTop: 8, fontSize: 18, color: COLORS.ink, fontWeight: '800' },
   emptySub: { marginTop: 4, fontSize: 13, color: COLORS.muted },
