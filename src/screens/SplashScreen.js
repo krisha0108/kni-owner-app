@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, StatusBar, Animated, Dimensions
 } from 'react-native';
 import LottieView from 'lottie-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width, height } = Dimensions.get('window');
 
@@ -34,9 +35,13 @@ const SplashScreen = ({ navigation }) => {
       ).start(),
     ]).start();
 
-    const timer = setTimeout(() => {
-      navigation.replace('Onboarding');
-    }, 3000);
+const timer = setTimeout(async () => {
+   const token = await AsyncStorage.getItem('userToken');
+    if (token) {
+      navigation.replace('Home'); // Already logged in
+    } else {
+      navigation.replace('Onboarding'); // Not logged in
+    }    }, 3000);
 
     return () => clearTimeout(timer);
   }, []);
