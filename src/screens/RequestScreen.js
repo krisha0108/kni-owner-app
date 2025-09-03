@@ -6,7 +6,9 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import KniBottomNav from '../components/KniBottomNav';
+import api from '../api/client';
 
+const INDEX_PATH = '/app/products';
 /* ---------------- Theme ---------------- */
 const COLORS = {
   primary: '#EF3A3A',
@@ -19,9 +21,9 @@ const COLORS = {
   border: '#E5E7EB',
 };
 
-const H_MARGIN = 16;   // page padding left/right
-const GAP = 12;        // grid gap
-const MIN_W = 170;     // min card width (prevents too-narrow cards)
+const H_MARGIN = 16;
+const GAP = 12;
+const MIN_W = 170;
 
 /* ---------------- Data ---------------- */
 const CATEGORIES = [
@@ -34,38 +36,9 @@ const CATEGORIES = [
   { key: 'Deep Freezer', icon: 'cube' },
 ];
 
-const RAW_FEED = [
-  { id: '1', title: 'Commercial Fridge..', category: 'Fridge',
-    desc: 'Cooling issues, gas refill, thermostat faults & preventive maintenance.',
-    image: 'https://s3-us-west-2.amazonaws.com/speedybrandimages/tmp_ba6cd8e2-3942-4d4b-bebc-a273130e6b29.webp',
-    rating: 4.8, requests: 225 },
-  { id: '2', title: 'Chimney Deep Clean', category: 'Chimney',
-    desc: 'Oil baffle cleaning, suction test, motor inspection—sparkling results.',
-    image: 'https://lh7-us.googleusercontent.com/XnO7uPqhk93Z8VpWwyunmyz-B6vQXHRGShqFA_8tS2xNZR2xg90_RFTl-_QwAFSwJcYltOkAD7Y2yDuq_TKktOXFb_knhmfNdHo4jvZLAy25g1F8jtQ1NRQ9DeIWZQp8JBc6yXDcILNn4C_dWHR9k4o',
-    rating: 4.7, requests: 310 },
-  { id: '3', title: 'Combi-Oven Repair', category: 'Oven',
-    desc: 'Heating coil, PCB, steam injectors & calibration by certified pros.',
-    image: 'https://lh7-us.googleusercontent.com/XpqpI8PT6wddRnj9CFheJzaFKx-7fL5FIuT6bQLUWg2iJTozxzVJqQ16rT7V805-QB-1uzUVkZ24vdcky8-iLw4ae6iAQTQ7Gts2x7D__j30b454ttxOv1gxtkWljwDUOAZIN2V8xIf3bRqrFdf3uXU',
-    rating: 4.6, requests: 142 },
-  { id: '4', title: 'Dishwasher Service', category: 'Dishwasher',
-    desc: 'Pump / spray arm issues, hard-water scale removal & leak fixes.',
-    image: 'https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=1200&auto=format&fit=crop',
-    rating: 4.5, requests: 190 },
-  { id: '5', title: 'Gas Range Inspection', category: 'Gas Range',
-    desc: 'Ignition, burner alignment, gas leak test & performance tuning.',
-    image: 'https://fixitrightappliances.ca/wp-content/uploads/2024/04/A-busy-commercial-kitchen-repair-scene-showing-an-array-of-diverse-refrigerators-open-with-their-mechanics-visible.-Various-tools-are-scattered-around-1-1024x585.webp',
-    rating: 4.9, requests: 403 },
-  { id: '6', title: 'Deep Freezer Repair', category: 'Deep Freezer',
-    desc: 'Compressor, fan, defrost cycle & seal replacement—fast turnaround.',
-    image: 'https://fixitrightappliances.ca/wp-content/uploads/2024/04/A-detailed-depiction-of-a-commercial-refrigerator-repair-scene-in-a-wide-format.-The-image-shows-a-skilled-technician-wearing-a-uniform-and-equipped-1.webp',
-    rating: 4.7, requests: 165 },
-];
-
-/* ---------------- Skeleton ---------------- */
-/* ---------------- Better Skeleton (mirrors real card) ---------------- */
+/* ---------------- Skeleton (matches real card) ---------------- */
 const SkeletonCard = ({ width }) => {
   const pulse = useRef(new Animated.Value(0.6)).current;
-
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
@@ -75,29 +48,19 @@ const SkeletonCard = ({ width }) => {
     );
     loop.start();
     return () => loop.stop();
-  }, []);
+  }, [pulse]);
 
   return (
     <View style={[styles.card, { width }]}>
-      {/* Image area (same height & radius) */}
       <Animated.View style={[styles.skelImage, { opacity: pulse }]}>
-        {/* rating badge placeholder (same position & shape) */}
         <View style={styles.skelBadge} />
-        {/* dim overlay placeholder (keeps same stacking) */}
         <View style={styles.skelOverlay} />
       </Animated.View>
-
-      {/* Body paddings same as real card */}
       <View style={styles.skelBody}>
-        {/* Title 2 lines same spacing */}
         <Animated.View style={[styles.skelLineTitle, { opacity: pulse }]} />
         <Animated.View style={[styles.skelLineTitleShort, { opacity: pulse }]} />
-
-        {/* Desc 2 lines */}
         <Animated.View style={[styles.skelLineDesc, { opacity: pulse }]} />
         <Animated.View style={[styles.skelLineDescShort, { opacity: pulse }]} />
-
-        {/* Meta row: left chip & right requests */}
         <View style={styles.metaRow}>
           <View style={styles.metaLeft}>
             <View style={styles.skelMetaIcon} />
@@ -108,14 +71,11 @@ const SkeletonCard = ({ width }) => {
             <Animated.View style={[styles.skelMetaTextSmall, { opacity: pulse }]} />
           </View>
         </View>
-
-        {/* CTA row: pill left, chevron right space reserved */}
         <View style={styles.ctaRow}>
           <View style={styles.skelPill}>
             <View style={styles.skelPillIcon} />
             <Animated.View style={[styles.skelPillText, { opacity: pulse }]} />
           </View>
-          {/* reserve chevron space so width/align match */}
           <View style={{ width: 20, height: 20 }} />
         </View>
       </View>
@@ -123,43 +83,132 @@ const SkeletonCard = ({ width }) => {
   );
 };
 
+/* ---------------- helpers ---------------- */
+function computeGrid(width) {
+  const numColumns = Math.max(2, Math.floor((width - H_MARGIN * 2 + GAP) / (MIN_W + GAP)));
+  const cardW = (width - H_MARGIN * 2 - GAP * (numColumns - 1)) / numColumns;
+  return { numColumns, cardW };
+}
 
 /* ---------------- Screen ---------------- */
 export default function RequestScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions(); // adapts on tablets/foldables/Chromebook
+  const { width } = useWindowDimensions();
 
-  // responsive columns (keeps ~170–220px cards)
-  const numColumns = Math.max(2, Math.floor((width - H_MARGIN * 2 + GAP) / (MIN_W + GAP)));
-  const cardW = (width - H_MARGIN * 2 - GAP * (numColumns - 1)) / numColumns;
+  // ✨ Keep columns in state and bump a key ONLY when the column count changes.
+  const [{ numColumns, cardW, listKey }, setGrid] = useState(() => {
+    const g = computeGrid(width);
+    return { ...g, listKey: `grid-${g.numColumns}` };
+  });
+  useEffect(() => {
+    const g = computeGrid(width);
+    setGrid(prev =>
+      g.numColumns !== prev.numColumns
+        ? { ...g, listKey: `grid-${g.numColumns}` } // force remount
+        : { ...g, listKey: prev.listKey }           // keep same key
+    );
+  }, [width]);
 
+  // server state
+  const [items, setItems] = useState([]);
   const [query, setQuery] = useState('');
   const [activeCat, setActiveCat] = useState('All');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 700);
-    return () => clearTimeout(t);
-  }, []);
-
-  const onRefresh = () => {
-    setRefreshing(true);
+const fetchFeed = async () => {
+  const endpoint = INDEX_PATH;
+  try {
     setLoading(true);
-    setTimeout(() => { setLoading(false); setRefreshing(false); }, 900);
-  };
+    console.group('[fetchFeed]');
+    console.log('Base URL:', api?.defaults?.baseURL);
+    console.log('GET:', endpoint);
 
-  const data = useMemo(() => {
+    const res = await api.get(endpoint, { timeout: 10000 });
+    console.log('Status:', res.status, res.statusText);
+
+    const mapped = (Array.isArray(res.data) ? res.data : []).map((p, ix) => {
+      // parse images
+      let images = [];
+      if (Array.isArray(p.images)) {
+        images = p.images;
+      } else if (typeof p.images === 'string') {
+        try {
+          const j = JSON.parse(p.images);
+          if (Array.isArray(j)) images = j;
+        } catch (e) {
+          console.warn(`Item ${ix}: images JSON parse failed`, e?.message, p.images);
+        }
+      }
+
+      // parse tags (optional)
+      let tags = [];
+      if (Array.isArray(p.tags)) {
+        tags = p.tags;
+      } else if (typeof p.tags === 'string') {
+        try {
+          const j = JSON.parse(p.tags);
+          if (Array.isArray(j)) tags = j;
+        } catch (e) {
+          /* ignore */
+        }
+      }
+
+      const firstImage = images?.[0];
+      if (!firstImage) {
+        console.warn(`Item ${ix} (${p.title}) has no first image after parsing.`);
+      }
+
+      return {
+        id: String(p.id),
+        title: p.title || '',
+        category: p.category || '',
+        desc: p.description || '',
+        image: firstImage,        // now a proper http://... string
+        rating: p.rating ?? 4.8,
+        requests: p.services_count ?? 0,
+        tags,
+      };
+    });
+
+    console.log('Mapped items count:', mapped.length);
+    if (mapped.length) {
+      console.table(mapped.slice(0, 10).map(({ id, title, category, image }) => ({ id, title, category, image })));
+    }
+
+    setItems(mapped);
+    console.groupEnd();
+  } catch (e) {
+    console.group('[fetchFeed:ERROR]');
+    console.error('Message:', e?.message);
+    if (e?.response) console.error('Response data:', e.response.data);
+    console.groupEnd();
+    setItems([]);
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+  useEffect(() => { fetchFeed(); }, []);
+
+  const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return RAW_FEED.filter((it) => {
+    return items.filter((it) => {
       const byCat = activeCat === 'All' || it.category === activeCat;
       const byQuery = !q
-        || it.title.toLowerCase().includes(q)
-        || it.category.toLowerCase().includes(q)
-        || it.desc.toLowerCase().includes(q);
+        || (it.title || '').toLowerCase().includes(q)
+        || (it.category || '').toLowerCase().includes(q)
+        || (it.desc || '').toLowerCase().includes(q);
       return byCat && byQuery;
     });
-  }, [query, activeCat]);
+  }, [items, query, activeCat]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchFeed();
+    setRefreshing(false);
+  };
 
   const renderChip = ({ item }) => {
     const active = item.key === activeCat;
@@ -176,8 +225,7 @@ export default function RequestScreen({ navigation }) {
 
   /* -------- Sticky Header (Request + Search + Chips) -------- */
   const Header = useMemo(() => (
-    <View style={[styles.stickyHeader]}>
-      {/* Topbar */}
+    <View style={styles.stickyHeader}>
       <View style={styles.topbar}>
         <Text style={styles.title}>Request</Text>
         <TouchableOpacity
@@ -190,7 +238,6 @@ export default function RequestScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      {/* Search */}
       <View style={styles.searchWrap}>
         <Icon name="search" size={18} color={COLORS.muted} />
         <TextInput
@@ -206,7 +253,6 @@ export default function RequestScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      {/* Chips */}
       <FlatList
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -216,115 +262,98 @@ export default function RequestScreen({ navigation }) {
         renderItem={renderChip}
       />
     </View>
-  ), [insets.top, query, activeCat]);
+  ), [query, activeCat, navigation]);
+
+  // 🔁 Single FlatList (no conditional FlatLists). Key changes only when columns change.
+  const listData = loading
+    ? Array.from({ length: numColumns * 2 }, (_, i) => ({ __sk: i }))
+    : filtered;
+
+  const renderItem = ({ item }) => {
+    if (loading) return <SkeletonCard width={cardW} />;
+    return (
+      <TouchableOpacity
+        activeOpacity={0.9}
+        style={[styles.card, { width: cardW }]}
+        onPress={() => navigation.navigate('RequestDetail', { item })}
+      >
+        <ImageBackground source={{ uri: item.image }} style={styles.cardImage} imageStyle={styles.cardImageR}>
+          <View style={styles.badge}>
+            <Icon name="star" size={12} color="#fff" />
+            <Text style={styles.badgeText}>{item.rating ?? 0}</Text>
+          </View>
+          <View style={styles.overlay} />
+        </ImageBackground>
+
+        <View style={{ paddingHorizontal: 12, paddingBottom: 12 }}>
+          <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
+          <Text style={styles.cardDesc} numberOfLines={2}>{item.desc}</Text>
+
+          <View style={styles.metaRow}>
+            <View style={styles.metaLeft}>
+              <Icon name="pricetags-outline" size={14} color={COLORS.muted} />
+              <Text style={styles.metaText}>{item.category}</Text>
+            </View>
+            <View style={styles.metaRight}>
+              <Icon name="flash-outline" size={14} color={COLORS.primary} />
+              <Text style={[styles.metaText, { color: COLORS.primary }]}>{item.requests ?? 0} req</Text>
+            </View>
+          </View>
+
+          <View style={styles.ctaRow}>
+            <View style={styles.pill}>
+              <Icon name="shield-checkmark" size={14} color="#fff" />
+              <Text style={styles.pillText}>KNI Verified</Text>
+            </View>
+            <Icon name="chevron-forward" size={20} color={COLORS.ink} />
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.bg }} edges={['top', 'left', 'right']}>
-      {/* Grid feed (with pull-to-refresh) */}
-      {loading ? (
-        <FlatList
-          data={Array.from({ length: numColumns * 2 }, (_, i) => i)}
-          keyExtractor={(i) => String(i)}
-          numColumns={numColumns}
-          columnWrapperStyle={{ paddingHorizontal: H_MARGIN, columnGap: GAP }}
-          contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
-          ListHeaderComponent={Header}
-          stickyHeaderIndices={[0]}           // ← Pinned header
-          renderItem={() => <SkeletonCard width={cardW} />}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} tintColor={COLORS.primary} />}
-        />
-      ) : data.length ? (
-        <FlatList
-          data={data}
-          keyExtractor={(i) => i.id}
-          numColumns={numColumns}
-          columnWrapperStyle={{ paddingHorizontal: H_MARGIN, columnGap: GAP }}
-          contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
-          ListHeaderComponent={Header}
-          stickyHeaderIndices={[0]}           // ← Pinned header
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              activeOpacity={0.9}
-              style={[styles.card, { width: cardW }]}
-              onPress={() => navigation.navigate('RequestDetail', { item })}
-            >
-              <ImageBackground source={{ uri: item.image }} style={styles.cardImage} imageStyle={styles.cardImageR}>
-                <View style={styles.badge}>
-                  <Icon name="star" size={12} color="#fff" />
-                  <Text style={styles.badgeText}>{item.rating}</Text>
-                </View>
-                <View style={styles.overlay} />
-              </ImageBackground>
-
-              <View style={{ paddingHorizontal: 12, paddingBottom: 12 }}>
-                <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
-                <Text style={styles.cardDesc} numberOfLines={2}>{item.desc}</Text>
-
-                <View style={styles.metaRow}>
-                  <View style={styles.metaLeft}>
-                    <Icon name="pricetags-outline" size={14} color={COLORS.muted} />
-                    <Text style={styles.metaText}>{item.category}</Text>
-                  </View>
-                  <View style={styles.metaRight}>
-                    <Icon name="flash-outline" size={14} color={COLORS.primary} />
-                    <Text style={[styles.metaText, { color: COLORS.primary }]}>{item.requests} req</Text>
-                  </View>
-                </View>
-
-                <View style={styles.ctaRow}>
-                  <View style={styles.pill}>
-                    <Icon name="shield-checkmark" size={14} color="#fff" />
-                    <Text style={styles.pillText}>KNI Verified</Text>
-                  </View>
-                  <Icon name="chevron-forward" size={20} color={COLORS.ink} />
-                </View>
-              </View>
-            </TouchableOpacity>
-          )}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} tintColor={COLORS.primary} />}
-        />
-      ) : (
-        <FlatList
-          data={[]}
-          ListHeaderComponent={Header}
-          stickyHeaderIndices={[0]}
-          contentContainerStyle={{ paddingBottom: insets.bottom + 120, flex: 1, justifyContent: 'center', alignItems: 'center' }}
-          ListEmptyComponent={
-            <View style={styles.empty}>
+      <FlatList
+        key={listKey} // 👈 forces a fresh mount when numColumns changes
+        data={listData}
+        keyExtractor={(it, idx) => (loading ? `sk-${idx}` : String(it.id))}
+        numColumns={numColumns}
+        columnWrapperStyle={{ paddingHorizontal: H_MARGIN, columnGap: GAP }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
+        ListHeaderComponent={Header}
+        stickyHeaderIndices={[0]}
+        renderItem={renderItem}
+        ListEmptyComponent={
+          !loading && (
+            <View style={[styles.empty, { paddingTop: 32 }]}>
               <Icon name="search-circle-outline" size={64} color="#CBD5E1" />
               <Text style={styles.emptyTitle}>No results</Text>
               <Text style={styles.emptySub}>Try a different keyword or category.</Text>
             </View>
-          }
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} tintColor={COLORS.primary} />}
-        />
-      )}
+          )
+        }
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[COLORS.primary]}
+            tintColor={COLORS.primary}
+          />
+        }
+      />
 
-      <KniBottomNav
-    navigation={navigation}
-    active="h"
-    cartCount={3}        // optional
-    notifCount={2}       // optional (I surface on Profile tab)
-  />
+      <KniBottomNav navigation={navigation} active="h" cartCount={3} notifCount={2} />
     </SafeAreaView>
   );
 }
 
 /* ---------------- Styles ---------------- */
 const styles = StyleSheet.create({
-  /* sticky wrapper: needs bg, border & elevation so it feels pinned */
-  stickyHeader: {
-    backgroundColor: COLORS.bg,
-    zIndex: 5,
-  
-  },
-
+  stickyHeader: { backgroundColor: COLORS.bg, zIndex: 5 },
   topbar: {
-    paddingHorizontal: 16,
-    paddingBottom: 6,                 // compact so title sits a bit higher
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    paddingHorizontal: 16, paddingBottom: 6,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
   },
   title: { fontSize: 28, fontWeight: '800', color: COLORS.ink },
 
@@ -379,41 +408,19 @@ const styles = StyleSheet.create({
   pill: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.primary, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
   pillText: { marginLeft: 6, color: '#fff', fontSize: 11, fontWeight: '700' },
 
-  /* ---------- skeleton internals matching real layout ---------- */
+  /* skeleton */
   skelBody: { paddingHorizontal: 12, paddingBottom: 12 },
-
-  // title (approx same height/spacing as two lines of 14px bold)
-  skelLineTitle: {
-    height: 14, backgroundColor: '#E9EEF5', borderRadius: 6, marginTop: 10, width: '92%',
-  },
-  skelLineTitleShort: {
-    height: 14, backgroundColor: '#E9EEF5', borderRadius: 6, marginTop: 8, width: '70%',
-  },
-
-  // description (12px two lines)
-  skelLineDesc: {
-    height: 12, backgroundColor: '#E9EEF5', borderRadius: 6, marginTop: 8, width: '95%',
-  },
-  skelLineDescShort: {
-    height: 12, backgroundColor: '#E9EEF5', borderRadius: 6, marginTop: 6, width: '75%',
-  },
-
-  // meta placeholders
+  skelLineTitle: { height: 14, backgroundColor: '#E9EEF5', borderRadius: 6, marginTop: 10, width: '92%' },
+  skelLineTitleShort: { height: 14, backgroundColor: '#E9EEF5', borderRadius: 6, marginTop: 8, width: '70%' },
+  skelLineDesc: { height: 12, backgroundColor: '#E9EEF5', borderRadius: 6, marginTop: 8, width: '95%' },
+  skelLineDescShort: { height: 12, backgroundColor: '#E9EEF5', borderRadius: 6, marginTop: 6, width: '75%' },
   skelMetaIcon: { width: 14, height: 14, borderRadius: 7, backgroundColor: '#E9EEF5' },
   skelMetaText: { width: 60, height: 12, borderRadius: 6, marginLeft: 6, backgroundColor: '#E9EEF5' },
-
   skelMetaIconSmall: { width: 14, height: 14, borderRadius: 7, backgroundColor: '#E9EEF5' },
   skelMetaTextSmall: { width: 50, height: 12, borderRadius: 6, marginLeft: 6, backgroundColor: '#E9EEF5' },
-
-  // pill button placeholder
-  skelPill: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: '#E9EEF5',
-  },
+  skelPill: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: '#E9EEF5' },
   skelPillIcon: { width: 14, height: 14, borderRadius: 7, backgroundColor: '#FFFFFF33' },
   skelPillText: { width: 70, height: 12, borderRadius: 6, marginLeft: 6, backgroundColor: '#FFFFFF33' },
-
-  // image + overlay + badge placeholders (mirror real)
   skelImage: {
     width: '100%', height: 120, backgroundColor: '#E9EEF5',
     borderTopLeftRadius: 18, borderTopRightRadius: 18, overflow: 'hidden',
@@ -424,12 +431,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#00000033',
     width: 64, height: 24,
     borderBottomRightRadius: 10, borderTopLeftRadius: 18,
-    marginTop: 0, // same as real badge position
+    marginTop: 0,
   },
-  skelOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(29,34,84,0.10)', // same tint as real overlay
-  },
+  skelOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(29,34,84,0.10)' },
+
   empty: { alignItems: 'center' },
   emptyTitle: { marginTop: 8, fontSize: 18, color: COLORS.ink, fontWeight: '800' },
   emptySub: { marginTop: 4, fontSize: 13, color: COLORS.muted },

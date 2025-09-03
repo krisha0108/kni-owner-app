@@ -7,6 +7,9 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import KniBottomNav from '../components/KniBottomNav';
+import auth from '@react-native-firebase/auth';
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /* ===== THEME ===== */
 const C = {
@@ -111,12 +114,47 @@ const SkelBox = ({w='100%', h=16, r=12, style}) => (
 );
 
 /* ===== SCREEN ===== */
-export default function ProfileScreen(navigation) {
+export default function ProfileScreen({navigation}) {
   const insets = useSafeAreaInsets();
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+const handleLogout = async () => {
+    try {
+    const provider = await AsyncStorage.getItem('authProvider');
 
+    if (provider === 'google') {
+      // Best-effort Google + Firebase sign-out
+      try { await GoogleSignin.revokeAccess(); } catch (_) {}
+      try { await GoogleSignin.signOut(); } catch (_) {}
+      try { await auth().signOut(); } catch (_) {}
+    } else {
+      // Password / unknown providers: nothing special to do with Firebase/Google
+    }
+  } catch (e) {
+    console.log('[logout] provider branch error:', e?.message);
+  } finally {
+    // Clear all local app auth state regardless of the above succeeding
+    await AsyncStorage.multiRemove([
+      'authProvider',
+      'APP_TOKEN',
+      'userToken',
+      'ownerToken',
+      'ownerData',
+      'ownerId',
+    ]);
+
+    // Remove auth header from axios clients
+    try { delete api.defaults.headers.common.Authorization; } catch (_) {}
+    try { delete axios.defaults.headers.common.Authorization; } catch (_) {}
+
+    // Hard reset navigation to Login
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'RestaurantLogin' }],
+    });
+  }
+  };
   useEffect(()=>{
     const t = setTimeout(()=>setLoading(false), 1200);
     return ()=> clearTimeout(t);
@@ -407,6 +445,13 @@ export default function ProfileScreen(navigation) {
             ))}
           </ScrollView>
         )}
+        <View style={st.logoutContainer}>
+        <TouchableOpacity style={st.logoutButton} onPress={handleLogout}>
+          <Icon name="log-out-outline" size={20} color="#EF3A3A" />
+          <Text style={st.logoutText}>Logout</Text>
+        </TouchableOpacity>
+        <Icon name="chevron-forward" size={20} color="#EF3A3A" />
+      </View>
       </ScrollView>
 
       <KniBottomNav
@@ -488,7 +533,29 @@ const st = StyleSheet.create({
   viewMoreBox:{ alignItems:'center', justifyContent:'center', borderWidth:2, borderStyle:'dashed', borderColor:'#CBD5E1',
     paddingVertical:26, paddingHorizontal:18, borderRadius:16, backgroundColor:'#FFFFFFF2' },
   viewMoreTxt:{ marginTop:8, fontWeight:'900', color:C.ink, fontSize:16 },
-
+logoutContainer: {
+    backgroundColor: '#ffffffff', // Grey background
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginHorizontal:15,
+    marginTop: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth:1, borderColor:'#EEF2F7',
+    shadowColor:'#707070ff', shadowOpacity:0.06, shadowRadius:2, elevation:2
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  logoutText: {
+    marginLeft: 10,
+    fontSize: 16,
+    color: '#EF3A3A',
+    fontWeight: 'bold',
+  },
   // reviews – pills
   revPill:{ width: W*0.7, backgroundColor:'#FFF', borderRadius:16, borderWidth:1, borderColor:'#EEF2F7', padding:12,
     shadowColor:'#000', shadowOpacity:0.04, shadowRadius:6, elevation:2 },

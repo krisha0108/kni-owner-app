@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "851628336447",
+    "project_id": "kni-app-52e57",
+    "storage_bucket": "kni-app-52e57.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:851628336447:android:11b29208a0653185b25f8a",
+        "android_client_info": {
+          "package_name": "com.kniapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "851628336447-431m4j1logr68f5idetqp3cv27mvs48i.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.kniapp",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "851628336447-uccg7n0mbg4g2mlvb5g8nr9r55s4oje2.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDRObQ4v6tfY21PVkLBx5ED0fk5NEMX_FY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "851628336447-uccg7n0mbg4g2mlvb5g8nr9r55s4oje2.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
