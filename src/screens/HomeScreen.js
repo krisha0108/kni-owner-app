@@ -3,11 +3,21 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   View, Text, StyleSheet, Image, ImageBackground, TouchableOpacity,
   ScrollView, FlatList, Animated, Easing, RefreshControl, Linking,
-  useWindowDimensions
+  useWindowDimensions,Alert
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import KniBottomNav from '../components/KniBottomNav';
+// HomePremium.js
+import { api } from '../api/client';
+const ION_GLYPHS = (Icon.getRawGlyphMap?.() ?? {});
+const hasIonicon = (name) => !!name && Object.prototype.hasOwnProperty.call(ION_GLYPHS, name);
+const TONE_ICON = {
+  ok:     'shield-checkmark-outline',
+  info:   'information-circle-outline',
+  warn:   'alert-circle-outline',
+  danger: 'alert-outline',
+};
 
 /* ---------------- THEME ---------------- */
 const C = {
@@ -17,14 +27,7 @@ const C = {
 const R = 20;
 
 /* ---------------- DEMO CONTENT ---------------- */
-const HERO = [
-  { id:'h1', img:'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=80&w=1600&auto=format&fit=crop',
-    tag:'New', title:'KNI Partner Program', sub:'Earn more with priority jobs.', cta:'Know more', link:'https://kniexample.com/partners' },
-  { id:'h2', img:'https://prd-webrepository.tomorrow.city/images/pnliwdxhy0tx/rAZeuMrD6IPLVV0Xe91zy/5345a43a55c0c5dd595ca39c2a0f3dcb/smart-ticketing-23.jpg',
-    tag:'Feature', title:'Smart Tickets', sub:'Auto-assigning & live ETA.', cta:'See how', link:'https://kniexample.com/features' },
-  { id:'h3', img:'https://media.istockphoto.com/id/1071461664/photo/having-a-tour-through-the-city-streets.jpg?s=612x612&w=0&k=20&c=nlr914eKeQkYVpv7UgKCGU1oWLd97eRCi5e3jRggEhw=',
-    tag:'Guide', title:'Kitchen deep-clean checklist', sub:'2-min video for busy owners.', cta:'Watch', link:'https://youtu.be/dQw4w9WgXcQ' },
-];
+
 
 const SPONSORED = [
   { id:'s1', brand:'Transrentals', img:'https://www.spinny.com/blog/wp-content/uploads/2024/09/videoframe_0.webp',
@@ -35,17 +38,6 @@ const SPONSORED = [
     line:'Restaurant Solution', link:'https://kitchennetworkinternational.com/' },
 ];
 
-const GUIDES = [
-  { id:'g1', thumb:'https://img.freepik.com/free-vector/group-tourists-travelling-with-guide-holding-flag-flat-illustration_74855-18752.jpg?semt=ais_hybrid&w=740&q=80', title:'How to raise a perfect service request', min:2, link:'https://youtu.be/FcywwLSXJDs?si=7zIO295TftZSOq_x' },
-  { id:'g2', thumb:'https://www.launch-marketing.com/wp-content/uploads/2020/08/GettyImages-1140693058-1024x655.jpg', title:'Preventive care: fridge & deep freezer', min:3, link:'https://youtu.be/p_eq98EINOI?si=OLTusNTYI2XkcizY' },
-  { id:'g3', thumb:'https://orioly.com/wp-content/uploads/2016/12/qualities-of-a-good-tour-guide-cover-illustration.png', title:'KNI billing & GST tips', min:1, link:'https://youtu.be/uBoijwzuY5s?si=QExUV1Y44Mt4iYtC' },
-];
-
-const FEED = [
-  { id:'n1', icon:'construct-outline', txt:'2 tickets assigned today', tone:'ok' },
-  { id:'n2', icon:'information-circle-outline', txt:'New: real-time technician ETA', tone:'info' },
-  { id:'n3', icon:'shield-checkmark-outline', txt:'KNI Verified benefits updated', tone:'ok' },
-];
 
 /* ---------------- HELPERS ---------------- */
 const open = async (url)=>{ try{ await Linking.openURL(url);}catch{} };
@@ -59,6 +51,73 @@ export default function HomePremium({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const showSkel = loading || refreshing;
+const [banners, setBanners] = useState([]); // each: {id,title,subtitle,description,badge,cta_text,cta_link,image_url}
+  const [heroIdx, setHeroIdx] = useState(0);
+  const [guides, setGuides] = useState([]);
+const [feed, setFeed] = useState([]); // [{ id, txt, tone, icon }]
+
+const fetchFeed = useCallback(async () => {
+  try {
+    const { data } = await api.get('/app_api/feeds', { params: { per_page: 10 } });
+    const list = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
+    setFeed(list.map((f) => {
+      const tone = String(f.tone || 'info').toLowerCase();
+      const safeTone = ['ok','info','warn','danger'].includes(tone) ? tone : 'info';
+      const iconFromApi = (f.icon || '').trim();
+      const icon = hasIonicon(iconFromApi) ? iconFromApi : TONE_ICON[safeTone];
+      return { id: String(f.id), txt: f.txt, tone: safeTone, icon };
+    }));
+  } catch (e) {
+    console.error('Feed error', e);
+  }
+}, []);// GUIDES
+const fetchGuides = useCallback(async () => {
+  try {
+    const { data } = await api.get('/app_api/guides', { params: { per_page: 10 } });
+     console.log('[Guides] Raw response:', JSON.stringify(data, null, 2));
+    const list = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
+    
+    setGuides(list.map(g => ({
+      id: String(g.id),
+      thumb: g.thumb_url,
+      title: g.title,
+      min: Number(g.minutes),
+      link: g.link,
+    })));
+  } catch (e) {
+    console.error('Guides error', e);
+    Alert.alert('Error', 'Unable to load guides right now.');
+  }
+}, []);// BANNERS
+useEffect(() => {
+  fetchGuides();
+  fetchFeed();
+}, [fetchGuides]);
+const fetchBanners = useCallback(async () => {
+  try {
+    const { data } = await api.get('/app_api/banners', {
+      params: { per_page: 10, status: 'published' }
+    });
+    const list = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []);
+    const published = list
+      .filter(b => (b.status || '').toLowerCase() === 'published')
+      .sort((a, b) => (Number(a.sort_order) || 9999) - (Number(b.sort_order) || 9999));
+    setBanners(published);
+    setHeroIdx(0);
+  } catch (e) {
+    console.error('Banner load error', e);
+    Alert.alert('Error', 'Unable to load banners right now.');
+  }
+}, []);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      await fetchBanners();
+      // keep your tiny initial content delay for skeleton feel
+      setTimeout(() => setLoading(false), 400);
+    })();
+  }, [fetchBanners]);
 
   const pulse = useRef(new Animated.Value(0.5)).current;
   useEffect(()=>{
@@ -69,37 +128,44 @@ export default function HomePremium({ navigation }) {
     ]));
     loop.start(); return ()=>{ clearTimeout(t); loop.stop(); };
   },[]);
-  const onRefresh = ()=>{
+const onRefresh = useCallback(() => {
     setRefreshing(true);
-    setLoading(true);
-    setTimeout(()=>{ setRefreshing(false); setLoading(false); }, 900);
-  };
+    (async () => {
+      await fetchBanners();
+      await fetchFeed();
+      setTimeout(() => setRefreshing(false), 300);
+    })();
+  }, [fetchBanners, fetchFeed]);
+
 
   /* hero “story” */
-  const [heroIdx, setHeroIdx] = useState(0);
   const bar = useRef(new Animated.Value(0)).current;
   const DURATION = 10000;
 
-  const cycle = useCallback(()=>{
-    bar.setValue(0);
-    Animated.timing(bar, { toValue:1, duration:DURATION, easing:Easing.linear, useNativeDriver:false })
-      .start(({finished})=>{
-        if(!finished) return;
-        setHeroIdx(i => (i+1)%HERO.length);
-      });
-  },[]);
-
+  const cycle = useCallback(() => {
+  if (!banners.length) return;                       // guard
+  bar.setValue(0);
+  Animated.timing(bar, {
+    toValue: 1,
+    duration: DURATION,
+    easing: Easing.linear,
+    useNativeDriver: false,
+  }).start(({ finished }) => {
+    if (!finished) return;
+    setHeroIdx(i => (i + 1) % banners.length);       // use banners length
+  });
+}, [banners.length, bar]);
   // start/stop progress only when not showing skeleton
-  useEffect(()=>{
-    bar.stopAnimation();
-    if (!showSkel) cycle();
-    return ()=>bar.stopAnimation();
-  },[heroIdx, showSkel, cycle]);
+useEffect(() => {
+  bar.stopAnimation();
+  if (!showSkel && banners.length) cycle();          // only when data exists
+  return () => bar.stopAnimation();
+}, [heroIdx, showSkel, cycle, banners.length, bar]);
 
   /* quick navs */
   const goSupport     = ()=> navigation.navigate?.('SupportCenter');
   const goRestaurants = ()=> navigation.navigate?.('Restaurants');
-  const goGuide       = ()=> open(GUIDES[0].link);
+  const goGuide       = ()=> open(guides?.[0]?.link);
 
   /* ----------- RENDER ----------- */
   return (
@@ -129,34 +195,48 @@ export default function HomePremium({ navigation }) {
         ) : (
           <>
             {/* HERO */}
-            <View style={{paddingHorizontal:16}}>
-              <ImageBackground
-                source={{uri:HERO[heroIdx].img}}
-                style={[st.hero,{height: 220}]}
-                imageStyle={{borderRadius:R}}
-              >
-                <View style={[StyleSheet.absoluteFill,{backgroundColor:'rgba(0,0,0,0.28)',borderRadius:R}]}/>
-                <View style={st.heroBadge}>
-                  <Text style={st.heroBadgeTxt}>{HERO[heroIdx].tag}</Text>
-                </View>
-                <View style={st.heroText}>
-                  <Text style={st.heroH}>{HERO[heroIdx].title}</Text>
-                  <Text style={st.heroP}>{HERO[heroIdx].sub}</Text>
-                  <TouchableOpacity onPress={()=>open(HERO[heroIdx].link)} style={st.heroBtn}>
-                    <Text style={st.heroBtnTxt}>{HERO[heroIdx].cta}</Text>
-                    <Icon name="arrow-forward" size={14} color="#fff"/>
-                  </TouchableOpacity>
-                </View>
-
-                {/* progress near bottom */}
-                <View style={st.heroProgWrap}>
-                  <Animated.View style={[
-                    st.heroProgBar,
-                    { width: bar.interpolate({inputRange:[0,1], outputRange:['0%','100%']}) }
-                  ]}/>
-                </View>
-              </ImageBackground>
-            </View>
+          <View style={{paddingHorizontal:16}}>
+  {banners.length ? (
+    <ImageBackground
+      source={{ uri: banners[heroIdx]?.image_url }}
+      style={[st.hero,{height: 220}]}
+      imageStyle={{borderRadius:R}}
+    >
+      <View style={[StyleSheet.absoluteFill,{backgroundColor:'rgba(0,0,0,0.28)',borderRadius:R}]}/>
+      {/* Badge (server: banner.badge) */}
+      {banners[heroIdx]?.badge ? (
+        <View style={st.heroBadge}>
+          <Text style={st.heroBadgeTxt}>{banners[heroIdx].badge}</Text>
+        </View>
+      ) : null}
+      {/* Title / subtitle / CTA */}
+      <View style={st.heroText}>
+        <Text style={st.heroH} numberOfLines={2}>{banners[heroIdx]?.title ?? ''}</Text>
+        {!!banners[heroIdx]?.subtitle && (
+          <Text style={st.heroP} numberOfLines={2}>{banners[heroIdx].subtitle}</Text>
+        )}
+        {!!banners[heroIdx]?.cta_text && !!banners[heroIdx]?.cta_link && (
+          <TouchableOpacity onPress={()=>open(banners[heroIdx].cta_link)} style={st.heroBtn}>
+            <Text style={st.heroBtnTxt}>{banners[heroIdx].cta_text}</Text>
+            <Icon name="arrow-forward" size={14} color="#fff"/>
+          </TouchableOpacity>
+        )}
+      </View>
+      {/* progress near bottom */}
+      <View style={st.heroProgWrap}>
+        <Animated.View style={[
+          st.heroProgBar,
+          { width: bar.interpolate({inputRange:[0,1], outputRange:['0%','100%']}) }
+        ]}/>
+      </View>
+    </ImageBackground>
+  ) : (
+    // Fallback if no banners returned: render a minimal placeholder
+    <View style={[st.hero,{height:220, backgroundColor:'#E9EEF5', alignItems:'center', justifyContent:'center'}]}>
+      <Text style={{color:C.muted,fontWeight:'700'}}>No banners yet</Text>
+    </View>
+  )}
+</View>
 
             {/* Quick navigation */}
             <View style={st.quickRow}>
@@ -168,15 +248,31 @@ export default function HomePremium({ navigation }) {
             {/* Notifications / highlights */}
             <View style={{paddingHorizontal:16, marginTop:20}}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                {FEED.map(f=>(
-                  <View key={f.id} style={[
-                    st.pill,
-                    f.tone==='ok' ? {backgroundColor:'#ECFDF5', borderColor:'#D1FAE5'} : {backgroundColor:'#EFF6FF', borderColor:'#BFDBFE'}
-                  ]}>
-                    <Icon name={f.icon} size={14} color={f.tone==='ok'?C.ok:C.info}/>
-                    <Text style={st.pillTxt}>{f.txt}</Text>
-                  </View>
-                ))}
+              {feed.map(f=>(
+  <View
+    key={f.id}
+    style={[
+      st.pill,
+      f.tone==='ok'     ? { backgroundColor:'#ECFDF5', borderColor:'#D1FAE5' } :
+      f.tone==='warn'   ? { backgroundColor:'#FFFBEB', borderColor:'#FDE68A' } :
+      f.tone==='danger' ? { backgroundColor:'#FEF2F2', borderColor:'#FECACA' } :
+                          { backgroundColor:'#EFF6FF', borderColor:'#BFDBFE' } // info
+    ]}
+  >
+    <Icon
+      name={f.icon}
+      size={14}
+      color={
+        f.tone==='ok'     ? C.ok :
+        f.tone==='warn'   ? '#F59E0B' :
+        f.tone==='danger' ? '#EF4444' :
+                            C.info
+      }
+    />
+    <Text style={st.pillTxt}>{f.txt}</Text>
+  </View>
+))}
+
               </ScrollView>
             </View>
 
@@ -209,24 +305,23 @@ export default function HomePremium({ navigation }) {
             </View>
             <FlatList
               horizontal
-              data={GUIDES}
+              data={guides}
               showsHorizontalScrollIndicator={false}
               keyExtractor={(i)=>i.id}
               contentContainerStyle={{ paddingHorizontal:16 }}
               renderItem={({item})=>(
-                <TouchableOpacity onPress={()=>open(item.link)} style={[st.guideCard,{ width: Math.min(280, width*0.72) }]}>
-                  <ImageBackground source={{uri:item.thumb}} style={st.guideImg} imageStyle={{borderTopLeftRadius:R,borderTopRightRadius:R}}>
-                    <View style={st.play}>
-                      <Icon name="play" size={14} color="#fff"/>
-                    </View>
-                  </ImageBackground>
-                  <View style={{padding:12}}>
-                    <Text style={st.guideTitle} numberOfLines={2}>{item.title}</Text>
-                    <View style={{flexDirection:'row',alignItems:'center',marginTop:6}}>
-                      <Icon name="time-outline" size={14} color={C.muted}/><Text style={st.guideMeta}>  {item.min} min</Text>
-                    </View>
-                  </View>
-                </TouchableOpacity>
+              <TouchableOpacity onPress={()=>open(item.link)} style={[st.guideCard,{ width: Math.min(280, width*0.72) }]}>
+      <ImageBackground source={{uri:item.thumb}} style={st.guideImg} imageStyle={{borderTopLeftRadius:R,borderTopRightRadius:R}}>
+        <View style={st.play}><Icon name="play" size={14} color="#fff"/></View>
+      </ImageBackground>
+      <View style={{padding:12}}>
+        <Text style={st.guideTitle} numberOfLines={2}>{item.title}</Text>
+        <View style={{flexDirection:'row',alignItems:'center',marginTop:6}}>
+          <Icon name="time-outline" size={14} color={C.muted}/>
+          <Text style={st.guideMeta}>  {item.min} min</Text>
+        </View>
+      </View>
+    </TouchableOpacity>
               )}
             />
 

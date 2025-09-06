@@ -9,7 +9,10 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import KniBottomNav from '../components/KniBottomNav';
 import auth from '@react-native-firebase/auth';
 import axios from 'axios';
+import { api } from '../api/client';
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 /* ===== THEME ===== */
 const C = {
@@ -19,45 +22,7 @@ const C = {
 const R = 20;
 const { width: W } = Dimensions.get('window');
 
-/* ===== DEMO DATA ===== */
-const user = {
-  name: 'Saurav',
-  email: 'saurav@kni.com',
-  phone: '+91-8347122756',
-  fssaiNo: '10718004001234',
-  fssaiCertUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-  hotelsCount: 6,
-  referral: 'KNI-SAURAV-94',
-  requests: 142,
-  rating: 4.8,
-  cover: 'https://images.unsplash.com/photo-1496412705862-e0088f16f791?q=80&w=1600&auto=format&fit=crop'
-};
 
-const hotelsPreview = [
-  {
-    id:'h1',
-    name:'Spice Hub',
-    email:'manager@spicehub.in',
-    address:'SG Highway, Ahmedabad',
-    rating:4.6,
-    desc:'Modern Indian kitchen with 600L cold room.',
-    photo:'https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/f6/54/90/facade.jpg?w=1200&h=-1&s=1'
-  },
-  {
-    id:'h2',
-    name:'Café Verde',
-    email:'hello@cafeverde.co',
-    address:'Law Garden, Ahmedabad',
-    rating:4.4,
-    desc:'Cafe & bakery; high-traffic brunch spot.',
-    photo:'https://lux-life.digital/wp-content/uploads/2019/09/turkish-hotel.jpg'
-  },
-];
-const reviews = [
-  { id:'r1', from:'Rahul S. (Tech)', stars:5, text:'Always keeps equipment logs ready. Smooth visit.' },
-  { id:'r2', from:'Mehul K. (Tech)', stars:4, text:'Prompt approvals and clear instructions.' },
-  { id:'r3', from:'Sana P. (Tech)', stars:5, text:'Great coordination with staff, zero delays.' },
-];
 
 /* ===== HELPERS ===== */
 const Stars = ({value=0,size=12})=>(
@@ -116,18 +81,22 @@ const SkelBox = ({w='100%', h=16, r=12, style}) => (
 /* ===== SCREEN ===== */
 export default function ProfileScreen({navigation}) {
   const insets = useSafeAreaInsets();
-
+const [user, setUser] = useState(null);
+const [hotels, setHotels] = useState([]);
+const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 const handleLogout = async () => {
     try {
     const provider = await AsyncStorage.getItem('authProvider');
+    console.log('[logout] provider:', provider);
 
     if (provider === 'google') {
       // Best-effort Google + Firebase sign-out
-      try { await GoogleSignin.revokeAccess(); } catch (_) {}
-      try { await GoogleSignin.signOut(); } catch (_) {}
-      try { await auth().signOut(); } catch (_) {}
+      try { await auth().signOut(); } catch (e) { console.log('[logout] firebase signOut err:', e?.message); }
+    try { await GoogleSignin.signOut(); } catch (e) { console.log('[logout] google signOut err:', e?.message); }
+    try { await GoogleSignin.revokeAccess(); } catch (e) { console.log('[logout] revokeAccess err:', e?.message); }
+    console.log('[logout] google signout done');
     } else {
       // Password / unknown providers: nothing special to do with Firebase/Google
     }
@@ -142,6 +111,10 @@ const handleLogout = async () => {
       'ownerToken',
       'ownerData',
       'ownerId',
+      'token',
+      'user',
+
+
     ]);
 
     // Remove auth header from axios clients
@@ -155,29 +128,139 @@ const handleLogout = async () => {
     });
   }
   };
-  useEffect(()=>{
-    const t = setTimeout(()=>setLoading(false), 1200);
-    return ()=> clearTimeout(t);
-  },[]);
+useEffect(() => {
+    (async () => {
+      try {
+        setLoading(true);
+       const res = await api.get('/restaurants/profile'); // baseURL .../api/app
+        console.log('Profile API raw response:', res);
+      const payload = res.data;
+console.log('Profile API payload:', payload);
+       setUser({
+        name: payload?.name ?? 'User',
+        email: payload?.email ?? '-',
+        phone: payload?.phone ?? '-',
+        cover:
+          payload?.cover ??
+          'https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?q=80&w=1600&auto=format&fit=crop',
+        fssaiNo: payload?.restaurants?.[0]?.fssai_number ?? '—',
+        fssaiCertUrl: payload?.restaurants?.[0]?.fssai_certificate_url ?? '',
+        referral: payload?.referral_code ?? 'KNI-REF-0001',
+        hotelsCount: payload?.stats?.hotels_count ?? 0,
+        requests: payload?.stats?.requests_count ?? 0,
+        rating: Number(payload?.rating ?? 0),
+      });
+       setHotels(
+        (payload?.restaurants ?? []).map(r => ({
+          id: String(r.id),
+          name: r.hotel_name,
+          address: r.address,
+          rating: r.rating ?? 0,
+          photo: r.photo ?? null,
+          fssaiNo: r.fssai_number,
+          fssaiCertUrl: r.fssai_certificate_url,
+        }))
+      ); // replace with API mapping when available
+        // Reviews (only if you add them to the API)
+      setReviews(
+        (payload?.reviews ?? []).map(rv => ({
+          id: String(rv.id),
+          from: rv.author_name ?? 'Anonymous',
+          text: rv.text ?? '',
+          stars: rv.stars ?? 0,
+        }))
+      );
+    } catch (e) {
+      console.log('Profile fetch error:', e?.response?.data || e?.message);
+      Alert.alert('Error', 'Unable to load your profile.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  })();
+}, []);
 
-  const onRefresh=()=>{
-    setRefreshing(true); setLoading(true);
-    setTimeout(()=>{ setRefreshing(false); setLoading(false); }, 900);
-  };
 
-  const viewPDF = async ()=>{
+ const onRefresh = () => {
+  setRefreshing(true);
+  (async () => {
     try {
-      const ok = await Linking.canOpenURL(user.fssaiCertUrl);
-      if(ok) Linking.openURL(user.fssaiCertUrl);
-      else Alert.alert('Unable to open', 'Install a PDF viewer to open the certificate.');
-    } catch {}
-  };
-  const shareReferral = async ()=>{ try { await Share.share({ message:`Use my KNI referral • ${user.referral}` }); } catch {} };
+      const res = await api.get('/restaurants/profile');
+      console.log('Profile API raw response:', res);
+      const payload = res.data;
+      setUser({
+        name: payload?.name ?? 'User',
+        email: payload?.email ?? '-',
+        phone: payload?.phone ?? '-',
+        cover:
+          payload?.cover ??
+          'https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?q=80&w=1600&auto=format&fit=crop',
+        fssaiNo: payload?.restaurants?.[0]?.fssai_number ?? '—',
+        fssaiCertUrl: payload?.restaurants?.[0]?.fssai_certificate_url ?? '',
+        referral: payload?.referral_code ?? 'KNI-REF-0001',
+        hotelsCount: payload?.stats?.hotels_count ?? 0,
+        requests: payload?.stats?.requests_count ?? 0,
+        rating: Number(payload?.rating ?? 0),
+      });
+      setHotels(
+        (payload?.restaurants ?? []).map(r => ({
+          id: String(r.id),
+          name: r.hotel_name,
+          address: r.address,
+          rating: r.rating ?? 0,
+          photo: r.photo ?? null,
+          fssaiNo: r.fssai_number,
+          fssaiCertUrl: r.fssai_certificate_url,
+        }))
+      );
+      setReviews(
+        (payload?.reviews ?? []).map(rv => ({
+          id: String(rv.id),
+          from: rv.author_name ?? 'Anonymous',
+          text: rv.text ?? '',
+          stars: rv.stars ?? 0,
+        }))
+      );
+    } catch (e) {
+      Alert.alert('Error', 'Unable to refresh.');
+    } finally {
+      setRefreshing(false);
+    }
+  })();
+};
+const toAbsoluteUrl = (maybeUrl) => {
+  if (!maybeUrl) return '';
+  if (/^https?:\/\//i.test(maybeUrl)) return maybeUrl;
+  const base = api?.defaults?.baseURL?.replace(/\/api\/?$/, '') || '';
+  return base + (maybeUrl.startsWith('/') ? maybeUrl : '/' + maybeUrl);
+};
 
-  const initial = user.name?.[0]?.toUpperCase() ?? 'U';
+ const viewPDF = async () => {
+  const raw = user?.fssaiCertUrl;
+  if (!raw) return Alert.alert('Not available', 'No certificate URL found.');
+  const url = toAbsoluteUrl(raw);
+  console.log('Opening PDF:', url);
+  try {
+    // Try opening directly
+    await Linking.openURL(url);
+  } catch (err) {
+    console.log('Direct open failed:', err?.message);
+    // Fallback: open in Google Docs viewer (works with any PDF URL)
+    const gview = `https://docs.google.com/gview?embedded=1&url=${encodeURIComponent(url)}`;
+    try {
+      await Linking.openURL(gview);
+    } catch {
+      Alert.alert('Unable to open', 'Please install a PDF viewer or try again later.');
+    }
+  }
+};
+  const shareReferral = async () => {
+    try { await Share.share({ message: `Use my KNI referral • ${user?.referral ?? ''}` }); } catch {}
+  };
+  const initial = ((user?.name || 'U')[0] || 'U').toUpperCase();
   const CARD_W = W * 0.88;
   const GAP = 14;
-  const hotelsData = [...hotelsPreview, { id:'more', type:'more' }];
+const hotelsData = [...(hotels || []), { id: 'more', type: 'more' }];
 
   return (
     <SafeAreaView style={{flex:1, backgroundColor:C.bg}} edges={['top','left','right']}>
@@ -196,7 +279,8 @@ const handleLogout = async () => {
           </View>
         ) : (
           <View style={[st.hero, { height: 220 }]}>
-            <Image source={{ uri: user.cover }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
+          <Image source={{ uri: user?.cover ?? 'https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?q=80&w=1600&auto=format&fit=crop' }}
+             style={StyleSheet.absoluteFillObject} resizeMode="cover" />
             <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.28)' }]} />
             <View style={st.blobA}/>
             <View style={st.blobB}/>
@@ -245,34 +329,33 @@ const handleLogout = async () => {
             </View>
           ) : (
             <>
-              <View style={st.heroBottomWrap}>
+             <View style={st.heroBottomWrap}>
                 <View style={st.avatarWrap}>
                   <View style={st.avatar}><Text style={st.avatarTxt}>{initial}</Text></View>
                   <View style={st.verifyPill}><Icon name="shield-checkmark" size={14} color="#fff"/><Text style={st.verifyTxt}>KNI Verified</Text></View>
                 </View>
                 <View style={{flex:1, marginLeft:12}}>
-                  <Text style={st.name}>{user.name}</Text>
-                  <Text style={st.meta}>{user.email}</Text>
-                  <Text style={st.meta}>{user.phone}</Text>
+                   <Text style={st.name}>{user?.name ?? '-'}</Text>
+                    <Text style={st.meta}>{user?.email ?? '-'}</Text>
+                     <Text style={st.meta}>{user?.phone ?? '-'}</Text>
                 </View>
               </View>
-
               <View style={[st.statsGlass, { marginTop:10, marginBottom:8 }]}>
                 <View style={st.statCell}>
                   <View style={st.statIcon}><Icon name="business-outline" size={16} color={C.primary}/></View>
-                  <Text style={st.statNum}>{user.hotelsCount}</Text>
+                   <Text style={st.statNum}>{user?.hotelsCount ?? 0}</Text>
                   <Text style={st.statLbl}>Hotels</Text>
                 </View>
                 <View style={st.vline}/>
                 <View style={st.statCell}>
                   <View style={st.statIcon}><Icon name="clipboard-outline" size={16} color={C.primary}/></View>
-                  <Text style={st.statNum}>{user.requests}</Text>
+                  <Text style={st.statNum}>{user?.requests ?? 0}</Text>
                   <Text style={st.statLbl}>Requests</Text>
                 </View>
                 <View style={st.vline}/>
                 <View style={st.statCell}>
                   <View style={st.statIcon}><Icon name="star" size={16} color="#F59E0B"/></View>
-                  <Text style={st.statNum}>{user.rating.toFixed(1)}</Text>
+                  <Text style={st.statNum}>{(user?.rating ?? 0).toFixed(1)}</Text>
                   <Text style={st.statLbl}>Avg rating</Text>
                 </View>
               </View>
@@ -306,7 +389,7 @@ const handleLogout = async () => {
             <Text style={st.h2}>FSSAI</Text>
             <View style={st.row}>
               <View style={st.rowLeft}><Icon name="document-text-outline" size={18} color={C.ink}/><Text style={st.rowLbl}>Number</Text></View>
-              <Text style={st.rowVal}>{user.fssaiNo}</Text>
+<Text style={st.rowVal}>{user?.fssaiNo ?? '—'}</Text>
             </View>
             <View style={st.row}>
               <View style={st.rowLeft}><Icon name="link-outline" size={18} color={C.ink}/><Text style={st.rowLbl}>Certificate</Text></View>
@@ -318,7 +401,7 @@ const handleLogout = async () => {
             <View style={{flexDirection:'row',alignItems:'center',marginTop:6}}>
               <View style={st.refChip}>
                 <Icon name="gift-outline" size={16} color={C.primary}/>
-                <Text style={st.refTxt}>{user.referral}</Text>
+<Text style={st.refTxt}>{user?.referral ??'-'}</Text>
               </View>
               <TouchableOpacity onPress={shareReferral} style={st.shareBtn}>
                 <Icon name="share-social-outline" size={16} color="#fff"/><Text style={st.shareTxt}>Share</Text>

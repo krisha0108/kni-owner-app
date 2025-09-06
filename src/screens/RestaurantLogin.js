@@ -222,7 +222,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
-import api from "../api/client";
+import { api } from '../api/client';
 import auth from '@react-native-firebase/auth';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -254,53 +254,7 @@ export default function RestaurantLogin({ navigation }) {
     setError('');
     return true;
   };
-// const handleLogin = async () => {
-//   if (!email || !password) return alert('Enter email and password');
-//   try {
-//     const res = await api.post('/restaurant/login', { email, password });
-//     if (res.data.status) {
-//       await AsyncStorage.setItem('userToken', res.data.token);
-//       await AsyncStorage.setItem('ownerData', JSON.stringify(res.data.data));
-//       navigation.replace('Home');
-//     }
-//   } catch (err) {
-//     console.log(err.response?.data);
-//     alert(err.response?.data?.message || 'Invalid credentials');
-//   }
-// };
-// const handleLogin = async () => {
-//   if (!email || !password) return alert('Enter email and password');
-//   try {
-//     const res = await api.post('/restaurant/login', { email, password });
-//     if (res.data?.status) {
-//       // Save token if present
-//       if (res.data?.token) {
-//         await AsyncStorage.setItem('userToken', res.data.token);
-//         await AsyncStorage.setItem('ownerToken', res.data.token); // optional unify
-//         api.defaults.headers.common.Authorization = `Bearer ${res.data.token}`;
-//       }
-//       // Save ownerData as you do already
-//       if (res.data?.data) {
-//         await AsyncStorage.setItem('ownerData', JSON.stringify(res.data.data));
-//       }
-//       // :white_check_mark: Extract and save the critical ownerId
-//       const owner = res.data?.data || res.data?.owner || res.data?.user;
-//       if (owner?.id) {
-//         await AsyncStorage.setItem('ownerId', String(owner.id));
-//         await AsyncStorage.setItem('authProvider', owner.password);
 
-//       } else {
-//         // If unsure about shape, inspect once:
-//         // console.log('Login response (no owner id found):', JSON.stringify(res.data, null, 2));
-//       }
-//       // Go in
-//       navigation.replace('Home'); // or Restaurants if you prefer
-//     }
-//   } catch (err) {
-//     console.log(err.response?.data);
-//     alert(err.response?.data?.message || 'Invalid credentials');
-//   }
-// };
 const handleLogin = async () => {
   if (!email || !password) return alert('Enter email and password');
   setPLoading(true);
@@ -336,7 +290,8 @@ const handleLogin = async () => {
     setError('');
     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
     // Ask Google
-    const signInRes = await GoogleSignin.signIn(); // { idToken?, user, ... }
+    // const signInRes = await GoogleSignin.signIn(); // { idToken?, user, ... }
+    const signInRes = await GoogleSignin.signIn({ prompt: 'select_account' });
     let { idToken } = signInRes || {};
     // If idToken is missing, try to fetch tokens explicitly
     if (!idToken) {
@@ -364,6 +319,8 @@ const handleLogin = async () => {
     api.defaults.headers.common.Authorization = `Bearer ${token}`;
 
       if (token) {
+          await AsyncStorage.setItem('APP_TOKEN', token);
+        await AsyncStorage.setItem('userToken', token);
         await AsyncStorage.setItem('ownerData', JSON.stringify(res.data.owner));
         await AsyncStorage.setItem('ownerId', String(res.data.owner?.id));
         api.defaults.headers.common.Authorization = `Bearer ${res.data.token}`;
