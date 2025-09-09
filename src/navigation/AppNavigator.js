@@ -1,6 +1,7 @@
 // src/navigation/AppNavigator.js
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import SplashScreen from '../screens/SplashScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import RestaurantLogin from '../screens/RestaurantLogin';
@@ -16,14 +17,47 @@ import SupportTicketDetail from '../screens/SupportTicketDetail';
 import Notifications from '../screens/Notifications';
 import ProfileScreen from '../screens/ProfileScreen';
 import Home from '../screens/HomeScreen'; 
+import EditOwnerProfile from '../screens/EditOwnerProfile'; 
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { api } from '../api/client';
 
 const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [initialRoute, setInitialRoute] = useState('Splash');
+
+  useEffect(() => {
+    checkAuthState();
+  }, []);
+
+  const checkAuthState = async () => {
+    try {
+     
+ const token = await AsyncStorage.getItem('userToken');
+const userData = await AsyncStorage.getItem('user');
+
+    if (token && userData) {
+  api.defaults.headers.common.Authorization = `Bearer ${token}`;
+  setInitialRoute('Home');
+} else {
+  setInitialRoute('Splash');
+}
+    } catch (error) {
+      console.log('Auth state check error:', error);
+      setInitialRoute('Splash');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (isLoading) {
+    return <SplashScreen />;
+  }
+
   return (
     <SafeAreaProvider>
-    <Stack.Navigator initialRouteName="Splash" screenOptions={{ headerShown: false }}>
+    <Stack.Navigator initialRouteName={initialRoute} screenOptions={{ headerShown: false }}>
        <Stack.Screen name="Splash" component={SplashScreen} />
       <Stack.Screen name="Onboarding" component={OnboardingScreen} />
       <Stack.Screen name="RestaurantLogin" component={RestaurantLogin} />
@@ -39,6 +73,7 @@ export default function AppNavigator() {
       <Stack.Screen name="RestaurantView" component={RestaurantView} />
       <Stack.Screen name="Notifications" component={Notifications} />
       <Stack.Screen name="Home" component={Home} />
+      <Stack.Screen name="EditOwnerProfile" component={EditOwnerProfile} /> 
     </Stack.Navigator>
     </SafeAreaProvider>
   );

@@ -12,7 +12,7 @@ function NewTicketModal({ visible, onClose, onSubmit, theme }) {
   const [category, setCategory] = useState('Equipment');
   const [equipment, setEquipment] = useState('');
   const [desc, setDesc] = useState('');
-  const [photos, setPhotos] = useState([]); // up to 5
+  const [photo, setPhotos] = useState(null); // single image
 
   // Reset fields when modal closes (safe – runs after render)
   useEffect(() => {
@@ -22,18 +22,21 @@ function NewTicketModal({ visible, onClose, onSubmit, theme }) {
   }, [visible]);
 
   const canSubmit = title.trim().length > 2 && desc.trim().length > 4;
-
-  const pickPhotos = async () => {
+  const pickPhoto = async () => {
     try {
-      const res = await launchImageLibrary({ mediaType: 'photo', quality: 0.85, selectionLimit: Math.max(1, 5 - photos.length) });
+      const res = await launchImageLibrary({
+        mediaType: 'photo',
+        quality: 0.85,
+        selectionLimit: 1,   // only 1 allowed
+      });
       if (res?.assets?.length) {
-        const add = res.assets.map(a => ({ uri: a.uri, fileName: a.fileName }));
-        setPhotos(prev => [...prev, ...add].slice(0, 5));
+        const img = res.assets[0];
+        setPhotos({ uri: img.uri, fileName: img.fileName });
       }
     } catch {}
   };
-
-  const removePhoto = (uri) => setPhotos(prev => prev.filter(p => p.uri !== uri));
+  
+  const removePhoto = () => setPhotos(null);
 
   return (
     // ✅ Component stays mounted; only Modal visibility toggles
@@ -61,23 +64,27 @@ function NewTicketModal({ visible, onClose, onSubmit, theme }) {
             <Field C={C} label="Equipment (optional)" icon="construct-outline" placeholder="e.g., Deep Freezer / Chimney…" value={equipment} onChange={setEquipment}/>
             <Field C={C} label="Describe the issue" icon="chatbox-ellipses-outline" placeholder="Tell us what’s happening…" value={desc} onChange={setDesc} multiline/>
 
-            <Text style={[st.inputLbl,{marginTop:2, color:C.muted}]}>Proof photos (up to 5)</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{paddingVertical:6}}>
-              <TouchableOpacity onPress={pickPhotos} style={[st.addPhoto, {borderColor:'#FECACA'}]}>
-                <Icon name="images-outline" size={18} color={C.primary}/>
-                <Text style={{color:C.primary, fontWeight:'900', marginLeft:6}}>Add photos</Text>
-              </TouchableOpacity>
-              {photos.map(p=>(
-                <View key={p.uri} style={st.photoBox}>
-                  <Image source={{uri:p.uri}} style={st.photoImg}/>
-                  <TouchableOpacity onPress={()=>removePhoto(p.uri)} style={st.photoDel}><Icon name="close" size={12} color="#fff"/></TouchableOpacity>
-                </View>
-              ))}
-            </ScrollView>
+            <Text style={[st.inputLbl,{marginTop:2, color:C.muted}]}>Proof photo (only 1)</Text>
+<View style={{flexDirection:'row', alignItems:'center', marginVertical:6}}>
+  {!photo ? (
+    <TouchableOpacity onPress={pickPhoto} style={[st.addPhoto, {borderColor:'#FECACA'}]}>
+      <Icon name="images-outline" size={18} color={C.primary}/>
+      <Text style={{color:C.primary, fontWeight:'900', marginLeft:6}}>Add photo</Text>
+    </TouchableOpacity>
+  ) : (
+    <View style={st.photoBox}>
+      <Image source={{uri:photo.uri}} style={st.photoImg}/>
+      <TouchableOpacity onPress={removePhoto} style={st.photoDel}>
+        <Icon name="close" size={12} color="#fff"/>
+      </TouchableOpacity>
+    </View>
+  )}
+</View>
+
 
             <TouchableOpacity
               disabled={!canSubmit}
-              onPress={()=> onSubmit({ title, category, equipment: equipment||'—', desc, photos })}
+              onPress={()=> onSubmit({ title, category, equipment: equipment||'—', desc, photos: photo ? [photo] : [] })}
               style={[st.primaryBtnWide, {backgroundColor:C.primary, opacity: canSubmit?1:0.5, marginTop:8}]}
               activeOpacity={0.85}>
               <Icon name="paper-plane" size={18} color="#fff" style={st.primaryIcon}/>

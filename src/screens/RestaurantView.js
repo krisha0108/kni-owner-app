@@ -143,9 +143,32 @@ export default function RestaurantView({ navigation, route }: any) {
   const shareIt = async ()=>{
     try{ await Share.share({ message:`${r.name}\n${r.address}\nFSSAI: ${r.fssai}` }); }catch{}
   };
-  const openPdf = async ()=>{
-    try{ const ok=await Linking.canOpenURL(r.fssaiPdf); ok?Linking.openURL(r.fssaiPdf):null; }catch{}
+ const openPdf = async ()=>{
+    console.log(':mag: Attempting to open PDF:', r.fssaiPdf);
+    if (!r.fssaiPdf || r.fssaiPdf.trim() === '') {
+      console.log(':x: PDF URL is empty or null');
+      return;
+    }
+    try{
+      console.log(':rocket: Opening PDF directly...');
+      // Direct opening without canOpenURL check for PDFs
+      // canOpenURL sometimes fails for local server URLs
+      await Linking.openURL(r.fssaiPdf);
+      console.log(':white_check_mark: PDF opened successfully');
+    } catch(error) {
+      console.log(':x: Error opening PDF:', error);
+      console.log(':arrows_counterclockwise: Trying alternative method...');
+      // Alternative: Try with browser intent
+      try {
+        const browserUrl = r.fssaiPdf;
+        await Linking.openURL(browserUrl);
+        console.log(':white_check_mark: PDF opened in browser');
+      } catch(secondError) {
+        console.log(':x: Alternative method also failed:', secondError);
+      }
+    }
   };
+
 
   /* -------------------- render -------------------- */
   if (showSkel) {

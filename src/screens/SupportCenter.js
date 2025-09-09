@@ -1,3 +1,4 @@
+
 // screens/SupportCenter.js
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -5,8 +6,10 @@ import {
   RefreshControl, Animated, Modal, Linking
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import NewTicketModal from '../components/NewTicketModal'; // <-- separate file
+import { api, IMAGE_BASE_URL } from '../api/client';
 
 /* ---------------- theme ---------------- */
 const C = {
@@ -17,14 +20,9 @@ const C = {
 const R = 20;
 const { width:W } = Dimensions.get('window');
 
-/* ---------------- demo tickets ---------------- */
-const DEMO = [
-  { id:'KNI-2418', title:'Deep freezer not cooling', category:'Equipment', equipment:'Deep Freezer', created:'2025-08-18T09:30:00Z', status:'onwork', updates:3 },
-  { id:'KNI-2417', title:'Need invoice copy for July', category:'Billing', equipment:'—', created:'2025-08-17T12:05:00Z', status:'seen', updates:1 },
-  { id:'KNI-2416', title:'Chimney deep clean schedule', category:'Service', equipment:'Chimney', created:'2025-08-15T10:45:00Z', status:'completed', updates:2 },
-  { id:'KNI-2415', title:'App login OTP delayed', category:'App/Account', equipment:'—', created:'2025-08-14T16:20:00Z', status:'pending', updates:0 },
-  { id:'KNI-2414', title:'Gas leak suspected – range', category:'Equipment', equipment:'Gas Range', created:'2025-08-12T08:10:00Z', status:'rejected', updates:4 },
-];
+/* ---------------- api shapes ---------------- */
+// UI ticket model we'll use locally
+// { id, title, category, equipment, created, status, updates }
 
 const STATUS_META = {
   pending:   { label:'Pending',   bg:'#FFF7ED', fg:C.warn, step:1 },
@@ -39,7 +37,7 @@ const fmt = (d)=> new Date(d).toLocaleString('en-IN',{ day:'2-digit', month:'sho
 export default function SupportCenter({ navigation }) {
   const insets = useSafeAreaInsets();
 
-  const [tickets, setTickets] = useState(DEMO);
+  const [tickets, setTickets] = useState([]);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
@@ -51,23 +49,53 @@ export default function SupportCenter({ navigation }) {
 
   const pulse = useRef(new Animated.Value(0.5)).current;
 
+  const loadTickets = async ()=>{
+    try{
+      const res = await api.get('/support/tickets');
+      const rows = res?.data?.data || [];
+      const mapped = rows.map((r)=>({
+        id: r.id,
+        title: r.title || r.equipment_name || 'Support ticket',
+        category: 'Equipment',
+        equipment: r.equipment_name || '—',
+        created: r.created_at,
+        status: r.status,
+        updates: (r.threads_count ?? r.threads?.length ?? 0)
+      }));
+      setTickets(mapped);
+    }catch(e){
+      console.log('Failed to load tickets', e?.response?.data || e?.message);
+    }finally{
+      setLoading(false);
+    }
+  };
+
   useEffect(()=> {
-    const t = setTimeout(()=>setLoading(false), 700);
+    loadTickets();
     const loop = Animated.loop(Animated.sequence([
       Animated.timing(pulse,{toValue:1,duration:800,useNativeDriver:false}),
       Animated.timing(pulse,{toValue:0.5,duration:800,useNativeDriver:false}),
     ]));
     loop.start();
-    return ()=>{ clearTimeout(t); loop.stop(); };
+    return ()=>{ loop.stop(); };
   }, []);
 
-  const onRefresh = ()=> { setRefreshing(true); setTimeout(()=>setRefreshing(false), 900); };
+  // Refresh when screen gains focus (ensures seen/onwork statuses reflect)
+  useFocusEffect(React.useCallback(() => {
+    loadTickets();
+    return undefined;
+  }, []));
+
+  const onRefresh = async ()=> { setRefreshing(true); await loadTickets(); setRefreshing(false); };
 
   const filtered = useMemo(()=>{
     const q = query.trim().toLowerCase();
     return tickets.filter(t=>{
       const okStatus = filter==='all' ? true : t.status===filter;
-      const okQ = !q || t.title.toLowerCase().includes(q) || t.id.toLowerCase().includes(q) || t.category.toLowerCase().includes(q);
+      const okQ = !q 
+        || (t.title?.toString().toLowerCase().includes(q))
+        || (String(t.id).toLowerCase().includes(q))
+        || (t.category?.toString().toLowerCase().includes(q));
       return okStatus && okQ;
     });
   },[tickets, query, filter]);
@@ -80,16 +108,32 @@ export default function SupportCenter({ navigation }) {
 
   const callNow = async ()=>{ setCallOpen(false); try{ await Linking.openURL('tel:8347122756'); }catch{} };
 
-  const addTicket = (payload)=>{
-    const id = `KNI-${Math.floor(2000 + Math.random()*8000)}`;
-    const item = { id, created:new Date().toISOString(), status:'pending', updates:0, ...payload };
-    setTickets(prev=>[item, ...prev]);
-    setNewOpen(false);
-    setToast({ type:'success', text:`Ticket created • ${id}` });
-    setTimeout(()=>setToast(null), 1800);
+  const addTicket = async (payload)=>{
+    try{
+      const form = new FormData();
+      form.append('title', payload.title || 'Support ticket');
+      form.append('equipment_name', payload.equipment || payload.title || 'Equipment');
+      form.append('description', payload.desc);
+      form.append('category', payload.category || 'Equipment');
+      // backend expects single photo for ticket create; take first if provided
+      const first = payload.photos?.[0];
+      if (first?.uri) {
+        const name = first.fileName || `photo_${Date.now()}.jpg`;
+        form.append('photo', { uri: first.uri, type: 'image/jpeg', name });
+      }
+      await api.post('/support/tickets', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setNewOpen(false);
+      setToast({ type:'success', text:`Ticket created` });
+      await loadTickets();
+      setTimeout(()=>setToast(null), 1500);
+    }catch(e){
+      console.log('Create ticket failed', e?.response?.data || e?.message);
+      setToast({ type:'error', text:'Failed to create ticket' });
+      setTimeout(()=>setToast(null), 2000);
+    }
   };
 
-  const goDetail = (t) => navigation.navigate('SupportTicketDetail', { ticket: t, ticketId: t.id });
+  const goDetail = (t) => navigation.navigate('SupportTicketDetail', { ticketId: t.id });
 
   return (
     <SafeAreaView style={{flex:1, backgroundColor:C.bg}} edges={['top','left','right']}>

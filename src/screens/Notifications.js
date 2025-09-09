@@ -6,6 +6,8 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { api } from '../api/client';
 
 /* ---------- THEME ---------- */
 const C = {
@@ -13,21 +15,6 @@ const C = {
   card:'#FFFFFF', border:'#E5E7EB'
 };
 const R = 18;
-
-/* ---------- DEMO DATA ---------- */
-const now = new Date();
-const iso = (d)=> new Date(d).toISOString();
-
-const DEMO = [
-  { id:'n1', type:'restaurant_approved', title:'Restaurant approved', body:'Spice Hub is now KNI-verified.', ts: iso(now), unread:true },
-  { id:'n2', type:'ticket_onwork', title:'Work started', body:'Pro assigned for #KNI-2418. ETA 4–6 PM.', ts: iso(now), unread:true, meta:{ticketId:'KNI-2418'} },
-  { id:'n3', type:'engineer_assigned', title:'Engineer assigned', body:'Rahul S. will visit Café Verde.', ts: iso(now-60*60*1000), unread:false },
-  { id:'n4', type:'ticket_seen', title:'Ticket seen', body:'We’re reviewing your request #KNI-2417.', ts: iso(now-2*60*60*1000), unread:false },
-  { id:'n5', type:'restaurant_rejected', title:'Restaurant rejected', body:'Relish Rooftop — missing FSSAI PDF.', ts: iso(now-24*60*60*1000), unread:true },
-  { id:'n6', type:'eq_request_approved', title:'Equipment request approved', body:'Deep Freezer service scheduled.', ts: iso(now-2*24*60*60*1000), unread:false },
-  { id:'n7', type:'feature', title:'New feature', body:'Inventory timeline & spend is live.', ts: iso(now-3*24*60*60*1000), unread:false },
-  { id:'n8', type:'update', title:'App update available', body:'Get v2.5 for faster tickets.', ts: iso(now-10*24*60*60*1000), unread:false },
-];
 
 /* ---------- TYPE → UI MAP ---------- */
 const TMAP = {
@@ -66,7 +53,7 @@ const groupSections = (arr)=>{
   });
 };
 
-/* ---------- SKELETON (reliable while loading) ---------- */
+/* ---------- SKELETON (loading view) ---------- */
 function SkeletonList({ pulse }) {
   return (
     <View style={{paddingHorizontal:16}}>
@@ -82,26 +69,120 @@ export default function Notifications({ navigation }) {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
 
-  const [items, setItems] = useState(DEMO);
+  const [items, setItems] = useState([]);
   const [filter, setFilter] = useState('all'); // all | tickets | restaurants | product
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [ownerId, setOwnerId] = useState(null);
+  const [token, setToken] = useState(null);
 
   // skeleton pulse
   const pulse = useRef(new Animated.Value(0.5)).current;
+
   useEffect(()=>{
-    // Start pulse loop
     const loop = Animated.loop(Animated.sequence([
       Animated.timing(pulse,{toValue:1,duration:800,useNativeDriver:false}),
       Animated.timing(pulse,{toValue:0.5,duration:800,useNativeDriver:false}),
     ]));
     loop.start();
 
-    // Initial fake load
-    const t = setTimeout(()=>setLoading(false), 700);
+    initializeUserData(); // Get user data first
 
-    return ()=>{ clearTimeout(t); loop.stop(); };
-  },[pulse]);
+    return ()=>{ loop.stop(); };
+  },[]);
+
+  // Get user data from AsyncStorage
+  const initializeUserData = async () => {
+    try {
+      const userData = await AsyncStorage.getItem('user');
+      const authToken = await AsyncStorage.getItem('userToken');
+
+      
+      console.log('AsyncStorage userData:', userData);
+      console.log('AsyncStorage authToken:', authToken);
+      
+      if (userData && authToken) {
+        const user = JSON.parse(userData);
+        console.log('Parsed user:', user);
+        setOwnerId(user.id);
+        setToken(authToken);
+        
+        // Now fetch notifications with the user data
+        fetchNotifications(user.id, authToken);
+      } else {
+        console.log('No user data found in AsyncStorage');
+        setLoading(false);
+      }
+    } catch (error) {
+      console.log('Error getting user data:', error);
+      setLoading(false);
+    }
+  };
+
+  /* ---------- API CALL ---------- */
+  const fetchNotifications = async (userOwnerId = null, userToken = null) => {
+    try {
+      setLoading(true);
+      
+      const currentOwnerId = userOwnerId || ownerId;
+      const currentToken = userToken || token;
+      
+      console.log('Fetching notifications for owner:', currentOwnerId);
+      console.log('Using token:', currentToken ? 'Token exists' : 'No token');
+      
+      if (!currentOwnerId || !currentToken) {
+        console.log('Missing ownerId or token - cannot fetch notifications');
+        setLoading(false);
+        return;
+      }
+      
+const res = await api.get(`/owners/${currentOwnerId}/notifications`, {
+  headers: {
+    Authorization: `Bearer ${currentToken}`,
+  }
+});
+      
+      console.log('Response status:', res.status);
+      console.log('Response data:', res.data);
+      
+      const json = res.data;
+      console.log('Raw API response:', json);
+      console.log('Response type:', typeof json);
+      console.log('Is array:', Array.isArray(json));
+
+      // Transform backend data to match frontend format
+      if (json && Array.isArray(json)) {
+        console.log('Processing array of notifications:', json.length);
+        const transformedData = json.map(notification => {
+          console.log('Processing notification:', notification);
+          return {
+            id: notification.id,
+            type: notification.type || 'restaurant_approved',
+            title: notification.title,
+            body: notification.message,
+            ts: notification.created_at,
+            unread: !notification.is_read,
+            meta: {
+              restaurantId: notification.restaurant_id,
+              notificationId: notification.id
+            }
+          };
+        });
+        console.log('Transformed data:', transformedData);
+        setItems(transformedData);
+      } else {
+        console.log('No valid array data received, setting empty array');
+        setItems([]);
+      }
+    } catch (e) {
+      console.log("Error fetching notifications:", e.message);
+      console.log("Full error:", e);
+      setItems([]);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
   const filtered = useMemo(()=>{
     if(filter === 'all') return items;
@@ -115,23 +196,49 @@ export default function Notifications({ navigation }) {
 
   const onRefresh = ()=>{
     setRefreshing(true);
-    setLoading(true);             // ensure skeleton shows during refresh
-    const t = setTimeout(()=>{
-      setRefreshing(false);
-      setLoading(false);
-    }, 900);
+    fetchNotifications();
   };
+// Mark single notification as read
+const markNotificationRead = async (id) => {
+  try {
+await api.post('/notifications/mark-read', { notification_id: id }, {
+  headers: { Authorization: `Bearer ${token}` }
+});  } catch (e) {
+    console.log('Error marking notification read:', e);
+  }
+};
 
-  const markAllRead = ()=> setItems(prev=> prev.map(n=>({...n, unread:false})));
 
-  const openItem = (n)=>{
-    if(n.type.startsWith('ticket')) navigation.navigate?.('TicketDetail', { id:n.meta?.ticketId });
-    else if(n.type.startsWith('restaurant')) navigation.navigate?.('Restaurants');
-    else if(n.type==='eq_request_approved') navigation.navigate?.('YourCart');
-    else if(n.type==='feature') navigation.navigate?.('HotelProfile');
-    else if(n.type==='update') navigation.navigate?.('SupportList');
-    setItems(prev => prev.map(x => x.id===n.id ? {...x, unread:false} : x));
-  };
+// Mark all notifications as read
+const markAllReadApi = async () => {
+  try {
+await api.post('/notifications/mark-all-read', { restaurant_owner_id: ownerId }, {
+  headers: { Authorization: `Bearer ${token}` }
+});  } catch (e) {
+    console.log('Error marking all read:', e);
+  }
+};
+
+// use inside openItem
+const openItem = (n) => {
+  // navigate logic
+  if (n.type.startsWith('ticket')) navigation.navigate?.('TicketDetail', { id: n.meta?.ticketId });
+  else if (n.type.startsWith('restaurant')) navigation.navigate?.('Restaurants');
+  else if (n.type==='eq_request_approved') navigation.navigate?.('YourCart');
+  else if (n.type==='feature') navigation.navigate?.('HotelProfile');
+  else if (n.type==='update') navigation.navigate?.('SupportList');
+
+  // update UI + backend
+  setItems(prev => prev.map(x => x.id===n.id ? {...x, unread:false} : x));
+  markNotificationRead(n.id);
+};
+
+// use inside markAllRead
+const markAllRead = () => {
+  setItems(prev => prev.map(n => ({...n, unread:false})));
+  markAllReadApi();
+};
+
 
   const chip = (key, label, ic)=>{
     const on = filter===key;
@@ -156,7 +263,7 @@ export default function Notifications({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      {/* Horizontal filter chips */}
+      {/* Filter chips */}
       <View style={{paddingHorizontal:0}}>
         <ScrollView
           horizontal
@@ -170,7 +277,7 @@ export default function Notifications({ navigation }) {
         </ScrollView>
       </View>
 
-      {/* While loading: show reliable skeleton view */}
+      {/* Content */}
       {loading ? (
         <ScrollView
           contentContainerStyle={{paddingBottom: insets.bottom+16}}
@@ -184,7 +291,7 @@ export default function Notifications({ navigation }) {
       ) : (
         <SectionList
           sections={sections}
-          keyExtractor={(item)=>item.id}
+          keyExtractor={(item)=>item.id.toString()}
           stickySectionHeadersEnabled={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} tintColor={C.primary}/>}
           showsVerticalScrollIndicator={false}
@@ -196,7 +303,6 @@ export default function Notifications({ navigation }) {
             const m = TMAP[item.type] || { ic:'notifications-outline', bg:'#F3F4F6', fg:C.ink };
             return (
               <TouchableOpacity activeOpacity={0.95} onPress={()=>openItem(item)} style={st.card}>
-                {/* left accent */}
                 <View style={[st.accent,{backgroundColor:m.fg}]}/>
                 <View style={st.iconWrap}>
                   <View style={[st.iconBg,{backgroundColor:m.bg}]}>
@@ -253,6 +359,6 @@ const st = StyleSheet.create({
   metaRow:{ flexDirection:'row', alignItems:'center', marginTop:8 },
   metaTxt:{ color:C.muted, fontSize:12 },
 
-  // skeletons
   skelItem:{ height:84, backgroundColor:'#E9EEF5', borderRadius:R, marginTop:10 },
 });
+

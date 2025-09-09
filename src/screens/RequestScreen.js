@@ -6,7 +6,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import KniBottomNav from '../components/KniBottomNav';
-import api from '../api/client';
+import { api } from '../api/client';
 
 const INDEX_PATH = '/app/products';
 /* ---------------- Theme ---------------- */

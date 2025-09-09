@@ -1,3 +1,4 @@
+
 // screens/SupportTicketDetail.js
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -7,6 +8,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary } from 'react-native-image-picker';
+import { api } from '../api/client';
 
 const C = { primary:'#EF3A3A', ink:'#0F172A', bg:'#F5F7FA', card:'#FFFFFF',
   text:'#111827', muted:'#6B7280', border:'#E5E7EB', ok:'#10B981', warn:'#F59E0B',
@@ -14,7 +16,7 @@ const C = { primary:'#EF3A3A', ink:'#0F172A', bg:'#F5F7FA', card:'#FFFFFF',
 };
 const R = 20;
 const { width:W, height:H } = Dimensions.get('window');
-
+const IMAGE_BASE_URL = 'http://192.168.29.222:8000'; 
 const STATUS = {
   pending:   { label:'Pending',   bg:'#FFF7ED', fg:C.warn,    step:1, icon:'time-outline' },
   seen:      { label:'Seen',      bg:'#EFF6FF', fg:C.info,    step:2, icon:'eye-outline' },
@@ -26,39 +28,25 @@ const PIPE = ['pending','seen','onwork','completed']; // rejected branches out
 const fmt = (d)=>new Date(d).toLocaleString('en-IN',{ day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
 
 /** DEMO fallback */
-const DEMO_TICKET = {
-  id:'KNI-2418',
-  title:'Deep freezer not cooling',
-  category:'Equipment',
-  equipment:'Deep Freezer',
-  created:'2025-08-18T09:30:00Z',
-  status:'onwork',
-};
-const DEMO_THREAD = [
-  { id:'m1', author:'support', time:'2025-08-18T09:35:00Z', text:'Ticket received. Marking as seen.' },
-  { id:'m2', author:'system',  time:'2025-08-18T09:36:00Z', status:'seen' },
-  { id:'m3', author:'owner',   time:'2025-08-18T09:50:00Z', text:'Freezer at -2°C, should be -18°C. Fan noisy.', photos:[
-    'https://quickservant.com/wp-content/uploads/2020/01/iStock-507954338-compressed.jpg'
-  ]},
-  { id:'m4', author:'support', time:'2025-08-18T10:20:00Z', text:'Assigned pro. Visiting today 4–6 PM.' },
-  { id:'m5', author:'system',  time:'2025-08-18T10:21:00Z', status:'onwork' },
-];
+const DEMO_TICKET = null;
+const DEMO_THREAD = [];
 
 export default function SupportTicketDetail({ navigation, route }) {
   const insets = useSafeAreaInsets();
-  const initialTicket = route?.params?.ticket || DEMO_TICKET;
-  const [ticket, setTicket] = useState(initialTicket);
-  const [thread, setThread] = useState(route?.params?.thread || DEMO_THREAD);
+  const ticketId = route?.params?.ticketId;
+  const [ticket, setTicket] = useState(DEMO_TICKET);
+  const [thread, setThread] = useState(DEMO_THREAD);
 
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // header delete (only when pending)
-  const canDelete = ticket.status === 'pending';
+  const canDelete = ticket?.status === 'pending';
   const [askDelete, setAskDelete] = useState(false);
 
   // viewer
   const [viewer, setViewer] = useState(null);
+
 
   // composer
   const [text, setText] = useState('');
@@ -75,12 +63,12 @@ export default function SupportTicketDetail({ navigation, route }) {
     loop.start(); return ()=>{ clearTimeout(t); loop.stop(); };
   },[]);
 
-  // auto-mark seen when opened from pending
   useEffect(()=>{
-    if (ticket.status==='pending') updateStatus('seen', 'Auto-marked as seen');
-  },[]);
+    if (!ticketId) return;
+    loadTicket();
+  },[ticketId]);
 
-  const onRefresh = ()=>{ setRefreshing(true); setTimeout(()=>setRefreshing(false), 900); };
+  const onRefresh = async ()=>{ setRefreshing(true); await loadTicket(); setRefreshing(false); };
 
   const callSupport = async ()=> { try{ await Linking.openURL('tel:8347122756'); }catch{} };
 
@@ -91,42 +79,68 @@ export default function SupportTicketDetail({ navigation, route }) {
   },[thread]);
 
   /** RULES */
-  const canChat = ticket.status === 'onwork';                  // ✅ chat opens only onwork
-  const closed = ticket.status==='completed' || ticket.status==='rejected';
+  // Check if admin has sent first message to enable owner chat
+  const adminHasSentMessage = thread.some(m => m.author === 'support');
+  const canChat = (ticket?.status === 'seen' && adminHasSentMessage) || ticket?.status === 'onwork';
+  const closed = ticket?.status==='completed' || ticket?.status==='rejected';
 
   const canAdvance = (to)=> {
-    const from = ticket.status;
+    const from = ticket?.status;
+    if (!from) return false;
     if (to==='rejected') return ['pending','seen','onwork'].includes(from);
     const iFrom = PIPE.indexOf(from), iTo = PIPE.indexOf(to);
     return iTo>=0 && iTo<=iFrom+1;
   };
 
-  const updateStatus = (to, note) => {
-    if (ticket.status===to) return;
-    if (!canAdvance(to)) return;
-    setTicket(t=>({ ...t, status:to }));
-    let extraText;
-    if (to==='onwork') extraText = "We’re starting work now. You can add updates & photos here.";
-    if (to==='completed') extraText = "Your work is completed. Thanks for choosing KNI.";
-    if (to==='rejected') extraText = "Ticket closed as rejected.";
-    setThread(prev=>[
-      ...prev,
-      { id:'m'+(Math.random()*1e6|0), author:'system', time:new Date().toISOString(), status:to, text: note || undefined },
-      ...(extraText ? [{ id:'m'+(Math.random()*1e6|0), author:'support', time:new Date().toISOString(), text:extraText }] : [])
-    ]);
-  };
+  const updateStatus = ()=>{}; // owner doesn't set explicit status here
 
-  const sendUpdate = ()=>{
+  const sendUpdate = async ()=>{
     if (!canChat || (!text.trim() && draftPhotos.length===0)) return;
-    const msg = {
-      id:'m'+(Math.random()*1e6|0),
-      author:'owner',
-      time:new Date().toISOString(),
-      text: text.trim() || undefined,
-      photos: draftPhotos.map(p=>p.uri),
-    };
-    setThread(prev=>[...prev, msg]);
-    setText(''); setDraftPhotos([]);
+    try{
+      const form = new FormData();
+      if (text.trim()) form.append('message', text.trim());
+      
+      if (draftPhotos[0]?.uri) {
+        form.append('photo', { uri: draftPhotos[0].uri, type: 'image/jpeg', name: `photo_${Date.now()}.jpg` });
+      }
+      await api.post(`/support/tickets/${ticketId}/messages`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setText(''); setDraftPhotos([]);
+      await loadTicket();
+    }catch(e){
+      console.log('Send message failed', e?.response?.data || e?.message);
+    }
+  };
+  const loadTicket = async ()=>{
+    try{
+      const res = await api.get(`/support/tickets/${ticketId}`);
+      const t = res?.data;
+      const mapped = {
+        id: t.id,
+        title: t.equipment_name || 'Support ticket',
+        category: 'Equipment',
+        equipment: t.equipment_name || '—',
+        created: t.created_at,
+        status: t.status,
+      };
+      const thr = (t.threads || []).map(x=>({
+        id: x.id,
+        author: x.sender_owner_id ? 'owner' : 'support',
+        time: x.created_at,
+        text: x.message || undefined,
+        photos: x.photo_path
+        ? [x.photo_path.startsWith('http')
+            ? x.photo_path
+            : x.photo_path.startsWith('/storage/')
+              ? `${IMAGE_BASE_URL.replace(/\/storage\/$/, '')}${x.photo_path}`
+              : `${IMAGE_BASE_URL.replace(/\/$/, '')}/${x.photo_path.replace(/^\/+/, '')}`
+          ]
+        : [],
+      }));
+      setTicket(mapped);
+      setThread(thr);
+    }catch(e){
+      console.log('Load ticket failed', e?.response?.data || e?.message);
+    }
   };
 
   const pickPhotos = async ()=>{
@@ -140,7 +154,7 @@ export default function SupportTicketDetail({ navigation, route }) {
   };
   const removeDraft = (uri)=> setDraftPhotos(prev=>prev.filter(p=>p.uri!==uri));
 
-  const M = STATUS[ticket.status] || STATUS.pending;
+  const M = STATUS[ticket?.status || 'pending'] || STATUS.pending;
   const progress = Math.min(4, M.step);
 
   return (
@@ -179,9 +193,9 @@ export default function SupportTicketDetail({ navigation, route }) {
             <View style={st.card}>
               <View style={{flexDirection:'row', justifyContent:'space-between', alignItems:'flex-start'}}>
                 <View style={{flex:1, paddingRight:12}}>
-                  <Text style={st.title}>{ticket.title}</Text>
+                  <Text style={st.title}>{ticket?.title || 'Support ticket'}</Text>
                   <Text style={st.sub}>
-                    #{ticket.id} • {fmt(ticket.created)} • {ticket.category}{ticket.equipment ? ` • ${ticket.equipment}`:''}
+                    #{ticket?.id} • {fmt(ticket?.created)} • {ticket?.category}{ticket?.equipment ? ` • ${ticket?.equipment}`:''}
                   </Text>
                 </View>
                 <View style={[st.badge,{backgroundColor:M.bg}]}>
@@ -190,33 +204,6 @@ export default function SupportTicketDetail({ navigation, route }) {
                 </View>
               </View>
 
-              {/* progress */}
-              {/* <View style={st.progress}>
-                {['pending','seen','onwork','completed'].map((k,i)=>{
-                  const meta = STATUS[k];
-                  const active = i < progress;
-                  const lockTap = closed; // when closed, freeze
-                  return (
-                    <TouchableOpacity
-                      key={k}
-                      disabled={lockTap}
-                      onPress={()=>updateStatus(k)}
-                      style={[st.step, active ? {backgroundColor:meta.fg, borderColor:meta.fg} : null]}
-                    >
-                      <Icon name={meta.icon} size={12} color={active?'#fff':'#94A3B8'}/>
-                      <Text style={[st.stepTxt, active?{color:'#fff'}:{color:'#64748B'}]}>{meta.label}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-                <TouchableOpacity
-                  disabled={closed}
-                  onPress={()=>updateStatus('rejected')}
-                  style={[st.stepOutline,{borderColor:C.danger}]}
-                >
-                  <Icon name="close-circle" size={12} color={C.danger}/>
-                  <Text style={[st.stepTxt,{color:C.danger}]}>Reject</Text>
-                </TouchableOpacity>
-              </View> */}
 
               {/* image strip */}
               {attachmentsTop.length>0 && (
@@ -234,7 +221,12 @@ export default function SupportTicketDetail({ navigation, route }) {
             {!canChat && !closed && (
               <View style={[st.infoBanner,{backgroundColor:'#FFF7ED', borderColor:'#FED7AA'}]}>
                 <Icon name="time-outline" size={16} color={C.warn}/>
-                <Text style={st.infoText}>Chat opens when the ticket moves to <Text style={{fontWeight:'900'}}>On work</Text>.</Text>
+                <Text style={st.infoText}>
+                  {ticket?.status === 'seen' && !adminHasSentMessage 
+                    ? 'Chat will open after admin sends first message.'
+                    : 'Chat opens when the ticket moves to On work.'
+                  }
+                </Text>
               </View>
             )}
             {closed && (
@@ -262,7 +254,8 @@ export default function SupportTicketDetail({ navigation, route }) {
 
           <View style={{flex:1, paddingRight:48}}>
             <TextInput
-              placeholder={canChat ? "Write an update…" : closed ? "Ticket closed" : "Locked until work starts"}
+              placeholder={canChat ? "Write an update…" : closed ? "Ticket closed" : 
+                ticket?.status === 'seen' && !adminHasSentMessage ? "Wait for admin's first message" : "Locked until work starts"}
               placeholderTextColor="#9CA3AF"
               value={text}
               onChangeText={setText}
@@ -359,11 +352,15 @@ function Message({ m, onImage }) {
         {!!m.text && <Text style={[st.msgText, isOwner && {color:'#fff'}]}>{m.text}</Text>}
         {!!m.photos?.length && (
           <View style={{flexDirection:'row', gap:6, marginTop:6, flexWrap:'wrap'}}>
-            {m.photos.map((uri,i)=>(
-              <TouchableOpacity key={uri+i} onPress={()=>onImage(uri)} style={st.msgImgBox}>
-                <Image source={{uri}} style={st.msgImg}/>
-              </TouchableOpacity>
-            ))}
+          {m.photos.map((uri,i)=>{
+  console.log("Image uri:", uri);
+  return (
+    <TouchableOpacity key={uri+i} onPress={()=>onImage(uri)} style={st.msgImgBox}>
+      <Image source={{uri}} style={st.msgImg}/>
+    </TouchableOpacity>
+  )
+})}
+
           </View>
         )}
         <Text style={[st.msgTime, isOwner && {color:'#FDE2E2'}]}>{fmt(m.time)}</Text>
@@ -467,4 +464,5 @@ const st = StyleSheet.create({
 
   viewer:{ flex:1, backgroundColor:'rgba(0,0,0,0.95)', alignItems:'center', justifyContent:'center' },
   viewerClose:{ position:'absolute', top:18, right:18, width:36, height:36, borderRadius:12, backgroundColor:'rgba(255,255,255,0.18)', alignItems:'center', justifyContent:'center' },
+
 });

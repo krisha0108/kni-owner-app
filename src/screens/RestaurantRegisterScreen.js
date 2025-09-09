@@ -14,6 +14,8 @@ import { api } from '../api/client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import auth from '@react-native-firebase/auth';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import messaging from '@react-native-firebase/messaging';
+
 const RestaurantRegisterScreen = ({ navigation }) => {
   const [form, setForm] = useState({
     firstName: '',
@@ -77,6 +79,25 @@ const RestaurantRegisterScreen = ({ navigation }) => {
           await AsyncStorage.setItem('ownerToken', res.data.token);
           api.defaults.headers.common.Authorization = `Bearer ${res.data.token}`;
         }
+        // :fire: Get and store FCM token
+      try {
+        const fcmToken = await messaging().getToken();
+        console.log('FCM Token:', fcmToken);
+        if (fcmToken && owner?.id) {
+          console.log('FCM Token obtained:', fcmToken);
+          // Send FCM token to backend
+          const fcmResponse = await api.post('/owners/save-fcm-token', {
+            restaurant_owner_id: owner.id,
+            fcm_token: fcmToken
+          });
+          console.log('FCM token response:', fcmResponse.data);
+          console.log('FCM token saved to backend successfully');
+        } else {
+          console.log('No FCM token or owner ID available');
+        }
+      } catch (fcmError) {
+        console.log('FCM token error:', fcmError.message);
+      }
         alert(res.data.message || 'Registered successfully');
         // Prefer skipping login if we already have ownerId
         navigation.replace('Home');

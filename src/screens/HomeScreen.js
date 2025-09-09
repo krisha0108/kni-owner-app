@@ -3,13 +3,18 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   View, Text, StyleSheet, Image, ImageBackground, TouchableOpacity,
   ScrollView, FlatList, Animated, Easing, RefreshControl, Linking,
-  useWindowDimensions,Alert
+  useWindowDimensions,Alert, ActivityIndicator
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import KniBottomNav from '../components/KniBottomNav';
+import { Dimensions } from 'react-native';
+// import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+// import api from "../api/client";
+// import { IMAGE_BASE_URL, api} from "../api/client";
 // HomePremium.js
-import { api } from '../api/client';
+import { api,IMAGE_BASE_URL } from '../api/client';
 const ION_GLYPHS = (Icon.getRawGlyphMap?.() ?? {});
 const hasIonicon = (name) => !!name && Object.prototype.hasOwnProperty.call(ION_GLYPHS, name);
 const TONE_ICON = {
@@ -29,14 +34,14 @@ const R = 20;
 /* ---------------- DEMO CONTENT ---------------- */
 
 
-const SPONSORED = [
-  { id:'s1', brand:'Transrentals', img:'https://www.spinny.com/blog/wp-content/uploads/2024/09/videoframe_0.webp',
-    line:'Vehicle rentals marketplace', link:'https://transrentals.in/' },
-  { id:'s2', brand:'Apollo Equipments', img:'https://images.jdmagicbox.com/comp/ahmedabad/s3/079pxx79.xx79.200819003419.f7s3/catalogue/apollo-kitchen-equipments-and-services-pvt-ltd-vatva-gidc-ahmedabad-commercial-kitchen-equipment-manufacturers-qpznuwhw6w.jpg',
-    line:'Worlds best equiments', link:'https://apolloequipments.com/' },
-  { id:'s3', brand:'KNI', img:'https://dynamic-media-cdn.tripadvisor.com/media/photo-o/27/d5/bb/74/lounge.jpg?w=900&h=500&s=1',
-    line:'Restaurant Solution', link:'https://kitchennetworkinternational.com/' },
-];
+// const SPONSORED = [
+//   { id:'s1', brand:'Transrentals', img:'https://www.spinny.com/blog/wp-content/uploads/2024/09/videoframe_0.webp',
+//     line:'Vehicle rentals marketplace', link:'https://transrentals.in/' },
+//   { id:'s2', brand:'Apollo Equipments', img:'https://images.jdmagicbox.com/comp/ahmedabad/s3/079pxx79.xx79.200819003419.f7s3/catalogue/apollo-kitchen-equipments-and-services-pvt-ltd-vatva-gidc-ahmedabad-commercial-kitchen-equipment-manufacturers-qpznuwhw6w.jpg',
+//     line:'Worlds best equiments', link:'https://apolloequipments.com/' },
+//   { id:'s3', brand:'KNI', img:'https://dynamic-media-cdn.tripadvisor.com/media/photo-o/27/d5/bb/74/lounge.jpg?w=900&h=500&s=1',
+//     line:'Restaurant Solution', link:'https://kitchennetworkinternational.com/' },
+// ];
 
 
 /* ---------------- HELPERS ---------------- */
@@ -51,6 +56,36 @@ export default function HomePremium({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const showSkel = loading || refreshing;
+  // const API_URL = "http://192.168.29.88:8000/api/sponsored";
+  // const res = await api.get('/sponsored');
+const [sponsoredData, setSponsoredData] = useState([]);
+useEffect(() => {
+    const fetchSponsored = async () => {
+    try {
+      const url = '/sponsored';
+      // console.log('Fetching from:', `http://192.168.29.222:8000/api${url}`);
+      const res = await api.get(url);
+      console.log('Response:', res.data);
+      setSponsoredData(res.data);
+    } catch (error) {
+      console.error(
+        "Error fetching sponsored data:",
+        error.response?.data || error.message
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+const loadEverything = async () => {
+    setLoading(true);
+    await fetchSponsored();
+    setTimeout(() => {
+      setLoading(false);
+    }, 800); // slight delay for smooth transition
+  };
+  loadEverything();
+    // fetchSponsored();
+  }, []);
 const [banners, setBanners] = useState([]); // each: {id,title,subtitle,description,badge,cta_text,cta_link,image_url}
   const [heroIdx, setHeroIdx] = useState(0);
   const [guides, setGuides] = useState([]);
@@ -155,6 +190,51 @@ const onRefresh = useCallback(() => {
     setHeroIdx(i => (i + 1) % banners.length);       // use banners length
   });
 }, [banners.length, bar]);
+
+const SponsoredSection = () => {
+  return (
+    <View>
+      <View style={{ paddingHorizontal: 16, paddingVertical: 8 }}>
+        <Text style={{ fontSize: 18, fontWeight: 'bold' , color: '#000' }}>Sponsored</Text>
+      </View>
+      <FlatList
+        horizontal
+        data={sponsoredData}
+        keyExtractor={(item) => item.id.toString()}
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 2 }}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            onPress={() => Linking.openURL(item.link)}
+            activeOpacity={0.9}
+            style={{
+              width: Math.min(320, width * 0.8),
+              marginRight: 10,
+              borderRadius: 10,
+              overflow: 'hidden',
+              backgroundColor: '#fff',
+              elevation: 2,
+            }}
+          >
+            <Image
+              source={{ uri: `${IMAGE_BASE_URL}/${item.image}` }}
+              style={{ width: '100%', height: 150 }}
+              resizeMode="cover"
+            />
+            <View style={{ padding: 8 }}>
+              <Text style={{color:"#666", fontWeight: 'bold', fontSize: 16 }} numberOfLines={1}>
+                {item.title}
+              </Text>
+              <Text style={{ color: '#666', fontSize: 14 }} numberOfLines={1}>
+                {item.description}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        )}
+      />
+    </View>
+  );
+};
   // start/stop progress only when not showing skeleton
 useEffect(() => {
   bar.stopAnimation();
@@ -275,28 +355,9 @@ useEffect(() => {
 
               </ScrollView>
             </View>
-
-            {/* Sponsored */}
-            <View style={st.sectionHdr}>
-              <Text style={st.sectionTitle}>Sponsored</Text>
-            </View>
-            <FlatList
-              horizontal
-              data={SPONSORED}
-              showsHorizontalScrollIndicator={false}
-              keyExtractor={(i)=>i.id}
-              contentContainerStyle={{ paddingHorizontal:16, paddingBottom:2 }}
-              renderItem={({item})=>(
-                <TouchableOpacity onPress={()=>open(item.link)} activeOpacity={0.9} style={[st.adCard,{ width: Math.min(320, width*0.8) }]}>
-                  <Image source={{uri:item.img}} style={st.adImg}/>
-                  <View style={st.adBottom}>
-                    <View style={st.adTag}><Text style={st.adTagTxt}>Ad</Text></View>
-                    <Text style={st.adBrand} numberOfLines={1}>{item.brand}</Text>
-                    <Text style={st.adLine} numberOfLines={1}>{item.line}</Text>
-                  </View>
-                </TouchableOpacity>
-              )}
-            />
+<View style={{ marginTop: 20 }}>
+  <SponsoredSection />
+</View>
 
             {/* Guides */}
             <View style={st.sectionHdr}>

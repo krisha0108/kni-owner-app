@@ -10,7 +10,7 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { pick, types, isCancel } from '@react-native-documents/picker';
 
-import api from "../api/client";
+import { api } from '../api/client';
 import { PermissionsAndroid } from 'react-native';
 async function requestGalleryPermission() {
   if (Platform.OS === 'android') {

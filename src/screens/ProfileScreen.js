@@ -339,7 +339,37 @@ const hotelsData = [...(hotels || []), { id: 'more', type: 'more' }];
                     <Text style={st.meta}>{user?.email ?? '-'}</Text>
                      <Text style={st.meta}>{user?.phone ?? '-'}</Text>
                 </View>
+                <View style={{ paddingHorizontal:16, marginTop:4, marginBottom:2, alignItems:'flex-end' }}>
+  <TouchableOpacity
+    onPress={()=>{
+      // Pre-fill initial values from current user object
+      const firstName = (user?.name || '').split(' ')[0] || '';
+      const lastName  = (user?.name || '').split(' ').slice(1).join(' ') || '';
+      navigation.navigate('EditOwnerProfile', {
+        initial: {
+          first_name: firstName,
+          last_name: lastName,
+          email: user?.email || '',
+          phone: user?.phone || '',
+          password: '', // blank by default
+          restaurant_name: user?.restaurant_name || '',
+           locations: Number.isFinite(user?.locations) ? String(user.locations) : '0',
+        }
+      });
+    }}
+    // style={{ backgroundColor: C.primary, paddingHorizontal:16, paddingVertical:10, borderRadius:12 }}
+  >
+    {/* <Text style={{ color:C.primary, fontWeight:'900',marginBottom:60 }}>Edit Profile</Text> */}
+    <Text style={{ color:C.primary, fontWeight:'900',marginBottom:60 }}><Icon
+  name="create-outline"   // pencil
+  size={28}
+  color={C.primary}
+  style={{ marginBottom: 60 }}
+/></Text>
+  </TouchableOpacity>
+</View>
               </View>
+              
               <View style={[st.statsGlass, { marginTop:10, marginBottom:8 }]}>
                 <View style={st.statCell}>
                   <View style={st.statIcon}><Icon name="business-outline" size={16} color={C.primary}/></View>
@@ -414,7 +444,7 @@ const hotelsData = [...(hotels || []), { id: 'more', type: 'more' }];
         <View style={st.sectionHdr}>
           <Text style={st.sectionTitle}>Your hotels</Text>
           {!loading && (
-            <TouchableOpacity onPress={()=>Alert.alert('Add Hotel')}>
+            <TouchableOpacity onPress={()=>navigation.navigate('Restaurants')} style={{padding:8}}>
               <Text style={st.link}>Add new</Text>
             </TouchableOpacity>
           )}
