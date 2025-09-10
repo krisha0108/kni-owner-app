@@ -62,7 +62,7 @@ const [sponsoredData, setSponsoredData] = useState([]);
 useEffect(() => {
     const fetchSponsored = async () => {
     try {
-      const url = '/sponsored';
+      const url = '/admin/sponsored';
       // console.log('Fetching from:', `http://192.168.29.222:8000/api${url}`);
       const res = await api.get(url);
       console.log('Response:', res.data);

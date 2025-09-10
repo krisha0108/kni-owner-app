@@ -9,6 +9,7 @@ import KniBottomNav from '../components/KniBottomNav';
 import { api } from '../api/client';
 
 const INDEX_PATH = '/app/products';
+
 /* ---------------- Theme ---------------- */
 const COLORS = {
   primary: '#EF3A3A',
@@ -25,16 +26,72 @@ const H_MARGIN = 16;
 const GAP = 12;
 const MIN_W = 170;
 
-/* ---------------- Data ---------------- */
-const CATEGORIES = [
-  { key: 'All', icon: 'apps' },
-  { key: 'Fridge', icon: 'snow' },
-  { key: 'Chimney', icon: 'filter' },
-  { key: 'Oven', icon: 'flame' },
-  { key: 'Dishwasher', icon: 'water' },
-  { key: 'Gas Range', icon: 'bonfire' },
-  { key: 'Deep Freezer', icon: 'cube' },
-];
+/* ---------------- Service → Ionicon mapping ---------------- */
+const SERVICE_ICONS = {
+  installation: { icon: 'construct', label: 'Installation' },
+  install:      { icon: 'construct', label: 'Installation' },
+  repair:       { icon: 'hammer',    label: 'Repair' },
+  fixing:       { icon: 'hammer',    label: 'Repair' },
+  maintenance:  { icon: 'settings-outline', label: 'Maintenance' },
+  service:      { icon: 'settings-outline', label: 'Maintenance' },
+  amc:          { icon: 'settings-outline', label: 'Maintenance' },
+  cleaning:     { icon: 'water',     label: 'Cleaning' },
+  wash:         { icon: 'water',     label: 'Cleaning' },
+  sanitize:     { icon: 'water',     label: 'Cleaning' },
+  inspection:   { icon: 'search-outline', label: 'Inspection' },
+  uninstallation:{ icon: 'remove-circle-outline', label: 'Uninstallation' },
+};
+
+// normalize " Fridge " -> "fridge"
+const norm = (s = '') => String(s).trim().toLowerCase();
+
+// Title Case for labels
+const toTitle = (s = '') =>
+  String(s).toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+
+/* -------------- Service inference -------------- */
+const inferServiceFrom = (p) => {
+  const pick = (key) => {
+    const k = norm(key);
+    if (SERVICE_ICONS[k]) return { key: k, ...SERVICE_ICONS[k] };
+    return null;
+  };
+
+  // 1) direct fields commonly used
+  const directKeys = [p.service, p.service_type, p.type];
+  for (const key of directKeys) {
+    if (!key) continue;
+    const hit = pick(key);
+    if (hit) return hit;
+  }
+
+  // 2) tags array/string
+  let tags = [];
+  if (Array.isArray(p.tags)) tags = p.tags;
+  else if (typeof p.tags === 'string') {
+    try {
+      const j = JSON.parse(p.tags);
+      if (Array.isArray(j)) tags = j;
+    } catch (_) {}
+  }
+  for (const t of tags) {
+    const hit = pick(t);
+    if (hit) return hit;
+  }
+
+  // 3) fuzzy search in title/desc/category
+  const hay = [
+    p.title, p.description, p.category, p.subtitle, p.short_desc
+  ].filter(Boolean).map(norm).join(' ');
+  for (const key of Object.keys(SERVICE_ICONS)) {
+    if (hay.includes(key)) {
+      return { key, ...SERVICE_ICONS[key] };
+    }
+  }
+
+  // Fallback: no service found
+  return null;
+};
 
 /* ---------------- Skeleton (matches real card) ---------------- */
 const SkeletonCard = ({ width }) => {
@@ -95,7 +152,6 @@ export default function RequestScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
 
-  // ✨ Keep columns in state and bump a key ONLY when the column count changes.
   const [{ numColumns, cardW, listKey }, setGrid] = useState(() => {
     const g = computeGrid(width);
     return { ...g, listKey: `grid-${g.numColumns}` };
@@ -104,105 +160,137 @@ export default function RequestScreen({ navigation }) {
     const g = computeGrid(width);
     setGrid(prev =>
       g.numColumns !== prev.numColumns
-        ? { ...g, listKey: `grid-${g.numColumns}` } // force remount
-        : { ...g, listKey: prev.listKey }           // keep same key
+        ? { ...g, listKey: `grid-${g.numColumns}` }
+        : { ...g, listKey: prev.listKey }
     );
   }, [width]);
 
   // server state
   const [items, setItems] = useState([]);
   const [query, setQuery] = useState('');
-  const [activeCat, setActiveCat] = useState('All');
+  const [activeServiceKey, setActiveServiceKey] = useState('all');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-const fetchFeed = async () => {
-  const endpoint = INDEX_PATH;
-  try {
-    setLoading(true);
-    console.group('[fetchFeed]');
-    console.log('Base URL:', api?.defaults?.baseURL);
-    console.log('GET:', endpoint);
+  const fetchFeed = async () => {
+    const endpoint = INDEX_PATH;
+    try {
+      setLoading(true);
+      console.group('[fetchFeed]');
+      console.log('Base URL:', api?.defaults?.baseURL);
+      console.log('GET:', endpoint);
 
-    const res = await api.get(endpoint, { timeout: 10000 });
-    console.log('Status:', res.status, res.statusText);
+      const res = await api.get(endpoint, { timeout: 10000 });
+      console.log('Status:', res.status, res.statusText);
 
-    const mapped = (Array.isArray(res.data) ? res.data : []).map((p, ix) => {
-      // parse images
-      let images = [];
-      if (Array.isArray(p.images)) {
-        images = p.images;
-      } else if (typeof p.images === 'string') {
-        try {
-          const j = JSON.parse(p.images);
-          if (Array.isArray(j)) images = j;
-        } catch (e) {
-          console.warn(`Item ${ix}: images JSON parse failed`, e?.message, p.images);
+      const mapped = (Array.isArray(res.data) ? res.data : []).map((p, ix) => {
+        // parse images
+        let images = [];
+        if (Array.isArray(p.images)) {
+          images = p.images;
+        } else if (typeof p.images === 'string') {
+          try {
+            const j = JSON.parse(p.images);
+            if (Array.isArray(j)) images = j;
+          } catch (e) {
+            console.warn(`Item ${ix}: images JSON parse failed`, e?.message, p.images);
+          }
         }
-      }
 
-      // parse tags (optional)
-      let tags = [];
-      if (Array.isArray(p.tags)) {
-        tags = p.tags;
-      } else if (typeof p.tags === 'string') {
-        try {
-          const j = JSON.parse(p.tags);
-          if (Array.isArray(j)) tags = j;
-        } catch (e) {
-          /* ignore */
+        // parse tags (optional)
+        let tags = [];
+        if (Array.isArray(p.tags)) {
+          tags = p.tags;
+        } else if (typeof p.tags === 'string') {
+          try {
+            const j = JSON.parse(p.tags);
+            if (Array.isArray(j)) tags = j;
+          } catch (e) {/* ignore */}
         }
+
+        const firstImage = images?.[0];
+        const service = inferServiceFrom(p);
+
+        return {
+          id: String(p.id),
+          title: p.title || '',
+          catLabel: toTitle(p.category || ''),
+          desc: p.description || '',
+          image: firstImage,
+          rating: p.rating ?? 4.8,
+          requests: p.services_count ?? 0,
+          tags,
+          serviceKey: service?.key || null,
+          serviceLabel: service?.label || null,
+          serviceIcon: service?.icon || null,
+        };
+      });
+
+      console.log('Mapped items count:', mapped.length);
+      if (mapped.length) {
+        console.table(
+          mapped.slice(0, 10).map(({ id, title, catLabel, serviceLabel }) => ({
+            id, title, category: catLabel, service: serviceLabel || '-'
+          }))
+        );
       }
 
-      const firstImage = images?.[0];
-      if (!firstImage) {
-        console.warn(`Item ${ix} (${p.title}) has no first image after parsing.`);
-      }
-
-      return {
-        id: String(p.id),
-        title: p.title || '',
-        category: p.category || '',
-        desc: p.description || '',
-        image: firstImage,        // now a proper http://... string
-        rating: p.rating ?? 4.8,
-        requests: p.services_count ?? 0,
-        tags,
-      };
-    });
-
-    console.log('Mapped items count:', mapped.length);
-    if (mapped.length) {
-      console.table(mapped.slice(0, 10).map(({ id, title, category, image }) => ({ id, title, category, image })));
+      setItems(mapped);
+      console.groupEnd();
+    } catch (e) {
+      console.group('[fetchFeed:ERROR]');
+      console.error('Message:', e?.message);
+      if (e?.response) console.error('Response data:', e.response.data);
+      console.groupEnd();
+      setItems([]);
+    } finally {
+      setLoading(false);
     }
-
-    setItems(mapped);
-    console.groupEnd();
-  } catch (e) {
-    console.group('[fetchFeed:ERROR]');
-    console.error('Message:', e?.message);
-    if (e?.response) console.error('Response data:', e.response.data);
-    console.groupEnd();
-    setItems([]);
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   useEffect(() => { fetchFeed(); }, []);
+
+  /* -------- Build service chips from items (only those present) -------- */
+  const SERVICES = useMemo(() => {
+    const set = new Map(); // key -> { key, label, icon }
+    items.forEach(it => {
+      if (it.serviceKey) {
+        set.set(it.serviceKey, {
+          key: it.serviceKey,
+          label: it.serviceLabel,
+          icon: it.serviceIcon || 'grid-outline'
+        });
+      }
+    });
+
+    const base = [{ key: 'all', label: 'All', icon: 'grid-outline' }];
+    const rest = [...set.values()].sort((a, b) => (a.label || '').localeCompare(b.label || ''));
+    return base.concat(rest);
+  }, [items]);
+
+  // Guard fallback for active service
+  useEffect(() => {
+    if (activeServiceKey !== 'all' && !SERVICES.find(s => s.key === activeServiceKey)) {
+      setActiveServiceKey('all');
+    }
+  }, [SERVICES, activeServiceKey]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return items.filter((it) => {
-      const byCat = activeCat === 'All' || it.category === activeCat;
+      const byService =
+        activeServiceKey === 'all' ||
+        (it.serviceKey ? it.serviceKey === activeServiceKey : false);
+
       const byQuery = !q
         || (it.title || '').toLowerCase().includes(q)
-        || (it.category || '').toLowerCase().includes(q)
-        || (it.desc || '').toLowerCase().includes(q);
-      return byCat && byQuery;
+        || (it.catLabel || '').toLowerCase().includes(q)
+        || (it.desc || '').toLowerCase().includes(q)
+        || (it.serviceLabel || '').toLowerCase().includes(q);
+
+      return byService && byQuery;
     });
-  }, [items, query, activeCat]);
+  }, [items, query, activeServiceKey]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -210,20 +298,22 @@ const fetchFeed = async () => {
     setRefreshing(false);
   };
 
-  const renderChip = ({ item }) => {
-    const active = item.key === activeCat;
+  const renderServiceChip = ({ item }) => {
+    const active = item.key === activeServiceKey;
     return (
       <TouchableOpacity
-        onPress={() => setActiveCat(item.key)}
+        onPress={() => setActiveServiceKey(item.key)}
         style={[styles.chip, active && { backgroundColor: '#FFF1F1', borderColor: COLORS.primary }]}
       >
-        <Icon name={item.icon} size={16} color={active ? COLORS.primary : COLORS.muted} style={{ marginRight: 6 }} />
-        <Text style={[styles.chipText, active && { color: COLORS.primary, fontWeight: '700' }]}>{item.key}</Text>
+        <Icon name={item.icon || 'grid-outline'} size={16} color={active ? COLORS.primary : COLORS.muted} style={{ marginRight: 6 }} />
+        <Text style={[styles.chipText, active && { color: COLORS.primary, fontWeight: '700' }]}>
+          {item.label}
+        </Text>
       </TouchableOpacity>
     );
   };
 
-  /* -------- Sticky Header (Request + Search + Chips) -------- */
+  /* -------- Sticky Header (Request + Search + Service Chips) -------- */
   const Header = useMemo(() => (
     <View style={styles.stickyHeader}>
       <View style={styles.topbar}>
@@ -248,34 +338,52 @@ const fetchFeed = async () => {
           style={styles.searchInput}
           returnKeyType="search"
         />
+        {/* filter icon kept for future use; no category chips now */}
         <TouchableOpacity style={styles.filterBtn}>
           <Icon name="options-outline" size={18} color="#fff" />
         </TouchableOpacity>
       </View>
 
-      <FlatList
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 12 }}
-        data={CATEGORIES}
-        keyExtractor={(i) => i.key}
-        renderItem={renderChip}
-      />
+      {/* Service chips only */}
+      {SERVICES.length > 1 && (
+        <FlatList
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 12 }}
+          data={SERVICES}
+          keyExtractor={(i) => `svc-${i.key}`}
+          renderItem={renderServiceChip}
+        />
+      )}
     </View>
-  ), [query, activeCat, navigation]);
+  ), [query, activeServiceKey, navigation, SERVICES]);
 
-  // 🔁 Single FlatList (no conditional FlatLists). Key changes only when columns change.
   const listData = loading
     ? Array.from({ length: numColumns * 2 }, (_, i) => ({ __sk: i }))
     : filtered;
 
   const renderItem = ({ item }) => {
     if (loading) return <SkeletonCard width={cardW} />;
+    const leftIcon = item.serviceIcon || 'pricetags-outline';
+    const leftLabel = item.serviceLabel || item.catLabel || '—';
+
     return (
       <TouchableOpacity
         activeOpacity={0.9}
         style={[styles.card, { width: cardW }]}
-        onPress={() => navigation.navigate('RequestDetail', { item })}
+        onPress={() =>
+  navigation.navigate('RequestDetail', {
+    id: item.id,                // <-- important for /app/products/:id
+    productId: item.id,         // <-- optional alias if your detail reads productId
+    item: {
+      title: item.title,
+      category: item.catLabel,
+      rating: item.rating,
+      requests: item.requests,
+      desc: item.desc,
+    },
+  })
+}
       >
         <ImageBackground source={{ uri: item.image }} style={styles.cardImage} imageStyle={styles.cardImageR}>
           <View style={styles.badge}>
@@ -291,8 +399,8 @@ const fetchFeed = async () => {
 
           <View style={styles.metaRow}>
             <View style={styles.metaLeft}>
-              <Icon name="pricetags-outline" size={14} color={COLORS.muted} />
-              <Text style={styles.metaText}>{item.category}</Text>
+              <Icon name={leftIcon} size={14} color={COLORS.muted} />
+              <Text style={styles.metaText}>{leftLabel}</Text>
             </View>
             <View style={styles.metaRight}>
               <Icon name="flash-outline" size={14} color={COLORS.primary} />
@@ -315,7 +423,7 @@ const fetchFeed = async () => {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.bg }} edges={['top', 'left', 'right']}>
       <FlatList
-        key={listKey} // 👈 forces a fresh mount when numColumns changes
+        key={listKey}
         data={listData}
         keyExtractor={(it, idx) => (loading ? `sk-${idx}` : String(it.id))}
         numColumns={numColumns}
@@ -329,7 +437,7 @@ const fetchFeed = async () => {
             <View style={[styles.empty, { paddingTop: 32 }]}>
               <Icon name="search-circle-outline" size={64} color="#CBD5E1" />
               <Text style={styles.emptyTitle}>No results</Text>
-              <Text style={styles.emptySub}>Try a different keyword or category.</Text>
+              <Text style={styles.emptySub}>Try a different keyword or service.</Text>
             </View>
           )
         }
@@ -389,7 +497,7 @@ const styles = StyleSheet.create({
   },
   cardImage: { width: '100%', height: 120, justifyContent: 'space-between' },
   cardImageR: { borderTopLeftRadius: 18, borderTopRightRadius: 18 },
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(29,34,84,0.15)' },
+  overlay: { ...StyleSheet.create({}).absoluteFillObject, backgroundColor: 'rgba(29,34,84,0.15)' },
   badge: {
     flexDirection: 'row', alignSelf: 'flex-start', backgroundColor: 'rgba(0,0,0,0.5)',
     paddingHorizontal: 8, paddingVertical: 5, borderBottomRightRadius: 10, borderTopLeftRadius: 18,
@@ -433,7 +541,7 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 10, borderTopLeftRadius: 18,
     marginTop: 0,
   },
-  skelOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(29,34,84,0.10)' },
+  skelOverlay: { ...StyleSheet.create({}).absoluteFillObject, backgroundColor: 'rgba(29,34,84,0.10)' },
 
   empty: { alignItems: 'center' },
   emptyTitle: { marginTop: 8, fontSize: 18, color: COLORS.ink, fontWeight: '800' },
