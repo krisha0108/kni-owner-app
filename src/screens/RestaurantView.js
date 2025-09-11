@@ -1,4 +1,3 @@
-// screens/RestaurantView.tsx (or .js)
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Image, ImageBackground, TouchableOpacity,
@@ -6,6 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { api } from '../api/client';
 
 const C = {
   primary:'#EF3A3A', ink:'#0F172A', bg:'#F5F7FA', card:'#FFFFFF',
@@ -15,17 +15,17 @@ const R = 20;
 const { width:W } = Dimensions.get('window');
 
 /* -------------------- helpers -------------------- */
-const money = (n:number)=>`₹ ${Number(n||0).toLocaleString('en-IN')}`;
-const day = (d:string|Date)=> new Date(d);
-const fmt = (d:string|Date)=> day(d).toLocaleDateString('en-IN',{ day:'2-digit', month:'short', year:'numeric' });
+const money = (n)=>`₹ ${Number(n||0).toLocaleString('en-IN')}`;
+const day = (d)=> new Date(d);
+const fmt = (d)=> day(d).toLocaleDateString('en-IN',{ day:'2-digit', month:'short', year:'numeric' });
 
-const statusStyles = (s?:string)=>({
+const statusStyles = (s)=>({
   bg: s==='approved' ? '#ECFDF5' : s==='pending' ? '#FFF7ED' : '#FEF2F2',
   fg: s==='approved' ? C.ok : s==='pending' ? '#F59E0B' : C.danger,
   label: s ? s[0].toUpperCase()+s.slice(1) : '—',
 });
 
-/* -------------------- demo inventory + equipment -------------------- */
+/* -------------------- demo inventory (unchanged) -------------------- */
 function demoInventory(seed = 0){
   const base = [
     { date:'2025-08-02', item:'Condenser coil', category:'Spare', cost: 4200, note:'Fridge – south line' },
@@ -44,17 +44,10 @@ function demoInventory(seed = 0){
   return base.map((x,i)=>({ id:`inv${i+seed}`, ...x, status: i%5===0?'Pending': 'Closed' }));
 }
 
-const demoEquip = [
-  { id:'e1', title:'Commercial Fridge', sub:'Double-door • 600L', photo:'https://images.unsplash.com/photo-1496412705862-e0088f16f791?q=80&w=1200&auto=format&fit=crop', count:22 },
-  { id:'e2', title:'Deep Freezer', sub:'-18°C • 450L', photo:'https://images.unsplash.com/photo-1543984613-5c3c7c54b3a6?q=80&w=1200&auto=format&fit=crop', count:15 },
-  { id:'e3', title:'Chimney', sub:'1200 m³/h baffle', photo:'https://images.unsplash.com/photo-1510627498534-cf7e9002facc?q=80&w=1200&auto=format&fit=crop', count:9 },
-  { id:'e4', title:'Combi Oven', sub:'10-tray • injection', photo:'https://images.unsplash.com/photo-1565299737801-9b9c2f1b0f2b?q=80&w=1200&auto=format&fit=crop', count:7 },
-];
-
 /* ================================================== */
 /*                     MAIN SCREEN                    */
 /* ================================================== */
-export default function RestaurantView({ navigation, route }: any) {
+export default function RestaurantView({ navigation, route }) {
   const insets = useSafeAreaInsets();
 
   const r = route?.params?.restaurant ?? {
@@ -80,7 +73,7 @@ export default function RestaurantView({ navigation, route }: any) {
 
   /* hero pager */
   const [idx, setIdx] = useState(0);
-  const sc = useRef<ScrollView|null>(null);
+  const sc = useRef(null);
   const bar = useRef(new Animated.Value(0)).current;
   const DURATION = 6000;
 
@@ -111,7 +104,8 @@ export default function RestaurantView({ navigation, route }: any) {
 
   const onRefresh = ()=>{
     setRefreshing(true);
-    setTimeout(()=>{ setRefreshing(false); }, 900);
+    Promise.allSettled([reloadEquip()])
+      .finally(()=> setTimeout(()=> setRefreshing(false), 400));
   };
 
   /* demo inventory + analytics */
@@ -125,7 +119,7 @@ export default function RestaurantView({ navigation, route }: any) {
   },[inventory]);
 
   const monthlyBars = useMemo(()=>{
-    const buckets:{label:string, value:number}[] = [];
+    const buckets = [];
     const now = new Date();
     for(let i=5;i>=0;i--){
       const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
@@ -137,38 +131,56 @@ export default function RestaurantView({ navigation, route }: any) {
       buckets.push({ label: d.toLocaleDateString('en-IN',{month:'short'}), value });
     }
     const max = Math.max(1, ...buckets.map(b=>b.value));
-    return buckets.map(b=>({ ...b, h: Math.max(6, Math.round((b.value/max)*60)) })); // height 6..60
+    return buckets.map(b=>({ ...b, h: Math.max(6, Math.round((b.value/max)*60)) }));
   },[inventory]);
 
   const shareIt = async ()=>{
-    try{ await Share.share({ message:`${r.name}\n${r.address}\nFSSAI: ${r.fssai}` }); }catch{}
+    try{ await Share.share({ message:`${r.name}\n${r.address}\nFSSAI: ${r.fssai}` }); }catch(e){}
   };
- const openPdf = async ()=>{
-    console.log(':mag: Attempting to open PDF:', r.fssaiPdf);
-    if (!r.fssaiPdf || r.fssaiPdf.trim() === '') {
-      console.log(':x: PDF URL is empty or null');
-      return;
-    }
+
+  const openPdf = async ()=>{
+    if (!r.fssaiPdf || r.fssaiPdf.trim() === '') return;
     try{
-      console.log(':rocket: Opening PDF directly...');
-      // Direct opening without canOpenURL check for PDFs
-      // canOpenURL sometimes fails for local server URLs
       await Linking.openURL(r.fssaiPdf);
-      console.log(':white_check_mark: PDF opened successfully');
     } catch(error) {
-      console.log(':x: Error opening PDF:', error);
-      console.log(':arrows_counterclockwise: Trying alternative method...');
-      // Alternative: Try with browser intent
       try {
-        const browserUrl = r.fssaiPdf;
-        await Linking.openURL(browserUrl);
-        console.log(':white_check_mark: PDF opened in browser');
-      } catch(secondError) {
-        console.log(':x: Alternative method also failed:', secondError);
-      }
+        await Linking.openURL(r.fssaiPdf);
+      } catch(_) {}
     }
   };
 
+  /* ==================== LIVE EQUIPMENT SNAPSHOT ==================== */
+  // We’ll show individual services from Laravel: GET /api/v1/services?status=Active
+  const [equip, setEquip] = useState([]);           // array of services
+  const [equipLoading, setEquipLoading] = useState(true);
+  const [equipError, setEquipError] = useState(null);
+
+  const fetchEquip = async ()=>{
+    try {
+      setEquipError(null);
+      setEquipLoading(true);
+      const res = await api.get('/services', { params: { status: 'Active' } });
+      // Expecting an array of services
+      const list = Array.isArray(res.data) ? res.data : [];
+      // Normalize for UI (title, category, image_url, price)
+      setEquip(list.map(s => ({
+        id: s.id,
+        title: s.title || 'Untitled',
+        sub: s.category || (s.description ? String(s.description).slice(0,32)+'…' : '—'),
+        count: 1, // you can replace this with s.completed_jobs if you add that column
+        image_url: s.image_url || null,
+        price: s.price || 0,
+      })));
+    } catch (err) {
+      setEquipError('Failed to load equipment.');
+    } finally {
+      setEquipLoading(false);
+    }
+  };
+
+  const reloadEquip = async ()=> fetchEquip();
+
+  useEffect(()=>{ fetchEquip(); },[]);
 
   /* -------------------- render -------------------- */
   if (showSkel) {
@@ -180,13 +192,13 @@ export default function RestaurantView({ navigation, route }: any) {
       {/* HERO */}
       <View style={{backgroundColor:C.card, borderBottomLeftRadius:R, borderBottomRightRadius:R, overflow:'hidden'}}>
         <ScrollView
-          ref={ref=>sc.current=ref}
+          ref={(ref)=>{ sc.current = ref; }}
           horizontal
           pagingEnabled
           showsHorizontalScrollIndicator={false}
           onMomentumScrollEnd={(e)=> setIdx(Math.round(e.nativeEvent.contentOffset.x / W))}
         >
-          {r.photos?.map((uri:string, i:number)=>(
+          {r.photos?.map((uri, i)=>(
             <ImageBackground key={i} source={{uri}} style={{width:W, height:240}}>
               <View style={[StyleSheet.absoluteFill,{backgroundColor:'rgba(0,0,0,0.25)'}]} />
             </ImageBackground>
@@ -195,9 +207,13 @@ export default function RestaurantView({ navigation, route }: any) {
 
         {/* overlay controls */}
         <View style={[st.heroTop]}>
-          <TouchableOpacity onPress={()=>navigation.goBack()} style={st.round}><Icon name="chevron-back" size={18} color={C.ink}/></TouchableOpacity>
+          <TouchableOpacity onPress={()=>navigation.goBack()} style={st.round}>
+            <Icon name="chevron-back" size={18} color={C.ink}/>
+          </TouchableOpacity>
           <View style={{flexDirection:'row', gap:8}}>
-            <TouchableOpacity onPress={shareIt} style={st.round}><Icon name="share-social-outline" size={18} color={C.ink}/></TouchableOpacity>
+            <TouchableOpacity onPress={shareIt} style={st.round}>
+              <Icon name="share-social-outline" size={18} color={C.ink}/>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -251,7 +267,8 @@ export default function RestaurantView({ navigation, route }: any) {
 
           <View style={{flexDirection:'row', gap:10, marginTop:12}}>
             <TouchableOpacity onPress={openPdf} style={[st.ghostBtn,{flex:1}]}>
-              <Icon name="document-text-outline" size={16} color={C.ink}/><Text style={st.ghostTxt}>FSSAI: {r.fssai}</Text>
+              <Icon name="document-text-outline" size={16} color={C.ink}/>
+              <Text style={st.ghostTxt}>FSSAI: {r.fssai}</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={()=>navigation.navigate?.('Restaurants')} style={[st.outBtn,{flex:0}]}>
               <Text style={st.outTxt}>Manage</Text>
@@ -272,23 +289,64 @@ export default function RestaurantView({ navigation, route }: any) {
           </View>
         </View>
 
-        {/* EQUIPMENT SNAPSHOT */}
+        {/* EQUIPMENT SNAPSHOT (LIVE) */}
         <View style={st.section}>
           <Text style={st.h2}>Equipment snapshot</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{paddingRight:16}}>
-            {demoEquip.map(e=>(
-              <View key={e.id} style={st.equipCard}>
-                <Image source={{uri:e.photo}} style={st.equipImg}/>
-                <View style={{padding:10}}>
-                  <Text style={st.equipTitle} numberOfLines={1}>{e.title}</Text>
-                  <Text style={st.equipSub} numberOfLines={1}>{e.sub}</Text>
-                  <View style={st.equipChip}>
-                    <Icon name="repeat-outline" size={12} color={C.ink}/><Text style={st.equipChipTxt}>{e.count}</Text>
+
+          {equipLoading && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{paddingRight:16}}>
+              {[0,1,2].map(i=>(
+                <View key={i} style={[st.equipCard, { backgroundColor:'#fff' }]}>
+                  <View style={stSK.equipImg} />
+                  <View style={{padding:10}}>
+                    <View style={stSK.lineMd} />
+                    <View style={[stSK.lineSm, { marginTop:6 }]} />
+                    <View style={[stSK.metaChip, { marginTop:8 }]} />
                   </View>
                 </View>
-              </View>
-            ))}
-          </ScrollView>
+              ))}
+            </ScrollView>
+          )}
+
+          {!!equipError && !equipLoading && (
+            <View style={{ backgroundColor:'#FEF2F2', borderColor:'#FEE2E2', borderWidth:1, padding:12, borderRadius:12 }}>
+              <Text style={{ color:'#991B1B', fontWeight:'700' }}>{equipError}</Text>
+              <TouchableOpacity onPress={reloadEquip} style={[st.ghostBtn, { marginTop:8, alignSelf:'flex-start' }]}>
+                <Icon name="reload-outline" size={16} color={C.ink}/>
+                <Text style={st.ghostTxt}>Retry</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {!equipLoading && !equipError && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{paddingRight:16}}>
+              {equip.map(e => (
+                <View key={e.id} style={st.equipCard}>
+                  {e.image_url ? (
+                    <Image source={{ uri: e.image_url }} style={st.equipImg}/>
+                  ) : (
+                    <View style={[st.equipImg, { backgroundColor:'#E9EEF5', alignItems:'center', justifyContent:'center' }]}>
+                      <Icon name="image-outline" size={22} color="#94A3B8" />
+                    </View>
+                  )}
+                  <View style={{padding:10}}>
+                    <Text style={st.equipTitle} numberOfLines={1}>{e.title}</Text>
+                    <Text style={st.equipSub} numberOfLines={1}>{e.sub}</Text>
+                    <View style={st.equipChip}>
+                      <Icon name="cash-outline" size={12} color={C.ink}/>
+                      <Text style={st.equipChipTxt}>{money(e.price)}</Text>
+                    </View>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+          )}
+
+          {(!equipLoading && !equipError && equip.length === 0) && (
+            <View style={{ padding:16, borderWidth:1, borderColor:'#E5E7EB', borderRadius:12, backgroundColor:'#fff' }}>
+              <Text style={{ color:C.muted }}>No equipment to show yet.</Text>
+            </View>
+          )}
         </View>
 
         {/* INVENTORY TIMELINE */}
@@ -336,7 +394,8 @@ export default function RestaurantView({ navigation, route }: any) {
           <Text style={st.stickySub}>{r.address}</Text>
         </View>
         <TouchableOpacity style={st.primaryBtn} onPress={()=>navigation.navigate?.('Request',{ restaurant:r })}>
-          <Icon name="add-circle" size={18} color="#fff"/><Text style={st.primaryTxt}>Raise request</Text>
+          <Icon name="add-circle" size={18} color="#fff"/>
+          <Text style={st.primaryTxt}>Raise request</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -344,7 +403,7 @@ export default function RestaurantView({ navigation, route }: any) {
 }
 
 /* ==================== SKELETON VIEW ==================== */
-function SkeletonRestaurantView({ insetsBottom=0 }: { insetsBottom?: number }) {
+function SkeletonRestaurantView({ insetsBottom=0 }) {
   const pulse = useRef(new Animated.Value(0.6)).current;
   useEffect(() => {
     const loop = Animated.loop(
@@ -359,18 +418,15 @@ function SkeletonRestaurantView({ insetsBottom=0 }: { insetsBottom?: number }) {
 
   return (
     <SafeAreaView style={{ flex:1, backgroundColor:C.bg }} edges={['top','left','right']}>
-      {/* HERO skeleton (pager + title band + status pill) */}
+      {/* HERO skeleton */}
       <View style={{backgroundColor:C.card, borderBottomLeftRadius:R, borderBottomRightRadius:R, overflow:'hidden'}}>
         <Animated.View style={[stSK.hero, { opacity:pulse }]}>
-          {/* top controls placeholders */}
           <View style={st.heroTop}>
             <View style={stSK.round}/>
             <View style={{ flexDirection:'row', gap:8 }}>
               <View style={stSK.round}/>
             </View>
           </View>
-
-          {/* progress bar placeholder */}
           <View style={{position:'absolute', left:16, right:16, bottom:10}}>
             <View style={{height:4, borderRadius:999, backgroundColor:'#ffffff55', overflow:'hidden', width:'90%'}} />
           </View>
@@ -479,7 +535,6 @@ function SkeletonRestaurantView({ insetsBottom=0 }: { insetsBottom?: number }) {
     </SafeAreaView>
   );
 }
-
 /* -------------------- styles -------------------- */
 const st = StyleSheet.create({
   heroTop:{ position:'absolute', top:12, left:12, right:12, flexDirection:'row', justifyContent:'space-between', alignItems:'center' },

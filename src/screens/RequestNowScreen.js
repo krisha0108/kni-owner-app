@@ -418,10 +418,21 @@ export default function RequestNow({ navigation, route }) {
       assigned_to: '',
     };
   };
+// :white_check_mark: Only allow confirming when selected restaurant is approved
+  const canConfirm = useMemo(() => {
+    if (!restSel) return false;
+    const picked = restaurants.find(r => r.id === restSel);
+    return !!(picked && picked.approved);
+  }, [restSel, restaurants]);
 
   const confirmRestaurant = useCallback(async () => {
     if (!restSel) return;
     const picked = restaurants.find(r => r.id === restSel);
+    // Hard stop if not approved (extra safety)
+    if (!picked?.approved) {
+      console.log('Blocked: restaurant is not approved');
+      return;
+    }
     try {
       setSavingReq(true);
       await AsyncStorage.setItem(K.restaurant, JSON.stringify(picked || {})).catch(()=>{});
@@ -782,11 +793,18 @@ export default function RequestNow({ navigation, route }) {
               <ScrollView style={{ marginTop: 8, maxHeight: 420 }}>
                 {restaurants.map((r, idx)=>{
                   const active = restSel===r.id;
+                  const disabled = !r.approved;
                   return (
                     <TouchableOpacity
                       key={`${r.id}-${idx}`}
-                      onPress={()=>setRestSel(r.id)}
-                      style={[st.restCard, active && { borderColor: C.primary }]}
+                      onPress={() => { if (!disabled) setRestSel(r.id); }}
+                      activeOpacity={disabled ? 1 : 0.7}
+                      accessibilityState={{ disabled }}
+                      style={[
+                        st.restCard,
+                        active && !disabled && { borderColor: C.primary },
+                        disabled && { opacity: 0.5 }
+                      ]}
                     >
                       <Text style={st.restName}>{r.name}</Text>
                       <Text style={st.restAddr}>{r.addr}</Text>
@@ -802,9 +820,9 @@ export default function RequestNow({ navigation, route }) {
             )}
 
             <TouchableOpacity
-              disabled={!restSel || savingReq}
+              disabled={!canConfirm || savingReq}
               onPress={confirmRestaurant}
-              style={[st.continueBtn, (!restSel || savingReq) && { backgroundColor:'#FBC6C3', opacity: 0.6 }]}
+              style={[st.continueBtn, (!canConfirm || savingReq) && { backgroundColor:'#FBC6C3', opacity: 0.6 }]}
             >
               {savingReq ? <ActivityIndicator color="#fff" /> : <Text style={st.continueTxt}>Confirm</Text>}
             </TouchableOpacity>
