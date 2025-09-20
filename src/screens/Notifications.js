@@ -222,7 +222,7 @@ await api.post('/notifications/mark-all-read', { restaurant_owner_id: ownerId },
 // use inside openItem
 const openItem = (n) => {
   // navigate logic
-  if (n.type.startsWith('ticket')) navigation.navigate?.('TicketDetail', { id: n.meta?.ticketId });
+  if (n.type.startsWith('ticket')) navigation.navigate?.('SupportCenter', { id: n.meta?.ticketId });
   else if (n.type.startsWith('restaurant')) navigation.navigate?.('Restaurants');
   else if (n.type==='eq_request_approved') navigation.navigate?.('YourCart');
   else if (n.type==='feature') navigation.navigate?.('HotelProfile');

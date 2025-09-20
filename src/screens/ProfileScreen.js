@@ -442,7 +442,7 @@ const hotelsData = [...(hotels || []), { id: 'more', type: 'more' }];
 
         {/* HOTELS */}
         <View style={st.sectionHdr}>
-          <Text style={st.sectionTitle}>Your hotels</Text>
+          <Text style={st.sectionTitle}>Your Restaurants</Text>
           {!loading && (
             <TouchableOpacity onPress={()=>navigation.navigate('Restaurants')} style={{padding:8}}>
               <Text style={st.link}>Add new</Text>

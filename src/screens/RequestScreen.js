@@ -6,9 +6,17 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import KniBottomNav from '../components/KniBottomNav';
-import { api } from '../api/client';
+import { api,IMAGE_BASE_URL } from '../api/client';
 
 const INDEX_PATH = '/app/products';
+// absolute-url helper
+const makeAbsolute = (u) => {
+  if (!u) return null;
+  const s = String(u).trim();
+  if (/^https?:\/\//i.test(s)) return s;                 // already absolute
+  const rel = s.replace(/^\/?/, '');                     // strip leading slash
+  return `${IMAGE_BASE_URL}/${rel}`;                     // -> https://your-api.com/storage/...
+};
 
 /* ---------------- Theme ---------------- */
 const COLORS = {
@@ -182,49 +190,42 @@ export default function RequestScreen({ navigation }) {
 
       const res = await api.get(endpoint, { timeout: 10000 });
       console.log('Status:', res.status, res.statusText);
+  // ✅ normalize images here
+// ✅ normalize images here
+const mapped = (Array.isArray(res.data) ? res.data : []).map((p, ix) => {
+  let images = [];
 
-      const mapped = (Array.isArray(res.data) ? res.data : []).map((p, ix) => {
-        // parse images
-        let images = [];
-        if (Array.isArray(p.images)) {
-          images = p.images;
-        } else if (typeof p.images === 'string') {
-          try {
-            const j = JSON.parse(p.images);
-            if (Array.isArray(j)) images = j;
-          } catch (e) {
-            console.warn(`Item ${ix}: images JSON parse failed`, e?.message, p.images);
-          }
-        }
+  // Prefer array, fallback stringified JSON
+  if (Array.isArray(p.images)) images = p.images;
+  else if (typeof p.images === 'string') {
+    try { images = JSON.parse(p.images) || []; } catch {}
+  }
 
-        // parse tags (optional)
-        let tags = [];
-        if (Array.isArray(p.tags)) {
-          tags = p.tags;
-        } else if (typeof p.tags === 'string') {
-          try {
-            const j = JSON.parse(p.tags);
-            if (Array.isArray(j)) tags = j;
-          } catch (e) {/* ignore */}
-        }
+  // Fall back to single image fields
+  const firstImage = images[0] || p.image || p.image_url || p.thumb || null;
 
-        const firstImage = images?.[0];
-        const service = inferServiceFrom(p);
+  // map relative → absolute
+  const imageUrl = firstImage ? makeAbsolute(firstImage) : null;
 
-        return {
-          id: String(p.id),
-          title: p.title || '',
-          catLabel: toTitle(p.category || ''),
-          desc: p.description || '',
-          image: firstImage,
-          rating: p.rating ?? 4.8,
-          requests: p.services_count ?? 0,
-          tags,
-          serviceKey: service?.key || null,
-          serviceLabel: service?.label || null,
-          serviceIcon: service?.icon || null,
-        };
-      });
+  return {
+    id: String(p.id),
+    title: p.title || "",
+    catLabel: toTitle(p.category || ""),
+    desc: p.description || "",
+    image: imageUrl,
+    rating: p.rating ?? 4.8,
+    requests: p.services_count ?? 0,
+    tags: p.tags ?? [],
+    serviceKey: null,
+    serviceLabel: null,
+    serviceIcon: null,
+  };
+});
+
+console.log('[fetchFeed] first mapped item:', mapped[0]);
+
+
+console.log("Mapped:", mapped[0]);
 
       console.log('Mapped items count:', mapped.length);
       if (mapped.length) {
@@ -381,11 +382,13 @@ export default function RequestScreen({ navigation }) {
       rating: item.rating,
       requests: item.requests,
       desc: item.desc,
+          image: item.image,   // ✅ yeh add karo
+
     },
   })
 }
       >
-        <ImageBackground source={{ uri: item.image }} style={styles.cardImage} imageStyle={styles.cardImageR}>
+<ImageBackground source={{ uri: item.image }} style={styles.cardImage} imageStyle={styles.cardImageR}>
           <View style={styles.badge}>
             <Icon name="star" size={12} color="#fff" />
             <Text style={styles.badgeText}>{item.rating ?? 0}</Text>

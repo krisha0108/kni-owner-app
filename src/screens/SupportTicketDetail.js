@@ -8,7 +8,29 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary } from 'react-native-image-picker';
-import { api } from '../api/client';
+import { api ,IMAGE_BASE_URL} from '../api/client';
+// turn any API path or localhost URL into a device-reachable URL
+const toStorageUrl = (u) => {
+  if (!u) return '';
+  const s = String(u).trim();
+  if (!s) return '';
+
+  // already absolute AND not localhost -> keep
+  if (/^https?:\/\//i.test(s) && !/https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i.test(s)) {
+    return s;
+  }
+
+  // extract the tail under /storage
+  const m = s.match(/\/storage\/(.+)$/);
+  const tail = m ? m[1] : s.replace(/^\/?storage\/?/, '');
+
+  // IMAGE_BASE_URL = 'http://192.168.29.223:8000/storage'
+  // ensure there is exactly one / between base and tail
+  const base = IMAGE_BASE_URL.replace(/\/$/, '');       // .../storage
+  const cleanTail = tail.replace(/^\/+/, '');           // support_threads/abc.jpg
+
+  return `${base}/${cleanTail}`;
+};
 
 const C = { primary:'#EF3A3A', ink:'#0F172A', bg:'#F5F7FA', card:'#FFFFFF',
   text:'#111827', muted:'#6B7280', border:'#E5E7EB', ok:'#10B981', warn:'#F59E0B',
@@ -16,7 +38,6 @@ const C = { primary:'#EF3A3A', ink:'#0F172A', bg:'#F5F7FA', card:'#FFFFFF',
 };
 const R = 20;
 const { width:W, height:H } = Dimensions.get('window');
-const IMAGE_BASE_URL = 'http://192.168.29.222:8000'; 
 const STATUS = {
   pending:   { label:'Pending',   bg:'#FFF7ED', fg:C.warn,    step:1, icon:'time-outline' },
   seen:      { label:'Seen',      bg:'#EFF6FF', fg:C.info,    step:2, icon:'eye-outline' },
@@ -122,20 +143,28 @@ export default function SupportTicketDetail({ navigation, route }) {
         created: t.created_at,
         status: t.status,
       };
-      const thr = (t.threads || []).map(x=>({
-        id: x.id,
-        author: x.sender_owner_id ? 'owner' : 'support',
-        time: x.created_at,
-        text: x.message || undefined,
-        photos: x.photo_path
-        ? [x.photo_path.startsWith('http')
-            ? x.photo_path
-            : x.photo_path.startsWith('/storage/')
-              ? `${IMAGE_BASE_URL.replace(/\/storage\/$/, '')}${x.photo_path}`
-              : `${IMAGE_BASE_URL.replace(/\/$/, '')}/${x.photo_path.replace(/^\/+/, '')}`
-          ]
-        : [],
-      }));
+      // const thr = (t.threads || []).map(x=>({
+      //   id: x.id,
+      //   author: x.sender_owner_id ? 'owner' : 'support',
+      //   time: x.created_at,
+      //   text: x.message || undefined,
+      //   photos: x.photo_path
+      //   ? [x.photo_path.startsWith('http')
+      //       ? x.photo_path
+      //       : x.photo_path.startsWith('/storage/')
+      //         ? `${IMAGE_BASE_URL.replace(/\/storage\/$/, '')}${x.photo_path}`
+      //         : `${IMAGE_BASE_URL.replace(/\/$/, '')}/${x.photo_path.replace(/^\/+/, '')}`
+      //     ]
+      //   : [],
+      // }));
+      const thr = (t.threads || []).map(x => ({
+  id: x.id,
+  author: x.sender_owner_id ? 'owner' : 'support',
+  time: x.created_at,
+  text: x.message || undefined,
+  photos: x.photo_path ? [toStorageUrl(x.photo_path)] : [],
+}));
+
       setTicket(mapped);
       setThread(thr);
     }catch(e){

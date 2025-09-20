@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { api } from '../api/client';
+import { api,IMAGE_BASE_URL } from '../api/client';
 
 const C = {
   primary:'#EF3A3A', ink:'#0F172A', bg:'#F5F7FA', card:'#FFFFFF',
@@ -159,7 +159,7 @@ export default function RestaurantView({ navigation, route }) {
     try {
       setEquipError(null);
       setEquipLoading(true);
-      const res = await api.get('/services', { params: { status: 'Active' } });
+      const res = await api.get('app/services', { params: { status: 'Active' } });
       // Expecting an array of services
       const list = Array.isArray(res.data) ? res.data : [];
       // Normalize for UI (title, category, image_url, price)

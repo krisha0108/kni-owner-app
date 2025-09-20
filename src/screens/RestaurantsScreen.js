@@ -10,7 +10,7 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { pick, types, isCancel } from '@react-native-documents/picker';
 
-import { api } from '../api/client';
+import { api, IMAGE_BASE_URL } from '../api/client';
 import { PermissionsAndroid } from 'react-native';
 async function requestGalleryPermission() {
   if (Platform.OS === 'android') {
@@ -129,27 +129,58 @@ useEffect(() => {
   }, []);
 
  // Restaurant list
+// const fetchRestaurants = async () => {
+//   try {
+//     setLoading(true);
+//     const res = await api.get('/restaurants'); // api = client.js
+//     console.log('fetchRestaurants response:', res);
+// const mapped = res.data.data.map(r => ({ 
+//       id: r.id,
+//       name: r.hotel_name,
+//       address: r.address,
+//       desc: r.description || '',
+//       fssai: r.fssai_number,
+//       fssaiPdf: r.fssai_certificate ? `http://192.168.29.223:8000/storage/${r.fssai_certificate}` : '',
+//       status: r.status,
+//       photos: [
+//         r.main_image ? `http://192.168.29.223:8000/storage/${r.main_image}` : '',
+//         ...(Array.isArray(r.gallery_images) 
+//         ? r.gallery_images.map(img => `http://192.168.29.223:8000/storage/${img}`) 
+//         : []),
+//         r.business_card ? `http://192.168.29.223:8000/storage/${r.business_card}` : '',
+//       ].filter(Boolean),
+//     }));
+//     setItems(mapped);
+//   } catch (err) {
+//     console.error(err);
+//     show('Failed to fetch restaurants', 'error');
+//   } finally {
+//     setLoading(false);
+//   }
+// };
 const fetchRestaurants = async () => {
   try {
     setLoading(true);
-    const res = await api.get('/restaurants'); // api = client.js
-    console.log('fetchRestaurants response:', res);
-const mapped = res.data.data.map(r => ({ 
+    const res = await api.get('/restaurants');
+
+    const mapped = res.data.data.map((r: any) => ({
       id: r.id,
       name: r.hotel_name,
       address: r.address,
       desc: r.description || '',
       fssai: r.fssai_number,
-      fssaiPdf: r.fssai_certificate ? `http://192.168.29.222:8000/storage/${r.fssai_certificate}` : '',
+      // ✅ just prepend IMAGE_BASE_URL
+      fssaiPdf: r.fssai_certificate ? `${IMAGE_BASE_URL}/${r.fssai_certificate}` : '',
       status: r.status,
       photos: [
-        r.main_image ? `http://192.168.29.222:8000/storage/${r.main_image}` : '',
-        ...(Array.isArray(r.gallery_images) 
-        ? r.gallery_images.map(img => `http://192.168.29.222:8000/storage/${img}`) 
-        : []),
-        r.business_card ? `http://192.168.29.222:8000/storage/${r.business_card}` : '',
+        r.main_image ? `${IMAGE_BASE_URL}/${r.main_image}` : '',
+        ...(Array.isArray(r.gallery_images)
+          ? r.gallery_images.map((img) => `${IMAGE_BASE_URL}/${img}`)
+          : []),
+        r.business_card ? `${IMAGE_BASE_URL}/${r.business_card}` : '',
       ].filter(Boolean),
     }));
+
     setItems(mapped);
   } catch (err) {
     console.error(err);
@@ -158,6 +189,7 @@ const mapped = res.data.data.map(r => ({
     setLoading(false);
   }
 };
+
 
   const onRefresh = async () => {
     setRefreshing(true);

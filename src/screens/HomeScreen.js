@@ -9,11 +9,8 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import Icon from 'react-native-vector-icons/Ionicons';
 import KniBottomNav from '../components/KniBottomNav';
 import { Dimensions } from 'react-native';
-// import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-// import api from "../api/client";
-// import { IMAGE_BASE_URL, api} from "../api/client";
-// HomePremium.js
+
 import { api,IMAGE_BASE_URL } from '../api/client';
 const ION_GLYPHS = (Icon.getRawGlyphMap?.() ?? {});
 const hasIonicon = (name) => !!name && Object.prototype.hasOwnProperty.call(ION_GLYPHS, name);
@@ -31,17 +28,7 @@ const C = {
 };
 const R = 20;
 
-/* ---------------- DEMO CONTENT ---------------- */
 
-
-// const SPONSORED = [
-//   { id:'s1', brand:'Transrentals', img:'https://www.spinny.com/blog/wp-content/uploads/2024/09/videoframe_0.webp',
-//     line:'Vehicle rentals marketplace', link:'https://transrentals.in/' },
-//   { id:'s2', brand:'Apollo Equipments', img:'https://images.jdmagicbox.com/comp/ahmedabad/s3/079pxx79.xx79.200819003419.f7s3/catalogue/apollo-kitchen-equipments-and-services-pvt-ltd-vatva-gidc-ahmedabad-commercial-kitchen-equipment-manufacturers-qpznuwhw6w.jpg',
-//     line:'Worlds best equiments', link:'https://apolloequipments.com/' },
-//   { id:'s3', brand:'KNI', img:'https://dynamic-media-cdn.tripadvisor.com/media/photo-o/27/d5/bb/74/lounge.jpg?w=900&h=500&s=1',
-//     line:'Restaurant Solution', link:'https://kitchennetworkinternational.com/' },
-// ];
 
 
 /* ---------------- HELPERS ---------------- */
@@ -62,8 +49,7 @@ const [sponsoredData, setSponsoredData] = useState([]);
 useEffect(() => {
     const fetchSponsored = async () => {
     try {
-      const url = '/admin/sponsored';
-      // console.log('Fetching from:', `http://192.168.29.222:8000/api${url}`);
+      const url = '/app_api/sponsored';
       const res = await api.get(url);
       console.log('Response:', res.data);
       setSponsoredData(res.data);
