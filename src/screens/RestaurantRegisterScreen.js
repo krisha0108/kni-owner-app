@@ -113,41 +113,56 @@ const RestaurantRegisterScreen = ({ navigation }) => {
 
   // Refined Google Sign-In
   const handleGoogle = async () => {
-    try {
-      setGoogleLoading(true);
+  try {
+    setGoogleLoading(true);
 
-      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-      const userInfo = await GoogleSignin.signIn();
+    // Ensure Google Play Services
+    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
 
-      // FIX: idToken and serverAuthCode are under userInfo.data
-      const idToken = userInfo?.data?.idToken;
-      const serverAuthCode = userInfo?.data?.serverAuthCode;
-
-      if (!idToken && !serverAuthCode) {
-        throw new Error('No Google idToken or serverAuthCode returned');
-      }
-
-      // Sign into Firebase with idToken
-      const credential = auth.GoogleAuthProvider.credential(idToken);
-      const firebaseUserCredential = await auth().signInWithCredential(credential);
-
-      const firebaseIdToken = await firebaseUserCredential.user.getIdToken(true);
-
-      const res = await api.post('/owner/auth/firebase', { idToken: firebaseIdToken });
-      const { token, owner } = res.data || {};
-      if (!token) throw new Error('No token returned from server');
-
-      await storeUserSession(token, owner);
-      await saveFcmToken(owner?.id);
-
-      navigation.replace('Home');
-    } catch (err) {
-      console.log('[Google Sign-In Error]', err);
-      Alert.alert('Google Sign-In Failed', err?.message || 'Please try again.');
-    } finally {
-      setGoogleLoading(false);
+    // Sign out Firebase user if exists
+    if (auth().currentUser) {
+      await auth().signOut();
     }
-  };
+
+    // Force account selection
+    try {
+      await GoogleSignin.revokeAccess();
+    } catch (e) {
+      console.log('Google revokeAccess error (ignored):', e.message);
+    }
+    try {
+      await GoogleSignin.signOut();
+    } catch (e) {
+      console.log('Google signOut error (ignored):', e.message);
+    }
+
+    // Show account picker
+    const userInfo = await GoogleSignin.signIn();
+    const idToken = userInfo?.idToken || userInfo?.data?.idToken;
+    if (!idToken) throw new Error('No Google idToken returned');
+
+    // Sign into Firebase
+    const credential = auth.GoogleAuthProvider.credential(idToken);
+    const firebaseUserCredential = await auth().signInWithCredential(credential);
+
+    const firebaseIdToken = await firebaseUserCredential.user.getIdToken(true);
+
+    // Send token to backend
+    const res = await api.post('/owner/auth/firebase', { idToken: firebaseIdToken });
+    const { token, owner } = res.data || {};
+    if (!token) throw new Error('No token returned from server');
+
+    await storeUserSession(token, owner);
+    await saveFcmToken(owner?.id);
+
+    navigation.replace('Home');
+  } catch (err) {
+    console.log('[Google Sign-In Error]', err);
+    Alert.alert('Google Sign-In Failed', err?.message || 'Please try again.');
+  } finally {
+    setGoogleLoading(false);
+  }
+};
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
