@@ -5,21 +5,29 @@ import {
   View,
   Text,
   TouchableOpacity,
-  SafeAreaView
+  SafeAreaView,
 } from 'react-native';
 import Onboarding from 'react-native-onboarding-swiper';
 import LottieView from 'lottie-react-native';
-import LinearGradient from 'react-native-linear-gradient';
 
 const { width, height } = Dimensions.get('window');
 
 const OnboardingScreen = ({ navigation }) => {
   const Done = ({ ...props }) => (
-    <TouchableOpacity
-      style={styles.doneButton}
-      {...props}
-    >
+    <TouchableOpacity style={[styles.doneButton, styles.buttonLift]} {...props}>
       <Text style={styles.doneText}>Let’s Go</Text>
+    </TouchableOpacity>
+  );
+
+  const Next = ({ ...props }) => (
+    <TouchableOpacity style={[styles.nextButton, styles.buttonLift]} {...props}>
+      <Text style={styles.nextText}>Next</Text>
+    </TouchableOpacity>
+  );
+
+  const Skip = ({ ...props }) => (
+    <TouchableOpacity style={[styles.skipButton, styles.buttonLift]} {...props}>
+      <Text style={styles.skipText}>Skip</Text>
     </TouchableOpacity>
   );
 
@@ -30,9 +38,12 @@ const OnboardingScreen = ({ navigation }) => {
         showSkip={true}
         showNext={true}
         showDone={true}
+        SkipButtonComponent={Skip}
+        NextButtonComponent={Next}
         DoneButtonComponent={Done}
         onSkip={() => navigation.replace('RestaurantLogin')}
         onDone={() => navigation.replace('RestaurantLogin')}
+        bottomBarHeight={height * 0.12} // 👈 lift bottom bar slightly
         pages={[
           {
             backgroundColor: '#FFFFFF',
@@ -77,7 +88,8 @@ const OnboardingScreen = ({ navigation }) => {
               </View>
             ),
             title: 'Role-Based Dashboards',
-            subtitle: 'Designed separately for Restaurant Owners & Engineers.',
+            subtitle:
+              'Designed separately for Restaurant Owners & Engineers.',
             titleStyles: styles.whiteTitle,
             subTitleStyles: styles.whiteSubtitle,
           },
@@ -127,6 +139,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 30,
   },
+
+  // 🔹 ORIGINAL BUTTON STYLES (unchanged)
   doneButton: {
     marginRight: 18,
     backgroundColor: '#1D2254',
@@ -138,5 +152,33 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '700',
     fontSize: 15,
+  },
+  nextButton: {
+    marginRight: 5,
+    // backgroundColor: '#1D2254',
+    paddingVertical: 10,
+    paddingHorizontal: 22,
+    borderRadius: 25,
+  },
+  nextText: {
+    color: '#1D2254',
+    fontWeight: '600',
+    fontSize: 15,
+  },
+  skipButton: {
+    marginLeft: 5,
+    paddingVertical: 10,
+    paddingHorizontal: 22,
+    borderRadius: 25,
+  },
+  skipText: {
+    color: '#1D2254',
+    fontWeight: '600',
+    fontSize: 15,
+  },
+
+  // 🔹 JUST LIFT BUTTONS UP A BIT (NO STYLE CHANGE)
+  buttonLift: {
+    marginBottom: height * 0.00, // moves all buttons slightly upward
   },
 });

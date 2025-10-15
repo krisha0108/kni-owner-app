@@ -559,7 +559,7 @@ if (owner) {
           </View>
         </View>
         {/* terms */}
-        <View style={[styles.terms, { paddingBottom: insets.bottom + 8 }]}>
+        <View style={[styles.terms, { paddingBottom: insets.bottom + 35 }]}>
           <Text style={styles.termsTxt}>
             By continuing you agree to our <Text style={styles.linkMuted}>Terms</Text> & <Text style={styles.linkMuted}>Privacy</Text>.
           </Text>
