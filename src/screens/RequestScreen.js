@@ -6,19 +6,18 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import KniBottomNav from '../components/KniBottomNav';
-import { api,IMAGE_BASE_URL } from '../api/client';
+import { api, IMAGE_BASE_URL } from '../api/client';
 
 const INDEX_PATH = '/app/products';
-// absolute-url helper
+
 const makeAbsolute = (u) => {
   if (!u) return null;
   const s = String(u).trim();
-  if (/^https?:\/\//i.test(s)) return s;                 // already absolute
-  const rel = s.replace(/^\/?/, '');                     // strip leading slash
-  return `${IMAGE_BASE_URL}/${rel}`;                     // -> https://your-api.com/storage/...
+  if (/^https?:\/\//i.test(s)) return s;
+  const rel = s.replace(/^\/?/, '');
+  return `${IMAGE_BASE_URL}/${rel}`;
 };
 
-/* ---------------- Theme ---------------- */
 const COLORS = {
   primary: '#EF3A3A',
   primary2: '#FF6A6A',
@@ -34,74 +33,24 @@ const H_MARGIN = 16;
 const GAP = 12;
 const MIN_W = 170;
 
-/* ---------------- Service → Ionicon mapping ---------------- */
 const SERVICE_ICONS = {
   installation: { icon: 'construct', label: 'Installation' },
-  install:      { icon: 'construct', label: 'Installation' },
-  repair:       { icon: 'hammer',    label: 'Repair' },
-  fixing:       { icon: 'hammer',    label: 'Repair' },
-  maintenance:  { icon: 'settings-outline', label: 'Maintenance' },
-  service:      { icon: 'settings-outline', label: 'Maintenance' },
-  amc:          { icon: 'settings-outline', label: 'Maintenance' },
-  cleaning:     { icon: 'water',     label: 'Cleaning' },
-  wash:         { icon: 'water',     label: 'Cleaning' },
-  sanitize:     { icon: 'water',     label: 'Cleaning' },
-  inspection:   { icon: 'search-outline', label: 'Inspection' },
-  uninstallation:{ icon: 'remove-circle-outline', label: 'Uninstallation' },
+  install: { icon: 'construct', label: 'Installation' },
+  repair: { icon: 'hammer', label: 'Repair' },
+  fixing: { icon: 'hammer', label: 'Repair' },
+  maintenance: { icon: 'settings-outline', label: 'Maintenance' },
+  service: { icon: 'settings-outline', label: 'Maintenance' },
+  amc: { icon: 'settings-outline', label: 'Maintenance' },
+  cleaning: { icon: 'water', label: 'Cleaning' },
+  wash: { icon: 'water', label: 'Cleaning' },
+  sanitize: { icon: 'water', label: 'Cleaning' },
+  inspection: { icon: 'search-outline', label: 'Inspection' },
+  uninstallation: { icon: 'remove-circle-outline', label: 'Uninstallation' },
 };
 
-// normalize " Fridge " -> "fridge"
 const norm = (s = '') => String(s).trim().toLowerCase();
+const toTitle = (s = '') => String(s).toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
 
-// Title Case for labels
-const toTitle = (s = '') =>
-  String(s).toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
-
-/* -------------- Service inference -------------- */
-const inferServiceFrom = (p) => {
-  const pick = (key) => {
-    const k = norm(key);
-    if (SERVICE_ICONS[k]) return { key: k, ...SERVICE_ICONS[k] };
-    return null;
-  };
-
-  // 1) direct fields commonly used
-  const directKeys = [p.service, p.service_type, p.type];
-  for (const key of directKeys) {
-    if (!key) continue;
-    const hit = pick(key);
-    if (hit) return hit;
-  }
-
-  // 2) tags array/string
-  let tags = [];
-  if (Array.isArray(p.tags)) tags = p.tags;
-  else if (typeof p.tags === 'string') {
-    try {
-      const j = JSON.parse(p.tags);
-      if (Array.isArray(j)) tags = j;
-    } catch (_) {}
-  }
-  for (const t of tags) {
-    const hit = pick(t);
-    if (hit) return hit;
-  }
-
-  // 3) fuzzy search in title/desc/category
-  const hay = [
-    p.title, p.description, p.category, p.subtitle, p.short_desc
-  ].filter(Boolean).map(norm).join(' ');
-  for (const key of Object.keys(SERVICE_ICONS)) {
-    if (hay.includes(key)) {
-      return { key, ...SERVICE_ICONS[key] };
-    }
-  }
-
-  // Fallback: no service found
-  return null;
-};
-
-/* ---------------- Skeleton (matches real card) ---------------- */
 const SkeletonCard = ({ width }) => {
   const pulse = useRef(new Animated.Value(0.6)).current;
   useEffect(() => {
@@ -148,14 +97,12 @@ const SkeletonCard = ({ width }) => {
   );
 };
 
-/* ---------------- helpers ---------------- */
 function computeGrid(width) {
   const numColumns = Math.max(2, Math.floor((width - H_MARGIN * 2 + GAP) / (MIN_W + GAP)));
   const cardW = (width - H_MARGIN * 2 - GAP * (numColumns - 1)) / numColumns;
   return { numColumns, cardW };
 }
 
-/* ---------------- Screen ---------------- */
 export default function RequestScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
@@ -164,6 +111,7 @@ export default function RequestScreen({ navigation }) {
     const g = computeGrid(width);
     return { ...g, listKey: `grid-${g.numColumns}` };
   });
+
   useEffect(() => {
     const g = computeGrid(width);
     setGrid(prev =>
@@ -173,76 +121,43 @@ export default function RequestScreen({ navigation }) {
     );
   }, [width]);
 
-  // server state
   const [items, setItems] = useState([]);
   const [query, setQuery] = useState('');
   const [activeServiceKey, setActiveServiceKey] = useState('all');
+  const [activeCategory, setActiveCategory] = useState('all');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchFeed = async () => {
-    const endpoint = INDEX_PATH;
     try {
       setLoading(true);
-      console.group('[fetchFeed]');
-      console.log('Base URL:', api?.defaults?.baseURL);
-      console.log('GET:', endpoint);
+      const res = await api.get(INDEX_PATH, { timeout: 10000 });
+      const mapped = (Array.isArray(res.data) ? res.data : []).map(p => {
+        let images = [];
+        if (Array.isArray(p.images)) images = p.images;
+        else if (typeof p.images === 'string') {
+          try { images = JSON.parse(p.images) || []; } catch {}
+        }
+        const firstImage = images[0] || p.image || p.image_url || p.thumb || null;
+        const imageUrl = firstImage ? makeAbsolute(firstImage) : null;
 
-      const res = await api.get(endpoint, { timeout: 10000 });
-      console.log('Status:', res.status, res.statusText);
-  // ✅ normalize images here
-// ✅ normalize images here
-const mapped = (Array.isArray(res.data) ? res.data : []).map((p, ix) => {
-  let images = [];
-
-  // Prefer array, fallback stringified JSON
-  if (Array.isArray(p.images)) images = p.images;
-  else if (typeof p.images === 'string') {
-    try { images = JSON.parse(p.images) || []; } catch {}
-  }
-
-  // Fall back to single image fields
-  const firstImage = images[0] || p.image || p.image_url || p.thumb || null;
-
-  // map relative → absolute
-  const imageUrl = firstImage ? makeAbsolute(firstImage) : null;
-
-  return {
-    id: String(p.id),
-    title: p.title || "",
-    catLabel: toTitle(p.category || ""),
-    desc: p.description || "",
-    image: imageUrl,
-    rating: p.rating ?? 4.8,
-    requests: p.services_count ?? 0,
-    tags: p.tags ?? [],
-    serviceKey: null,
-    serviceLabel: null,
-    serviceIcon: null,
-  };
-});
-
-console.log('[fetchFeed] first mapped item:', mapped[0]);
-
-
-console.log("Mapped:", mapped[0]);
-
-      console.log('Mapped items count:', mapped.length);
-      if (mapped.length) {
-        console.table(
-          mapped.slice(0, 10).map(({ id, title, catLabel, serviceLabel }) => ({
-            id, title, category: catLabel, service: serviceLabel || '-'
-          }))
-        );
-      }
-
+        return {
+          id: String(p.id),
+          title: p.title || "",
+          catLabel: toTitle(p.category || ""),
+          desc: p.description || "",
+          image: imageUrl,
+          rating: p.rating ?? 4.8,
+          requests: p.services_count ?? 0,
+          tags: p.tags ?? [],
+          serviceKey: null,
+          serviceLabel: null,
+          serviceIcon: null,
+        };
+      });
       setItems(mapped);
-      console.groupEnd();
     } catch (e) {
-      console.group('[fetchFeed:ERROR]');
-      console.error('Message:', e?.message);
-      if (e?.response) console.error('Response data:', e.response.data);
-      console.groupEnd();
+      console.error(e?.message || e);
       setItems([]);
     } finally {
       setLoading(false);
@@ -251,9 +166,9 @@ console.log("Mapped:", mapped[0]);
 
   useEffect(() => { fetchFeed(); }, []);
 
-  /* -------- Build service chips from items (only those present) -------- */
+  // --- Compute service chips ---
   const SERVICES = useMemo(() => {
-    const set = new Map(); // key -> { key, label, icon }
+    const set = new Map();
     items.forEach(it => {
       if (it.serviceKey) {
         set.set(it.serviceKey, {
@@ -263,35 +178,68 @@ console.log("Mapped:", mapped[0]);
         });
       }
     });
-
     const base = [{ key: 'all', label: 'All', icon: 'grid-outline' }];
     const rest = [...set.values()].sort((a, b) => (a.label || '').localeCompare(b.label || ''));
     return base.concat(rest);
   }, [items]);
 
-  // Guard fallback for active service
   useEffect(() => {
     if (activeServiceKey !== 'all' && !SERVICES.find(s => s.key === activeServiceKey)) {
       setActiveServiceKey('all');
     }
   }, [SERVICES, activeServiceKey]);
 
+  // --- Compute category chips ---
+  const CATEGORIES = useMemo(() => {
+    const set = new Map();
+    items.forEach(it => { if (it.catLabel) set.set(it.catLabel, it.catLabel); });
+    const base = ['all'];
+    const rest = [...set.values()].sort();
+    return base.concat(rest);
+  }, [items]);
+
+  // --- Dynamic category icons (match SERVICE_ICONS if possible) ---
+  const CATEGORY_ICONS = useMemo(() => {
+    const map = { all: 'grid-outline' };
+    items.forEach(it => {
+      if (it.catLabel && !map[it.catLabel]) {
+        const normCat = norm(it.catLabel);
+        let icon = 'layers-outline'; // default fallback
+
+        for (const key in SERVICE_ICONS) {
+          if (norm(SERVICE_ICONS[key].label) === normCat) {
+            icon = SERVICE_ICONS[key].icon;
+            break;
+          }
+        }
+
+        // fallback keyword matching
+        if (icon === 'layers-outline') {
+          if (normCat.includes('install') || normCat.includes('equipment')) icon = 'construct-outline';
+          else if (normCat.includes('maintenance') || normCat.includes('amc')) icon = 'settings-outline';
+          else if (normCat.includes('clean') || normCat.includes('wash') || normCat.includes('sanitize')) icon = 'water-outline';
+          else if (normCat.includes('inspection') || normCat.includes('check')) icon = 'search-outline';
+        }
+
+        map[it.catLabel] = icon;
+      }
+    });
+    return map;
+  }, [items]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return items.filter((it) => {
-      const byService =
-        activeServiceKey === 'all' ||
-        (it.serviceKey ? it.serviceKey === activeServiceKey : false);
-
+    return items.filter(it => {
+      const byService = activeServiceKey === 'all' || (it.serviceKey ? it.serviceKey === activeServiceKey : false);
+      const byCategory = activeCategory === 'all' || (it.catLabel ? it.catLabel === activeCategory : false);
       const byQuery = !q
         || (it.title || '').toLowerCase().includes(q)
         || (it.catLabel || '').toLowerCase().includes(q)
         || (it.desc || '').toLowerCase().includes(q)
         || (it.serviceLabel || '').toLowerCase().includes(q);
-
-      return byService && byQuery;
+      return byService && byCategory && byQuery;
     });
-  }, [items, query, activeServiceKey]);
+  }, [items, query, activeServiceKey, activeCategory]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -307,14 +255,28 @@ console.log("Mapped:", mapped[0]);
         style={[styles.chip, active && { backgroundColor: '#FFF1F1', borderColor: COLORS.primary }]}
       >
         <Icon name={item.icon || 'grid-outline'} size={16} color={active ? COLORS.primary : COLORS.muted} style={{ marginRight: 6 }} />
+        <Text style={[styles.chipText, active && { color: COLORS.primary, fontWeight: '700' }]}>{item.label}</Text>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderCategoryChip = ({ item: cat }) => {
+    const active = cat === activeCategory;
+    const iconName = CATEGORY_ICONS[cat] || 'grid-outline';
+
+    return (
+      <TouchableOpacity
+        onPress={() => setActiveCategory(cat)}
+        style={[styles.chip, active && { backgroundColor: '#FFF1F1', borderColor: COLORS.primary }]}
+      >
+        <Icon name={iconName} size={16} color={active ? COLORS.primary : COLORS.muted} style={{ marginRight: 6 }} />
         <Text style={[styles.chipText, active && { color: COLORS.primary, fontWeight: '700' }]}>
-          {item.label}
+          {cat === 'all' ? 'All' : cat}
         </Text>
       </TouchableOpacity>
     );
   };
 
-  /* -------- Sticky Header (Request + Search + Service Chips) -------- */
   const Header = useMemo(() => (
     <View style={styles.stickyHeader}>
       <View style={styles.topbar}>
@@ -339,13 +301,24 @@ console.log("Mapped:", mapped[0]);
           style={styles.searchInput}
           returnKeyType="search"
         />
-        {/* filter icon kept for future use; no category chips now */}
         <TouchableOpacity style={styles.filterBtn}>
           <Icon name="options-outline" size={18} color="#fff" />
         </TouchableOpacity>
       </View>
 
-      {/* Service chips only */}
+      {/* Category chips */}
+      {CATEGORIES.length > 1 && (
+        <FlatList
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 12 }}
+          data={CATEGORIES}
+          keyExtractor={(i) => `cat-${i}`}
+          renderItem={renderCategoryChip}
+        />
+      )}
+
+      {/* Service chips */}
       {SERVICES.length > 1 && (
         <FlatList
           horizontal
@@ -357,11 +330,9 @@ console.log("Mapped:", mapped[0]);
         />
       )}
     </View>
-  ), [query, activeServiceKey, navigation, SERVICES]);
+  ), [query, activeServiceKey, activeCategory, navigation, SERVICES, CATEGORIES, CATEGORY_ICONS]);
 
-  const listData = loading
-    ? Array.from({ length: numColumns * 2 }, (_, i) => ({ __sk: i }))
-    : filtered;
+  const listData = loading ? Array.from({ length: numColumns * 2 }, (_, i) => ({ __sk: i })) : filtered;
 
   const renderItem = ({ item }) => {
     if (loading) return <SkeletonCard width={cardW} />;
@@ -372,23 +343,20 @@ console.log("Mapped:", mapped[0]);
       <TouchableOpacity
         activeOpacity={0.9}
         style={[styles.card, { width: cardW }]}
-        onPress={() =>
-  navigation.navigate('RequestDetail', {
-    id: item.id,                // <-- important for /app/products/:id
-    productId: item.id,         // <-- optional alias if your detail reads productId
-    item: {
-      title: item.title,
-      category: item.catLabel,
-      rating: item.rating,
-      requests: item.requests,
-      desc: item.desc,
-          image: item.image,   // ✅ yeh add karo
-
-    },
-  })
-}
+        onPress={() => navigation.navigate('RequestDetail', {
+          id: item.id,
+          productId: item.id,
+          item: {
+            title: item.title,
+            category: item.catLabel,
+            rating: item.rating,
+            requests: item.requests,
+            desc: item.desc,
+            image: item.image,
+          },
+        })}
       >
-<ImageBackground source={{ uri: item.image }} style={styles.cardImage} imageStyle={styles.cardImageR}>
+        <ImageBackground source={{ uri: item.image }} style={styles.cardImage} imageStyle={styles.cardImageR}>
           <View style={styles.badge}>
             <Icon name="star" size={12} color="#fff" />
             <Text style={styles.badgeText}>{item.rating ?? 0}</Text>
@@ -440,20 +408,14 @@ console.log("Mapped:", mapped[0]);
             <View style={[styles.empty, { paddingTop: 32 }]}>
               <Icon name="search-circle-outline" size={64} color="#CBD5E1" />
               <Text style={styles.emptyTitle}>No results</Text>
-              <Text style={styles.emptySub}>Try a different keyword or service.</Text>
+              <Text style={styles.emptySub}>Try a different keyword, category, or service.</Text>
             </View>
           )
         }
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={[COLORS.primary]}
-            tintColor={COLORS.primary}
-          />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} tintColor={COLORS.primary} />
         }
       />
-
       <KniBottomNav navigation={navigation} active="h" cartCount={3} notifCount={2} />
     </SafeAreaView>
   );
@@ -491,6 +453,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 12, height: 36, backgroundColor: '#FFFFFF',
     borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, marginRight: 8,
+    justifyContent: 'center',
   },
   chipText: { fontSize: 13, color: COLORS.muted },
 

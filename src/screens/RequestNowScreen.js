@@ -2,12 +2,37 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, FlatList, ScrollView,
-  ActivityIndicator, ImageBackground, Modal, TextInput, Platform, Dimensions
+  ActivityIndicator, ImageBackground, Modal, TextInput, Platform, Dimensions, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api } from '../api/client';
+import { Image, Linking } from 'react-native';
+
+/* ---------- MONEY & UPI HELPERS ---------- */
+const toPaise = (n) => Math.round(Number(n || 0) * 100);
+const fromPaise = (p) => (p / 100);
+
+/** Build a React-Native-safe UPI url (no URLSearchParams). */
+const buildUpiUrl = ({ pa, pn, am, cu = 'INR', tn }) => {
+  const paise = toPaise(am);
+  const amountStr = fromPaise(paise).toFixed(2); // e.g. "1.18"
+
+  const params = [
+    ['pa', pa],
+    ['pn', pn],
+    ['am', amountStr],
+    ['cu', cu],
+  ];
+  if (tn && tn.trim()) params.push(['tn', tn.trim().slice(0, 80)]);
+
+  const qs = params
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
+    .join('&');
+
+  return `upi://pay?${qs}`;
+};
 
 /* ---------- THEME ---------- */
 const C = {
@@ -20,6 +45,15 @@ const Rs = (n)=>`₹ ${Number(Math.round(n || 0)).toLocaleString('en-IN')}`;
 /* ---------- FEES / TAX ---------- */
 const FIXED_FEE = 49;
 const GST_RATE  = 0.18;
+
+const UPI_ID = 'yogiyashvant8347@oksbi';
+const PAYEE_NAME = 'Your Business Name'; // Name displayed in UPI app
+const upiApps = [
+  { name: 'Pay with UPI', upiId: 'yogiyashvant8347@oksbi', color: '#34B4F0' },
+  // { name: 'PhonePe', upiId: 'yogiyashvant8347@oksbi', color: '#673AB7' },
+  // { name: 'Paytm', upiId: 'yogiyashvant8347@oksbi', color: '#00BFFF' },
+  // { name: 'BHIM', upiId: 'yogiyashvant8347@oksbi', color: '#4CAF50' },
+];
 
 /* ---------- DATE HELPERS ---------- */
 const startOfDay = (d)=>{ const x=new Date(d); x.setHours(0,0,0,0); return x; };
@@ -238,13 +272,38 @@ export default function RequestNow({ navigation, route }) {
   );
 
   /* ---------- TOTALS (selected only) ---------- */
-  const itemTotalSelected = useMemo(()=>selectedItems.reduce((s,it)=>s+it.lineTotal,0),[selectedItems]);
-  const taxesAndFee = itemTotalSelected > 0 ? FIXED_FEE : 0;
-  const baseTotal   = itemTotalSelected + taxesAndFee;
-  const gstAmount   = Math.round(baseTotal * GST_RATE);
-  const [tip, setTip] = useState(0);
-  const payable = useMemo(() => baseTotal + gstAmount + tip, [baseTotal, gstAmount, tip]);
+  /* ---------- TOTALS (selected only, paise-accurate) ---------- */
+const [tip, setTip] = useState(0);
+const [paymentNote, setPaymentNote] = useState('');
 
+const totals = useMemo(() => {
+  const itemPaise = selectedItems.reduce((sum, it) => sum + toPaise(it.lineTotal), 0);
+  const gstPaise  = Math.round(itemPaise * GST_RATE); // 18% GST
+  const tipPaise  = toPaise(tip);
+  const payPaise  = itemPaise + gstPaise + tipPaise;
+
+  return {
+    item: fromPaise(itemPaise),
+    gst: fromPaise(gstPaise),
+    tip: fromPaise(tipPaise),
+    payable: fromPaise(payPaise),
+  };
+}, [selectedItems, tip]);
+
+const itemTotalSelected = totals.item;
+const gstAmount         = totals.gst;
+const payable           = totals.payable;
+
+  const handleConfirmPayment = () => {
+  if (!paymentNote.trim()) {
+    alert("Please enter your payment note before confirming.");
+    return;
+  }
+
+  // proceed with payment confirmation logic
+  console.log("Payment note:", paymentNote);
+  setPaymentModal(false);
+};
   // TIP persistence (global per owner)
   const tipKey = useMemo(()=>`tip:${ownerKey}`,[ownerKey]);
   useEffect(() => { (async () => {
@@ -397,6 +456,10 @@ export default function RequestNow({ navigation, route }) {
     setRestModal(true);
   }, [selectedDate, K.date, fetchRestaurants]);
 
+  // payment 
+  const [paymentModal, setPaymentModal] = useState(false);
+const [upiLinks, setUpiLinks] = useState([]);
+
   /* ---------- Save equipment request ---------- */
   const [savingReq, setSavingReq] = useState(false);
   const [successModal, setSuccessModal] = useState(false);
@@ -426,26 +489,26 @@ export default function RequestNow({ navigation, route }) {
   }, [restSel, restaurants]);
 
   const confirmRestaurant = useCallback(async () => {
-    if (!restSel) return;
-    const picked = restaurants.find(r => r.id === restSel);
-    // Hard stop if not approved (extra safety)
-    if (!picked?.approved) {
-      console.log('Blocked: restaurant is not approved');
-      return;
-    }
-    try {
-      setSavingReq(true);
-      await AsyncStorage.setItem(K.restaurant, JSON.stringify(picked || {})).catch(()=>{});
-      const payload = buildEquipmentRequestPayload(picked);
-      await api.post('/app/equipment-requests', payload);
-      setRestModal(false);
-      setSuccessModal(true);
-    } catch (e) {
-      console.log('Create equipment request failed:', e?.response?.data || e?.message);
-    } finally {
-      setSavingReq(false);
-    }
-  }, [restSel, restaurants, K.restaurant, selectedItems, selectedDate, cards]);
+  if (!restSel) return;
+  const picked = restaurants.find(r => r.id === restSel);
+  if (!picked?.approved) return;
+
+  try {
+    setSavingReq(true);
+    await AsyncStorage.setItem(K.restaurant, JSON.stringify(picked || {})).catch(()=>{});
+    
+    const payload = buildEquipmentRequestPayload(picked);
+    await api.post('/app/equipment-requests', payload);
+
+    setRestModal(false);
+    // Open payment modal instead of success modal
+    setPaymentModal(true);
+  } catch (e) {
+    console.log('Create equipment request failed:', e?.response?.data || e?.message);
+  } finally {
+    setSavingReq(false);
+  }
+}, [restSel, restaurants, K.restaurant, selectedItems, selectedDate, cards]);
 
   /* ---------- Row/Controls bound to a specific card ---------- */
   const incQty = useCallback((pid, sid) => {
@@ -618,16 +681,35 @@ export default function RequestNow({ navigation, route }) {
 
         {/* Payment summary */}
         <View style={[st.card, { marginHorizontal: 16 }]}>
-          <Text style={st.cardTitle}>Payment summary</Text>
-          <View style={st.row}><Text style={st.rowLbl}>Item total</Text><Text style={st.rowVal}>{Rs(itemTotalSelected)}</Text></View>
-          <View style={st.row}><Text style={st.rowLbl}>Taxes and Fee</Text><Text style={st.rowVal}>{Rs(taxesAndFee)}</Text></View>
-          <View style={st.hr} />
-          <View style={st.row}><Text style={[st.rowLbl,{fontWeight:'700'}]}>Total amount</Text><Text style={[st.rowVal,{fontWeight:'800'}]}>{Rs(baseTotal)}</Text></View>
-          <View style={st.row}><Text style={st.rowLbl}>Tax (GST 18%)</Text><Text style={st.rowVal}>{Rs(gstAmount)}</Text></View>
-          <View style={st.row}><Text style={st.rowLbl}>Tip</Text><Text style={st.rowVal}>{Rs(tip)}</Text></View>
-          <View style={st.hr} />
-          <View style={st.row}><Text style={st.payableLbl}>Amount to pay</Text><Text style={st.payableVal}>{Rs(payable)}</Text></View>
-        </View>
+  <Text style={st.cardTitle}>Payment summary</Text>
+
+  {/* Item total */}
+  <View style={st.row}>
+    <Text style={st.rowLbl}>Item total</Text>
+    <Text style={st.rowVal}>{itemTotalSelected.toFixed(2)}</Text>
+  </View>
+
+  {/* GST */}
+  <View style={st.row}>
+    <Text style={st.rowLbl}>Tax (GST 18%)</Text>
+    <Text style={st.rowVal}>{gstAmount.toFixed(2)}</Text>
+  </View>
+
+  {/* Tip */}
+  <View style={st.row}>
+    <Text style={st.rowLbl}>Tip</Text>
+    <Text style={st.rowVal}>{tip.toFixed(2)}</Text>
+  </View>
+
+  <View style={st.hr} />
+
+  {/* Total payable */}
+  <View style={st.row}>
+    <Text style={st.payableLbl}>Amount to pay</Text>
+    <Text style={st.payableVal}>{payable.toFixed(2)}</Text>
+  </View>
+
+</View>
 
         {/* Tip selector */}
         <View style={[st.card, { marginHorizontal: 16 }]}>
@@ -829,6 +911,177 @@ export default function RequestNow({ navigation, route }) {
           </View>
         </View>
       </Modal>
+
+      {/* Payment Modal */}
+<Modal
+  visible={paymentModal}
+  transparent
+  animationType="slide"
+  onRequestClose={() => setPaymentModal(false)}
+>
+  <View style={st.modalBackdrop}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      style={{ flex: 1 }}
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+          <View style={st.sheetLarge}>
+            <ScrollView
+              contentContainerStyle={{
+                paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+              }}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              <Text style={st.sheetTitle}>Complete Payment</Text>
+
+              {/* QR Section */}
+              <View style={{ alignItems: 'center', marginVertical: 16 }}>
+                <Image
+                  source={require('../assets/images/qr2.jpg')}
+                  style={{
+                    width: Dimensions.get('window').width * 0.5,
+                    height: Dimensions.get('window').width * 0.5,
+                    borderRadius: 10,
+                  }}
+                  resizeMode="contain"
+                />
+                <Text style={{ marginTop: 6, color: C.ink, fontWeight: '800' }}>
+  Amount: ₹ {payable.toFixed(2)}
+</Text>
+                <Text style={{ marginTop: 12, color: C.muted, textAlign: 'center' }}>
+                  Scan the QR code using your preferred UPI app
+                </Text>
+              </View>
+
+              {/* UPI options */}
+              <Text style={st.inputLbl}>Or pay directly via:</Text>
+              <View style={{ marginVertical: 10 }}>
+                {upiApps.map((app, index) => {
+  const upiLink = buildUpiUrl({
+    pa: app.upiId,
+    pn: 'Yogi Yashvant',
+    am: payable,               // raw number; helper fixes it to 2 decimals
+    cu: 'INR',
+    tn: paymentNote || 'Order payment'
+  });
+
+  return (
+    <TouchableOpacity
+      key={index}
+      activeOpacity={0.8}
+      style={{
+        backgroundColor: app.color,
+        paddingVertical: 14,
+        borderRadius: 10,
+        marginVertical: 6,
+      }}
+      onPress={async () => {
+        if (payable < 1) {            // optional minimum-amount guard
+          alert('Minimum payable amount is ₹1.00');
+          return;
+        }
+        try {
+          await Linking.openURL(upiLink);
+        } catch (e) {
+          alert('Could not open your UPI app. Please try again or scan the QR.');
+        }
+      }}
+    >
+      <Text style={{ color: '#fff', textAlign: 'center', fontWeight: '700', fontSize: 16 }}>
+        Pay with {app.name}
+      </Text>
+    </TouchableOpacity>
+  );
+})}
+
+              </View>
+
+              {/* Note Input */}
+              <Text style={[st.inputLbl, { marginTop: 16 }]}>Add a note (optional)</Text>
+              <TextInput
+                value={paymentNote}
+                onChangeText={setPaymentNote}
+                placeholder="I have done my payment"
+                style={[
+                  st.input,
+                  {
+                    height: 100,
+                    textAlignVertical: 'top',
+                    paddingTop: 12,
+                    borderWidth: 1,
+                    borderColor: '#E5E7EB',
+                    borderRadius: 10,
+                    backgroundColor: '#F9FAFB',
+                    fontSize: 15,
+                  },
+                ]}
+                multiline
+                placeholderTextColor="#9CA3AF"
+              />
+
+              {/* Action Buttons */}
+              <View
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  marginTop: 24,
+                }}
+              >
+                <TouchableOpacity
+                  onPress={() => setPaymentModal(false)}
+                  activeOpacity={0.8}
+                  style={[
+                    st.btn,
+                    {
+                      backgroundColor: '#F1F5F9',
+                      flex: 1,
+                      marginRight: 8,
+                      borderRadius: 10,
+                      paddingVertical: 14,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[st.btnTxt, { color: C.ink, textAlign: 'center', fontSize: 16 }]}
+                  >
+                    Cancel
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => {
+                    console.log('Payment note:', paymentNote);
+                    setPaymentModal(false);
+                    setSuccessModal(true);
+                  }}
+                  activeOpacity={0.8}
+                  style={[
+                    st.btn,
+                    {
+                      backgroundColor: C.primary,
+                      flex: 1,
+                      marginLeft: 8,
+                      borderRadius: 10,
+                      paddingVertical: 14,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[st.btnTxt, { color: '#fff', textAlign: 'center', fontSize: 16 }]}
+                  >
+                    Confirm Payment
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
+  </View>
+</Modal>
 
       {/* Success popup */}
       <Modal visible={successModal} transparent animationType="fade" onRequestClose={()=>setSuccessModal(false)}>

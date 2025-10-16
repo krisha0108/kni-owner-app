@@ -8,8 +8,8 @@
 
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-const API_BASE_URL = 'http://192.168.29.223:8000/api';
-const IMAGE_BASE_URL = 'http://192.168.29.223:8000/storage'; 
+const API_BASE_URL = 'http://192.168.29.54:8000/api';
+const IMAGE_BASE_URL = 'http://192.168.29.54:8000/storage'; 
 const api = axios.create({
   baseURL: API_BASE_URL, // :point_left: your backend base
   timeout: 20000,
