@@ -1,81 +1,72 @@
+// src/screens/RestaurantRegister.js
 import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Image,
-  ScrollView,
-  ActivityIndicator,
-  Alert,
+  View, Text, TextInput, TouchableOpacity, StyleSheet,
+  Image, ScrollView, ActivityIndicator, Alert
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { api } from '../api/client';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import auth from '@react-native-firebase/auth';
-import messaging from '@react-native-firebase/messaging';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import messaging from '@react-native-firebase/messaging';
 
-const RestaurantRegisterScreen = ({ navigation }) => {
+export default function RestaurantRegisterScreen({ navigation }) {
   const [form, setForm] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    password: '',
-    restaurantName: '',
-    locations: '',
+    firstName: '', lastName: '', email: '', phone: '',
+    password: '', restaurantName: '', locations: ''
   });
   const [secureText, setSecureText] = useState(true);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
-  // Configure Google Signin
   useEffect(() => {
     GoogleSignin.configure({
-      webClientId:
-        '851628336447-uccg7n0mbg4g2mlvb5g8nr9r55s4oje2.apps.googleusercontent.com',
+      webClientId: '851628336447-uccg7n0mbg4g2mlvb5g8nr9r55s4oje2.apps.googleusercontent.com', // update if needed
       offlineAccess: true,
       forceCodeForRefreshToken: true,
     });
   }, []);
 
+  // inline helper (same as login)
+  const saveSessionAndFcm = async (token, owner, provider = 'password') => {
+    try {
+      if (token) {
+        await AsyncStorage.setItem('userToken', token);
+        if (api && api.defaults) api.defaults.headers.common.Authorization = `Bearer ${token}`;
+      }
+
+      if (owner) {
+        await AsyncStorage.setItem('user', JSON.stringify(owner));
+        if (owner?.id) await AsyncStorage.setItem('ownerId', String(owner.id));
+      }
+
+      await AsyncStorage.setItem('authProvider', provider);
+
+      try {
+        const fcmToken = await messaging().getToken();
+        if (fcmToken && owner?.id) {
+          await api.post('/owners/save-fcm-token', {
+            restaurant_owner_id: owner.id,
+            fcm_token: fcmToken,
+          }).catch(e => console.log('save-fcm-token error (ignored):', e?.message || e));
+        }
+      } catch (fcmErr) {
+        console.log('FCM fetch error (ignored):', fcmErr?.message || fcmErr);
+      }
+    } catch (err) {
+      console.log('saveSessionAndFcm error:', err?.message || err);
+      throw err;
+    }
+  };
+
   const handleChange = (field, value) => {
     setForm(prev => ({ ...prev, [field]: value }));
   };
 
-  const storeUserSession = async (token, owner) => {
-    if (token) {
-      await AsyncStorage.setItem('userToken', token);
-      api.defaults.headers.common.Authorization = `Bearer ${token}`;
-    }
-    if (owner) {
-      await AsyncStorage.setItem('user', JSON.stringify(owner));
-      if (owner?.id) {
-        await AsyncStorage.setItem('ownerId', String(owner.id));
-      }
-    }
-  };
-
-  const saveFcmToken = async ownerId => {
-    try {
-      const fcmToken = await messaging().getToken(); // new modular API is the same
-      if (fcmToken && ownerId) {
-        await api.post('/owners/save-fcm-token', {
-          restaurant_owner_id: ownerId,
-          fcm_token: fcmToken,
-        });
-        console.log('✅ FCM token saved:', fcmToken);
-      }
-    } catch (error) {
-      console.log('❌ FCM token save failed:', error.message);
-    }
-  };
-
   const handleRegister = async () => {
     const { firstName, lastName, email, phone, password, restaurantName, locations } = form;
-    if (!firstName || !lastName || !email || !phone || !password || !restaurantName || !locations) {
+    if (!firstName || !lastName || !email || !phone || !password || !restaurantName) {
       return Alert.alert('Missing Fields', 'Please fill all required fields.');
     }
 
@@ -88,17 +79,14 @@ const RestaurantRegisterScreen = ({ navigation }) => {
         phone,
         password,
         restaurant_name: restaurantName,
-        locations,
+        locations: locations || 1,
       });
 
       if (res.data?.status) {
         const owner = res.data?.data || res.data?.owner;
         const token = res.data?.token;
-
-        await storeUserSession(token, owner);
-        await saveFcmToken(owner?.id);
-
-        Alert.alert('Success', res.data.message || 'Registered successfully!');
+        await saveSessionAndFcm(token, owner, 'password');
+        Alert.alert('Success', res.data?.message || 'Registered successfully!');
         navigation.replace('Home');
       } else {
         Alert.alert('Error', res.data?.message || 'Registration failed.');
@@ -111,58 +99,56 @@ const RestaurantRegisterScreen = ({ navigation }) => {
     }
   };
 
-  // Refined Google Sign-In
   const handleGoogle = async () => {
-  try {
     setGoogleLoading(true);
-
-    // Ensure Google Play Services
-    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-
-    // Sign out Firebase user if exists
-    if (auth().currentUser) {
-      await auth().signOut();
-    }
-
-    // Force account selection
     try {
-      await GoogleSignin.revokeAccess();
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+
+      // Clean local state
+      try { if (auth().currentUser) await auth().signOut(); } catch(_) {}
+      try { await GoogleSignin.signOut(); } catch(_) {}
+      try { await GoogleSignin.revokeAccess(); } catch(_) {}
+
+      // Sign in with Google and Firebase
+      const userInfo = await GoogleSignin.signIn();
+      let tokens = await GoogleSignin.getTokens().catch(() => null);
+      const googleIdToken = (userInfo?.idToken) || (tokens?.idToken);
+      const googleAccessToken = tokens?.accessToken || userInfo?.accessToken;
+
+      if (!googleIdToken && !googleAccessToken) {
+        throw new Error('Google Sign-In did not return idToken or accessToken');
+      }
+
+      const credential = auth.GoogleAuthProvider.credential(googleIdToken || null, googleAccessToken || null);
+      const firebaseUserCredential = await auth().signInWithCredential(credential);
+      const firebaseIdToken = await firebaseUserCredential.user.getIdToken(true);
+      // console.log('🔥 Firebase ID Token:', firebaseIdToken);
+
+      // Send firebase idToken to backend
+      const res = await api.post('/owner/auth/firebase', { idToken: firebaseIdToken });
+
+      if (!res.data?.status || !res.data?.token) {
+        console.log('Backend firebase auth response:', res.data);
+        throw new Error(res.data?.message || 'Server did not return token');
+      }
+
+      const appToken = res.data.token;
+      const owner = res.data.owner || res.data.data;
+      await saveSessionAndFcm(appToken, owner, 'google');
+
+      navigation.replace('Home');
     } catch (e) {
-      console.log('Google revokeAccess error (ignored):', e.message);
+      console.log('[Google register error]', e?.message || e, e?.response?.data || e?.response?.status);
+      Alert.alert(
+        'Google Sign-In Failed',
+        e?.message?.includes('idToken') || e?.message?.includes('accessToken')
+          ? 'Google sign-in failed to retrieve a token. Check Web client ID & SHA keys in Firebase console.'
+          : (e?.response?.data?.message || e?.message || 'Please try again.')
+      );
+    } finally {
+      setGoogleLoading(false);
     }
-    try {
-      await GoogleSignin.signOut();
-    } catch (e) {
-      console.log('Google signOut error (ignored):', e.message);
-    }
-
-    // Show account picker
-    const userInfo = await GoogleSignin.signIn();
-    const idToken = userInfo?.idToken || userInfo?.data?.idToken;
-    if (!idToken) throw new Error('No Google idToken returned');
-
-    // Sign into Firebase
-    const credential = auth.GoogleAuthProvider.credential(idToken);
-    const firebaseUserCredential = await auth().signInWithCredential(credential);
-
-    const firebaseIdToken = await firebaseUserCredential.user.getIdToken(true);
-
-    // Send token to backend
-    const res = await api.post('/owner/auth/firebase', { idToken: firebaseIdToken });
-    const { token, owner } = res.data || {};
-    if (!token) throw new Error('No token returned from server');
-
-    await storeUserSession(token, owner);
-    await saveFcmToken(owner?.id);
-
-    navigation.replace('Home');
-  } catch (err) {
-    console.log('[Google Sign-In Error]', err);
-    Alert.alert('Google Sign-In Failed', err?.message || 'Please try again.');
-  } finally {
-    setGoogleLoading(false);
-  }
-};
+  };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
@@ -176,7 +162,7 @@ const RestaurantRegisterScreen = ({ navigation }) => {
         <View style={styles.googleIcon}>
           {googleLoading ? <ActivityIndicator /> : <Icon name="logo-google" size={18} color="#4285F4" />}
         </View>
-        <Text style={styles.googleTxt}>Sign in with Google</Text>
+        <Text style={styles.googleTxt}>Continue with Google</Text>
       </TouchableOpacity>
 
       {[
@@ -187,8 +173,8 @@ const RestaurantRegisterScreen = ({ navigation }) => {
         { key: 'password', placeholder: 'Password', icon: 'lock-closed-outline', secure: true },
         { key: 'restaurantName', placeholder: 'Restaurant Name', icon: 'restaurant-outline' },
         { key: 'locations', placeholder: 'Number of Locations', icon: 'map-outline', keyboardType: 'numeric' },
-      ].map((item, index) => (
-        <View key={index} style={styles.inputWrapper}>
+      ].map((item, i) => (
+        <View key={i} style={styles.inputWrapper}>
           <Icon name={item.icon} size={20} color="#888" style={styles.icon} />
           <TextInput
             placeholder={item.placeholder}
@@ -198,7 +184,7 @@ const RestaurantRegisterScreen = ({ navigation }) => {
             value={form[item.key]?.toString() || ''}
             placeholderTextColor="#999"
             onChangeText={text =>
-              handleChange(item.key, item.key === 'locations' ? parseInt(text) || '' : text)
+              handleChange(item.key, item.key === 'locations' ? (text === '' ? '' : parseInt(text)) : text)
             }
           />
           {item.key === 'password' && (
@@ -224,9 +210,7 @@ const RestaurantRegisterScreen = ({ navigation }) => {
       </Text>
     </ScrollView>
   );
-};
-
-export default RestaurantRegisterScreen;
+}
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F5F7FA', padding: 20 },

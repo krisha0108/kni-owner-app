@@ -72,7 +72,7 @@ export default function KniBottomNav({
             active={active==='profile'}
             icon="person"
             label="Profile"
-            badge={notifCount}
+            // badge={notifCount}
             onPress={()=>go('profile')}
           />
 

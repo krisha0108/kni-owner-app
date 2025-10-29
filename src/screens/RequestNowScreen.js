@@ -2,13 +2,15 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, FlatList, ScrollView,
-  ActivityIndicator, ImageBackground, Modal, TextInput, Platform, Dimensions, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard
+  ActivityIndicator, ImageBackground, Modal, TextInput, Platform, 
+  Dimensions, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard, Image, Alert
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api } from '../api/client';
-import { Image, Linking } from 'react-native';
+import { Clipboard } from 'react-native';
+import { launchImageLibrary } from 'react-native-image-picker';
 
 /* ---------- MONEY & UPI HELPERS ---------- */
 const toPaise = (n) => Math.round(Number(n || 0) * 100);
@@ -16,22 +18,27 @@ const fromPaise = (p) => (p / 100);
 
 /** Build a React-Native-safe UPI url (no URLSearchParams). */
 const buildUpiUrl = ({ pa, pn, am, cu = 'INR', tn }) => {
-  const paise = toPaise(am);
-  const amountStr = fromPaise(paise).toFixed(2); // e.g. "1.18"
-
+  const amountStr = Number(am).toFixed(2);
+  
   const params = [
-    ['pa', pa],
-    ['pn', pn],
-    ['am', amountStr],
-    ['cu', cu],
+    `pa=${pa}`,
+    `pn=${pn}`,
+    `am=${amountStr}`,
+    `cu=${cu}`,
   ];
-  if (tn && tn.trim()) params.push(['tn', tn.trim().slice(0, 80)]);
+  
+  if (tn && tn.trim()) {
+    const cleanNote = tn
+      .trim()
+      .replace(/[^a-zA-Z0-9\s]/g, '')
+      .slice(0, 40);
+    
+    if (cleanNote) {
+      params.push(`tn=${cleanNote}`);
+    }
+  }
 
-  const qs = params
-    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
-    .join('&');
-
-  return `upi://pay?${qs}`;
+  return `upi://pay?${params.join('&')}`;
 };
 
 /* ---------- THEME ---------- */
@@ -46,14 +53,8 @@ const Rs = (n)=>`₹ ${Number(Math.round(n || 0)).toLocaleString('en-IN')}`;
 const FIXED_FEE = 49;
 const GST_RATE  = 0.18;
 
-const UPI_ID = 'yogiyashvant8347@oksbi';
-const PAYEE_NAME = 'Your Business Name'; // Name displayed in UPI app
-const upiApps = [
-  { name: 'Pay with UPI', upiId: 'yogiyashvant8347@oksbi', color: '#34B4F0' },
-  // { name: 'PhonePe', upiId: 'yogiyashvant8347@oksbi', color: '#673AB7' },
-  // { name: 'Paytm', upiId: 'yogiyashvant8347@oksbi', color: '#00BFFF' },
-  // { name: 'BHIM', upiId: 'yogiyashvant8347@oksbi', color: '#4CAF50' },
-];
+const UPI_ID = 'krishaghadiya0108@oksbi';
+const PAYEE_NAME = 'YOGI YASHVANT';
 
 /* ---------- DATE HELPERS ---------- */
 const startOfDay = (d)=>{ const x=new Date(d); x.setHours(0,0,0,0); return x; };
@@ -66,15 +67,38 @@ export default function RequestNow({ navigation, route }) {
 
   /* ---------- INCOMING ---------- */
   const passedServices = Array.isArray(route?.params?.services) ? route.params.services : [];
-  const passedCartRaw  = route?.params?.cart || {}; // { [service_id]: qty }
+  const passedCartRaw  = route?.params?.cart || {};
   const productId      = String(route?.params?.productId ?? route?.params?.id ?? 'global');
   const productTitle   = route?.params?.productTitle || 'Commercial Fridge';
   const category       = route?.params?.category || 'Commercial';
   const subtitle       = route?.params?.description || '';
   const heroImage      = route?.params?.heroImage || 'https://s3-us-west-2.amazonaws.com/speedybrandimages/tmp_ba6cd8e2-3942-4d4b-bebc-a273130e6b29.webp';
 
-  /* ---------- OWNER / PERSIST KEYS (mirror RequestDetail) ---------- */
+  /* ---------- STATE VARIABLES ---------- */
   const [ownerKey, setOwnerKey] = useState('global');
+  const [cards, setCards] = useState([]);
+  const [loadingInit, setLoadingInit] = useState(true);
+  const [selectedMap, setSelectedMap] = useState({});
+  const [tip, setTip] = useState(0);
+  const [paymentNote, setPaymentNote] = useState('');
+  const [paymentScreenshot, setPaymentScreenshot] = useState(null);
+  const [address, setAddress] = useState({ label:'Home', line1:'Jdbhs, Maruti Titanium, Sard…' });
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [addrModal, setAddrModal] = useState(false);
+  const [addrLabel, setAddrLabel] = useState(address.label);
+  const [addrLine1, setAddrLine1] = useState(address.line1);
+  const [dateModal, setDateModal] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [restModal, setRestModal] = useState(false);
+  const [restSel, setRestSel] = useState(null);
+  const [loadingR, setLoadingR] = useState(false);
+  const [restaurants, setRestaurants] = useState([]);
+  const [restError, setRestError] = useState('');
+  const [paymentModal, setPaymentModal] = useState(false);
+  const [savingReq, setSavingReq] = useState(false);
+  const [successModal, setSuccessModal] = useState(false);
+
+  /* ---------- OWNER / PERSIST KEYS ---------- */
   useEffect(() => {
     (async () => {
       try {
@@ -103,11 +127,14 @@ export default function RequestNow({ navigation, route }) {
     [ownerKey]
   );
 
-  // We store all cards’ data here
-  const [cards, setCards] = useState([]); // [{pid, meta, services, cart}]
-  const [loadingInit, setLoadingInit] = useState(true);
+  const K = useMemo(() => ({
+    addr: `addr:${ownerKey}`,
+    addrList: `addresses:${ownerKey}`,
+    date: `service_date:${ownerKey}`,
+    restaurant: `restaurant:${ownerKey}`,
+  }), [ownerKey]);
 
-  // persist current product meta+services so it’s available when user opens another product later
+  /* ---------- PERSIST CURRENT PRODUCT ---------- */
   useEffect(() => {
     (async () => {
       try {
@@ -126,13 +153,12 @@ export default function RequestNow({ navigation, route }) {
     })();
   }, [productId, productTitle, category, subtitle, heroImage, passedServices, pmetaKeyOf, rservicesKeyOf]);
 
-  // Load all rdrafts (all products with something in the cart)
+  /* ---------- LOAD ALL CARDS ---------- */
   useEffect(() => {
     (async () => {
       try {
         setLoadingInit(true);
 
-        // 1) Start with current product’s cart
         let initialCart = {};
         try {
           const fromRD = Object.fromEntries(
@@ -146,17 +172,14 @@ export default function RequestNow({ navigation, route }) {
             initialCart = Object.fromEntries(Object.entries(saved||{}).filter(([_, q])=>Number(q)>0));
           }
         } catch {}
-        // keep it in storage sync
+        
         await AsyncStorage.setItem(rdraftKeyOf(productId), JSON.stringify(initialCart||{})).catch(()=>{});
 
-        // 2) Find every other rdraft:<ownerKey>:<pid>
         const allKeys = await AsyncStorage.getAllKeys();
         const myPrefix = `rdraft:${ownerKey}:`;
         const otherKeys = allKeys.filter(k => k.startsWith(myPrefix));
 
         const products = new Map();
-
-        // Load carts for each pid
         for (const key of otherKeys) {
           const pid = key.slice(myPrefix.length);
           const raw = await AsyncStorage.getItem(key);
@@ -167,16 +190,13 @@ export default function RequestNow({ navigation, route }) {
           }
         }
 
-        // Ensure current product is present (even if others exist)
         products.set(productId, { pid: productId, cart: initialCart });
 
-        // Hydrate meta + services for each
         const hydrated = [];
         for (const { pid, cart } of products.values()) {
           let meta = null;
-          try { meta = JSON.parse(await AsyncStorage.getItem(pmetaKeyOf(pid)) || 'null'); } catch {}
+          try { meta = JSON.parse(await AsyncStorage.getItem(pmetaKeyOf(pid)) || 'null') } catch {}
           if (!meta) {
-            // fallback with minimal information
             meta = { productId: pid, productTitle: `Equipment #${pid}`, category: '—', subtitle: '', heroImage: heroImage };
           }
 
@@ -184,13 +204,12 @@ export default function RequestNow({ navigation, route }) {
           if (pid === productId && passedServices?.length) {
             svcs = passedServices;
           } else {
-            try { svcs = JSON.parse(await AsyncStorage.getItem(rservicesKeyOf(pid)) || '[]'); } catch {}
+            try { svcs = JSON.parse(await AsyncStorage.getItem(rservicesKeyOf(pid)) || '[]') } catch {}
           }
 
           hydrated.push({ pid, meta, services: Array.isArray(svcs)?svcs:[], cart });
         }
 
-        // Sort so current product appears first, then others stable
         hydrated.sort((a,b)=> (a.pid===productId?-1: b.pid===productId?1: (String(a.meta.productTitle||'').localeCompare(String(b.meta.productTitle||'')))));
 
         setCards(hydrated);
@@ -200,13 +219,12 @@ export default function RequestNow({ navigation, route }) {
     })();
   }, [ownerKey, productId, passedCartRaw, passedServices, rdraftKeyOf, pmetaKeyOf, rservicesKeyOf, heroImage]);
 
-  // Keep rdraft in sync when carts change
+  /* ---------- CART MANAGEMENT ---------- */
   const updateCartFor = useCallback(async (pid, updater) => {
     setCards(prev => {
       const next = prev.map(card => {
         if (card.pid !== pid) return card;
         const newCart = updater(card.cart || {});
-        // persist outside setState
         AsyncStorage.setItem(rdraftKeyOf(pid), JSON.stringify(newCart || {})).catch(()=>{});
         return { ...card, cart: newCart };
       });
@@ -214,7 +232,6 @@ export default function RequestNow({ navigation, route }) {
     });
   }, [rdraftKeyOf]);
 
-  /* ---------- PER-CARD computed rows ---------- */
   const makeItems = useCallback((services, cartObj) => {
     const byId = {};
     (services||[]).forEach(s => { byId[Number(s.id)] = { name: s.title || s.name, unit: Number(s.price||0) }; });
@@ -226,15 +243,13 @@ export default function RequestNow({ navigation, route }) {
     }).filter(x => x.qty>0);
   }, []);
 
-  // Flatten items across all cards
   const flatItems = useMemo(() => {
     return cards.flatMap(card => makeItems(card.services, card.cart).map(it => ({
       ...it, __pid: card.pid
     })));
   }, [cards, makeItems]);
 
-  /* ---------- SELECTION (auto-follows items) ---------- */
-  const [selectedMap, setSelectedMap] = useState({});
+  /* ---------- SELECTION MANAGEMENT ---------- */
   const allKeys = useMemo(() => flatItems.map(it => `${it.__pid}:${it.service_id}`), [flatItems]);
 
   useEffect(() => {
@@ -271,63 +286,31 @@ export default function RequestNow({ navigation, route }) {
     [flatItems, selectedMap]
   );
 
-  /* ---------- TOTALS (selected only) ---------- */
-  /* ---------- TOTALS (selected only, paise-accurate) ---------- */
-const [tip, setTip] = useState(0);
-const [paymentNote, setPaymentNote] = useState('');
+  /* ---------- TOTALS ---------- */
+  const totals = useMemo(() => {
+    const itemPaise = selectedItems.reduce((sum, it) => sum + toPaise(it.lineTotal), 0);
+    const gstPaise  = Math.round(itemPaise * GST_RATE);
+    const tipPaise  = toPaise(tip);
+    const payPaise  = itemPaise + gstPaise + tipPaise;
 
-const totals = useMemo(() => {
-  const itemPaise = selectedItems.reduce((sum, it) => sum + toPaise(it.lineTotal), 0);
-  const gstPaise  = Math.round(itemPaise * GST_RATE); // 18% GST
-  const tipPaise  = toPaise(tip);
-  const payPaise  = itemPaise + gstPaise + tipPaise;
+    return {
+      item: fromPaise(itemPaise),
+      gst: fromPaise(gstPaise),
+      tip: fromPaise(tipPaise),
+      payable: fromPaise(payPaise),
+    };
+  }, [selectedItems, tip]);
 
-  return {
-    item: fromPaise(itemPaise),
-    gst: fromPaise(gstPaise),
-    tip: fromPaise(tipPaise),
-    payable: fromPaise(payPaise),
-  };
-}, [selectedItems, tip]);
+  const itemTotalSelected = totals.item;
+  const gstAmount         = totals.gst;
+  const payable           = totals.payable;
 
-const itemTotalSelected = totals.item;
-const gstAmount         = totals.gst;
-const payable           = totals.payable;
+  /* ---------- TIP HANDLER ---------- */
+  const toggleTip = useCallback((amount) => {
+    setTip(prev => prev === amount ? 0 : amount);
+  }, []);
 
-  const handleConfirmPayment = () => {
-  if (!paymentNote.trim()) {
-    alert("Please enter your payment note before confirming.");
-    return;
-  }
-
-  // proceed with payment confirmation logic
-  console.log("Payment note:", paymentNote);
-  setPaymentModal(false);
-};
-  // TIP persistence (global per owner)
-  const tipKey = useMemo(()=>`tip:${ownerKey}`,[ownerKey]);
-  useEffect(() => { (async () => {
-    try { const raw = await AsyncStorage.getItem(tipKey); if (raw!=null) setTip(Number(raw)||0); } catch {}
-  })(); }, [tipKey]);
-  const toggleTip = useCallback(async (val) => {
-    const next = tip===val ? 0 : val; setTip(next);
-    AsyncStorage.setItem(tipKey, String(next)).catch(()=>{});
-  }, [tip, tipKey]);
-
-  /* ---------- ADDRESS ---------- */
-  const K = useMemo(() => ({
-    addr: `addr:${ownerKey}`,
-    addrList: `addresses:${ownerKey}`,
-    date: `service_date:${ownerKey}`,
-    restaurant: `restaurant:${ownerKey}`,
-  }), [ownerKey]);
-
-  const [address, setAddress] = useState({ label:'Home', line1:'Jdbhs, Maruti Titanium, Sard…' });
-  const [savedAddresses, setSavedAddresses] = useState([]);
-  const [addrModal, setAddrModal] = useState(false);
-  const [addrLabel, setAddrLabel] = useState(address.label);
-  const [addrLine1, setAddrLine1] = useState(address.line1);
-
+  /* ---------- ADDRESS MANAGEMENT ---------- */
   useEffect(() => {
     (async () => {
       try {
@@ -368,14 +351,12 @@ const payable           = totals.payable;
     setAddrModal(false);
   }, [K.addr]);
 
-  /* ---------- DATE SHEET ---------- */
-  const [dateModal, setDateModal] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(null);
+  /* ---------- DATE MANAGEMENT ---------- */
   const today = useMemo(() => startOfDay(new Date()), []);
   const next30 = useMemo(() => Array.from({ length: 30 }).map((_, i) => startOfDay(addDays(today, i))), [today]);
 
   const paddedDates = useMemo(() => {
-    const headPad = next30[0].getDay(); // 0=Sun..6=Sat
+    const headPad = next30[0].getDay();
     const withHead = [...Array(headPad).fill(null), ...next30];
     const rem = withHead.length % 7;
     const tailPad = rem === 0 ? 0 : (7 - rem);
@@ -394,19 +375,12 @@ const payable           = totals.payable;
     })();
   }, [K.date]);
 
-  /* ---------- RESTAURANT PICKER (OWNER-ONLY) ---------- */
-  const [restModal, setRestModal] = useState(false);
-  const [restSel, setRestSel] = useState(null);
-  const [loadingR, setLoadingR] = useState(false);
-  const [restaurants, setRestaurants] = useState([]);
-  const [restError, setRestError] = useState('');
-
+  /* ---------- RESTAURANT MANAGEMENT ---------- */
   const fetchRestaurants = useCallback(async () => {
     setLoadingR(true);
     setRestError('');
     setRestaurants([]);
     try {
-      // Get owner id similar to previous impl
       let chosen = '';
       try {
         const idParam = route?.params?.ownerId ? String(route.params.ownerId).trim() : '';
@@ -456,18 +430,147 @@ const payable           = totals.payable;
     setRestModal(true);
   }, [selectedDate, K.date, fetchRestaurants]);
 
-  // payment 
-  const [paymentModal, setPaymentModal] = useState(false);
-const [upiLinks, setUpiLinks] = useState([]);
+  /* ---------- PAYMENT HANDLING ---------- */
+  const [upiCopiedModal, setUpiCopiedModal] = useState(false);
+  const copyUpiId = useCallback(() => {
+  Clipboard.setString(UPI_ID);
+  setUpiCopiedModal(true);
+}, [UPI_ID]);
 
-  /* ---------- Save equipment request ---------- */
-  const [savingReq, setSavingReq] = useState(false);
-  const [successModal, setSuccessModal] = useState(false);
+  const pickScreenshot = useCallback(() => {
+    const options = {
+      mediaType: 'photo',
+      quality: 0.8,
+      maxWidth: 1024,
+      maxHeight: 1024,
+    };
 
+    launchImageLibrary(options, (response) => {
+      if (response.didCancel) {
+        console.log('User cancelled image picker');
+      } else if (response.error) {
+        console.log('ImagePicker Error: ', response.error);
+        alert('Error selecting image');
+      } else if (response.assets && response.assets[0]) {
+        setPaymentScreenshot(response.assets[0]);
+      }
+    });
+  }, []);
+
+  const hasScreenshot = !!paymentScreenshot;
+
+  const handleConfirmPayment = async () => {
+  if (!hasScreenshot) {
+    alert("Please upload your payment screenshot before confirming.");
+    return;
+  }
+
+  console.log('Processing payment confirmation...');
+  
+  // Extract numeric owner ID from ownerKey
+  const extractOwnerId = (ownerKey) => {
+    if (ownerKey.includes(':')) {
+      return ownerKey.split(':')[1];
+    }
+    return ownerKey;
+  };
+
+  const numericOwnerId = extractOwnerId(ownerKey);
+  const transactionId = 'UPI_' + new Date().getTime();
+
+  // Convert image to base64 for upload
+  let screenshotBase64 = null;
+  if (paymentScreenshot && paymentScreenshot.uri) {
+    try {
+      // In a real app, you would convert the image to base64
+      // For now, we'll just send the URI and handle it on the backend
+      screenshotBase64 = paymentScreenshot.uri;
+      console.log('Screenshot ready for upload');
+    } catch (error) {
+      console.error('Error processing screenshot:', error);
+    }
+  }
+
+  // Prepare payment data
+  const paymentData = {
+    owner_id: numericOwnerId,
+    amount: parseFloat(payable),
+    payment_method: 'UPI',
+    payment_status: 'completed',
+    transaction_id: transactionId,
+    payment_note: paymentNote || 'Service payment via UPI',
+    payment_screenshot: screenshotBase64, // ADD SCREENSHOT TO REQUEST
+  };
+
+  console.log('Sending payment data with screenshot');
+
+  try {
+    setSavingReq(true);
+    
+    // Make API call to your endpoint
+    const response = await api.post('/owner-payment', paymentData, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    console.log('API Response:', response.data);
+
+    if (response.data.message === 'Payment details saved successfully.') {
+      console.log('Payment saved successfully with screenshot');
+      
+      // Clear the cart after successful payment
+      try {
+        const allKeys = await AsyncStorage.getAllKeys();
+        const myPrefix = `rdraft:${ownerKey}:`;
+        const rdraftKeys = allKeys.filter(k => k.startsWith(myPrefix));
+        await AsyncStorage.multiRemove(rdraftKeys);
+        console.log('Cart cleared after payment');
+      } catch (clearError) {
+        console.log('Error clearing cart:', clearError);
+      }
+      
+      setPaymentModal(false);
+      
+      // Small delay to ensure smooth transition
+      setTimeout(() => {
+        setSuccessModal(true);
+      }, 300);
+      
+    } else {
+      throw new Error('Unexpected response from server');
+    }
+    
+  } catch (error) {
+    console.error('Error in payment confirmation:', error);
+    
+    let errorMessage = 'Payment failed. Please try again.';
+    
+    if (error.response) {
+      console.log('Error response data:', error.response.data);
+      console.log('Error response status:', error.response.status);
+      
+      if (error.response.status === 404) {
+        errorMessage = 'Payment endpoint not found. Please check the server.';
+      } else if (error.response.status === 500) {
+        errorMessage = 'Server error. Please try again later.';
+      } else if (error.response.data?.error) {
+        errorMessage = error.response.data.error;
+      }
+    } else if (error.request) {
+      errorMessage = 'No response from server. Please check your connection.';
+    }
+    
+    alert(errorMessage);
+  } finally {
+    setSavingReq(false);
+  }
+};
+
+  /* ---------- EQUIPMENT REQUEST ---------- */
   const buildEquipmentRequestPayload = (pickedRestaurant) => {
     const firstLine = selectedItems[0] || {};
     const tags = selectedItems.map(it => `${it.name} x${it.qty}`);
-    // Use the currently visible card as product context, else fallback
     const defaultMeta = cards[0]?.meta || {};
     return {
       product_id: Number(defaultMeta.productId || firstLine.service_id || 0),
@@ -481,7 +584,7 @@ const [upiLinks, setUpiLinks] = useState([]);
       assigned_to: '',
     };
   };
-// :white_check_mark: Only allow confirming when selected restaurant is approved
+
   const canConfirm = useMemo(() => {
     if (!restSel) return false;
     const picked = restaurants.find(r => r.id === restSel);
@@ -489,28 +592,27 @@ const [upiLinks, setUpiLinks] = useState([]);
   }, [restSel, restaurants]);
 
   const confirmRestaurant = useCallback(async () => {
-  if (!restSel) return;
-  const picked = restaurants.find(r => r.id === restSel);
-  if (!picked?.approved) return;
+    if (!restSel) return;
+    const picked = restaurants.find(r => r.id === restSel);
+    if (!picked?.approved) return;
 
-  try {
-    setSavingReq(true);
-    await AsyncStorage.setItem(K.restaurant, JSON.stringify(picked || {})).catch(()=>{});
-    
-    const payload = buildEquipmentRequestPayload(picked);
-    await api.post('/app/equipment-requests', payload);
+    try {
+      setSavingReq(true);
+      await AsyncStorage.setItem(K.restaurant, JSON.stringify(picked || {})).catch(()=>{});
+      
+      const payload = buildEquipmentRequestPayload(picked);
+      await api.post('/app/equipment-requests', payload);
 
-    setRestModal(false);
-    // Open payment modal instead of success modal
-    setPaymentModal(true);
-  } catch (e) {
-    console.log('Create equipment request failed:', e?.response?.data || e?.message);
-  } finally {
-    setSavingReq(false);
-  }
-}, [restSel, restaurants, K.restaurant, selectedItems, selectedDate, cards]);
+      setRestModal(false);
+      setPaymentModal(true);
+    } catch (e) {
+      console.log('Create equipment request failed:', e?.response?.data || e?.message);
+    } finally {
+      setSavingReq(false);
+    }
+  }, [restSel, restaurants, K.restaurant, selectedItems, selectedDate, cards]);
 
-  /* ---------- Row/Controls bound to a specific card ---------- */
+  /* ---------- CARD CONTROLS ---------- */
   const incQty = useCallback((pid, sid) => {
     updateCartFor(pid, prev => ({ ...(prev || {}), [sid]: (prev?.[sid] || 0) + 1 }));
   }, [updateCartFor]);
@@ -534,6 +636,7 @@ const [upiLinks, setUpiLinks] = useState([]);
 
   const scrollRef = useRef(null);
 
+  /* ---------- COMPONENTS ---------- */
   const ProductCard = ({ card }) => {
     const { pid, meta, services, cart } = card;
     const items = useMemo(()=>makeItems(services, cart),[services, cart]);
@@ -587,10 +690,7 @@ const [upiLinks, setUpiLinks] = useState([]);
             </View>
             <TouchableOpacity
               onPress={() => {
-                // Toggle all items for THIS card
                 if (isAllSelectedInCard) {
-                  const updates = {};
-                  items.forEach(it => { updates[`${pid}:${it.service_id}`] = false; });
                   setSelectedMap(prev => {
                     const n = { ...(prev||{}) };
                     items.forEach(it => { delete n[`${pid}:${it.service_id}`]; });
@@ -681,35 +781,30 @@ const [upiLinks, setUpiLinks] = useState([]);
 
         {/* Payment summary */}
         <View style={[st.card, { marginHorizontal: 16 }]}>
-  <Text style={st.cardTitle}>Payment summary</Text>
+          <Text style={st.cardTitle}>Payment summary</Text>
 
-  {/* Item total */}
-  <View style={st.row}>
-    <Text style={st.rowLbl}>Item total</Text>
-    <Text style={st.rowVal}>{itemTotalSelected.toFixed(2)}</Text>
-  </View>
+          <View style={st.row}>
+            <Text style={st.rowLbl}>Item total</Text>
+            <Text style={st.rowVal}>{itemTotalSelected.toFixed(2)}</Text>
+          </View>
 
-  {/* GST */}
-  <View style={st.row}>
-    <Text style={st.rowLbl}>Tax (GST 18%)</Text>
-    <Text style={st.rowVal}>{gstAmount.toFixed(2)}</Text>
-  </View>
+          <View style={st.row}>
+            <Text style={st.rowLbl}>Tax (GST 18%)</Text>
+            <Text style={st.rowVal}>{gstAmount.toFixed(2)}</Text>
+          </View>
 
-  {/* Tip */}
-  <View style={st.row}>
-    <Text style={st.rowLbl}>Tip</Text>
-    <Text style={st.rowVal}>{tip.toFixed(2)}</Text>
-  </View>
+          <View style={st.row}>
+            <Text style={st.rowLbl}>Tip</Text>
+            <Text style={st.rowVal}>{tip.toFixed(2)}</Text>
+          </View>
 
-  <View style={st.hr} />
+          <View style={st.hr} />
 
-  {/* Total payable */}
-  <View style={st.row}>
-    <Text style={st.payableLbl}>Amount to pay</Text>
-    <Text style={st.payableVal}>{payable.toFixed(2)}</Text>
-  </View>
-
-</View>
+          <View style={st.row}>
+            <Text style={st.payableLbl}>Amount to pay</Text>
+            <Text style={st.payableVal}>{payable.toFixed(2)}</Text>
+          </View>
+        </View>
 
         {/* Tip selector */}
         <View style={[st.card, { marginHorizontal: 16 }]}>
@@ -913,7 +1008,7 @@ const [upiLinks, setUpiLinks] = useState([]);
       </Modal>
 
       {/* Payment Modal */}
-<Modal
+      <Modal
   visible={paymentModal}
   transparent
   animationType="slide"
@@ -922,164 +1017,287 @@ const [upiLinks, setUpiLinks] = useState([]);
   <View style={st.modalBackdrop}>
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={{ flex: 1 }}
+      style={{ flex: 1, justifyContent: 'flex-end' }}
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View style={{ flex: 1, justifyContent: 'flex-end' }}>
-          <View style={st.sheetLarge}>
-            <ScrollView
-              contentContainerStyle={{
-                paddingBottom: Platform.OS === 'ios' ? 40 : 20,
-              }}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            >
-              <Text style={st.sheetTitle}>Complete Payment</Text>
+        <View style={st.sheetLarge}>
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{
+              flexGrow: 1,
+              paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+            }}
+          >
+            <Text style={st.sheetTitle}>Complete Payment</Text>
 
-              {/* QR Section */}
-              <View style={{ alignItems: 'center', marginVertical: 16 }}>
-                <Image
-                  source={require('../assets/images/qr2.jpg')}
-                  style={{
-                    width: Dimensions.get('window').width * 0.5,
-                    height: Dimensions.get('window').width * 0.5,
-                    borderRadius: 10,
-                  }}
-                  resizeMode="contain"
-                />
-                <Text style={{ marginTop: 6, color: C.ink, fontWeight: '800' }}>
-  Amount: ₹ {payable.toFixed(2)}
-</Text>
-                <Text style={{ marginTop: 12, color: C.muted, textAlign: 'center' }}>
-                  Scan the QR code using your preferred UPI app
-                </Text>
-              </View>
-
-              {/* UPI options */}
-              <Text style={st.inputLbl}>Or pay directly via:</Text>
-              <View style={{ marginVertical: 10 }}>
-                {upiApps.map((app, index) => {
-  const upiLink = buildUpiUrl({
-    pa: app.upiId,
-    pn: 'Yogi Yashvant',
-    am: payable,               // raw number; helper fixes it to 2 decimals
-    cu: 'INR',
-    tn: paymentNote || 'Order payment'
-  });
-
-  return (
-    <TouchableOpacity
-      key={index}
-      activeOpacity={0.8}
-      style={{
-        backgroundColor: app.color,
-        paddingVertical: 14,
-        borderRadius: 10,
-        marginVertical: 6,
-      }}
-      onPress={async () => {
-        if (payable < 1) {            // optional minimum-amount guard
-          alert('Minimum payable amount is ₹1.00');
-          return;
-        }
-        try {
-          await Linking.openURL(upiLink);
-        } catch (e) {
-          alert('Could not open your UPI app. Please try again or scan the QR.');
-        }
-      }}
-    >
-      <Text style={{ color: '#fff', textAlign: 'center', fontWeight: '700', fontSize: 16 }}>
-        Pay with {app.name}
-      </Text>
-    </TouchableOpacity>
-  );
-})}
-
-              </View>
-
-              {/* Note Input */}
-              <Text style={[st.inputLbl, { marginTop: 16 }]}>Add a note (optional)</Text>
-              <TextInput
-                value={paymentNote}
-                onChangeText={setPaymentNote}
-                placeholder="I have done my payment"
-                style={[
-                  st.input,
-                  {
-                    height: 100,
-                    textAlignVertical: 'top',
-                    paddingTop: 12,
-                    borderWidth: 1,
-                    borderColor: '#E5E7EB',
-                    borderRadius: 10,
-                    backgroundColor: '#F9FAFB',
-                    fontSize: 15,
-                  },
-                ]}
-                multiline
-                placeholderTextColor="#9CA3AF"
+            {/* QR section */}
+            <View style={{ alignItems: 'center', marginVertical: 16 }}>
+              <Image
+                source={require('../assets/images/qr20.jpg')}
+                style={{
+                  width: Dimensions.get('window').width * 0.5,
+                  height: Dimensions.get('window').width * 0.5,
+                  borderRadius: 10,
+                }}
+                resizeMode="contain"
               />
+              <Text style={{ marginTop: 6, color: C.ink, fontWeight: '800' }}>
+                Amount: ₹ {payable.toFixed(2)}
+              </Text>
+              <Text style={{ marginTop: 12, color: C.muted, textAlign: 'center' }}>
+                Scan the QR code using your preferred UPI app
+              </Text>
+            </View>
 
-              {/* Action Buttons */}
+            {/* Copyable UPI ID */}
+            <View style={{ marginVertical: 16 }}>
+              <Text style={[st.inputLbl, { marginBottom: 8 }]}>
+                Or send payment to UPI ID:
+              </Text>
               <View
                 style={{
                   flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  marginTop: 24,
+                  alignItems: 'center',
+                  backgroundColor: '#F8FAFC',
+                  borderWidth: 1,
+                  borderColor: '#E5E7EB',
+                  borderRadius: 10,
+                  padding: 12,
+                  marginBottom: 8,
                 }}
               >
+                <Text style={{ flex: 1, color: C.ink, fontWeight: '600', fontSize: 16 }}>
+                  {UPI_ID}
+                </Text>
                 <TouchableOpacity
-                  onPress={() => setPaymentModal(false)}
-                  activeOpacity={0.8}
-                  style={[
-                    st.btn,
-                    {
-                      backgroundColor: '#F1F5F9',
-                      flex: 1,
-                      marginRight: 8,
-                      borderRadius: 10,
-                      paddingVertical: 14,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[st.btnTxt, { color: C.ink, textAlign: 'center', fontSize: 16 }]}
-                  >
-                    Cancel
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() => {
-                    console.log('Payment note:', paymentNote);
-                    setPaymentModal(false);
-                    setSuccessModal(true);
+                  onPress={copyUpiId}
+                  style={{
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    backgroundColor: C.primary,
+                    borderRadius: 6,
                   }}
-                  activeOpacity={0.8}
-                  style={[
-                    st.btn,
-                    {
-                      backgroundColor: C.primary,
-                      flex: 1,
-                      marginLeft: 8,
-                      borderRadius: 10,
-                      paddingVertical: 14,
-                    },
-                  ]}
                 >
-                  <Text
-                    style={[st.btnTxt, { color: '#fff', textAlign: 'center', fontSize: 16 }]}
-                  >
-                    Confirm Payment
+                  <Text style={{ color: '#fff', fontWeight: '600', fontSize: 14 }}>
+                    Copy
                   </Text>
                 </TouchableOpacity>
               </View>
-            </ScrollView>
+              <Text style={{ fontSize: 12, color: C.muted, textAlign: 'center' }}>
+                Tap "Copy" and paste in your UPI app to pay ₹{payable.toFixed(2)}
+              </Text>
+            </View>
+
+            {/* Screenshot warning */}
+            <View
+              style={{
+                backgroundColor: '#FFF7ED',
+                borderWidth: 1,
+                borderColor: '#FDBA74',
+                borderRadius: 10,
+                padding: 12,
+                marginVertical: 8,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                <Icon name="warning-outline" size={16} color="#EA580C" />
+                <Text
+                  style={{
+                    marginLeft: 6,
+                    color: '#EA580C',
+                    fontWeight: '700',
+                    fontSize: 14,
+                  }}
+                >
+                  Payment Screenshot Required
+                </Text>
+              </View>
+              <Text style={{ fontSize: 12, color: '#EA580C', lineHeight: 16 }}>
+                You must upload a screenshot of your payment confirmation for the request
+                to be processed.
+              </Text>
+            </View>
+
+            {/* Screenshot upload */}
+            <Text style={[st.inputLbl, { marginTop: 16 }]}>
+              Upload Payment Screenshot (Required)
+            </Text>
+            {paymentScreenshot ? (
+              <View
+                style={{
+                  height: 120,
+                  borderRadius: 10,
+                  overflow: 'hidden',
+                  marginVertical: 8,
+                  position: 'relative',
+                }}
+              >
+                <Image
+                  source={{ uri: paymentScreenshot.uri }}
+                  style={{ width: '100%', height: '100%' }}
+                  resizeMode="cover"
+                />
+                <TouchableOpacity
+                  style={{
+                    position: 'absolute',
+                    top: 8,
+                    right: 8,
+                    backgroundColor: 'rgba(0,0,0,0.7)',
+                    borderRadius: 15,
+                    width: 30,
+                    height: 30,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                  onPress={() => setPaymentScreenshot(null)}
+                >
+                  <Icon name="close" size={16} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={{
+                  height: 120,
+                  borderWidth: 2,
+                  borderColor: '#E5E7EB',
+                  borderStyle: 'dashed',
+                  borderRadius: 10,
+                  backgroundColor: '#F9FAFB',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginVertical: 8,
+                }}
+                onPress={pickScreenshot}
+              >
+                <Icon name="cloud-upload-outline" size={32} color={C.muted} />
+                <Text style={{ marginTop: 8, color: C.muted, fontWeight: '600' }}>
+                  Tap to Upload Screenshot
+                </Text>
+                <Text style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>
+                  PNG, JPG up to 5MB
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Notes */}
+            <Text style={[st.inputLbl, { marginTop: 16 }]}>
+              Additional Notes (Optional)
+            </Text>
+            <TextInput
+              value={paymentNote}
+              onChangeText={setPaymentNote}
+              placeholder="Any additional information about your payment..."
+              style={[
+                st.input,
+                {
+                  height: 80,
+                  textAlignVertical: 'top',
+                  paddingTop: 12,
+                  borderWidth: 1,
+                  borderColor: '#E5E7EB',
+                  borderRadius: 10,
+                  backgroundColor: '#F9FAFB',
+                  fontSize: 15,
+                },
+              ]}
+              multiline
+              placeholderTextColor="#9CA3AF"
+            />
+          </ScrollView>
+
+          {/* Fixed bottom buttons */}
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              marginTop: 8,
+            }}
+          >
+            <TouchableOpacity
+              onPress={() => setPaymentModal(false)}
+              style={{
+                backgroundColor: '#F1F5F9',
+                flex: 1,
+                marginRight: 8,
+                borderRadius: 10,
+                paddingVertical: 14,
+              }}
+            >
+              <Text
+                style={{
+                  color: C.ink,
+                  textAlign: 'center',
+                  fontSize: 16,
+                  fontWeight: '600',
+                }}
+              >
+                Cancel
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handleConfirmPayment}
+              style={{
+                backgroundColor: C.primary,
+                flex: 1,
+                marginLeft: 8,
+                borderRadius: 10,
+                paddingVertical: 14,
+              }}
+            >
+              <Text
+                style={{
+                  color: '#fff',
+                  textAlign: 'center',
+                  fontSize: 16,
+                  fontWeight: '600',
+                }}
+              >
+                Confirm Payment
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
+  </View>
+</Modal>
+
+{/* UPI Copied Success Modal */}
+<Modal visible={upiCopiedModal} transparent animationType="fade" onRequestClose={()=>setUpiCopiedModal(false)}>
+  <View style={st.modalBackdropCenter}>
+    <View style={st.upiCopiedCard}>
+      <View style={st.upiCopiedHeader}>
+        <View style={st.upiCopiedIconWrap}>
+          <Icon name="copy" size={28} color="#fff"/>
+        </View>
+        <Text style={st.upiCopiedTitle}>UPI ID Copied</Text>
+      </View>
+      
+      <View style={st.upiIdBox}>
+        <Text style={st.upiIdText}>{UPI_ID}</Text>
+      </View>
+      
+      <Text style={st.upiCopiedSubtitle}>
+        ✅ Successfully copied to clipboard
+      </Text>
+      
+      <Text style={st.upiCopiedInstruction}>
+        Paste this UPI ID in your payment app and pay:
+      </Text>
+      
+      <View style={st.amountBox}>
+        <Text style={st.amountText}>₹ {payable.toFixed(2)}</Text>
+      </View>
+      
+      <TouchableOpacity 
+        onPress={()=>setUpiCopiedModal(false)} 
+        style={st.upiCopiedBtn}
+      >
+        <Text style={st.upiCopiedBtnText}>Continue to Payment</Text>
+      </TouchableOpacity>
+    </View>
   </View>
 </Modal>
 
@@ -1090,9 +1308,12 @@ const [upiLinks, setUpiLinks] = useState([]);
             <View style={st.successIconWrap}><Icon name="checkmark" size={36} color="#fff"/></View>
             <Text style={st.successTitle}>Congratulations 🎉</Text>
             <Text style={st.successMsg}>
-              We’ll notify you when a service engineer is available on your selected date and will arrive at your restaurant.
+              We'll notify you when a service engineer is available on your selected date and will arrive at your restaurant.
             </Text>
-            <TouchableOpacity onPress={()=>setSuccessModal(false)} style={st.successBtn}>
+            <TouchableOpacity onPress={()=>{
+              setSuccessModal(false);
+              navigation.goBack();
+            }} style={st.successBtn}>
               <Text style={st.successBtnTxt}>Okay</Text>
             </TouchableOpacity>
           </View>
@@ -1203,4 +1424,98 @@ const st = StyleSheet.create({
 
   subtle: { color: '#9CA3AF' },
   counterBtnSm:{ width:28, height:28, borderRadius:8, backgroundColor:'#FFF2F2', alignItems:'center', justifyContent:'center', borderWidth:1, borderColor:'#FEE2E2' },
+
+  upiCopiedCard: {
+  width: '90%',
+  maxWidth: 400,
+  backgroundColor: '#fff',
+  borderRadius: 20,
+  padding: 24,
+  alignItems: 'center',
+  shadowColor: '#000',
+  shadowOffset: {
+    width: 0,
+    height: 4,
+  },
+  shadowOpacity: 0.25,
+  shadowRadius: 12,
+  elevation: 8,
+},
+upiCopiedHeader: {
+  alignItems: 'center',
+  marginBottom: 20,
+},
+upiCopiedIconWrap: {
+  width: 60,
+  height: 60,
+  borderRadius: 30,
+  backgroundColor: '#10B981',
+  alignItems: 'center',
+  justifyContent: 'center',
+  marginBottom: 12,
+},
+upiCopiedTitle: {
+  fontSize: 22,
+  fontWeight: '800',
+  color: C.ink,
+  textAlign: 'center',
+},
+upiIdBox: {
+  backgroundColor: '#F8FAFC',
+  borderWidth: 2,
+  borderColor: '#E5E7EB',
+  borderRadius: 12,
+  padding: 16,
+  marginBottom: 16,
+  width: '100%',
+},
+upiIdText: {
+  fontSize: 16,
+  fontWeight: '700',
+  color: C.ink,
+  textAlign: 'center',
+  letterSpacing: 0.5,
+},
+upiCopiedSubtitle: {
+  fontSize: 16,
+  fontWeight: '600',
+  color: '#10B981',
+  textAlign: 'center',
+  marginBottom: 8,
+},
+upiCopiedInstruction: {
+  fontSize: 14,
+  color: C.muted,
+  textAlign: 'center',
+  marginBottom: 12,
+  lineHeight: 20,
+},
+amountBox: {
+  backgroundColor: '#FFFBEB',
+  borderWidth: 2,
+  borderColor: '#F59E0B',
+  borderRadius: 12,
+  paddingVertical: 12,
+  paddingHorizontal: 24,
+  marginBottom: 24,
+},
+amountText: {
+  fontSize: 20,
+  fontWeight: '800',
+  color: '#D97706',
+  textAlign: 'center',
+},
+upiCopiedBtn: {
+  backgroundColor: C.primary,
+  paddingVertical: 14,
+  paddingHorizontal: 32,
+  borderRadius: 12,
+  width: '100%',
+  alignItems: 'center',
+},
+upiCopiedBtnText: {
+  color: '#fff',
+  fontWeight: '700',
+  fontSize: 16,
+},
 });

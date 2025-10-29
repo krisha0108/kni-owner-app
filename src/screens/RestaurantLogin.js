@@ -284,11 +284,11 @@
 //   termsTxt:{ color:'#94A3B8', textAlign:'center' },
 // });
 
-
-import React, { useEffect, useMemo, useState } from 'react';
+// src/screens/RestaurantLogin.js
+import React, { useEffect, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  StatusBar, Image, KeyboardAvoidingView, Platform, ActivityIndicator
+  StatusBar, Image, KeyboardAvoidingView, Platform, ActivityIndicator, Alert
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
@@ -298,209 +298,158 @@ import auth from '@react-native-firebase/auth';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import messaging from '@react-native-firebase/messaging';
+
 const C = {
   primary:'#EF3A3A', ink:'#1D2254', bg:'#F5F7FA', card:'#FFFFFF',
   text:'#0F172A', muted:'#6B7280', border:'#E5E7EB'
 };
+
 export default function RestaurantLogin({ navigation, route }) {
   const insets = useSafeAreaInsets();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState(route?.params?.prefillEmail || '');
+  const [password, setPassword] = useState(route?.params?.prefillPassword || '');
   const [secure, setSecure] = useState(true);
   const [error, setError] = useState('');
   const [gLoading, setGLoading] = useState(false);
   const [pLoading, setPLoading] = useState(false);
+
   useEffect(() => {
     GoogleSignin.configure({
-      webClientId: '851628336447-uccg7n0mbg4g2mlvb5g8nr9r55s4oje2.apps.googleusercontent.com', // <-- from Firebase (Web)
+      webClientId: '851628336447-uccg7n0mbg4g2mlvb5g8nr9r55s4oje2.apps.googleusercontent.com', // update if needed
       offlineAccess: false,
       forceCodeForRefreshToken: false,
     });
-    
-    // Auto-fill email and password if coming from registration
-    if (route?.params?.prefillEmail) {
-      setEmail(route.params.prefillEmail);
-    }
-    if (route?.params?.prefillPassword) {
-      setPassword(route.params.prefillPassword);
-    }
-  }, [route?.params]);
+  }, []);
 
-  const validate = () => {
-    if (!email?.trim() || !password?.trim()) {
-      setError('Please enter both email/phone and password.');
-      return false;
-    }
-    setError('');
-    return true;
-  };
+  // Inline helper — stores session and registers FCM token (best-effort)
+  const saveSessionAndFcm = async (token, owner, provider = 'password') => {
+    try {
+      if (token) {
+        await AsyncStorage.setItem('userToken', token);
+        if (api && api.defaults) api.defaults.headers.common.Authorization = `Bearer ${token}`;
+      }
 
-const handleLogin = async () => {
-  if (!email || !password) return alert('Enter email and password');
-  setPLoading(true);
-  try {
-    const res = await api.post('/restaurant/login', { email, password });
-    if (res.data?.status) {
-      const token = res.data?.token;
-      const owner = res.data?.data;
-      
-      // Store tokens
-     // ✅ Store tokens
-if (token) {
-  await AsyncStorage.setItem('userToken', token); // only 1 key
-  api.defaults.headers.common.Authorization = `Bearer ${token}`;
-}
+      if (owner) {
+        await AsyncStorage.setItem('user', JSON.stringify(owner));
+        if (owner?.id) await AsyncStorage.setItem('ownerId', String(owner.id));
+      }
 
-      
-    // ✅ Store user data
-if (owner) {
-  await AsyncStorage.setItem('user', JSON.stringify(owner));
-  if (owner?.id) {
-    await AsyncStorage.setItem('ownerId', String(owner.id));
-  }
-}
-      
-      // 🔥 Get and store FCM token
+      await AsyncStorage.setItem('authProvider', provider);
+
+      // Try to get FCM token and send to backend (non-blocking)
       try {
         const fcmToken = await messaging().getToken();
-        console.log('FCM Token:', fcmToken);
         if (fcmToken && owner?.id) {
-          console.log('FCM Token obtained:', fcmToken);
-          
-          // Send FCM token to backend
-          const fcmResponse = await api.post('/owners/save-fcm-token', {
+          await api.post('/owners/save-fcm-token', {
             restaurant_owner_id: owner.id,
-            fcm_token: fcmToken
-          });
-          
-          
-          console.log('FCM token response:', fcmResponse.data);
-          console.log('FCM token saved to backend successfully');
-        } else {
-          console.log('No FCM token or owner ID available');
+            fcm_token: fcmToken,
+          }).catch(e => console.log('save-fcm-token error (ignored):', e?.message || e));
         }
-      } catch (fcmError) {
-        console.log('FCM token error:', fcmError.message);
+      } catch (fcmErr) {
+        console.log('FCM fetch error (ignored):', fcmErr?.message || fcmErr);
       }
-      
-      await AsyncStorage.setItem('authProvider', 'password');
-      navigation.replace('Home');
-    } else {
-      alert(res.data?.message || 'Invalid credentials');
+    } catch (err) {
+      console.log('saveSessionAndFcm error:', err?.message || err);
+      throw err;
     }
-  } catch (err) {
-    console.log('Login error:', err?.response?.data || err.message);
-    alert(err?.response?.data?.message || 'Invalid credentials');
-  } finally {
-    setPLoading(false);
-  }
-};
-  const handleGoogle = async () => {
-  try {
-    setGLoading(true);
-    setError('');
-    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-    
-    const signInRes = await GoogleSignin.signIn();
-    let { idToken } = signInRes || {};
-    
-    if (!idToken) {
-      const tokenRes = await GoogleSignin.getTokens();
-      idToken = tokenRes?.idToken;
-      var accessToken = tokenRes?.accessToken;
-    }
-    
-    if (!idToken && !accessToken) {
-      throw new Error('Google Sign-In did not return idToken or accessToken');
-    }
-    
-    const credential = auth.GoogleAuthProvider.credential(idToken || null, accessToken || null);
-    await auth().signInWithCredential(credential);
-    const firebaseIdToken = await auth().currentUser.getIdToken(true);
-    
-    const res = await api.post(`/owner/auth/firebase`, {
-      idToken: firebaseIdToken,
-    });
-    
-    const { token } = res.data || {};
-    const owner = res.data?.owner;
-    
-    if (!token) throw new Error('No token from server');
-    
-    // Store tokens
-  // ✅ Store token
-await AsyncStorage.setItem('userToken', token);
-api.defaults.headers.common.Authorization = `Bearer ${token}`;
+  };
 
-// ✅ Store user data
-if (owner) {
-  await AsyncStorage.setItem('user', JSON.stringify(owner));
-  if (owner?.id) {
-    await AsyncStorage.setItem('ownerId', String(owner.id));
-  }
-}
-
-    
-    // 🔥 Get and store FCM token
+  const handleLogin = async () => {
+    if (!email?.trim() || !password?.trim()) {
+      return Alert.alert('Missing fields', 'Please enter email/phone and password.');
+    }
+    setPLoading(true);
     try {
-      const fcmToken = await messaging().getToken();
-      if (fcmToken && owner?.id) {
-        console.log('FCM Token obtained:', fcmToken);
-        
-        // Send FCM token to backend
-        const fcmResponse = await api.post('/owners/save-fcm-token', {
-          restaurant_owner_id: owner.id,
-          fcm_token: fcmToken
-        });
-        
-        console.log('FCM token response:', fcmResponse.data);
-        console.log('FCM token saved to backend successfully');
+      const res = await api.post('/restaurant/login', { email, password });
+      if (res.data?.status) {
+        const token = res.data?.token;
+        const owner = res.data?.data;
+        await saveSessionAndFcm(token, owner, 'password');
+        navigation.replace('Home');
       } else {
-        console.log('No FCM token or owner ID available');
+        Alert.alert('Login failed', res.data?.message || 'Invalid credentials');
       }
-    } catch (fcmError) {
-      console.log('FCM token error:', fcmError.message);
+    } catch (err) {
+      console.log('Login error:', err?.response?.data || err.message);
+      Alert.alert('Login error', err?.response?.data?.message || 'Invalid credentials');
+    } finally {
+      setPLoading(false);
     }
-    navigation.replace('Home');
+  };
 
-  } catch (e) {
-    console.log('[Google sign-in error]', e?.message, e);
-    console.log('status:', e?.response?.status);
-    console.log('data:', e?.response?.data);
-    setError(
-      e?.message?.includes('idToken') || e?.message?.includes('accessToken')
+  const handleGoogle = async () => {
+    try {
+      setGLoading(true);
+      setError('');
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+
+      // Clean previous state
+      try { if (auth().currentUser) await auth().signOut(); } catch(_) {}
+      try { await GoogleSignin.signOut(); } catch(_) {}
+
+      // Google sign in
+      const signInRes = await GoogleSignin.signIn();
+      let { idToken } = signInRes || {};
+      let accessToken = null;
+
+      if (!idToken) {
+        const tokens = await GoogleSignin.getTokens().catch(() => null);
+        idToken = tokens?.idToken;
+        accessToken = tokens?.accessToken;
+      }
+
+      if (!idToken && !accessToken) {
+        throw new Error('Google Sign-In did not return idToken or accessToken');
+      }
+
+      const credential = auth.GoogleAuthProvider.credential(idToken || null, accessToken || null);
+      const firebaseUserCredential = await auth().signInWithCredential(credential);
+      const firebaseIdToken = await firebaseUserCredential.user.getIdToken(true);
+      // console.log('🔥 Firebase ID Token:', firebaseIdToken);
+
+      // Send firebase idToken to backend and get app token
+      const res = await api.post('/owner/auth/firebase', { idToken: firebaseIdToken });
+
+      if (!res.data?.status || !res.data?.token) {
+        console.log('Backend firebase auth response:', res.data);
+        throw new Error(res.data?.message || 'Server did not return token');
+      }
+
+      const token = res.data.token;
+      const owner = res.data.owner || res.data.data;
+      await saveSessionAndFcm(token, owner, 'google');
+
+      navigation.replace('Home');
+    } catch (e) {
+      console.log('[Google sign-in error]', e?.message || e, e?.response?.data || e?.response?.status);
+      const msg = e?.message?.includes('idToken') || e?.message?.includes('accessToken')
         ? 'Google sign-in failed to retrieve a token. Check Web client ID & SHA keys.'
-        : 'Google sign-in failed. Please try again.'
-    );
-  } finally {
-    setGLoading(false);
-  }
-};
-
+        : (e?.response?.data?.message || e?.message || 'Google sign-in failed. Please try again.');
+      setError(msg);
+      Alert.alert('Google Sign-In Failed', msg);
+    } finally {
+      setGLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={{ flex:1, backgroundColor:C.bg }} edges={['top','left','right']}>
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
-      {/* animated-feel gradient header */}
       <LinearGradient
         colors={['#FFEEEE', '#FFD6D6', '#EF3A3A']}
         start={{x:0.1,y:0}}
         end={{x:1,y:1}}
         style={[styles.header, { paddingTop: insets.top + 12 }]}
-      >
-      </LinearGradient>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={{ flex:1 }}
-      >
-        {/* glass card */}
+      />
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex:1 }}>
         <View style={styles.cardWrap}>
           <View style={styles.card}>
             <View style={styles.brandPill}>
-          <Image source={require('../assets/images/kni-logo.png')} style={styles.logoSmall}/>
-        </View>
+              <Image source={require('../assets/images/kni-logo.png')} style={styles.logoSmall}/>
+            </View>
+
             <Text style={styles.title}>Restaurant Owner Login</Text>
-            {/* email */}
+
             <View style={styles.inputWrap}>
               <Icon name="mail-outline" size={18} color="#9CA3AF" />
               <TextInput
@@ -513,7 +462,7 @@ if (owner) {
                 style={styles.input}
               />
             </View>
-            {/* password */}
+
             <View style={styles.inputWrap}>
               <Icon name="lock-closed-outline" size={18} color="#9CA3AF" />
               <TextInput
@@ -528,26 +477,26 @@ if (owner) {
                 <Icon name={secure ? 'eye-off-outline' : 'eye-outline'} size={18} color="#9CA3AF" />
               </TouchableOpacity>
             </View>
-            {/* subtle error (no default alert) */}
+
             {!!error && <Text style={styles.error}>{error}</Text>}
-            {/* primary CTA */}
-           <TouchableOpacity style={[styles.primaryBtn, {opacity: pLoading ? 0.7 : 1}]} onPress={handleLogin} disabled={pLoading || gLoading}>
+
+            <TouchableOpacity style={[styles.primaryBtn, {opacity: pLoading ? 0.7 : 1}]} onPress={handleLogin} disabled={pLoading || gLoading}>
               {pLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryTxt}>Login</Text>}
             </TouchableOpacity>
-            {/* divider */}
+
             <View style={styles.dividerRow}>
-              <View className="divider" style={styles.divider} />
+              <View style={styles.divider} />
               <Text style={styles.dividerTxt}>or continue with</Text>
-              <View className="divider" style={styles.divider} />
+              <View style={styles.divider} />
             </View>
-            {/* Google button */}
-          <TouchableOpacity style={[styles.googleBtn, {opacity: gLoading ? 0.7 : 1}]} onPress={handleGoogle} disabled={gLoading || pLoading}>
+
+            <TouchableOpacity style={[styles.googleBtn, {opacity: gLoading ? 0.7 : 1}]} onPress={handleGoogle} disabled={gLoading || pLoading}>
               <View style={styles.googleIcon}>
                 {gLoading ? <ActivityIndicator /> : <Icon name="logo-google" size={18} color="#4285F4" />}
               </View>
-              <Text style={styles.googleTxt}>Sign in with Google</Text>
+              <Text style={styles.googleTxt}>Continue with Google</Text>
             </TouchableOpacity>
-            {/* secondary row */}
+
             <View style={styles.bottomRow}>
               <TouchableOpacity onPress={()=>navigation.navigate('RestaurantRegister')}>
                 <Text style={styles.linkRed}>Create an account</Text>
@@ -558,7 +507,7 @@ if (owner) {
             </View>
           </View>
         </View>
-        {/* terms */}
+
         <View style={[styles.terms, { paddingBottom: insets.bottom + 35 }]}>
           <Text style={styles.termsTxt}>
             By continuing you agree to our <Text style={styles.linkMuted}>Terms</Text> & <Text style={styles.linkMuted}>Privacy</Text>.
@@ -568,61 +517,24 @@ if (owner) {
     </SafeAreaView>
   );
 }
+
 const styles = StyleSheet.create({
-  header:{
-    height: 140,
-    justifyContent:'flex-end',
-    paddingHorizontal:16,
-  },
-  brandPill:{
-    width:'80%',
-    zIndex:10,
-    height:60,
-    justifyContent:'center',
-    alignSelf:'center',
-    alignItems:'center',
-  },
+  header:{ height: 140, justifyContent:'flex-end', paddingHorizontal:16 },
+  brandPill:{ width:'80%', zIndex:10, height:60, justifyContent:'center', alignSelf:'center', alignItems:'center' },
   logoSmall:{ width:120, height:120, resizeMode:'contain' },
   cardWrap:{ flex:1, alignItems:'center', marginTop:-28 },
-  card:{
-    width:'90%',
-    backgroundColor:'rgba(255,255,255,0.9)',
-    borderRadius:20,
-    borderWidth:1, borderColor:'#EEF2F7',
-    padding:18,
-    shadowColor:'#000', shadowOpacity:0.08, shadowRadius:18, elevation:6,
-  },
+  card:{ width:'90%', backgroundColor:'rgba(255,255,255,0.9)', borderRadius:20, borderWidth:1, borderColor:'#EEF2F7', padding:18, shadowColor:'#000', shadowOpacity:0.08, shadowRadius:18, elevation:6 },
   title:{ fontSize:22, fontWeight:'900', color:'#1D2254', textAlign:'center',marginTop:16, marginBottom:14 },
-  inputWrap:{
-    flexDirection:'row', alignItems:'center',
-    backgroundColor:'#fff',
-    borderWidth:1, borderColor:'#E5E7EB',
-    borderRadius:14,
-    paddingHorizontal:12, paddingVertical:12,
-    marginBottom:12,
-  },
+  inputWrap:{ flexDirection:'row', alignItems:'center', backgroundColor:'#fff', borderWidth:1, borderColor:'#E5E7EB', borderRadius:14, paddingHorizontal:12, paddingVertical:12, marginBottom:12 },
   input:{ flex:1, marginLeft:10, color:'#0F172A' },
   error:{ color:'#DC2626', fontWeight:'700', marginBottom:8, textAlign:'center' },
-  primaryBtn:{
-    backgroundColor:'#EF3A3A',
-    borderRadius:14, paddingVertical:14,
-    alignItems:'center', marginTop:2,
-    shadowColor:'#EF3A3A', shadowOpacity:0.35, shadowRadius:10, elevation:4,
-  },
+  primaryBtn:{ backgroundColor:'#EF3A3A', borderRadius:14, paddingVertical:14, alignItems:'center', marginTop:2, shadowColor:'#EF3A3A', shadowOpacity:0.35, shadowRadius:10, elevation:4 },
   primaryTxt:{ color:'#fff', fontWeight:'900', letterSpacing:0.2 },
   dividerRow:{ flexDirection:'row', alignItems:'center', marginVertical:14 },
   divider:{ flex:1, height:1, backgroundColor:'#E5E7EB' },
   dividerTxt:{ marginHorizontal:8, color:'#6B7280', fontWeight:'700' },
-  googleBtn:{
-    flexDirection:'row', alignItems:'center', justifyContent:'center',
-    backgroundColor:'#fff',
-    borderRadius:14, borderWidth:1, borderColor:'#E5E7EB',
-    paddingVertical:12,
-  },
-  googleIcon:{
-    width:28, height:28, borderRadius:8, backgroundColor:'#F1F5FF',
-    alignItems:'center', justifyContent:'center', marginRight:8,
-  },
+  googleBtn:{ flexDirection:'row', alignItems:'center', justifyContent:'center', backgroundColor:'#fff', borderRadius:14, borderWidth:1, borderColor:'#E5E7EB', paddingVertical:12 },
+  googleIcon:{ width:28, height:28, borderRadius:8, backgroundColor:'#F1F5FF', alignItems:'center', justifyContent:'center', marginRight:8 },
   googleTxt:{ color:'#1D2254', fontWeight:'800' },
   bottomRow:{ marginTop:14, flexDirection:'row', justifyContent:'space-between' },
   linkRed:{ color:'#EF3A3A', fontWeight:'800' },
