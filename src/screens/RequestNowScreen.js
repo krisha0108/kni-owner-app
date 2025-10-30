@@ -53,8 +53,8 @@ const Rs = (n)=>`₹ ${Number(Math.round(n || 0)).toLocaleString('en-IN')}`;
 const FIXED_FEE = 49;
 const GST_RATE  = 0.18;
 
-const UPI_ID = 'krishaghadiya0108@oksbi';
-const PAYEE_NAME = 'YOGI YASHVANT';
+const UPI_ID = 'vyapar.173506862114@hdfcbank';
+const PAYEE_NAME = 'KNI';
 
 /* ---------- DATE HELPERS ---------- */
 const startOfDay = (d)=>{ const x=new Date(d); x.setHours(0,0,0,0); return x; };
@@ -482,8 +482,6 @@ export default function RequestNow({ navigation, route }) {
   let screenshotBase64 = null;
   if (paymentScreenshot && paymentScreenshot.uri) {
     try {
-      // In a real app, you would convert the image to base64
-      // For now, we'll just send the URI and handle it on the backend
       screenshotBase64 = paymentScreenshot.uri;
       console.log('Screenshot ready for upload');
     } catch (error) {
@@ -491,32 +489,44 @@ export default function RequestNow({ navigation, route }) {
     }
   }
 
-  // Prepare payment data
-  const paymentData = {
-    owner_id: numericOwnerId,
-    amount: parseFloat(payable),
-    payment_method: 'UPI',
-    payment_status: 'completed',
-    transaction_id: transactionId,
-    payment_note: paymentNote || 'Service payment via UPI',
-    payment_screenshot: screenshotBase64, // ADD SCREENSHOT TO REQUEST
-  };
-
-  console.log('Sending payment data with screenshot');
-
   try {
     setSavingReq(true);
     
-    // Make API call to your endpoint
-    const response = await api.post('/owner-payment', paymentData, {
+    // STEP 1: First create the equipment request
+    console.log('Creating equipment request...');
+    const pickedRestaurant = restaurants.find(r => r.id === restSel);
+    if (!pickedRestaurant) {
+      throw new Error('Restaurant not found');
+    }
+
+    const equipmentRequestPayload = buildEquipmentRequestPayload(pickedRestaurant);
+    
+    // Create equipment request first
+    const equipmentResponse = await api.post('/app/equipment-requests', equipmentRequestPayload);
+    console.log('Equipment request created:', equipmentResponse.data);
+
+    // STEP 2: Then process the payment
+    console.log('Processing payment...');
+    const paymentData = {
+      owner_id: numericOwnerId,
+      amount: parseFloat(payable),
+      payment_method: 'UPI',
+      payment_status: 'completed',
+      transaction_id: transactionId,
+      payment_note: paymentNote || 'Service payment via UPI',
+      payment_screenshot: screenshotBase64,
+      equipment_request_id: equipmentResponse.data.data?.id || null, // Link payment to equipment request
+    };
+
+    const paymentResponse = await api.post('/app/owner-payment', paymentData, {
       headers: {
         'Content-Type': 'application/json',
       },
     });
     
-    console.log('API Response:', response.data);
+    console.log('Payment API Response:', paymentResponse.data);
 
-    if (response.data.message === 'Payment details saved successfully.') {
+    if (paymentResponse.data.message === 'Payment details saved successfully.') {
       console.log('Payment saved successfully with screenshot');
       
       // Clear the cart after successful payment
@@ -569,21 +579,35 @@ export default function RequestNow({ navigation, route }) {
 
   /* ---------- EQUIPMENT REQUEST ---------- */
   const buildEquipmentRequestPayload = (pickedRestaurant) => {
-    const firstLine = selectedItems[0] || {};
-    const tags = selectedItems.map(it => `${it.name} x${it.qty}`);
-    const defaultMeta = cards[0]?.meta || {};
-    return {
-      product_id: Number(defaultMeta.productId || firstLine.service_id || 0),
-      product_name: defaultMeta.productTitle || firstLine.name || 'Service Request',
-      description: `Requested for ${selectedDate ? selectedDate.toDateString() : '—'}`,
-      image: defaultMeta.heroImage || '',
-      tags,
-      restaurant_id: Number(pickedRestaurant?.id || 0),
-      restaurant_name: pickedRestaurant?.name || '',
-      status: 'Pending',
-      assigned_to: '',
-    };
+  const firstLine = selectedItems[0] || {};
+  const tags = selectedItems.map(it => `${it.name} x${it.qty}`);
+  const defaultMeta = cards[0]?.meta || {};
+  
+  // FIX: Proper date formatting without timezone issues
+  let serviceDate = null;
+  if (selectedDate) {
+    const year = selectedDate.getFullYear();
+    const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+    const day = String(selectedDate.getDate()).padStart(2, '0');
+    serviceDate = `${year}-${month}-${day}`;
+  }
+  
+  return {
+    product_id: Number(defaultMeta.productId || firstLine.service_id || 0),
+    product_name: defaultMeta.productTitle || firstLine.name || 'Service Request',
+    description: `Requested for ${selectedDate ? selectedDate.toDateString() : '—'}`,
+    image: defaultMeta.heroImage || '',
+    tags,
+    restaurant_id: Number(pickedRestaurant?.id || 0),
+    restaurant_name: pickedRestaurant?.name || '',
+    restaurant_owner_name: pickedRestaurant?.ownerName || '',
+    location: address.line1 || '',
+    service_date: serviceDate, // This will now store the correct date
+    status: 'Pending',
+    assigned_to: '',
+    assigned_to_id: null,
   };
+};
 
   const canConfirm = useMemo(() => {
     if (!restSel) return false;
@@ -592,25 +616,27 @@ export default function RequestNow({ navigation, route }) {
   }, [restSel, restaurants]);
 
   const confirmRestaurant = useCallback(async () => {
-    if (!restSel) return;
-    const picked = restaurants.find(r => r.id === restSel);
-    if (!picked?.approved) return;
+  if (!restSel) return;
+  const picked = restaurants.find(r => r.id === restSel);
+  if (!picked?.approved) return;
 
-    try {
-      setSavingReq(true);
-      await AsyncStorage.setItem(K.restaurant, JSON.stringify(picked || {})).catch(()=>{});
-      
-      const payload = buildEquipmentRequestPayload(picked);
-      await api.post('/app/equipment-requests', payload);
+  try {
+    setSavingReq(true);
+    await AsyncStorage.setItem(K.restaurant, JSON.stringify(picked || {})).catch(()=>{});
+    
+    // REMOVED: Equipment request creation from here
+    // const payload = buildEquipmentRequestPayload(picked);
+    // await api.post('/app/equipment-requests', payload);
 
-      setRestModal(false);
-      setPaymentModal(true);
-    } catch (e) {
-      console.log('Create equipment request failed:', e?.response?.data || e?.message);
-    } finally {
-      setSavingReq(false);
-    }
-  }, [restSel, restaurants, K.restaurant, selectedItems, selectedDate, cards]);
+    setRestModal(false);
+    setPaymentModal(true);
+  } catch (e) {
+    console.log('Restaurant selection failed:', e?.response?.data || e?.message);
+    alert('Failed to select restaurant. Please try again.');
+  } finally {
+    setSavingReq(false);
+  }
+}, [restSel, restaurants, K.restaurant]);
 
   /* ---------- CARD CONTROLS ---------- */
   const incQty = useCallback((pid, sid) => {
@@ -1034,7 +1060,7 @@ export default function RequestNow({ navigation, route }) {
             {/* QR section */}
             <View style={{ alignItems: 'center', marginVertical: 16 }}>
               <Image
-                source={require('../assets/images/qr20.jpg')}
+                source={require('../assets/images/kni.jpg')}
                 style={{
                   width: Dimensions.get('window').width * 0.5,
                   height: Dimensions.get('window').width * 0.5,
