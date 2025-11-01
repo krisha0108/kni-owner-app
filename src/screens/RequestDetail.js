@@ -988,9 +988,8 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
- import { api, IMAGE_BASE_URL } from '../api/client';
+import { api, IMAGE_BASE_URL } from '../api/client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
 
 // ---- debug helpers ----
 const DEBUG_IMG = true;
@@ -1000,7 +999,6 @@ const logGrp = (label, fn) => {
   console.groupCollapsed(`[RD:image] ${label}`);
   try { fn?.(); } finally { console.groupEnd(); }
 };
-
 
 const ORIGIN = IMAGE_BASE_URL.replace(/\/storage\/?$/i, ''); // http://192.168.29.223:8000
 const STORAGE_BASE = IMAGE_BASE_URL.replace(/\/$/, '');      // http://…:8000/storage
@@ -1039,12 +1037,7 @@ const FALLBACK_IMAGES = [
   'https://images.unsplash.com/photo-1556909114-23622d5b5b51?q=80&w=1500&auto=format&fit=crop',
   'https://images.unsplash.com/photo-1506806732259-39c2d0268443?q=80&w=1500&auto=format&fit=crop',
 ];
-const FALLBACK_SERVICES = [
-  { id: 1, name: 'Site Visit', price: 499 },
-  { id: 2, name: 'Compressor Service', price: 1299 },
-  { id: 3, name: 'Gas Refill', price: 1699 },
-  { id: 4, name: 'Thermostat Change', price: 899 },
-];
+
 const FALLBACK_INCLUDED = ['Multi-point inspection', 'Basic exterior clean', 'Minor tuning', 'Completion photos'];
 const FALLBACK_EXCLUDED = ['Major spares', 'Civil/electrical work', 'Inaccessible units'];
 const FALLBACK_CONDITIONS = [
@@ -1055,7 +1048,7 @@ const FALLBACK_CONDITIONS = [
 const FALLBACK_FAQS = [
   { id: 'f1', q: 'How soon can I get a visit?', a: 'Usually within 4–8 working hours in metro cities.' },
   { id: 'f2', q: 'Do you use genuine spares?', a: 'Yes, OEM or high-quality compatible parts with bill.' },
-  { id: 'f3', q: 'If I don’t go ahead?', a: 'Only the diagnostic/visit fee is applicable.' },
+  { id: 'f3', q: 'If I don\'t go ahead?', a: 'Only the diagnostic/visit fee is applicable.' },
 ];
 
 /* ---------- STATIC ---------- */
@@ -1070,9 +1063,6 @@ const processSteps = [
 const debounce = (fn, ms = 350) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 const Rs = (n) => `₹ ${Number(n || 0).toLocaleString('en-IN')}`;
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
-const isAbs = (u) => typeof u === 'string' && /^https?:\/\//i.test(u);
-const clean = (u) => (typeof u === 'string' ? u.trim() : '');
-const uniq = (arr) => Array.from(new Set(arr.filter(Boolean)));
 
 const Stars = React.memo(({ value, size = 12 }) => {
   const v = clamp(Math.round(value || 0), 0, 5);
@@ -1084,7 +1074,6 @@ const Stars = React.memo(({ value, size = 12 }) => {
     </View>
   );
 });
-
 
 function buildStoryImages(d = {}, headerItem = {}) {
   let imgs = [];
@@ -1127,7 +1116,6 @@ function buildStoryImages(d = {}, headerItem = {}) {
 
   return imgs.length ? imgs : null;
 }
-
 
 /* ---------- FAQ ITEM ---------- */
 const FAQItem = React.memo(({ f }) => {
@@ -1259,7 +1247,7 @@ export default function RequestDetail({ navigation, route }) {
     rating: 4.8,
     requests: 1225,
     desc: 'Cooling issues, gas refill, thermostat faults & preventive maintenance.',
-    image: null, // may be provided by list screen; handled by buildStoryImages
+    image: null,
   };
 
   const [prod, setProd] = useState({
@@ -1270,7 +1258,7 @@ export default function RequestDetail({ navigation, route }) {
     excluded: FALLBACK_EXCLUDED,
     conditions: FALLBACK_CONDITIONS,
     faqs: FALLBACK_FAQS,
-    services: FALLBACK_SERVICES,
+    services: [], // Start with empty array instead of fallback services
   });
 
   const [technicians, setTechnicians] = useState([]);
@@ -1342,87 +1330,135 @@ export default function RequestDetail({ navigation, route }) {
     setReviews(mapped.slice(0, 3));
   }, [ownerId, safeGet]);
 
+  // 🔥 REFINED: Fetch product-specific services
   const fetchAll = useCallback(async () => {
-    setNetworkErr(''); setLoading(true);
+    setNetworkErr(''); 
+    setLoading(true);
     let serviceIdForTech;
+    
     try {
       if (productId) {
+        console.log(`🔄 Fetching product ${productId} details...`);
+        
+        // Fetch product details
         const res = await safeGet(`/app/products/${productId}`, 2, ownerId ? { owner_id: ownerId } : {});
         const d = res?.data ?? {};
 
-        // 🔥 The key upgrade: resolve images from any field + route param image
         const resolvedImages = buildStoryImages(d, headerItem) || FALLBACK_IMAGES;
-
         const included   = normalizeArray(d.included,   FALLBACK_INCLUDED);
         const excluded   = normalizeArray(d.excluded,   FALLBACK_EXCLUDED);
         const conditions = normalizeArray(d.conditions, FALLBACK_CONDITIONS);
         const faqs       = normalizeArray(d.faqs,       FALLBACK_FAQS);
-        const servicesFromProduct = normalizeArray(d.services, []);
+        
+        let services = [];
 
-        serviceIdForTech = servicesFromProduct?.[0]?.id;
-
-        let services;
-        if (!servicesFromProduct.length) {
-          try {
-            const srvRes = await safeGet('/app/services', 2, ownerId ? { owner_id: ownerId } : {});
-            const arr = Array.isArray(srvRes?.data) ? srvRes.data
-              : Array.isArray(srvRes?.data?.data) ? srvRes.data.data : [];
-            services = normalizeArray(
-              arr.map((s) => ({
-                id: Number(s.id),
-                name: s.title || s.name || `Service #${s.id}`,
-                price: Number(s.price || s.mrp || 0),
-              })), FALLBACK_SERVICES
-            );
-          } catch { services = FALLBACK_SERVICES; }
-        } else {
-          services = servicesFromProduct.map((s) => ({
+        // 🔥 METHOD 1: Try to get services directly from product response
+        if (d.services && Array.isArray(d.services) && d.services.length > 0) {
+          console.log(`✅ Found ${d.services.length} services in product response`);
+          services = d.services.map((s) => ({
             id: Number(s.id),
             name: s.title || s.name || `Service #${s.id}`,
             price: Number(s.price || s.mrp || 0),
           }));
+          serviceIdForTech = services[0]?.id;
+        } 
+        
+        // 🔥 METHOD 2: If no services in product response, fetch all and filter by product_id
+        if (services.length === 0) {
+          try {
+            console.log(`🔄 Fetching all services to filter by product_id: ${productId}`);
+            const srvRes = await safeGet('/app/services', 2, ownerId ? { owner_id: ownerId } : {});
+            const allServices = Array.isArray(srvRes?.data) ? srvRes.data
+              : Array.isArray(srvRes?.data?.data) ? srvRes.data.data : [];
+            
+            console.log(`📦 Retrieved ${allServices.length} total services from API`);
+            
+            // 🔥 KEY FIX: Filter services by product_id
+            const filteredServices = allServices.filter(s => {
+              const serviceProductId = Number(s.product_id);
+              const currentProductId = Number(productId);
+              const match = serviceProductId === currentProductId;
+              
+              if (match) {
+                console.log(`✅ Service ${s.id} matches product ${productId}`);
+              }
+              
+              return match;
+            });
+            
+            console.log(`✅ Filtered ${filteredServices.length} services for product ${productId}`);
+            
+            if (filteredServices.length > 0) {
+              services = filteredServices.map((s) => ({
+                id: Number(s.id),
+                name: s.title || s.name || `Service #${s.id}`,
+                price: Number(s.price || s.mrp || 0),
+              }));
+              serviceIdForTech = services[0]?.id;
+            }
+          } catch (serviceErr) {
+            console.log('❌ Services API failed:', serviceErr.message);
+          }
         }
 
-        // Prefetch a few for smoother hero
-resolvedImages.slice(0, 3).forEach((uri) =>
-  Image.prefetch(uri).then(
-    () => logImg('prefetch ok:', uri),
-    () => logImg('prefetch FAIL:', uri)
-  )
-);
+        // 🔥 METHOD 3: Show empty array if no product-specific services found
+        if (services.length === 0) {
+          console.log(`⚠️ No services found for product ${productId}`);
+        }
+
+        // Prefetch images
+        resolvedImages.slice(0, 3).forEach((uri) =>
+          Image.prefetch(uri).then(
+            () => logImg('prefetch ok:', uri),
+            () => logImg('prefetch FAIL:', uri)
+          )
+        );
 
         setProd({
           title: d.title || headerItem.title,
           description: d.description || headerItem.desc,
-          storyImages: resolvedImages,     // ✅ use resolved list
+          storyImages: resolvedImages,
           included, excluded, conditions, faqs, services,
         });
       } else {
-        // No product id: still try to build services; images from headerItem handled in initial state & buildStoryImages when needed
-        try {
-          const srvRes = await safeGet('/app/services', 2, ownerId ? { owner_id: ownerId } : {});
-          const arr = Array.isArray(srvRes?.data) ? srvRes.data
-            : Array.isArray(srvRes?.data?.data) ? srvRes.data.data : [];
-          const services = normalizeArray(
-            arr.map((s) => ({
-              id: Number(s.id),
-              name: s.title || s.name || `Service #${s.id}`,
-              price: Number(s.price || s.mrp || 0),
-            })), FALLBACK_SERVICES
-          );
-          setProd(p => ({ ...p, services }));
-        } catch {}
+        console.log('❌ No productId provided');
+        setProd(p => ({ ...p, services: [] }));
       }
     } catch (e) {
+      console.log('❌ fetchAll error:', e.message);
       setNetworkErr(e?.message || 'Failed to load product');
+      setProd(p => ({ ...p, services: [] }));
     } finally {
-      try { await fetchTechnicians(serviceIdForTech); } catch { setTechnicians([]); }
-      try { await fetchReviews(productId || null); } catch { setReviews([]); }
+      try { 
+        await fetchTechnicians(serviceIdForTech); 
+      } catch (e) { 
+        console.log('Technicians fetch failed:', e.message);
+        setTechnicians([]); 
+      }
+      try { 
+        await fetchReviews(productId || null); 
+      } catch (e) { 
+        console.log('Reviews fetch failed:', e.message);
+        setReviews([]); 
+      }
       setLoading(false);
     }
   }, [fetchTechnicians, fetchReviews, headerItem, ownerId, productId, safeGet]);
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
+  useEffect(() => { 
+    fetchAll(); 
+  }, [fetchAll]);
+
+  // Debug effect to monitor services
+  useEffect(() => {
+    console.log('🔍 Current State:', {
+      productId,
+      servicesCount: prod.services?.length || 0,
+      services: prod.services,
+      loading,
+      hasOwnerId: !!ownerId
+    });
+  }, [prod.services, productId, loading, ownerId]);
 
   /* ---------- HERO PROGRESS ---------- */
   const [idx, setIdx] = useState(0);
@@ -1446,7 +1482,7 @@ resolvedImages.slice(0, 3).forEach((uri) =>
   /* ---------- CART ---------- */
   const [cart, setCart] = useState({});
   const hydratedRef = useRef({ local: false, server: false });
-  const lastSyncedRef = useRef({}); // product_id -> quantity snapshot
+  const lastSyncedRef = useRef({});
 
   const [ownerKey, setOwnerKey] = useState('global');
   useEffect(() => {
@@ -1470,7 +1506,6 @@ resolvedImages.slice(0, 3).forEach((uri) =>
   const prod2svc = useMemo(() => {
     const m = {};
     Object.entries(svc2prod || {}).forEach(([sid, pid]) => { if (pid) m[Number(pid)] = Number(sid); });
-    // allow identity mapping if svc2prod is empty
     return Object.keys(cart || {}).reduce((acc, sidStr) => {
       const sid = Number(sidStr);
       if (!(sid in acc)) acc[sid] = sid;
@@ -1495,7 +1530,7 @@ resolvedImages.slice(0, 3).forEach((uri) =>
     })();
   }, [persistKey, ownerKey]);
 
-  // ⭐ Rehydrate when screen is focused (reflect changes from RequestNow)
+  // ⭐ Rehydrate when screen is focused
   const rehydrateLocalDraft = useCallback(async () => {
     if (!persistKey) return;
     try {
@@ -1517,7 +1552,6 @@ resolvedImages.slice(0, 3).forEach((uri) =>
     }, [rehydrateLocalDraft])
   );
 
-  // Also rehydrate if persistKey flips (owner/product changed)
   useEffect(() => { rehydrateLocalDraft(); }, [rehydrateLocalDraft]);
 
   // hydrate from server (snapshot only)
@@ -1574,7 +1608,7 @@ resolvedImages.slice(0, 3).forEach((uri) =>
   }, [svc2prod]);
 
   const writeServerQuantity = useCallback(async (sid, quantity) => {
-    if (!ownerId) return; // UI shows banner; no server write without owner
+    if (!ownerId) return;
     const pid = serviceIdToProductId(sid);
     if (!pid) return;
 
@@ -1585,9 +1619,7 @@ resolvedImages.slice(0, 3).forEach((uri) =>
         await api.delete(`/app/cart/items/${pid}`, { params: { owner_id: ownerId } });
       }
     } catch (e) {
-      const status = e?.response?.status;
-      const data = e?.response?.data;
-      console.log('SERVER WRITE FAIL', status, data);
+      console.log('SERVER WRITE FAIL', e?.response?.status, e?.response?.data);
       Alert.alert('Network', 'Could not save your selection to server right now.');
     }
   }, [ownerId, serviceIdToProductId]);
@@ -1641,8 +1673,8 @@ resolvedImages.slice(0, 3).forEach((uri) =>
       subtitle: route?.params?.description || '',
       heroImage: (prod?.storyImages?.[0]) || FALLBACK_IMAGES[0],
       services: Array.isArray(prod?.services) ? prod.services : [],
-      cart,                // { [service_id]: qty }
-      ownerId,             // helps RequestNow resolve ownerKey consistently
+      cart,
+      ownerId,
     };
   }, [productId, prod?.title, prod?.storyImages, prod?.services, headerItem?.category, route?.params?.subtitle, cart, ownerId]);
 
@@ -1696,7 +1728,7 @@ resolvedImages.slice(0, 3).forEach((uri) =>
         <View style={{ flex: 1, marginLeft: 10, minWidth: 0 }}>
           <Text style={st.techName} numberOfLines={1}>{t.name}</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
-            <Text style={st.techJobs}>⭐ {rating.toFixed(1)} • {jobs}</Text>
+            <Text style={st.techJobs}>⭐ {rating.toFixed(1)} • {jobs} jobs</Text>
           </View>
         </View>
       </View>
@@ -1728,7 +1760,7 @@ resolvedImages.slice(0, 3).forEach((uri) =>
       <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top','left','right']}>
         <View style={{ flex:1, alignItems:'center', justifyContent:'center', padding:24 }}>
           <Icon name="cloud-offline-outline" size={36} color={C.muted} />
-          <Text style={{ color: C.ink, fontWeight: '800', fontSize: 16, marginTop: 8 }}>Couldn’t load product</Text>
+          <Text style={{ color: C.ink, fontWeight: '800', fontSize: 16, marginTop: 8 }}>Couldn't load product</Text>
           <Text style={{ color: C.muted, textAlign:'center', marginTop: 6 }}>{networkErr}</Text>
           <TouchableOpacity onPress={onRefresh} style={[st.outlineBtn, { marginTop: 14, paddingHorizontal: 18 }]}>
             <Text style={st.outlineTxt}>Retry</Text>
@@ -1745,18 +1777,18 @@ resolvedImages.slice(0, 3).forEach((uri) =>
         <View style={{ backgroundColor:'#FFF7ED', padding:10 }}>
           <Text style={{ color:'#B45309', fontWeight:'700' }}>Owner not set</Text>
           <Text style={{ color:'#92400E', marginTop:4, fontSize:12 }}>
-            Please login again. Cart won’t be saved to the server until we have your owner ID.
+            Please login again. Cart won't be saved to the server until we have your owner ID.
           </Text>
         </View>
       )}
 
       {/* HERO */}
       <View style={{ backgroundColor: C.card, borderBottomLeftRadius: R, borderBottomRightRadius: R, overflow: 'hidden' }}>
-<ImageBackground
-  source={{ uri: (images[idx] || FALLBACK_IMAGES[0]) }}
-  style={{ width: '100%', height: 260, justifyContent: 'flex-end' }}
-  onError={(e) => logImg('HERO onError for uri:', images[idx], e?.nativeEvent)}
->
+        <ImageBackground
+          source={{ uri: (images[idx] || FALLBACK_IMAGES[0]) }}
+          style={{ width: '100%', height: 260, justifyContent: 'flex-end' }}
+          onError={(e) => logImg('HERO onError for uri:', images[idx], e?.nativeEvent)}
+        >
           <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.22)' }]} />
 
           <View style={[st.actionsWrap, { paddingTop: 8 }]}>
@@ -1797,14 +1829,18 @@ resolvedImages.slice(0, 3).forEach((uri) =>
           <Text style={st.desc}>{prod.description}</Text>
         </View>
 
-        {/* Services */}
+        {/* Services - REFINED */}
         <View style={st.section}>
           <Text style={st.sectionTitle}>Add services</Text>
           <Text style={st.sectionSub}>Shortlist what you need. You can edit before confirming.</Text>
 
-          {(!prod.services || prod.services.length === 0) ? (
+          {loading ? (
             <View style={[st.serviceChip, { justifyContent:'center' }]}>
-              <Text style={st.sectionSub}>No services found.</Text>
+              <Text style={st.sectionSub}>Loading services...</Text>
+            </View>
+          ) : (!prod.services || prod.services.length === 0) ? (
+            <View style={[st.serviceChip, { justifyContent:'center' }]}>
+              <Text style={st.sectionSub}>No services available for this product.</Text>
             </View>
           ) : (
             <FlatList
@@ -1821,7 +1857,7 @@ resolvedImages.slice(0, 3).forEach((uri) =>
 
         {/* Included / Not included */}
         <View style={st.section}>
-          <Text style={st.sectionTitle}>What’s included</Text>
+          <Text style={st.sectionTitle}>What's included</Text>
           <View style={st.wrapPills}>
             {(prod.included || []).map((t, i) => (
               <View key={`in-${i}`} style={[st.pill, { backgroundColor: '#ECFDF5', borderColor: '#D1FAE5' }]}>
@@ -1892,17 +1928,12 @@ resolvedImages.slice(0, 3).forEach((uri) =>
         </View>
 
         {/* FAQs */}
-        {/* <View style={st.section}>
+        <View style={st.section}>
           <Text style={st.sectionTitle}>FAQs</Text>
-          {(prod.faqs || []).map((f) => <FAQItem key={f.id || f.q} f={f} />)}
-        </View> */}
-{/* FAQs */}
-<View style={st.section}>
-  <Text style={st.sectionTitle}>FAQs</Text>
-  {(prod.faqs || []).map((f, i) => (
-    <FAQItem key={`${f.id ?? (f.q || 'faq')}-${i}`} f={f} />
-  ))}
-</View>
+          {(prod.faqs || []).map((f, i) => (
+            <FAQItem key={`${f.id ?? (f.q || 'faq')}-${i}`} f={f} />
+          ))}
+        </View>
 
         {/* Reviews */}
         <View style={st.section}>
