@@ -14,19 +14,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "851628336447-o5o6stkkrf32bcvk90bmikskm6k75jvk.apps.googleusercontent.com",
+          "client_id": "851628336447-431m4j1logr68f5idetqp3cv27mvs48i.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.kniapp",
-            "certificate_hash": "8530cdc9c6a729b2d1f7641bad92a7bed97984eb"
-          }
-        },
-        {
-          "client_id": "851628336447-rfrssf50ca840gukfafmkqiq123q6nq5.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.kniapp",
-            "certificate_hash": "f2053f76257b2741b74f40faf411db1664aff0fd"
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
           }
         },
         {

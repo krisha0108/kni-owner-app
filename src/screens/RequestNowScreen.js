@@ -433,9 +433,9 @@ export default function RequestNow({ navigation, route }) {
   /* ---------- PAYMENT HANDLING ---------- */
   const [upiCopiedModal, setUpiCopiedModal] = useState(false);
   const copyUpiId = useCallback(() => {
-  Clipboard.setString(UPI_ID);
-  setUpiCopiedModal(true);
-}, [UPI_ID]);
+    Clipboard.setString(UPI_ID);
+    setUpiCopiedModal(true);
+  }, [UPI_ID]);
 
   const pickScreenshot = useCallback(() => {
     const options = {
@@ -459,155 +459,197 @@ export default function RequestNow({ navigation, route }) {
 
   const hasScreenshot = !!paymentScreenshot;
 
-  const handleConfirmPayment = async () => {
-  if (!hasScreenshot) {
-    alert("Please upload your payment screenshot before confirming.");
-    return;
-  }
-
-  console.log('Processing payment confirmation...');
-  
-  // Extract numeric owner ID from ownerKey
-  const extractOwnerId = (ownerKey) => {
-    if (ownerKey.includes(':')) {
-      return ownerKey.split(':')[1];
-    }
-    return ownerKey;
-  };
-
-  const numericOwnerId = extractOwnerId(ownerKey);
-  const transactionId = 'UPI_' + new Date().getTime();
-
-  // Convert image to base64 for upload
-  let screenshotBase64 = null;
-  if (paymentScreenshot && paymentScreenshot.uri) {
-    try {
-      screenshotBase64 = paymentScreenshot.uri;
-      console.log('Screenshot ready for upload');
-    } catch (error) {
-      console.error('Error processing screenshot:', error);
-    }
-  }
-
-  try {
-    setSavingReq(true);
+  /* ---------- FIXED: Equipment Request Payload ---------- */
+  const buildEquipmentRequestPayload = (pickedRestaurant) => {
+    // Get the actual product ID from route params or use a default valid ID
+    // The product_id must be a valid ID that exists in your products table
+    const defaultMeta = cards[0]?.meta || {};
     
-    // STEP 1: First create the equipment request
-    console.log('Creating equipment request...');
-    const pickedRestaurant = restaurants.find(r => r.id === restSel);
-    if (!pickedRestaurant) {
-      throw new Error('Restaurant not found');
+    // Use the actual product ID from route params, or if that's not valid, use 1 as default
+    // You may need to adjust this based on what valid product IDs exist in your database
+    let productIdValue = Number(productId);
+    
+    // If the productId from route params is not a valid number, use a default valid ID
+    // You need to replace 1 with an actual valid product ID from your database
+    if (!productIdValue || isNaN(productIdValue) || productIdValue === 0) {
+      productIdValue = 1; // Use a default valid product ID that exists in your database
     }
 
-    const equipmentRequestPayload = buildEquipmentRequestPayload(pickedRestaurant);
-    
-    // Create equipment request first
-    const equipmentResponse = await api.post('/app/equipment-requests', equipmentRequestPayload);
-    console.log('Equipment request created:', equipmentResponse.data);
+    // Format service date properly
+    let serviceDate = null;
+    if (selectedDate) {
+      const year = selectedDate.getFullYear();
+      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+      const day = String(selectedDate.getDate()).padStart(2, '0');
+      serviceDate = `${year}-${month}-${day}`;
+    }
 
-    // STEP 2: Then process the payment
-    console.log('Processing payment...');
-    const paymentData = {
-      owner_id: numericOwnerId,
-      amount: parseFloat(payable),
-      payment_method: 'UPI',
-      payment_status: 'completed',
-      transaction_id: transactionId,
-      payment_note: paymentNote || 'Service payment via UPI',
-      payment_screenshot: screenshotBase64,
-      equipment_request_id: equipmentResponse.data.data?.id || null, // Link payment to equipment request
+    // Create tags from selected items
+    const tags = selectedItems.map(it => `${it.name} x${it.qty}`);
+
+    // Build the payload with all required fields
+    const payload = {
+      product_id: productIdValue,
+      product_name: defaultMeta.productTitle || 'Commercial Fridge',
+      description: `Requested for ${selectedDate ? selectedDate.toDateString() : 'Not specified'}`,
+      image: defaultMeta.heroImage || '',
+      tags: tags.length > 0 ? tags : ['General Service'],
+      restaurant_id: Number(pickedRestaurant?.id || 0),
+      restaurant_name: pickedRestaurant?.name || 'Unknown Restaurant',
+      restaurant_owner_name: pickedRestaurant?.ownerName || '',
+      location: address.line1 || 'Location not specified',
+      service_date: serviceDate,
+      status: 'Pending',
+      assigned_to: '',
+      assigned_to_id: null,
     };
 
-    const paymentResponse = await api.post('/app/owner-payment', paymentData, {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    
-    console.log('Payment API Response:', paymentResponse.data);
-
-    if (paymentResponse.data.message === 'Payment details saved successfully.') {
-      console.log('Payment saved successfully with screenshot');
-      
-      // Clear the cart after successful payment
-      try {
-        const allKeys = await AsyncStorage.getAllKeys();
-        const myPrefix = `rdraft:${ownerKey}:`;
-        const rdraftKeys = allKeys.filter(k => k.startsWith(myPrefix));
-        await AsyncStorage.multiRemove(rdraftKeys);
-        console.log('Cart cleared after payment');
-      } catch (clearError) {
-        console.log('Error clearing cart:', clearError);
-      }
-      
-      setPaymentModal(false);
-      
-      // Small delay to ensure smooth transition
-      setTimeout(() => {
-        setSuccessModal(true);
-      }, 300);
-      
-    } else {
-      throw new Error('Unexpected response from server');
-    }
-    
-  } catch (error) {
-    console.error('Error in payment confirmation:', error);
-    
-    let errorMessage = 'Payment failed. Please try again.';
-    
-    if (error.response) {
-      console.log('Error response data:', error.response.data);
-      console.log('Error response status:', error.response.status);
-      
-      if (error.response.status === 404) {
-        errorMessage = 'Payment endpoint not found. Please check the server.';
-      } else if (error.response.status === 500) {
-        errorMessage = 'Server error. Please try again later.';
-      } else if (error.response.data?.error) {
-        errorMessage = error.response.data.error;
-      }
-    } else if (error.request) {
-      errorMessage = 'No response from server. Please check your connection.';
-    }
-    
-    alert(errorMessage);
-  } finally {
-    setSavingReq(false);
-  }
-};
-
-  /* ---------- EQUIPMENT REQUEST ---------- */
-  const buildEquipmentRequestPayload = (pickedRestaurant) => {
-  const firstLine = selectedItems[0] || {};
-  const tags = selectedItems.map(it => `${it.name} x${it.qty}`);
-  const defaultMeta = cards[0]?.meta || {};
-  
-  // FIX: Proper date formatting without timezone issues
-  let serviceDate = null;
-  if (selectedDate) {
-    const year = selectedDate.getFullYear();
-    const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
-    const day = String(selectedDate.getDate()).padStart(2, '0');
-    serviceDate = `${year}-${month}-${day}`;
-  }
-  
-  return {
-    product_id: Number(defaultMeta.productId || firstLine.service_id || 0),
-    product_name: defaultMeta.productTitle || firstLine.name || 'Service Request',
-    description: `Requested for ${selectedDate ? selectedDate.toDateString() : '—'}`,
-    image: defaultMeta.heroImage || '',
-    tags,
-    restaurant_id: Number(pickedRestaurant?.id || 0),
-    restaurant_name: pickedRestaurant?.name || '',
-    restaurant_owner_name: pickedRestaurant?.ownerName || '',
-    location: address.line1 || '',
-    service_date: serviceDate, // This will now store the correct date
-    status: 'Pending',
-    assigned_to: '',
-    assigned_to_id: null,
+    console.log('Equipment Request Payload:', payload);
+    return payload;
   };
-};
+
+  /* ---------- FIXED: Payment Confirmation ---------- */
+  const handleConfirmPayment = async () => {
+    if (!hasScreenshot) {
+      alert("Please upload your payment screenshot before confirming.");
+      return;
+    }
+
+    console.log('Processing payment confirmation...');
+    
+    // Extract numeric owner ID from ownerKey
+    const extractOwnerId = (ownerKey) => {
+      if (ownerKey.includes(':')) {
+        return ownerKey.split(':')[1];
+      }
+      return ownerKey;
+    };
+
+    const numericOwnerId = extractOwnerId(ownerKey);
+    const transactionId = 'UPI_' + new Date().getTime();
+
+    // Convert image to base64 for upload
+    let screenshotBase64 = null;
+    if (paymentScreenshot && paymentScreenshot.uri) {
+      try {
+        // For base64 conversion, you might need to use a different approach
+        // For now, we'll use the URI directly if your API accepts it
+        screenshotBase64 = paymentScreenshot.uri;
+        console.log('Screenshot ready for upload');
+      } catch (error) {
+        console.error('Error processing screenshot:', error);
+      }
+    }
+
+    try {
+      setSavingReq(true);
+      
+      // STEP 1: First create the equipment request
+      console.log('Creating equipment request...');
+      const pickedRestaurant = restaurants.find(r => r.id === restSel);
+      if (!pickedRestaurant) {
+        throw new Error('Restaurant not found');
+      }
+
+      const equipmentRequestPayload = buildEquipmentRequestPayload(pickedRestaurant);
+      
+      console.log('Sending equipment request with payload:', equipmentRequestPayload);
+      
+      // Create equipment request first
+      const equipmentResponse = await api.post('/app/equipment-requests', equipmentRequestPayload);
+      console.log('Equipment request created:', equipmentResponse.data);
+
+      // STEP 2: Then process the payment
+      console.log('Processing payment...');
+      const paymentData = {
+        owner_id: numericOwnerId,
+        amount: parseFloat(payable),
+        payment_method: 'UPI',
+        payment_status: 'completed',
+        transaction_id: transactionId,
+        payment_note: paymentNote || 'Service payment via UPI',
+        payment_screenshot: screenshotBase64,
+        equipment_request_id: equipmentResponse.data.data?.id || null,
+      };
+
+      console.log('Sending payment data:', { ...paymentData, payment_screenshot: 'BASE64_IMAGE' });
+
+      const paymentResponse = await api.post('/app/owner-payment', paymentData, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      console.log('Payment API Response:', paymentResponse.data);
+
+      if (paymentResponse.data.message === 'Payment details saved successfully.') {
+        console.log('Payment saved successfully with screenshot');
+        
+        // Clear the cart after successful payment
+        try {
+          const allKeys = await AsyncStorage.getAllKeys();
+          const myPrefix = `rdraft:${ownerKey}:`;
+          const rdraftKeys = allKeys.filter(k => k.startsWith(myPrefix));
+          await AsyncStorage.multiRemove(rdraftKeys);
+          console.log('Cart cleared after payment');
+        } catch (clearError) {
+          console.log('Error clearing cart:', clearError);
+        }
+        
+        setPaymentModal(false);
+        
+        // Small delay to ensure smooth transition
+        setTimeout(() => {
+          setSuccessModal(true);
+        }, 300);
+        
+      } else {
+        throw new Error('Unexpected response from server');
+      }
+      
+    } catch (error) {
+      console.error('Error in payment confirmation:', error);
+      
+      let errorMessage = 'Payment failed. Please try again.';
+      let errorDetails = '';
+      
+      if (error.response) {
+        console.log('Error response data:', error.response.data);
+        console.log('Error response status:', error.response.status);
+        
+        errorDetails = error.response.data?.message || JSON.stringify(error.response.data);
+        
+        if (error.response.status === 422) {
+          // More specific error handling for product_id validation
+          if (error.response.data?.errors?.product_id) {
+            errorMessage = `Product ID Error: ${error.response.data.errors.product_id[0]}. Please contact support.`;
+          } else {
+            errorMessage = `Validation Error: ${errorDetails}`;
+          }
+        } else if (error.response.status === 404) {
+          errorMessage = 'Payment endpoint not found. Please check the server.';
+        } else if (error.response.status === 500) {
+          errorMessage = 'Server error. Please try again later.';
+        } else if (error.response.data?.error) {
+          errorMessage = error.response.data.error;
+        }
+      } else if (error.request) {
+        errorMessage = 'No response from server. Please check your connection.';
+      } else {
+        errorMessage = error.message || 'An unexpected error occurred.';
+      }
+      
+      console.log('Full error details:', { 
+        message: errorMessage, 
+        details: errorDetails,
+        stack: error.stack 
+      });
+      
+      Alert.alert('Payment Failed', errorMessage);
+    } finally {
+      setSavingReq(false);
+    }
+  };
 
   const canConfirm = useMemo(() => {
     if (!restSel) return false;
@@ -616,27 +658,23 @@ export default function RequestNow({ navigation, route }) {
   }, [restSel, restaurants]);
 
   const confirmRestaurant = useCallback(async () => {
-  if (!restSel) return;
-  const picked = restaurants.find(r => r.id === restSel);
-  if (!picked?.approved) return;
+    if (!restSel) return;
+    const picked = restaurants.find(r => r.id === restSel);
+    if (!picked?.approved) return;
 
-  try {
-    setSavingReq(true);
-    await AsyncStorage.setItem(K.restaurant, JSON.stringify(picked || {})).catch(()=>{});
-    
-    // REMOVED: Equipment request creation from here
-    // const payload = buildEquipmentRequestPayload(picked);
-    // await api.post('/app/equipment-requests', payload);
-
-    setRestModal(false);
-    setPaymentModal(true);
-  } catch (e) {
-    console.log('Restaurant selection failed:', e?.response?.data || e?.message);
-    alert('Failed to select restaurant. Please try again.');
-  } finally {
-    setSavingReq(false);
-  }
-}, [restSel, restaurants, K.restaurant]);
+    try {
+      setSavingReq(true);
+      await AsyncStorage.setItem(K.restaurant, JSON.stringify(picked || {})).catch(()=>{});
+      
+      setRestModal(false);
+      setPaymentModal(true);
+    } catch (e) {
+      console.log('Restaurant selection failed:', e?.response?.data || e?.message);
+      alert('Failed to select restaurant. Please try again.');
+    } finally {
+      setSavingReq(false);
+    }
+  }, [restSel, restaurants, K.restaurant]);
 
   /* ---------- CARD CONTROLS ---------- */
   const incQty = useCallback((pid, sid) => {
@@ -1035,297 +1073,306 @@ export default function RequestNow({ navigation, route }) {
 
       {/* Payment Modal */}
       <Modal
-  visible={paymentModal}
-  transparent
-  animationType="slide"
-  onRequestClose={() => setPaymentModal(false)}
->
-  <View style={st.modalBackdrop}>
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={{ flex: 1, justifyContent: 'flex-end' }}
-    >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View style={st.sheetLarge}>
-          <ScrollView
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{
-              flexGrow: 1,
-              paddingBottom: Platform.OS === 'ios' ? 40 : 20,
-            }}
+        visible={paymentModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setPaymentModal(false)}
+      >
+        <View style={st.modalBackdrop}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={{ flex: 1, justifyContent: 'flex-end' }}
           >
-            <Text style={st.sheetTitle}>Complete Payment</Text>
-
-            {/* QR section */}
-            <View style={{ alignItems: 'center', marginVertical: 16 }}>
-              <Image
-                source={require('../assets/images/kni.jpg')}
-                style={{
-                  width: Dimensions.get('window').width * 0.5,
-                  height: Dimensions.get('window').width * 0.5,
-                  borderRadius: 10,
-                }}
-                resizeMode="contain"
-              />
-              <Text style={{ marginTop: 6, color: C.ink, fontWeight: '800' }}>
-                Amount: ₹ {payable.toFixed(2)}
-              </Text>
-              <Text style={{ marginTop: 12, color: C.muted, textAlign: 'center' }}>
-                Scan the QR code using your preferred UPI app
-              </Text>
-            </View>
-
-            {/* Copyable UPI ID */}
-            <View style={{ marginVertical: 16 }}>
-              <Text style={[st.inputLbl, { marginBottom: 8 }]}>
-                Or send payment to UPI ID:
-              </Text>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  backgroundColor: '#F8FAFC',
-                  borderWidth: 1,
-                  borderColor: '#E5E7EB',
-                  borderRadius: 10,
-                  padding: 12,
-                  marginBottom: 8,
-                }}
-              >
-                <Text style={{ flex: 1, color: C.ink, fontWeight: '600', fontSize: 16 }}>
-                  {UPI_ID}
-                </Text>
-                <TouchableOpacity
-                  onPress={copyUpiId}
-                  style={{
-                    paddingHorizontal: 12,
-                    paddingVertical: 6,
-                    backgroundColor: C.primary,
-                    borderRadius: 6,
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+              <View style={st.sheetLarge}>
+                <ScrollView
+                  keyboardShouldPersistTaps="handled"
+                  showsVerticalScrollIndicator={false}
+                  contentContainerStyle={{
+                    flexGrow: 1,
+                    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
                   }}
                 >
-                  <Text style={{ color: '#fff', fontWeight: '600', fontSize: 14 }}>
-                    Copy
+                  <Text style={st.sheetTitle}>Complete Payment</Text>
+
+                  {/* QR section */}
+                  <View style={{ alignItems: 'center', marginVertical: 16 }}>
+                    <Image
+                      source={require('../assets/images/kni.jpg')}
+                      style={{
+                        width: Dimensions.get('window').width * 0.5,
+                        height: Dimensions.get('window').width * 0.5,
+                        borderRadius: 10,
+                      }}
+                      resizeMode="contain"
+                    />
+                    <Text style={{ marginTop: 6, color: C.ink, fontWeight: '800' }}>
+                      Amount: ₹ {payable.toFixed(2)}
+                    </Text>
+                    <Text style={{ marginTop: 12, color: C.muted, textAlign: 'center' }}>
+                      Scan the QR code using your preferred UPI app
+                    </Text>
+                  </View>
+
+                  {/* Copyable UPI ID */}
+                  <View style={{ marginVertical: 16 }}>
+                    <Text style={[st.inputLbl, { marginBottom: 8 }]}>
+                      Or send payment to UPI ID:
+                    </Text>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        backgroundColor: '#F8FAFC',
+                        borderWidth: 1,
+                        borderColor: '#E5E7EB',
+                        borderRadius: 10,
+                        padding: 12,
+                        marginBottom: 8,
+                      }}
+                    >
+                      <Text style={{ flex: 1, color: C.ink, fontWeight: '600', fontSize: 16 }}>
+                        {UPI_ID}
+                      </Text>
+                      <TouchableOpacity
+                        onPress={copyUpiId}
+                        style={{
+                          paddingHorizontal: 12,
+                          paddingVertical: 6,
+                          backgroundColor: C.primary,
+                          borderRadius: 6,
+                        }}
+                      >
+                        <Text style={{ color: '#fff', fontWeight: '600', fontSize: 14 }}>
+                          Copy
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                    <Text style={{ fontSize: 12, color: C.muted, textAlign: 'center' }}>
+                      Tap "Copy" and paste in your UPI app to pay ₹{payable.toFixed(2)}
+                    </Text>
+                  </View>
+
+                  {/* Screenshot warning */}
+                  <View
+                    style={{
+                      backgroundColor: '#FFF7ED',
+                      borderWidth: 1,
+                      borderColor: '#FDBA74',
+                      borderRadius: 10,
+                      padding: 12,
+                      marginVertical: 8,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                      <Icon name="warning-outline" size={16} color="#EA580C" />
+                      <Text
+                        style={{
+                          marginLeft: 6,
+                          color: '#EA580C',
+                          fontWeight: '700',
+                          fontSize: 14,
+                        }}
+                      >
+                        Payment Screenshot Required
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 12, color: '#EA580C', lineHeight: 16 }}>
+                      You must upload a screenshot of your payment confirmation for the request
+                      to be processed.
+                    </Text>
+                  </View>
+
+                  {/* Screenshot upload */}
+                  <Text style={[st.inputLbl, { marginTop: 16 }]}>
+                    Upload Payment Screenshot (Required)
                   </Text>
-                </TouchableOpacity>
-              </View>
-              <Text style={{ fontSize: 12, color: C.muted, textAlign: 'center' }}>
-                Tap "Copy" and paste in your UPI app to pay ₹{payable.toFixed(2)}
-              </Text>
-            </View>
+                  {paymentScreenshot ? (
+                    <View
+                      style={{
+                        height: 120,
+                        borderRadius: 10,
+                        overflow: 'hidden',
+                        marginVertical: 8,
+                        position: 'relative',
+                      }}
+                    >
+                      <Image
+                        source={{ uri: paymentScreenshot.uri }}
+                        style={{ width: '100%', height: '100%' }}
+                        resizeMode="cover"
+                      />
+                      <TouchableOpacity
+                        style={{
+                          position: 'absolute',
+                          top: 8,
+                          right: 8,
+                          backgroundColor: 'rgba(0,0,0,0.7)',
+                          borderRadius: 15,
+                          width: 30,
+                          height: 30,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                        onPress={() => setPaymentScreenshot(null)}
+                      >
+                        <Icon name="close" size={16} color="#fff" />
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      style={{
+                        height: 120,
+                        borderWidth: 2,
+                        borderColor: '#E5E7EB',
+                        borderStyle: 'dashed',
+                        borderRadius: 10,
+                        backgroundColor: '#F9FAFB',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginVertical: 8,
+                      }}
+                      onPress={pickScreenshot}
+                    >
+                      <Icon name="cloud-upload-outline" size={32} color={C.muted} />
+                      <Text style={{ marginTop: 8, color: C.muted, fontWeight: '600' }}>
+                        Tap to Upload Screenshot
+                      </Text>
+                      <Text style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>
+                        PNG, JPG up to 5MB
+                      </Text>
+                    </TouchableOpacity>
+                  )}
 
-            {/* Screenshot warning */}
-            <View
-              style={{
-                backgroundColor: '#FFF7ED',
-                borderWidth: 1,
-                borderColor: '#FDBA74',
-                borderRadius: 10,
-                padding: 12,
-                marginVertical: 8,
-              }}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                <Icon name="warning-outline" size={16} color="#EA580C" />
-                <Text
+                  {/* Notes */}
+                  <Text style={[st.inputLbl, { marginTop: 16 }]}>
+                    Additional Notes (Optional)
+                  </Text>
+                  <TextInput
+                    value={paymentNote}
+                    onChangeText={setPaymentNote}
+                    placeholder="Any additional information about your payment..."
+                    style={[
+                      st.input,
+                      {
+                        height: 80,
+                        textAlignVertical: 'top',
+                        paddingTop: 12,
+                        borderWidth: 1,
+                        borderColor: '#E5E7EB',
+                        borderRadius: 10,
+                        backgroundColor: '#F9FAFB',
+                        fontSize: 15,
+                      },
+                    ]
+                    }
+                    multiline
+                    placeholderTextColor="#9CA3AF"
+                  />
+                </ScrollView>
+
+                {/* Fixed bottom buttons */}
+                <View
                   style={{
-                    marginLeft: 6,
-                    color: '#EA580C',
-                    fontWeight: '700',
-                    fontSize: 14,
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    marginTop: 8,
                   }}
                 >
-                  Payment Screenshot Required
-                </Text>
+                  <TouchableOpacity
+                    onPress={() => setPaymentModal(false)}
+                    style={{
+                      backgroundColor: '#F1F5F9',
+                      flex: 1,
+                      marginRight: 8,
+                      borderRadius: 10,
+                      paddingVertical: 14,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: C.ink,
+                        textAlign: 'center',
+                        fontSize: 16,
+                        fontWeight: '600',
+                      }}
+                    >
+                      Cancel
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={handleConfirmPayment}
+                    disabled={!hasScreenshot || savingReq}
+                    style={[
+                      {
+                        backgroundColor: C.primary,
+                        flex: 1,
+                        marginLeft: 8,
+                        borderRadius: 10,
+                        paddingVertical: 14,
+                      },
+                      (!hasScreenshot || savingReq) && { opacity: 0.6 }
+                    ]}
+                  >
+                    {savingReq ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <Text
+                        style={{
+                          color: '#fff',
+                          textAlign: 'center',
+                          fontSize: 16,
+                          fontWeight: '600',
+                        }}
+                      >
+                        Confirm Payment
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
               </View>
-              <Text style={{ fontSize: 12, color: '#EA580C', lineHeight: 16 }}>
-                You must upload a screenshot of your payment confirmation for the request
-                to be processed.
-              </Text>
+            </TouchableWithoutFeedback>
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
+
+      {/* UPI Copied Success Modal */}
+      <Modal visible={upiCopiedModal} transparent animationType="fade" onRequestClose={()=>setUpiCopiedModal(false)}>
+        <View style={st.modalBackdropCenter}>
+          <View style={st.upiCopiedCard}>
+            <View style={st.upiCopiedHeader}>
+              <View style={st.upiCopiedIconWrap}>
+                <Icon name="copy" size={28} color="#fff"/>
+              </View>
+              <Text style={st.upiCopiedTitle}>UPI ID Copied</Text>
             </View>
-
-            {/* Screenshot upload */}
-            <Text style={[st.inputLbl, { marginTop: 16 }]}>
-              Upload Payment Screenshot (Required)
+            
+            <View style={st.upiIdBox}>
+              <Text style={st.upiIdText}>{UPI_ID}</Text>
+            </View>
+            
+            <Text style={st.upiCopiedSubtitle}>
+              ✅ Successfully copied to clipboard
             </Text>
-            {paymentScreenshot ? (
-              <View
-                style={{
-                  height: 120,
-                  borderRadius: 10,
-                  overflow: 'hidden',
-                  marginVertical: 8,
-                  position: 'relative',
-                }}
-              >
-                <Image
-                  source={{ uri: paymentScreenshot.uri }}
-                  style={{ width: '100%', height: '100%' }}
-                  resizeMode="cover"
-                />
-                <TouchableOpacity
-                  style={{
-                    position: 'absolute',
-                    top: 8,
-                    right: 8,
-                    backgroundColor: 'rgba(0,0,0,0.7)',
-                    borderRadius: 15,
-                    width: 30,
-                    height: 30,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                  onPress={() => setPaymentScreenshot(null)}
-                >
-                  <Icon name="close" size={16} color="#fff" />
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <TouchableOpacity
-                style={{
-                  height: 120,
-                  borderWidth: 2,
-                  borderColor: '#E5E7EB',
-                  borderStyle: 'dashed',
-                  borderRadius: 10,
-                  backgroundColor: '#F9FAFB',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginVertical: 8,
-                }}
-                onPress={pickScreenshot}
-              >
-                <Icon name="cloud-upload-outline" size={32} color={C.muted} />
-                <Text style={{ marginTop: 8, color: C.muted, fontWeight: '600' }}>
-                  Tap to Upload Screenshot
-                </Text>
-                <Text style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>
-                  PNG, JPG up to 5MB
-                </Text>
-              </TouchableOpacity>
-            )}
-
-            {/* Notes */}
-            <Text style={[st.inputLbl, { marginTop: 16 }]}>
-              Additional Notes (Optional)
+            
+            <Text style={st.upiCopiedInstruction}>
+              Paste this UPI ID in your payment app and pay:
             </Text>
-            <TextInput
-              value={paymentNote}
-              onChangeText={setPaymentNote}
-              placeholder="Any additional information about your payment..."
-              style={[
-                st.input,
-                {
-                  height: 80,
-                  textAlignVertical: 'top',
-                  paddingTop: 12,
-                  borderWidth: 1,
-                  borderColor: '#E5E7EB',
-                  borderRadius: 10,
-                  backgroundColor: '#F9FAFB',
-                  fontSize: 15,
-                },
-              ]}
-              multiline
-              placeholderTextColor="#9CA3AF"
-            />
-          </ScrollView>
-
-          {/* Fixed bottom buttons */}
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              marginTop: 8,
-            }}
-          >
-            <TouchableOpacity
-              onPress={() => setPaymentModal(false)}
-              style={{
-                backgroundColor: '#F1F5F9',
-                flex: 1,
-                marginRight: 8,
-                borderRadius: 10,
-                paddingVertical: 14,
-              }}
+            
+            <View style={st.amountBox}>
+              <Text style={st.amountText}>₹ {payable.toFixed(2)}</Text>
+            </View>
+            
+            <TouchableOpacity 
+              onPress={()=>setUpiCopiedModal(false)} 
+              style={st.upiCopiedBtn}
             >
-              <Text
-                style={{
-                  color: C.ink,
-                  textAlign: 'center',
-                  fontSize: 16,
-                  fontWeight: '600',
-                }}
-              >
-                Cancel
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={handleConfirmPayment}
-              style={{
-                backgroundColor: C.primary,
-                flex: 1,
-                marginLeft: 8,
-                borderRadius: 10,
-                paddingVertical: 14,
-              }}
-            >
-              <Text
-                style={{
-                  color: '#fff',
-                  textAlign: 'center',
-                  fontSize: 16,
-                  fontWeight: '600',
-                }}
-              >
-                Confirm Payment
-              </Text>
+              <Text style={st.upiCopiedBtnText}>Continue to Payment</Text>
             </TouchableOpacity>
           </View>
         </View>
-      </TouchableWithoutFeedback>
-    </KeyboardAvoidingView>
-  </View>
-</Modal>
-
-{/* UPI Copied Success Modal */}
-<Modal visible={upiCopiedModal} transparent animationType="fade" onRequestClose={()=>setUpiCopiedModal(false)}>
-  <View style={st.modalBackdropCenter}>
-    <View style={st.upiCopiedCard}>
-      <View style={st.upiCopiedHeader}>
-        <View style={st.upiCopiedIconWrap}>
-          <Icon name="copy" size={28} color="#fff"/>
-        </View>
-        <Text style={st.upiCopiedTitle}>UPI ID Copied</Text>
-      </View>
-      
-      <View style={st.upiIdBox}>
-        <Text style={st.upiIdText}>{UPI_ID}</Text>
-      </View>
-      
-      <Text style={st.upiCopiedSubtitle}>
-        ✅ Successfully copied to clipboard
-      </Text>
-      
-      <Text style={st.upiCopiedInstruction}>
-        Paste this UPI ID in your payment app and pay:
-      </Text>
-      
-      <View style={st.amountBox}>
-        <Text style={st.amountText}>₹ {payable.toFixed(2)}</Text>
-      </View>
-      
-      <TouchableOpacity 
-        onPress={()=>setUpiCopiedModal(false)} 
-        style={st.upiCopiedBtn}
-      >
-        <Text style={st.upiCopiedBtnText}>Continue to Payment</Text>
-      </TouchableOpacity>
-    </View>
-  </View>
-</Modal>
+      </Modal>
 
       {/* Success popup */}
       <Modal visible={successModal} transparent animationType="fade" onRequestClose={()=>setSuccessModal(false)}>
@@ -1452,96 +1499,96 @@ const st = StyleSheet.create({
   counterBtnSm:{ width:28, height:28, borderRadius:8, backgroundColor:'#FFF2F2', alignItems:'center', justifyContent:'center', borderWidth:1, borderColor:'#FEE2E2' },
 
   upiCopiedCard: {
-  width: '90%',
-  maxWidth: 400,
-  backgroundColor: '#fff',
-  borderRadius: 20,
-  padding: 24,
-  alignItems: 'center',
-  shadowColor: '#000',
-  shadowOffset: {
-    width: 0,
-    height: 4,
+    width: '90%',
+    maxWidth: 400,
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 8,
   },
-  shadowOpacity: 0.25,
-  shadowRadius: 12,
-  elevation: 8,
-},
-upiCopiedHeader: {
-  alignItems: 'center',
-  marginBottom: 20,
-},
-upiCopiedIconWrap: {
-  width: 60,
-  height: 60,
-  borderRadius: 30,
-  backgroundColor: '#10B981',
-  alignItems: 'center',
-  justifyContent: 'center',
-  marginBottom: 12,
-},
-upiCopiedTitle: {
-  fontSize: 22,
-  fontWeight: '800',
-  color: C.ink,
-  textAlign: 'center',
-},
-upiIdBox: {
-  backgroundColor: '#F8FAFC',
-  borderWidth: 2,
-  borderColor: '#E5E7EB',
-  borderRadius: 12,
-  padding: 16,
-  marginBottom: 16,
-  width: '100%',
-},
-upiIdText: {
-  fontSize: 16,
-  fontWeight: '700',
-  color: C.ink,
-  textAlign: 'center',
-  letterSpacing: 0.5,
-},
-upiCopiedSubtitle: {
-  fontSize: 16,
-  fontWeight: '600',
-  color: '#10B981',
-  textAlign: 'center',
-  marginBottom: 8,
-},
-upiCopiedInstruction: {
-  fontSize: 14,
-  color: C.muted,
-  textAlign: 'center',
-  marginBottom: 12,
-  lineHeight: 20,
-},
-amountBox: {
-  backgroundColor: '#FFFBEB',
-  borderWidth: 2,
-  borderColor: '#F59E0B',
-  borderRadius: 12,
-  paddingVertical: 12,
-  paddingHorizontal: 24,
-  marginBottom: 24,
-},
-amountText: {
-  fontSize: 20,
-  fontWeight: '800',
-  color: '#D97706',
-  textAlign: 'center',
-},
-upiCopiedBtn: {
-  backgroundColor: C.primary,
-  paddingVertical: 14,
-  paddingHorizontal: 32,
-  borderRadius: 12,
-  width: '100%',
-  alignItems: 'center',
-},
-upiCopiedBtnText: {
-  color: '#fff',
-  fontWeight: '700',
-  fontSize: 16,
-},
+  upiCopiedHeader: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  upiCopiedIconWrap: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#10B981',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  upiCopiedTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: C.ink,
+    textAlign: 'center',
+  },
+  upiIdBox: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    width: '100%',
+  },
+  upiIdText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: C.ink,
+    textAlign: 'center',
+    letterSpacing: 0.5,
+  },
+  upiCopiedSubtitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#10B981',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  upiCopiedInstruction: {
+    fontSize: 14,
+    color: C.muted,
+    textAlign: 'center',
+    marginBottom: 12,
+    lineHeight: 20,
+  },
+  amountBox: {
+    backgroundColor: '#FFFBEB',
+    borderWidth: 2,
+    borderColor: '#F59E0B',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    marginBottom: 24,
+  },
+  amountText: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#D97706',
+    textAlign: 'center',
+  },
+  upiCopiedBtn: {
+    backgroundColor: C.primary,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    width: '100%',
+    alignItems: 'center',
+  },
+  upiCopiedBtnText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 16,
+  },
 });

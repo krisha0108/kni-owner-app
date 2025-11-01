@@ -65,6 +65,40 @@ export default function SupportTicketDetail({ navigation, route }) {
   const canDelete = ticket?.status === 'pending';
   const [askDelete, setAskDelete] = useState(false);
 
+  const deleteTicket = async () => {
+  try {
+    console.log('Attempting to delete ticket with ID:', ticketId);
+    console.log('Full URL:', `/support/tickets/${ticketId}`);
+    
+    // Your API client already handles the token automatically via interceptors
+    const response = await api.delete(`/support/tickets/${ticketId}`);
+    
+    console.log('Delete successful:', response.data);
+    setAskDelete(false);
+    navigation.goBack();
+    
+  } catch (error) {
+    console.log('Delete error details:', {
+      status: error.response?.status,
+      data: error.response?.data,
+      url: error.config?.url,
+      method: error.config?.method,
+      message: error.message
+    });
+    
+    // More specific error messages
+    if (error.response?.status === 405) {
+      alert('Server error: Method not allowed. The server might be caching old routes.');
+    } else if (error.response?.status === 403) {
+      alert(error.response.data?.message || 'You are not authorized to delete this ticket');
+    } else if (error.response?.status === 404) {
+      alert('Ticket not found or already deleted');
+    } else {
+      alert(error?.response?.data?.message || 'Failed to delete ticket');
+    }
+    setAskDelete(false);
+  }
+};
   // viewer
   const [viewer, setViewer] = useState(null);
 
@@ -196,7 +230,7 @@ export default function SupportTicketDetail({ navigation, route }) {
         </View>
         <View style={{flexDirection:'row', gap:8}}>
           {canDelete && (
-            <TouchableOpacity onPress={()=>setAskDelete(true)} style={[st.hBtn,{backgroundColor:'#FEF2F2',borderColor:'#FCA5A5'}]}>
+            <TouchableOpacity onPress={deleteTicket} style={[st.hBtn,{backgroundColor:'#FEF2F2',borderColor:'#FCA5A5'}]}>
               <Icon name="trash-outline" size={18} color={C.danger}/>
             </TouchableOpacity>
           )}

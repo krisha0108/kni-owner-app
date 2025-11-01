@@ -288,7 +288,8 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  StatusBar, Image, KeyboardAvoidingView, Platform, ActivityIndicator, Alert
+  StatusBar, Image, KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
+  ScrollView
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
@@ -435,96 +436,112 @@ export default function RestaurantLogin({ navigation, route }) {
   return (
     <SafeAreaView style={{ flex:1, backgroundColor:C.bg }} edges={['top','left','right']}>
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
-      <LinearGradient
-        colors={['#FFEEEE', '#FFD6D6', '#EF3A3A']}
-        start={{x:0.1,y:0}}
-        end={{x:1,y:1}}
-        style={[styles.header, { paddingTop: insets.top + 12 }]}
-      />
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex:1 }}>
-        <View style={styles.cardWrap}>
-          <View style={styles.card}>
-            <View style={styles.brandPill}>
-              <Image source={require('../assets/images/kni-logo.png')} style={styles.logoSmall}/>
-            </View>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex:1 }}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={styles.scrollContainer}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Header inside ScrollView */}
+          <LinearGradient
+            colors={['#FFEEEE', '#FFD6D6', '#EF3A3A']}
+            start={{x:0.1,y:0}}
+            end={{x:1,y:1}}
+            style={[styles.header, { paddingTop: insets.top + 12 }]}
+          />
 
-            <Text style={styles.title}>Restaurant Owner Login</Text>
-
-            <View style={styles.inputWrap}>
-              <Icon name="mail-outline" size={18} color="#9CA3AF" />
-              <TextInput
-                placeholder="Email or Phone Number"
-                placeholderTextColor="#9CA3AF"
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                keyboardType="default"
-                style={styles.input}
-              />
-            </View>
-
-            <View style={styles.inputWrap}>
-              <Icon name="lock-closed-outline" size={18} color="#9CA3AF" />
-              <TextInput
-                placeholder="Password"
-                placeholderTextColor="#9CA3AF"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={secure}
-                style={styles.input}
-              />
-              <TouchableOpacity onPress={()=>setSecure(s=>!s)} hitSlop={{top:8,bottom:8,left:8,right:8}}>
-                <Icon name={secure ? 'eye-off-outline' : 'eye-outline'} size={18} color="#9CA3AF" />
-              </TouchableOpacity>
-            </View>
-
-            {!!error && <Text style={styles.error}>{error}</Text>}
-
-            <TouchableOpacity style={[styles.primaryBtn, {opacity: pLoading ? 0.7 : 1}]} onPress={handleLogin} disabled={pLoading || gLoading}>
-              {pLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryTxt}>Login</Text>}
-            </TouchableOpacity>
-
-            <View style={styles.dividerRow}>
-              <View style={styles.divider} />
-              <Text style={styles.dividerTxt}>or continue with</Text>
-              <View style={styles.divider} />
-            </View>
-
-            <TouchableOpacity style={[styles.googleBtn, {opacity: gLoading ? 0.7 : 1}]} onPress={handleGoogle} disabled={gLoading || pLoading}>
-              <View style={styles.googleIcon}>
-                {gLoading ? <ActivityIndicator /> : <Icon name="logo-google" size={18} color="#4285F4" />}
+          <View style={styles.cardWrap}>
+            <View style={styles.card}>
+              {/* Logo and Title moved inside card */}
+              <View style={styles.brandPill}>
+                <Image source={require('../assets/images/kni-logo.png')} style={styles.logoSmall}/>
               </View>
-              <Text style={styles.googleTxt}>Continue with Google</Text>
-            </TouchableOpacity>
+              <Text style={styles.title}>Restaurant Owner Login</Text>
 
-            <View style={styles.bottomRow}>
-              <TouchableOpacity onPress={()=>navigation.navigate('RestaurantRegister')}>
-                <Text style={styles.linkRed}>Create an account</Text>
+              <View style={styles.inputWrap}>
+                <Icon name="mail-outline" size={18} color="#9CA3AF" />
+                <TextInput
+                  placeholder="Email or Phone Number"
+                  placeholderTextColor="#9CA3AF"
+                  value={email}
+                  onChangeText={setEmail}
+                  autoCapitalize="none"
+                  keyboardType="default"
+                  style={styles.input}
+                />
+              </View>
+
+              <View style={styles.inputWrap}>
+                <Icon name="lock-closed-outline" size={18} color="#9CA3AF" />
+                <TextInput
+                  placeholder="Password"
+                  placeholderTextColor="#9CA3AF"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={secure}
+                  style={styles.input}
+                />
+                <TouchableOpacity onPress={()=>setSecure(s=>!s)} hitSlop={{top:8,bottom:8,left:8,right:8}}>
+                  <Icon name={secure ? 'eye-off-outline' : 'eye-outline'} size={18} color="#9CA3AF" />
+                </TouchableOpacity>
+              </View>
+
+              {!!error && <Text style={styles.error}>{error}</Text>}
+
+              <TouchableOpacity style={[styles.primaryBtn, {opacity: pLoading ? 0.7 : 1}]} onPress={handleLogin} disabled={pLoading || gLoading}>
+                {pLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryTxt}>Login</Text>}
               </TouchableOpacity>
-              <TouchableOpacity onPress={()=>navigation.navigate('RestaurantOnboarding')}>
-                <Text style={styles.linkMuted}>Forgot password?</Text>
+
+              <View style={styles.dividerRow}>
+                <View style={styles.divider} />
+                <Text style={styles.dividerTxt}>or continue with</Text>
+                <View style={styles.divider} />
+              </View>
+
+              <TouchableOpacity style={[styles.googleBtn, {opacity: gLoading ? 0.7 : 1}]} onPress={handleGoogle} disabled={gLoading || pLoading}>
+                <View style={styles.googleIcon}>
+                  {gLoading ? <ActivityIndicator /> : <Icon name="logo-google" size={18} color="#4285F4" />}
+                </View>
+                <Text style={styles.googleTxt}>Continue with Google</Text>
               </TouchableOpacity>
+
+              <View style={styles.bottomRow}>
+                <TouchableOpacity onPress={()=>navigation.navigate('RestaurantRegister')}>
+                  <Text style={styles.linkRed}>Create an account</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={()=>navigation.navigate('RestaurantOnboarding')}>
+                  <Text style={styles.linkMuted}>Forgot password?</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
 
-        <View style={[styles.terms, { paddingBottom: insets.bottom + 35 }]}>
-          <Text style={styles.termsTxt}>
-            By continuing you agree to our <Text style={styles.linkMuted}>Terms</Text> & <Text style={styles.linkMuted}>Privacy</Text>.
-          </Text>
-        </View>
+          <View style={[styles.terms, { paddingBottom: insets.bottom + 35 }]}>
+            <Text style={styles.termsTxt}>
+              By continuing you agree to our <Text style={styles.linkMuted}>Terms</Text> & <Text style={styles.linkMuted}>Privacy</Text>.
+            </Text>
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  scrollContainer: {
+    flexGrow: 1,
+  },
   header:{ height: 140, justifyContent:'flex-end', paddingHorizontal:16 },
-  brandPill:{ width:'80%', zIndex:10, height:60, justifyContent:'center', alignSelf:'center', alignItems:'center' },
+  brandPill:{ width:'100%', zIndex:10, height:60, justifyContent:'center', alignSelf:'center', alignItems:'center' },
   logoSmall:{ width:120, height:120, resizeMode:'contain' },
   cardWrap:{ flex:1, alignItems:'center', marginTop:-28 },
   card:{ width:'90%', backgroundColor:'rgba(255,255,255,0.9)', borderRadius:20, borderWidth:1, borderColor:'#EEF2F7', padding:18, shadowColor:'#000', shadowOpacity:0.08, shadowRadius:18, elevation:6 },
-  title:{ fontSize:22, fontWeight:'900', color:'#1D2254', textAlign:'center',marginTop:16, marginBottom:14 },
+  title:{ fontSize:22, fontWeight:'900', color:'#1D2254', textAlign:'center', marginTop: 10, marginBottom:14 },
   inputWrap:{ flexDirection:'row', alignItems:'center', backgroundColor:'#fff', borderWidth:1, borderColor:'#E5E7EB', borderRadius:14, paddingHorizontal:12, paddingVertical:12, marginBottom:12 },
   input:{ flex:1, marginLeft:10, color:'#0F172A' },
   error:{ color:'#DC2626', fontWeight:'700', marginBottom:8, textAlign:'center' },

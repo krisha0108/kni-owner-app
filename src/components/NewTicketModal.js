@@ -15,12 +15,15 @@ function NewTicketModal({ visible, onClose, onSubmit, theme }) {
   const [photo, setPhotos] = useState(null); // single image
 
   // Reset fields when modal closes (safe – runs after render)
-  useEffect(() => {
-    if (!visible) {
-      setTitle(''); setEquipment(''); setDesc(''); setCategory('Equipment'); setPhotos([]);
-    }
-  }, [visible]);
-
+useEffect(() => {
+  if (!visible) {
+    setTitle(''); 
+    setEquipment(''); 
+    setDesc(''); 
+    setCategory('Equipment'); 
+    setPhotos(null); // ✅ Change from [] to null
+  }
+}, [visible]);
   const canSubmit = title.trim().length > 2 && desc.trim().length > 4;
   const pickPhoto = async () => {
     try {
@@ -66,22 +69,22 @@ function NewTicketModal({ visible, onClose, onSubmit, theme }) {
 
             <Text style={[st.inputLbl,{marginTop:2, color:C.muted}]}>Proof photo (only 1)</Text>
 <View style={{flexDirection:'row', alignItems:'center', marginVertical:6}}>
-  {!photo ? (
-    <TouchableOpacity onPress={pickPhoto} style={[st.addPhoto, {borderColor:'#FECACA'}]}>
-      <Icon name="images-outline" size={18} color={C.primary}/>
-      <Text style={{color:C.primary, fontWeight:'900', marginLeft:6}}>Add photo</Text>
-    </TouchableOpacity>
-  ) : (
+  {/* ✅ This will only show photo preview when photo exists */}
+  {photo ? (
     <View style={st.photoBox}>
       <Image source={{uri:photo.uri}} style={st.photoImg}/>
       <TouchableOpacity onPress={removePhoto} style={st.photoDel}>
         <Icon name="close" size={12} color="#fff"/>
       </TouchableOpacity>
     </View>
+  ) : (
+    // ✅ This will only show "Add photo" button when no photo
+    <TouchableOpacity onPress={pickPhoto} style={[st.addPhoto, {borderColor:'#FECACA'}]}>
+      <Icon name="images-outline" size={18} color={C.primary}/>
+      <Text style={{color:C.primary, fontWeight:'900', marginLeft:6}}>Add photo</Text>
+    </TouchableOpacity>
   )}
 </View>
-
-
             <TouchableOpacity
               disabled={!canSubmit}
               onPress={()=> onSubmit({ title, category, equipment: equipment||'—', desc, photos: photo ? [photo] : [] })}
