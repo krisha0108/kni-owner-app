@@ -983,7 +983,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, Image, ImageBackground, Animated, Easing,
-  TouchableOpacity, ScrollView, FlatList, Share, RefreshControl, Alert
+  TouchableOpacity, ScrollView, FlatList, Share, RefreshControl, Alert,
+  Modal, TextInput
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -1064,6 +1065,14 @@ const debounce = (fn, ms = 350) => { let t; return (...a) => { clearTimeout(t); 
 const Rs = (n) => `₹ ${Number(n || 0).toLocaleString('en-IN')}`;
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 
+// Add formatPrice function
+const formatPrice = (price) => {
+  if (price === null || price === undefined) return 'Price on request';
+  const num = parseFloat(price);
+  if (isNaN(num)) return 'Price on request';
+  return `₹${num.toLocaleString('en-IN')}`;
+};
+
 const Stars = React.memo(({ value, size = 12 }) => {
   const v = clamp(Math.round(value || 0), 0, 5);
   return (
@@ -1117,6 +1126,144 @@ function buildStoryImages(d = {}, headerItem = {}) {
   return imgs.length ? imgs : null;
 }
 
+/* ---------- ENQUIRY MODAL ---------- */
+const EnquiryModal = ({ visible, onClose, product, onSubmit, loading }) => {
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    enquiry_text: ''
+  });
+
+  useEffect(() => {
+    if (!visible) {
+      setForm({ name: '', email: '', phone: '', enquiry_text: '' });
+    }
+  }, [visible]);
+
+  const handleInputChange = (field, value) => {
+    setForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = () => {
+    if (!form.name || !form.email || !form.phone || !form.enquiry_text) {
+      Alert.alert('Error', 'Please fill all required fields');
+      return;
+    }
+
+    if (!product) {
+      Alert.alert('Error', 'No product selected');
+      return;
+    }
+
+    onSubmit(form, product);
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={onClose}
+    >
+      <View style={st.modalOverlay}>
+        <View style={st.modalContent}>
+          <ScrollView style={st.modalScroll} showsVerticalScrollIndicator={false}>
+            <View style={st.modalHeader}>
+              <Text style={st.modalTitle}>Product Enquiry</Text>
+              <TouchableOpacity onPress={onClose} style={st.closeButton}>
+                <Icon name="close" size={24} color={C.muted} />
+              </TouchableOpacity>
+            </View>
+            
+            <Text style={st.modalDescription}>
+              Submit your enquiry for:{'\n'}
+              <Text style={st.productName}>{product?.title}</Text>
+            </Text>
+
+            <View style={st.form}>
+              <View style={st.inputGroup}>
+                <Text style={st.label}>Full Name *</Text>
+                <TextInput
+                  style={st.input}
+                  value={form.name}
+                  onChangeText={(value) => handleInputChange('name', value)}
+                  placeholder="Enter your full name"
+                  placeholderTextColor="#94A3B8"
+                />
+              </View>
+
+              <View style={st.inputGroup}>
+                <Text style={st.label}>Email Address *</Text>
+                <TextInput
+                  style={st.input}
+                  value={form.email}
+                  onChangeText={(value) => handleInputChange('email', value)}
+                  placeholder="Enter your email"
+                  placeholderTextColor="#94A3B8"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </View>
+
+              <View style={st.inputGroup}>
+                <Text style={st.label}>Phone Number *</Text>
+                <TextInput
+                  style={st.input}
+                  value={form.phone}
+                  onChangeText={(value) => handleInputChange('phone', value)}
+                  placeholder="Enter your phone number"
+                  placeholderTextColor="#94A3B8"
+                  keyboardType="phone-pad"
+                />
+              </View>
+
+              <View style={st.inputGroup}>
+                <Text style={st.label}>Your Enquiry *</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  value={form.enquiry_text}
+                  onChangeText={(value) => handleInputChange('enquiry_text', value)}
+                  placeholder="Please describe your enquiry in detail..."
+                  placeholderTextColor="#94A3B8"
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                />
+              </View>
+
+              <View style={st.modalActions}>
+                <TouchableOpacity 
+                  style={[st.button, st.cancelButton]} 
+                  onPress={onClose}
+                  disabled={loading}
+                >
+                  <Text style={st.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={[st.button, st.submitButton, loading && st.submitButtonDisabled]} 
+                  onPress={handleSubmit}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <Text style={st.submitButtonText}>Submitting...</Text>
+                  ) : (
+                    <>
+                      <Icon name="send" size={16} color="#fff" style={st.buttonIcon} />
+                      <Text style={st.submitButtonText}>Submit Enquiry</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
 /* ---------- FAQ ITEM ---------- */
 const FAQItem = React.memo(({ f }) => {
   const [open, setOpen] = useState(false);
@@ -1167,7 +1314,10 @@ function SkeletonRequestDetail({ insetsBottom }) {
         <View style={st.heroBottom}>
           <View style={{ flex: 1 }}>
             <Animated.View style={[sk.lineLg, { width: '60%', opacity: pulse }]} />
-            <Animated.View style={[sk.lineSm, { width: 140, marginTop: 6, opacity: pulse }]} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+              <Animated.View style={[sk.lineMd, { width: 80, opacity: pulse }]} />
+              <Animated.View style={[sk.lineSm, { width: 140, marginLeft: 8, opacity: pulse }]} />
+            </View>
           </View>
           <View style={sk.ratingPill} />
         </View>
@@ -1244,6 +1394,7 @@ export default function RequestDetail({ navigation, route }) {
   const headerItem = route?.params?.item ?? {
     title: 'Commercial Fridge Service',
     category: 'Fridge',
+    price: null,
     rating: 4.8,
     requests: 1225,
     desc: 'Cooling issues, gas refill, thermostat faults & preventive maintenance.',
@@ -1253,6 +1404,7 @@ export default function RequestDetail({ navigation, route }) {
   const [prod, setProd] = useState({
     title: headerItem.title,
     description: headerItem.desc,
+    price: headerItem.price,
     storyImages: FALLBACK_IMAGES,
     included: FALLBACK_INCLUDED,
     excluded: FALLBACK_EXCLUDED,
@@ -1266,6 +1418,11 @@ export default function RequestDetail({ navigation, route }) {
   const [loading, setLoading] = useState(true);
   const [networkErr, setNetworkErr] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  
+  // Enquiry states
+  const [enquiryModalVisible, setEnquiryModalVisible] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [enquiryLoading, setEnquiryLoading] = useState(false);
 
   /** backoff for 429/5xx */
   const safeGet = useCallback(async (url, tries = 2, params = {}) => {
@@ -1329,6 +1486,49 @@ export default function RequestDetail({ navigation, route }) {
 
     setReviews(mapped.slice(0, 3));
   }, [ownerId, safeGet]);
+
+  // Handle enquiry submission
+  // Handle enquiry submission
+const handleEnquirySubmit = async (formData, product) => {
+  try {
+    setEnquiryLoading(true);
+    
+    // Prepare enquiry data according to your backend validation
+    const enquiryData = {
+      product_id: product.id || productId, // Use product.id or fallback to productId
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone,
+      enquiry_text: formData.enquiry_text,
+    };
+
+    console.log('Submitting enquiry:', enquiryData);
+
+    // Send to your API endpoint
+    const response = await api.post('/app/enquiries', enquiryData, {
+      params: ownerId ? { owner_id: ownerId } : {}
+    });
+
+    // Success
+    Alert.alert(
+      'Enquiry Submitted',
+      'Thank you for your enquiry! We will get back to you soon.',
+      [{ text: 'OK', onPress: () => setEnquiryModalVisible(false) }]
+    );
+    
+  } catch (error) {
+    console.error('Enquiry submission error:', error);
+    const errorMessage = error?.response?.data?.message || 'Failed to submit enquiry. Please try again.';
+    Alert.alert('Error', errorMessage);
+  } finally {
+    setEnquiryLoading(false);
+  }
+};
+
+  const openEnquiryModal = (product) => {
+    setSelectedProduct(product);
+    setEnquiryModalVisible(true);
+  };
 
   // 🔥 REFINED: Fetch product-specific services
   const fetchAll = useCallback(async () => {
@@ -1417,6 +1617,7 @@ export default function RequestDetail({ navigation, route }) {
         setProd({
           title: d.title || headerItem.title,
           description: d.description || headerItem.desc,
+          price: d.price || headerItem.price,
           storyImages: resolvedImages,
           included, excluded, conditions, faqs, services,
         });
@@ -1783,36 +1984,51 @@ export default function RequestDetail({ navigation, route }) {
       )}
 
       {/* HERO */}
-      <View style={{ backgroundColor: C.card, borderBottomLeftRadius: R, borderBottomRightRadius: R, overflow: 'hidden' }}>
-        <ImageBackground
-          source={{ uri: (images[idx] || FALLBACK_IMAGES[0]) }}
-          style={{ width: '100%', height: 260, justifyContent: 'flex-end' }}
-          onError={(e) => logImg('HERO onError for uri:', images[idx], e?.nativeEvent)}
-        >
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.22)' }]} />
+      {/* HERO */}
+<View style={{ backgroundColor: C.card, borderBottomLeftRadius: R, borderBottomRightRadius: R, overflow: 'hidden' }}>
+  <ImageBackground
+    source={{ uri: (images[idx] || FALLBACK_IMAGES[0]) }}
+    style={{ width: '100%', height: 260, justifyContent: 'flex-end' }}
+    onError={(e) => logImg('HERO onError for uri:', images[idx], e?.nativeEvent)}
+  >
+    <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.22)' }]} />
 
-          <View style={[st.actionsWrap, { paddingTop: 8 }]}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={st.glassBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Icon name="close" size={18} color={C.ink} />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={shareIt} style={[st.glassBtn, { marginLeft: 8 }]}>
-              <Icon name="share-social-outline" size={18} color={C.ink} />
-            </TouchableOpacity>
-          </View>
+    <View style={[st.actionsWrap, { paddingTop: 8 }]}>
+      <TouchableOpacity onPress={() => navigation.goBack()} style={st.glassBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <Icon name="close" size={18} color={C.ink} />
+      </TouchableOpacity>
+      <TouchableOpacity onPress={shareIt} style={[st.glassBtn, { marginLeft: 8 }]}>
+        <Icon name="share-social-outline" size={18} color={C.ink} />
+      </TouchableOpacity>
+    </View>
 
-          <View style={{ position: 'absolute', left: '5%', right: '5%', bottom: 70, height: 4, backgroundColor: '#FFFFFF55', borderRadius: 3, overflow: 'hidden' }}>
-            <Animated.View style={{ height: 4, width: bar.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }), backgroundColor: '#fff' }} />
-          </View>
+    {/* Enquiry Button on Hero Image - Bottom Left */}
+    <View style={st.heroEnquiryBtn}>
+      <TouchableOpacity 
+        style={st.enquiryButtonHero}
+        onPress={() => openEnquiryModal(prod)}
+      >
+        <Icon name="mail-outline" size={16} color="#fff" />
+        <Text style={st.enquiryButtonText}>Enquire Now</Text>
+      </TouchableOpacity>
+    </View>
 
-          <View style={st.heroBottom}>
-            <View style={{ flex: 1 }}>
-              <Text style={st.title}>{prod.title}</Text>
-              <Text style={st.subTitle}>{headerItem.category} • {headerItem.requests?.toLocaleString()} requests</Text>
-            </View>
-            <View style={st.ratingPill}><Icon name="star" size={14} color="#fff" /><Text style={st.ratingTxt}>{headerItem.rating}</Text></View>
-          </View>
-        </ImageBackground>
+    <View style={{ position: 'absolute', left: '5%', right: '5%', bottom: 70, height: 4, backgroundColor: '#FFFFFF55', borderRadius: 3, overflow: 'hidden' }}>
+      <Animated.View style={{ height: 4, width: bar.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }), backgroundColor: '#fff' }} />
+    </View>
+
+    <View style={st.heroBottom}>
+      <View style={{ flex: 1 }}>
+        <Text style={st.title}>{prod.title}</Text>
+        <View style={st.priceRatingRow}>
+          <Text style={st.subTitle}>{headerItem.category} • {headerItem.requests?.toLocaleString()} requests</Text>
+        </View>
+          <Text style={st.priceText}>{formatPrice(prod.price)}</Text>
       </View>
+      <View style={st.ratingPill}><Icon name="star" size={14} color="#fff" /><Text style={st.ratingTxt}>{headerItem.rating}</Text></View>
+    </View>
+  </ImageBackground>
+</View>
 
       <ScrollView
         contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
@@ -1827,6 +2043,15 @@ export default function RequestDetail({ navigation, route }) {
         <View style={st.section}>
           <Text style={st.sectionTitle}>About</Text>
           <Text style={st.desc}>{prod.description}</Text>
+          
+          {/* Enquiry Button in About Section */}
+          <TouchableOpacity 
+            style={st.enquiryButtonSection}
+            onPress={() => openEnquiryModal(prod)}
+          >
+            <Icon name="mail-outline" size={16} color="#fff" />
+            <Text style={st.enquiryButtonText}>Enquire About This Product</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Services - REFINED */}
@@ -1933,6 +2158,15 @@ export default function RequestDetail({ navigation, route }) {
           {(prod.faqs || []).map((f, i) => (
             <FAQItem key={`${f.id ?? (f.q || 'faq')}-${i}`} f={f} />
           ))}
+          
+          {/* Enquiry Button in FAQ Section */}
+          <TouchableOpacity 
+            style={st.enquiryButtonSection}
+            onPress={() => openEnquiryModal(prod)}
+          >
+            <Icon name="help-circle-outline" size={16} color="#fff" />
+            <Text style={st.enquiryButtonText}>Still Have Questions? Enquire Now</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Reviews */}
@@ -2002,6 +2236,15 @@ export default function RequestDetail({ navigation, route }) {
           <Text style={st.primaryTxt}>{totals.items ? 'Request Now' : 'Select services'}</Text>
         </TouchableOpacity>
       </View>
+      
+      {/* Enquiry Modal */}
+      <EnquiryModal
+        visible={enquiryModalVisible}
+        onClose={() => setEnquiryModalVisible(false)}
+        product={selectedProduct}
+        onSubmit={handleEnquirySubmit}
+        loading={enquiryLoading}
+      />
     </SafeAreaView>
   );
 }
@@ -2024,6 +2267,74 @@ const st = StyleSheet.create({
   sectionTitle: { fontSize: 18, fontWeight: '800', color: C.ink, marginBottom: 8 },
   sectionSub: { fontSize: 12, color: C.muted, marginBottom: 8 },
   desc: { color: C.text, fontSize: 14, lineHeight: 20 },
+
+  // Price styles
+  priceRatingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+    flexWrap: 'wrap',
+  },
+  priceText: {
+    color: C.primary,
+    fontSize: 16,
+    fontWeight: '800',
+    marginRight: 8,
+  },
+
+  // Enquiry Button Styles
+heroEnquiryBtn: {
+  position: 'absolute',
+  bottom: 115, // Position above the hero bottom content
+  left: 5,
+  right: 16,
+  alignItems: 'flex-start', // Align to left
+},
+enquiryButtonHero: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  backgroundColor: C.primary,
+  paddingVertical: 10,
+  paddingHorizontal: 16,
+  borderRadius: 20,
+  gap: 6,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.3,
+  shadowRadius: 4,
+  elevation: 5,
+  alignSelf: 'flex-start', // Align to left
+},
+enquiryButtonText: {
+  color: '#fff',
+  fontSize: 14,
+  fontWeight: '700',
+},
+// Enquiry Button in Section Styles
+enquiryButtonSection: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  backgroundColor: C.primary,
+  paddingVertical: 14,
+  paddingHorizontal: 20,
+  borderRadius: 14,
+  gap: 8,
+  marginTop: 16,
+  borderWidth: 1,
+  borderColor: '#E11D48',
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.1,
+  shadowRadius: 4,
+  elevation: 3,
+},
+enquiryButtonText: {
+  color: '#fff',
+  fontSize: 15,
+  fontWeight: '700',
+},
 
   serviceChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.card, borderRadius: 14, padding: 12, marginRight: 10, borderWidth: 1, borderColor: '#EEF2F7' },
   serviceTitle: { color: C.text, fontWeight: '700', fontSize: 14 },
@@ -2075,6 +2386,121 @@ const st = StyleSheet.create({
   cartAmt: { color: C.ink, fontSize: 18, fontWeight: '800' },
   primaryBtn: { backgroundColor: C.primary, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 18 },
   primaryTxt: { color: '#fff', fontWeight: '800' },
+
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    width: '100%',
+    maxHeight: '80%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  modalScroll: {
+    maxHeight: '100%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: C.text,
+    flex: 1,
+  },
+  closeButton: {
+    padding: 4,
+  },
+  modalDescription: {
+    padding: 20,
+    paddingBottom: 0,
+    fontSize: 14,
+    color: C.muted,
+    lineHeight: 20,
+  },
+  productName: {
+    color: C.primary,
+    fontWeight: '600',
+  },
+  form: {
+    padding: 20,
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: C.text,
+    marginBottom: 6,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: C.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    color: C.text,
+    backgroundColor: '#fff',
+  },
+  textArea: {
+    height: 100,
+    textAlignVertical: 'top',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 20,
+  },
+  button: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 10,
+    gap: 8,
+  },
+  cancelButton: {
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  cancelButtonText: {
+    color: C.text,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  submitButton: {
+    backgroundColor: C.primary,
+  },
+  submitButtonDisabled: {
+    opacity: 0.6,
+  },
+  submitButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  buttonIcon: {
+    marginRight: 4,
+  },
 });
 
 /* ---------- Skeleton styles ---------- */
@@ -2089,4 +2515,21 @@ const sk = StyleSheet.create({
   lineSm:{ height:12, borderRadius:8, backgroundColor:'#E9EEF5' },
   lineXs:{ height:10, borderRadius:8, backgroundColor:'#E9EEF5' },
   btnPill:{ width:78, height:32, borderRadius:999, backgroundColor:'#F1F5F9', borderWidth:1, borderColor:'#E2E8F0', marginLeft:10 },
+});
+
+const styles = StyleSheet.create({
+  input: {
+    borderWidth: 1,
+    borderColor: C.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    color: C.text,
+    backgroundColor: '#fff',
+  },
+  textArea: {
+    height: 100,
+    textAlignVertical: 'top',
+  },
 });

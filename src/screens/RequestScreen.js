@@ -51,6 +51,14 @@ const SERVICE_ICONS = {
 const norm = (s = '') => String(s).trim().toLowerCase();
 const toTitle = (s = '') => String(s).toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
 
+// Format price function
+const formatPrice = (price) => {
+  if (price === null || price === undefined) return 'Price on request';
+  const num = parseFloat(price);
+  if (isNaN(num)) return 'Price on request';
+  return `₹${num.toLocaleString('en-IN')}`;
+};
+
 const SkeletonCard = ({ width }) => {
   const pulse = useRef(new Animated.Value(0.6)).current;
   useEffect(() => {
@@ -75,6 +83,10 @@ const SkeletonCard = ({ width }) => {
         <Animated.View style={[styles.skelLineTitleShort, { opacity: pulse }]} />
         <Animated.View style={[styles.skelLineDesc, { opacity: pulse }]} />
         <Animated.View style={[styles.skelLineDescShort, { opacity: pulse }]} />
+        
+        {/* Price skeleton */}
+        <Animated.View style={[styles.skelPrice, { opacity: pulse }]} />
+        
         <View style={styles.metaRow}>
           <View style={styles.metaLeft}>
             <View style={styles.skelMetaIcon} />
@@ -147,6 +159,7 @@ export default function RequestScreen({ navigation }) {
           catLabel: toTitle(p.category || ""),
           desc: p.description || "",
           image: imageUrl,
+          price: p.price, // Add price from API
           rating: p.rating ?? 4.8,
           requests: p.services_count ?? 0,
           tags: p.tags ?? [],
@@ -349,6 +362,7 @@ export default function RequestScreen({ navigation }) {
           item: {
             title: item.title,
             category: item.catLabel,
+            price: item.price, // Pass price to detail screen
             rating: item.rating,
             requests: item.requests,
             desc: item.desc,
@@ -367,6 +381,9 @@ export default function RequestScreen({ navigation }) {
         <View style={{ paddingHorizontal: 12, paddingBottom: 12 }}>
           <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
           <Text style={styles.cardDesc} numberOfLines={2}>{item.desc}</Text>
+          
+          {/* Price Display */}
+          <Text style={styles.priceText}>{formatPrice(item.price)}</Text>
 
           <View style={styles.metaRow}>
             <View style={styles.metaLeft}>
@@ -472,6 +489,13 @@ const styles = StyleSheet.create({
 
   cardTitle: { color: COLORS.text, fontWeight: '700', fontSize: 14, marginTop: 10 },
   cardDesc: { color: COLORS.muted, fontSize: 12, marginTop: 4 },
+  priceText: { 
+    color: COLORS.primary, 
+    fontSize: 15, 
+    fontWeight: '800', 
+    marginTop: 6,
+    marginBottom: 4,
+  },
 
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 },
   metaLeft: { flexDirection: 'row', alignItems: 'center' },
@@ -488,6 +512,7 @@ const styles = StyleSheet.create({
   skelLineTitleShort: { height: 14, backgroundColor: '#E9EEF5', borderRadius: 6, marginTop: 8, width: '70%' },
   skelLineDesc: { height: 12, backgroundColor: '#E9EEF5', borderRadius: 6, marginTop: 8, width: '95%' },
   skelLineDescShort: { height: 12, backgroundColor: '#E9EEF5', borderRadius: 6, marginTop: 6, width: '75%' },
+  skelPrice: { height: 16, backgroundColor: '#E9EEF5', borderRadius: 6, marginTop: 6, marginBottom: 4, width: '60%' },
   skelMetaIcon: { width: 14, height: 14, borderRadius: 7, backgroundColor: '#E9EEF5' },
   skelMetaText: { width: 60, height: 12, borderRadius: 6, marginLeft: 6, backgroundColor: '#E9EEF5' },
   skelMetaIconSmall: { width: 14, height: 14, borderRadius: 7, backgroundColor: '#E9EEF5' },
