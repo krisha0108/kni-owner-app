@@ -387,9 +387,15 @@ export default function RequestScreen({ navigation }) {
 
           <View style={styles.metaRow}>
             <View style={styles.metaLeft}>
-              <Icon name={leftIcon} size={14} color={COLORS.muted} />
-              <Text style={styles.metaText}>{leftLabel}</Text>
-            </View>
+  <Icon name={leftIcon} size={14} color={COLORS.muted} />
+  <Text 
+    style={styles.metaText} 
+    numberOfLines={1} 
+    ellipsizeMode="tail"
+  >
+    {leftLabel}
+  </Text>
+</View>
             <View style={styles.metaRight}>
               <Icon name="flash-outline" size={14} color={COLORS.primary} />
               <Text style={[styles.metaText, { color: COLORS.primary }]}>{item.requests ?? 0} req</Text>
@@ -500,7 +506,7 @@ const styles = StyleSheet.create({
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 },
   metaLeft: { flexDirection: 'row', alignItems: 'center' },
   metaRight: { flexDirection: 'row', alignItems: 'center' },
-  metaText: { marginLeft: 6, fontSize: 12, color: COLORS.muted, fontWeight: '600' },
+  metaText: { marginLeft: 6, fontSize: 12, color: COLORS.muted, fontWeight: '600', maxWidth: 80, },
 
   ctaRow: { marginTop: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   pill: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.primary, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
