@@ -681,7 +681,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Image, TouchableOpacity,
-  RefreshControl, Animated, Share, Linking, Alert, Dimensions, FlatList
+  RefreshControl, Animated, Share, Linking, Alert, Dimensions, FlatList,
+  Modal, TextInput
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -709,6 +710,106 @@ const Stars = ({value=0,size=12})=>(
   </View>
 );
 
+/* ===== DELETE ACCOUNT MODAL COMPONENT ===== */
+const DeleteAccountModal = ({ visible, onClose, user }) => {
+  const [loading, setLoading] = useState(false);
+
+  const handleEmailSupport = () => {
+    const email = 'support@yourdomain.com';
+    const subject = 'Delete My Account Request';
+    const body = `Please delete my account with the following details:\n\n- Registered Name: ${user?.name || 'N/A'}\n- Registered Email: ${user?.email || 'N/A'}\n- Registered Phone: ${user?.phone || 'N/A'}\n- User ID: ${user?.id || 'N/A'}\n\nI confirm that I want to permanently delete my account and all associated data.`;
+    
+    Linking.openURL(`mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`).catch(() => {
+      Alert.alert('Error', 'Could not open email client. Please email support@yourdomain.com directly.');
+    });
+    onClose();
+  };
+
+  const handlePhoneSupport = () => {
+    const phoneNumber = '+1 (555) 123-4567';
+    Linking.openURL(`tel:${phoneNumber}`).catch(() => {
+      Alert.alert('Error', 'Could not make phone call. Please call +1 (555) 123-4567 directly.');
+    });
+    onClose();
+  };
+
+  const handleWebForm = () => {
+    Linking.openURL('https://example.com/delete-request').catch(() => {
+      Alert.alert('Error', 'Could not open web form. Please visit https://example.com/delete-request');
+    });
+    onClose();
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          {/* Header */}
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Delete Account</Text>
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <Icon name="close" size={24} color={C.muted} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+            {/* Warning Alert */}
+            <View style={styles.warningBox}>
+              <Icon name="warning" size={20} color="#DC2626" />
+              <Text style={styles.warningText}>
+                This action cannot be undone. All your data will be permanently deleted.
+              </Text>
+            </View>
+
+            {/* Contact Methods */}
+            <Text style={styles.sectionTitle}>Choose how to delete your account:</Text>
+
+            {/* Email Method */}
+            <TouchableOpacity style={styles.optionCard} onPress={handleEmailSupport}>
+              <View style={styles.optionIcon}>
+                <Icon name="mail" size={24} color="#2563EB" />
+              </View>
+              <View style={styles.optionContent}>
+                <Text style={styles.optionTitle}>Email Support</Text>
+                <Text style={styles.optionDescription}>
+                  Send an email to our support team with your account details
+                </Text>
+                <Text style={styles.optionDetail}>support@kni.com</Text>
+              </View>
+              <Icon name="chevron-forward" size={20} color={C.muted} />
+            </TouchableOpacity>
+
+            {/* What Gets Deleted */}
+            <View style={styles.infoCard}>
+              <View style={styles.infoHeader}>
+                <Icon name="trash" size={20} color="#DC2626" />
+                <Text style={styles.infoTitle}>What Will Be Deleted</Text>
+              </View>
+              <Text style={styles.infoItem}>• User profile (name, phone, email)</Text>
+              <Text style={styles.infoItem}>• Photos and attachments you uploaded</Text>
+              <Text style={styles.infoItem}>• Account activity logs</Text>
+              <Text style={styles.infoItem}>• Service request history</Text>
+              <Text style={styles.infoItem}>• Payment and billing information</Text>
+            </View>
+          </ScrollView>
+
+          {/* Footer */}
+          <View style={styles.modalFooter}>
+            <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
 /* ===== SCREEN ===== */
 export default function ProfileScreen({navigation}) {
   const insets = useSafeAreaInsets();
@@ -717,6 +818,12 @@ export default function ProfileScreen({navigation}) {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+
+  /* ===== DELETE ACCOUNT HANDLING ===== */
+  const handleDeleteAccount = () => {
+    setDeleteModalVisible(true);
+  };
 
   /* ===== FSSAI CERTIFICATE HANDLING ===== */
   const getFssaiCertificateUrl = (restaurant) => {
@@ -1124,15 +1231,34 @@ export default function ProfileScreen({navigation}) {
           ))}
         </ScrollView>
         
-        {/* LOGOUT SECTION */}
-        <View style={st.logoutContainer}>
-          <TouchableOpacity style={st.logoutButton} onPress={handleLogout}>
-            <Icon name="log-out-outline" size={20} color="#EF3A3A" />
-            <Text style={st.logoutText}>Logout</Text>
+        {/* ACCOUNT ACTIONS SECTION */}
+        <View style={st.actionsContainer}>
+          {/* LOGOUT BUTTON */}
+          <TouchableOpacity style={st.actionButton} onPress={handleLogout}>
+            <View style={st.actionButtonContent}>
+              <Icon name="log-out-outline" size={20} color="#EF3A3A" />
+              <Text style={st.actionButtonText}>Logout</Text>
+            </View>
+            <Icon name="chevron-forward" size={20} color="#EF3A3A" />
           </TouchableOpacity>
-          <Icon name="chevron-forward" size={20} color="#EF3A3A" />
+
+          {/* DELETE ACCOUNT BUTTON */}
+          <TouchableOpacity style={[st.actionButton, st.deleteActionButton]} onPress={handleDeleteAccount}>
+            <View style={st.actionButtonContent}>
+              <Icon name="trash-outline" size={20} color="#DC2626" />
+              <Text style={[st.actionButtonText, st.deleteActionText]}>Delete Account</Text>
+            </View>
+            <Icon name="chevron-forward" size={20} color="#DC2626" />
+          </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* DELETE ACCOUNT MODAL */}
+      <DeleteAccountModal
+        visible={deleteModalVisible}
+        onClose={() => setDeleteModalVisible(false)}
+        user={user}
+      />
 
       <KniBottomNav
         navigation={navigation}
@@ -1280,33 +1406,201 @@ const st = StyleSheet.create({
   viewMoreBox:{ alignItems:'center', justifyContent:'center', borderWidth:2, borderStyle:'dashed', borderColor:'#CBD5E1',
     paddingVertical:26, paddingHorizontal:18, borderRadius:16, backgroundColor:'#FFFFFFF2' },
   viewMoreTxt:{ marginTop:8, fontWeight:'900', color:C.ink, fontSize:16 },
-  logoutContainer: {
+  // New styles for account actions
+  actionsContainer: {
     backgroundColor: '#ffffffff',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
     borderRadius: 8,
-    marginHorizontal:15,
+    marginHorizontal: 15,
     marginTop: 20,
+    borderWidth: 1,
+    borderColor: '#EEF2F7',
+    shadowColor: '#707070ff',
+    shadowOpacity: 0.06,
+    shadowRadius: 2,
+    elevation: 2,
+    overflow: 'hidden',
+  },
+  actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderWidth:1, borderColor:'#EEF2F7',
-    shadowColor:'#707070ff', shadowOpacity:0.06, shadowRadius:2, elevation:2
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
   },
-  logoutButton: {
+  deleteActionButton: {
+    borderBottomWidth: 0, // Remove border for last item
+  },
+  actionButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  logoutText: {
-    marginLeft: 10,
+  actionButtonText: {
+    marginLeft: 12,
     fontSize: 16,
     color: '#EF3A3A',
-    fontWeight: 'bold',
+    fontWeight: '600',
+  },
+  deleteActionText: {
+    color: '#DC2626',
   },
   revPill:{ width: W*0.7, backgroundColor:'#FFF', borderRadius:16, borderWidth:1, borderColor:'#EEF2F7', padding:12,
     shadowColor:'#000', shadowOpacity:0.04, shadowRadius:6, elevation:2 },
   revFromMini:{ color:C.ink, fontWeight:'900', marginBottom:4 },
   revTxtMini:{ color:C.text, lineHeight:18 },
+});
+
+/* ===== MODAL STYLES ===== */
+const styles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '90%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: C.ink,
+  },
+  closeButton: {
+    padding: 4,
+  },
+  modalBody: {
+    padding: 20,
+    maxHeight: '80%',
+  },
+  warningBox: {
+    flexDirection: 'row',
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    alignItems: 'flex-start',
+  },
+  warningText: {
+    color: '#DC2626',
+    marginLeft: 12,
+    flex: 1,
+    fontWeight: '500',
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: C.ink,
+    marginBottom: 16,
+  },
+  optionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+  },
+  optionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  optionContent: {
+    flex: 1,
+  },
+  optionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: C.ink,
+    marginBottom: 4,
+  },
+  optionDescription: {
+    fontSize: 14,
+    color: C.muted,
+    marginBottom: 4,
+  },
+  optionDetail: {
+    fontSize: 12,
+    color: C.primary,
+    fontWeight: '500',
+  },
+  infoCard: {
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+  },
+  infoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  infoTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: C.ink,
+    marginLeft: 8,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  infoLabel: {
+    fontSize: 14,
+    color: C.muted,
+  },
+  infoValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: C.ink,
+  },
+  infoItem: {
+    fontSize: 14,
+    color: C.muted,
+    marginBottom: 6,
+  },
+  modalFooter: {
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  cancelButton: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: C.ink,
+  },
 });
 
 /* ===== SKELETON STYLES ===== */

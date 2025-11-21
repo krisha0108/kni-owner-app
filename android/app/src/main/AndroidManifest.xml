@@ -1,33 +1,27 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Internet -->
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <!-- Firebase Cloud Messaging Permissions -->
+    <!-- Firebase / Background Operations -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.VIBRATE" />
-    <uses-permission android:name="com.google.android.c2dm.permission.RECEIVE" />
-    <!-- For Android 13+ (API 33+) -->
-    
-    <!-- For Android 13+ (API 33+) -->
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-        <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Android 13+ (Image & Video Picker) -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
-    
-    <!-- For Android 11 (API 30) to 12 (API 32) -->
+
+    <!-- Notifications (Android 13+) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Android 12 & Below: Document Picker ke liye READ_EXTERNAL_STORAGE allowed -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
-    
-    <!-- For legacy Android 10 (API 29) and below -->
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-        android:maxSdkVersion="28" />
-    
-    <!-- Only request MANAGE_EXTERNAL_STORAGE if absolutely necessary -->
-    <!-- This permission is heavily restricted on Play Store -->
-    <!-- <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" 
-        tools:ignore="ScopedStorage" /> -->
+
+    <!-- ❌ DO NOT ADD WRITE_EXTERNAL_STORAGE (Google policy restricts it) -->
+    <!-- Tumhari app internal storage me write karti hai = no permission needed -->
 
     <application
         android:name=".MainApplication"
@@ -36,31 +30,25 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:allowBackup="false"
         android:theme="@style/AppTheme"
-        android:requestLegacyExternalStorage="true"
-        tools:targetApi="31"
         android:supportsRtl="true"
-        android:usesCleartextTraffic="true">
-        
-     <activity
-    android:name=".MainActivity"
-    android:label="@string/app_name"
-    android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
-    android:launchMode="singleTask"
-    android:windowSoftInputMode="adjustResize"
-    android:exported="true">
+        android:usesCleartextTraffic="true"
+        tools:targetApi="31">
 
-    <!-- This makes it the entry point of your app -->
-    <intent-filter>
-        <action android:name="android.intent.action.MAIN" />
-        <category android:name="android.intent.category.LAUNCHER" />
-    </intent-filter>
+        <activity
+            android:name=".MainActivity"
+            android:label="@string/app_name"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
+            android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize"
+            android:exported="true">
 
-    <!-- Keep your Firebase notification intent if needed -->
-    <intent-filter>
-        <action android:name="FLUTTER_NOTIFICATION_CLICK" />
-        <category android:name="android.intent.category.DEFAULT" />
-    </intent-filter>
-</activity>
+            <!-- Main Entry Point -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+        </activity>
 
         <!-- Firebase Messaging Service -->
         <service
@@ -70,5 +58,7 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
+
     </application>
+
 </manifest>
