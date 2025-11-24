@@ -715,12 +715,12 @@ const DeleteAccountModal = ({ visible, onClose, user }) => {
   const [loading, setLoading] = useState(false);
 
   const handleEmailSupport = () => {
-    const email = 'support@yourdomain.com';
+    const email = 'info@kniservices.com';
     const subject = 'Delete My Account Request';
     const body = `Please delete my account with the following details:\n\n- Registered Name: ${user?.name || 'N/A'}\n- Registered Email: ${user?.email || 'N/A'}\n- Registered Phone: ${user?.phone || 'N/A'}\n- User ID: ${user?.id || 'N/A'}\n\nI confirm that I want to permanently delete my account and all associated data.`;
     
     Linking.openURL(`mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`).catch(() => {
-      Alert.alert('Error', 'Could not open email client. Please email support@yourdomain.com directly.');
+      Alert.alert('Error', 'Could not open email client. Please email info@kniservices.com directly.');
     });
     onClose();
   };
@@ -779,7 +779,7 @@ const DeleteAccountModal = ({ visible, onClose, user }) => {
                 <Text style={styles.optionDescription}>
                   Send an email to our support team with your account details
                 </Text>
-                <Text style={styles.optionDetail}>support@kni.com</Text>
+                <Text style={styles.optionDetail}>info@kniservices.com</Text>
               </View>
               <Icon name="chevron-forward" size={20} color={C.muted} />
             </TouchableOpacity>
