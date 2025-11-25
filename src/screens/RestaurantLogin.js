@@ -316,7 +316,7 @@ export default function RestaurantLogin({ navigation, route }) {
 
   useEffect(() => {
     GoogleSignin.configure({
-      webClientId: '851628336447-uccg7n0mbg4g2mlvb5g8nr9r55s4oje2.apps.googleusercontent.com', // update if needed
+          webClientId: '851628336447-uccg7n0mbg4g2mlvb5g8nr9r55s4oje2.apps.googleusercontent.com', // update if needed
       offlineAccess: false,
       forceCodeForRefreshToken: false,
     });
@@ -378,60 +378,112 @@ export default function RestaurantLogin({ navigation, route }) {
     }
   };
 
-  const handleGoogle = async () => {
+const handleGoogle = async () => {
+  try {
+    setGLoading(true);
+    setError('');
+
+    console.log('🔧 Step 1: Checking Google Play Services...');
+    await GoogleSignin.hasPlayServices({ 
+      showPlayServicesUpdateDialog: true 
+    });
+
+    console.log('🔧 Step 2: Cleaning previous sessions...');
     try {
-      setGLoading(true);
-      setError('');
-      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      await GoogleSignin.signOut();
+      console.log('✅ Google session cleared');
+    } catch (signOutError) {
+      console.log('ℹ️ No Google session to clear');
+    }
 
-      // Clean previous state
-      try { if (auth().currentUser) await auth().signOut(); } catch(_) {}
-      try { await GoogleSignin.signOut(); } catch(_) {}
+    console.log('🔧 Step 3: Starting Google Sign-In...');
+    const signInRes = await GoogleSignin.signIn();
+    console.log('🔧 SignIn response received:', !!signInRes);
 
-      // Google sign in
-      const signInRes = await GoogleSignin.signIn();
-      let { idToken } = signInRes || {};
-      let accessToken = null;
+    let idToken = signInRes?.idToken;
+    let accessToken = null;
 
-      if (!idToken) {
-        const tokens = await GoogleSignin.getTokens().catch(() => null);
+    // If no idToken in initial response, try to get tokens
+    if (!idToken) {
+      console.log('🔧 Step 4: Getting tokens explicitly...');
+      try {
+        const tokens = await GoogleSignin.getTokens();
         idToken = tokens?.idToken;
         accessToken = tokens?.accessToken;
+        console.log('🔧 Tokens retrieved:', { 
+          hasIdToken: !!idToken, 
+          hasAccessToken: !!accessToken 
+        });
+      } catch (tokenError) {
+        console.log('🔧 Token retrieval failed:', tokenError);
       }
-
-      if (!idToken && !accessToken) {
-        throw new Error('Google Sign-In did not return idToken or accessToken');
-      }
-
-      const credential = auth.GoogleAuthProvider.credential(idToken || null, accessToken || null);
-      const firebaseUserCredential = await auth().signInWithCredential(credential);
-      const firebaseIdToken = await firebaseUserCredential.user.getIdToken(true);
-      // console.log('🔥 Firebase ID Token:', firebaseIdToken);
-
-      // Send firebase idToken to backend and get app token
-      const res = await api.post('/owner/auth/firebase', { idToken: firebaseIdToken });
-
-      if (!res.data?.status || !res.data?.token) {
-        console.log('Backend firebase auth response:', res.data);
-        throw new Error(res.data?.message || 'Server did not return token');
-      }
-
-      const token = res.data.token;
-      const owner = res.data.owner || res.data.data;
-      await saveSessionAndFcm(token, owner, 'google');
-
-      navigation.replace('Home');
-    } catch (e) {
-      console.log('[Google sign-in error]', e?.message || e, e?.response?.data || e?.response?.status);
-      const msg = e?.message?.includes('idToken') || e?.message?.includes('accessToken')
-        ? 'Google sign-in failed to retrieve a token. Check Web client ID & SHA keys.'
-        : (e?.response?.data?.message || e?.message || 'Google sign-in failed. Please try again.');
-      setError(msg);
-      Alert.alert('Google Sign-In Failed', msg);
-    } finally {
-      setGLoading(false);
     }
-  };
+
+    // If still no idToken, try to use accessToken
+    if (!idToken && !accessToken) {
+      throw new Error('No authentication tokens received from Google');
+    }
+
+    console.log('🔧 Step 5: Firebase authentication...');
+    const credential = auth.GoogleAuthProvider.credential(idToken, accessToken);
+    const userCredential = await auth().signInWithCredential(credential);
+    const firebaseToken = await userCredential.user.getIdToken(true);
+    console.log('🔧 Firebase authentication successful');
+
+    console.log('🔧 Step 6: Backend authentication...');
+    const res = await api.post('/owner/auth/firebase', {
+      idToken: firebaseToken
+    });
+
+    console.log('🔧 Backend response status:', res.data?.status);
+
+    if (res.data?.status && res.data?.token) {
+      await saveSessionAndFcm(res.data.token, res.data.owner || res.data.data, 'google');
+      console.log('🔧 Navigation to Home...');
+      navigation.replace('Home');
+    } else {
+      throw new Error(res.data?.message || 'Backend authentication failed');
+    }
+
+  } catch (error) {
+    console.error('❌ Google Sign-In Full Error:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack,
+      response: error.response?.data
+    });
+
+    let errorMessage = 'Google sign-in failed. Please try again.';
+    
+    // More specific error handling
+    switch (error.code) {
+      case 10: // DEVELOPER_ERROR
+        errorMessage = 'Google Sign-In configuration error. Check webClientId and SHA certificates.';
+        break;
+      case 12500: // SIGN_IN_FAILED
+        errorMessage = 'Google Sign-In was interrupted. Please try again.';
+        break;
+      case 4: // SIGN_IN_REQUIRED
+        errorMessage = 'Please sign in to your Google account.';
+        break;
+      case 7: // NETWORK_ERROR
+        errorMessage = 'Network error. Please check your connection.';
+        break;
+      case 'SIGN_IN_CANCELLED':
+        errorMessage = 'Sign-in was cancelled.';
+        break;
+      default:
+        if (error.message?.includes('idToken') || error.message?.includes('token')) {
+          errorMessage = 'Authentication token issue. Please try again.';
+        }
+    }
+    
+    setError(errorMessage);
+    Alert.alert('Google Sign-In Failed', errorMessage);
+  } finally {
+    setGLoading(false);
+  }
+};
 
   return (
     <SafeAreaView style={{ flex:1, backgroundColor:C.bg }} edges={['top','left','right']}>

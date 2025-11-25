@@ -22,6 +22,43 @@
           }
         },
         {
+          "client_id": "851628336447-hbet1r9mfoep0nv4qpnh7m6cg6app55n.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.kniapp",
+            "certificate_hash": "85d742543fdbe7f6d283bc1aedfefa7bc4539ab5"
+          }
+        },
+        {
+          "client_id": "851628336447-uccg7n0mbg4g2mlvb5g8nr9r55s4oje2.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDRObQ4v6tfY21PVkLBx5ED0fk5NEMX_FY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "851628336447-uccg7n0mbg4g2mlvb5g8nr9r55s4oje2.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:851628336447:android:80ecf8307a8020d9b25f8a",
+        "android_client_info": {
+          "package_name": "com.serviceengineer"
+        }
+      },
+      "oauth_client": [
+        {
           "client_id": "851628336447-uccg7n0mbg4g2mlvb5g8nr9r55s4oje2.apps.googleusercontent.com",
           "client_type": 3
         }

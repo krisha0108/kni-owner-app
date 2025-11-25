@@ -11,39 +11,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { pick, types, isCancel } from '@react-native-documents/picker';
 
 import { api, IMAGE_BASE_URL } from '../api/client';
-import { PermissionsAndroid } from 'react-native';
-async function requestGalleryPermission() {
-  if (Platform.OS === 'android') {
-    if (Platform.Version >= 33) {
-      const granted = await PermissionsAndroid.requestMultiple([
-        PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES,
-        PermissionsAndroid.PERMISSIONS.READ_MEDIA_VIDEO,
-      ]);
-      return (
-        granted['android.permission.READ_MEDIA_IMAGES'] === PermissionsAndroid.RESULTS.GRANTED
-      );
-    } else {
-      const granted = await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE
-      );
-      return granted === PermissionsAndroid.RESULTS.GRANTED;
-    }
-  }
-  return true;
-}
-
-// Renamed package
 
 const C = { primary:'#EF3A3A', ink:'#1D2254', bg:'#F5F7FA', card:'#FFFFFF',
   text:'#0F172A', muted:'#6B7280', border:'#E5E7EB', ok:'#10B981', warn:'#F59E0B', danger:'#EF4444' };
 const R = 20;
 const { width:W, height:H } = Dimensions.get('window');
- 
-
 
 const statusStyles = (s)=> {
   if (s === 'all') {
-    return { bg:'#F1F5F9', fg:'#475569', label:'All' }; // neutral style
+    return { bg:'#F1F5F9', fg:'#475569', label:'All' };
   }
   return {
     bg: s==='approved' ? '#ECFDF5' : s==='pending' ? '#FFF7ED' : '#FEF2F2',
@@ -79,7 +55,6 @@ function useToast() {
           opacity: anim,
           transform: [{ translateY: anim.interpolate({ inputRange:[0,1], outputRange:[20,0] }) }],
           backgroundColor: toast.type==='success' ? '#10B981' : toast.type==='error' ? '#EF4444' : '#334155'
-          
         }
       ]}
     >
@@ -104,92 +79,57 @@ export default function RestaurantsScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState('all'); // all | approved | pending | rejected
+  const [filter, setFilter] = useState('all');
   const [items, setItems] = useState([]);
 
   // modals
   const [formOpen, setFormOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [toDelete, setToDelete] = useState(null);
+  const [ownerId, setOwnerId] = useState(null);
 
+  useEffect(() => {
+    (async () => {
+      const id = await AsyncStorage.getItem("ownerId");
+      setOwnerId(id ?? null);
+    })();
+  }, []);
 
-const [ownerId, setOwnerId] = useState(null);
-
-useEffect(() => {
-  (async () => {
-    const id = await AsyncStorage.getItem("ownerId");
-    setOwnerId(id ?? null);
-  })();
-}, []);
-
-
-
- useEffect(() => {
+  useEffect(() => {
     fetchRestaurants();
   }, []);
 
- // Restaurant list
-// const fetchRestaurants = async () => {
-//   try {
-//     setLoading(true);
-//     const res = await api.get('/restaurants'); // api = client.js
-//     console.log('fetchRestaurants response:', res);
-// const mapped = res.data.data.map(r => ({ 
-//       id: r.id,
-//       name: r.hotel_name,
-//       address: r.address,
-//       desc: r.description || '',
-//       fssai: r.fssai_number,
-//       fssaiPdf: r.fssai_certificate ? `http://192.168.29.223:8000/storage/${r.fssai_certificate}` : '',
-//       status: r.status,
-//       photos: [
-//         r.main_image ? `http://192.168.29.223:8000/storage/${r.main_image}` : '',
-//         ...(Array.isArray(r.gallery_images) 
-//         ? r.gallery_images.map(img => `http://192.168.29.223:8000/storage/${img}`) 
-//         : []),
-//         r.business_card ? `http://192.168.29.223:8000/storage/${r.business_card}` : '',
-//       ].filter(Boolean),
-//     }));
-//     setItems(mapped);
-//   } catch (err) {
-//     console.error(err);
-//     show('Failed to fetch restaurants', 'error');
-//   } finally {
-//     setLoading(false);
-//   }
-// };
-const fetchRestaurants = async () => {
-  try {
-    setLoading(true);
-    const res = await api.get('/restaurants');
+  // Restaurant list
+  const fetchRestaurants = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/restaurants');
 
-    const mapped = res.data.data.map((r: any) => ({
-      id: r.id,
-      name: r.hotel_name,
-      address: r.address,
-      desc: r.description || '',
-      fssai: r.fssai_number,
-      // ✅ just prepend IMAGE_BASE_URL
-      fssaiPdf: r.fssai_certificate ? `${IMAGE_BASE_URL}/${r.fssai_certificate}` : '',
-      status: r.status,
-      photos: [
-        r.main_image ? `${IMAGE_BASE_URL}/${r.main_image}` : '',
-        ...(Array.isArray(r.gallery_images)
-          ? r.gallery_images.map((img) => `${IMAGE_BASE_URL}/${img}`)
-          : []),
-        r.business_card ? `${IMAGE_BASE_URL}/${r.business_card}` : '',
-      ].filter(Boolean),
-    }));
+      const mapped = res.data.data.map((r) => ({
+        id: r.id,
+        name: r.hotel_name,
+        address: r.address,
+        desc: r.description || '',
+        fssai: r.fssai_number,
+        fssaiPdf: r.fssai_certificate ? `${IMAGE_BASE_URL}/${r.fssai_certificate}` : '',
+        status: r.status,
+        photos: [
+          r.main_image ? `${IMAGE_BASE_URL}/${r.main_image}` : '',
+          ...(Array.isArray(r.gallery_images)
+            ? r.gallery_images.map((img) => `${IMAGE_BASE_URL}/${img}`)
+            : []),
+          r.business_card ? `${IMAGE_BASE_URL}/${r.business_card}` : '',
+        ].filter(Boolean),
+      }));
 
-    setItems(mapped);
-  } catch (err) {
-    console.error(err);
-    show('Failed to fetch restaurants', 'error');
-  } finally {
-    setLoading(false);
-  }
-};
-
+      setItems(mapped);
+    } catch (err) {
+      console.error(err);
+      show('Failed to fetch restaurants', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -216,23 +156,20 @@ const fetchRestaurants = async () => {
     loop.start(); return ()=>{ clearTimeout(t); loop.stop(); };
   },[]);
 
-  
-const [debouncedQuery, setDebouncedQuery] = useState('');
-useEffect(() => {
-  const handler = setTimeout(() => setDebouncedQuery(query), 300);
-  return () => clearTimeout(handler);
-}, [query]);
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedQuery(query), 300);
+    return () => clearTimeout(handler);
+  }, [query]);
 
-const filtered = useMemo(() => {
-  const q = debouncedQuery.trim().toLowerCase();
-  return items.filter(r => {
-    console.log('something finding:' ,r);
-    const okStatus = filter === 'all' || r.status === filter;
-    const okQ = !q || r.name.toLowerCase().includes(q) || r.address.toLowerCase().includes(q);
-    return okStatus && okQ;
-  });
-}, [items, debouncedQuery, filter]);
-
+  const filtered = useMemo(() => {
+    const q = debouncedQuery.trim().toLowerCase();
+    return items.filter(r => {
+      const okStatus = filter === 'all' || r.status === filter;
+      const okQ = !q || r.name.toLowerCase().includes(q) || r.address.toLowerCase().includes(q);
+      return okStatus && okQ;
+    });
+  }, [items, debouncedQuery, filter]);
 
   // open add/edit
   const startEdit = (r)=>{
@@ -248,181 +185,155 @@ const filtered = useMemo(() => {
     setFormOpen(true);
   };
 
-// Handle both create and update restaurant
-const saveForm = async () => {
-  console.log('ownerId at submit:', ownerId);
-  if (!ownerId) {
-    show('Owner not found. Please login again.', 'error');
-    return;
-  }
-
-  if (!form.name || !form.address) {
-    show('Please enter name & address', 'error');
-    return;
-  }
-
-  try {
-    const fd = new FormData();
-    
-    // For update, we need to include the _method: 'PUT' for Laravel
-    if (form.id) {
-      fd.append('_method', 'PUT');
+  // Handle both create and update restaurant
+  const saveForm = async () => {
+    console.log('ownerId at submit:', ownerId);
+    if (!ownerId) {
+      show('Owner not found. Please login again.', 'error');
+      return;
     }
-    
-    // Always append owner ID for both create and update
-    fd.append('restaurant_owner_id', String(ownerId));
-    fd.append('hotel_name', form.name);
-    fd.append('address', form.address);
-    fd.append('fssai_number', form.fssai || '');
-    fd.append('description', form.desc || '');
 
-    // Append images if they exist
-    if (form.main) {
-      if (!form.main.startsWith('http')) {
-        fd.append('main_image', {
-          uri: form.main,
-          type: 'image/jpeg',
-          name: 'main_image.jpg',
-        });
+    if (!form.name || !form.address) {
+      show('Please enter name & address', 'error');
+      return;
+    }
+
+    try {
+      const fd = new FormData();
+      
+      if (form.id) {
+        fd.append('_method', 'PUT');
       }
-    }
-    
-    // Handle gallery images (img1, img2, img3)
-    const galleryImages = [];
-    [form.img1, form.img2, form.img3].forEach((img, index) => {
-      if (img) {
-        if (!img.startsWith('http')) {
-          fd.append(`gallery_images[]`, {
-            uri: img,
+      
+      fd.append('restaurant_owner_id', String(ownerId));
+      fd.append('hotel_name', form.name);
+      fd.append('address', form.address);
+      fd.append('fssai_number', form.fssai || '');
+      fd.append('description', form.desc || '');
+
+      if (form.main) {
+        if (!form.main.startsWith('http')) {
+          fd.append('main_image', {
+            uri: form.main,
             type: 'image/jpeg',
-            name: `gallery_${index}.jpg`,
+            name: 'main_image.jpg',
           });
         }
       }
-    });
+      
+      [form.img1, form.img2, form.img3].forEach((img, index) => {
+        if (img) {
+          if (!img.startsWith('http')) {
+            fd.append(`gallery_images[]`, {
+              uri: img,
+              type: 'image/jpeg',
+              name: `gallery_${index}.jpg`,
+            });
+          }
+        }
+      });
 
-    // Handle business card
-    if (form.card) {
-      if (!form.card.startsWith('http')) {
-        fd.append('business_card', {
-          uri: form.card,
-          type: 'image/jpeg',
-          name: 'business_card.jpg',
+      if (form.card) {
+        if (!form.card.startsWith('http')) {
+          fd.append('business_card', {
+            uri: form.card,
+            type: 'image/jpeg',
+            name: 'business_card.jpg',
+          });
+        }
+      }
+      
+      if (form.fssaiPdf) {
+        if (!form.fssaiPdf.startsWith('http')) {
+          fd.append('fssai_certificate', {
+            uri: form.fssaiPdf,
+            type: 'application/pdf',
+            name: form.fssaiPdfName || 'fssai_certificate.pdf',
+          });
+        }
+      }
+
+      let res;
+      if (form.id) {
+        res = await api.post(`/restaurants/${form.id}`, fd, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+      } else {
+        res = await api.post('/restaurants', fd, {
+          headers: { 'Content-Type': 'multipart/form-data' },
         });
       }
+
+      show(`Restaurant ${form.id ? 'updated' : 'added'} successfully`, 'success');
+      setFormOpen(false);
+      fetchRestaurants();
+    } catch (err) {
+      console.log("❌ API error:", err);
+      show(`Failed to ${form.id ? 'update' : 'save'} restaurant`, 'error');
     }
-    
-    // Handle PDF
-    if (form.fssaiPdf) {
-      if (!form.fssaiPdf.startsWith('http')) {
-        fd.append('fssai_certificate', {
-          uri: form.fssaiPdf,
-          type: 'application/pdf',
-          name: form.fssaiPdfName || 'fssai_certificate.pdf',
-        });
-      }
-    }
+  };
 
-    console.log("🚀 Submitting form data...");
-    for (let [k, v] of fd._parts) {
-      console.log("👉", k, v);
-    }
-
-    let res;
-    if (form.id) {
-      // Update existing restaurant
-      res = await api.post(`/restaurants/${form.id}`, fd, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-    } else {
-      // Create new restaurant
-      res = await api.post('/restaurants', fd, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-    }
-
-    console.log("✅ Server response:", res.data);
-    show(`Restaurant ${form.id ? 'updated' : 'added'} successfully`, 'success');
-    setFormOpen(false);
-    fetchRestaurants();
-  } catch (err) {
-    console.log("❌ API error:", err);
-    console.log("📩 Error response:", err.response?.data);
-    show(`Failed to ${form.id ? 'update' : 'save'} restaurant`, 'error');
-  }
-};
-
-
-
-// Admin approve/reject (agar screen me admin ka option bhi dikhana ho)
-const updateRestaurantStatus = async (id, status) => {
-  try {
-    await api.patch(`/restaurants/${id}/status`, { status });
-    show(`Restaurant ${status}`, 'success');
-    fetchRestaurants();
-  } catch (err) {
-    console.error(err);
-    show('Failed to update status', 'error');
-  }
-};
   const askDelete = (r)=>{ setToDelete(r); setConfirmOpen(true); };
-const doDelete = async () => {
-  try {
-    await api.delete(`/restaurants/${toDelete.id}`);
-    show('Restaurant deleted', 'success');
-    fetchRestaurants();
-  } catch (err) {
-    console.error(err);
-    show('Failed to delete', 'error');
-  } finally {
-    setConfirmOpen(false);
-    setToDelete(null);
-  }
-};
-  // pickers
-const pickImage = async (key) => {
-  const hasPermission = await requestGalleryPermission();
-  if (!hasPermission) {
-    console.log("Gallery permission denied");
-    return;
-  }
+  
+  const doDelete = async () => {
+    try {
+      await api.delete(`/restaurants/${toDelete.id}`);
+      show('Restaurant deleted', 'success');
+      fetchRestaurants();
+    } catch (err) {
+      console.error(err);
+      show('Failed to delete', 'error');
+    } finally {
+      setConfirmOpen(false);
+      setToDelete(null);
+    }
+  };
 
-  const res = await launchImageLibrary({
-    mediaType: 'photo',
-    selectionLimit: 1,
-  });
+  // Image pickers - simplified without permission requests
+  const pickImage = async (key) => {
+    try {
+      const result = await launchImageLibrary({
+        mediaType: 'photo',
+        selectionLimit: 1,
+        includeBase64: false,
+        quality: 0.8,
+      });
 
-  console.log("ImagePicker response:", res);
+      if (result.didCancel) return;
+      
+      if (result.errorCode) {
+        show('Failed to pick image', 'error');
+        return;
+      }
 
-  if (res.didCancel) {
-    console.log('User cancelled');
-    return;
-  }
-  if (res.errorCode) {
-    console.log('Error:', res.errorCode, res.errorMessage);
-    return;
-  }
-  if (res.assets?.length) {
-    setForm(f => ({ ...f, [key]: res.assets[0].uri }));
-  }
-};
-
-
+      if (result.assets && result.assets.length > 0) {
+        const uri = result.assets[0].uri;
+        setForm(f => ({ ...f, [key]: uri }));
+      }
+    } catch (error) {
+      console.log('ImagePicker exception:', error);
+      show('Failed to open gallery', 'error');
+    }
+  };
 
   const pickMultipleImages = async ()=>{
     try {
-      const res = await launchImageLibrary({
+      const result = await launchImageLibrary({
         mediaType:'photo',
         selectionLimit:3,
         includeBase64:false,
         quality:0.9
       });
-      if (res?.assets?.length) {
-        const uris = res.assets.map(a=>a.uri).filter(Boolean);
+      
+      if (result.didCancel) return;
+      
+      if (result.errorCode) {
+        show('Failed to pick images', 'error');
+        return;
+      }
+
+      if (result.assets?.length) {
+        const uris = result.assets.map(a => a.uri).filter(Boolean);
         setForm(f=>({
           ...f,
           img1: uris[0] || '',
@@ -430,61 +341,45 @@ const pickImage = async (key) => {
           img3: uris[2] || '',
         }));
       }
-    } catch {}
+    } catch (error) {
+      console.log('Multiple Images exception:', error);
+      show('Failed to open gallery', 'error');
+    }
   };
-const pickPDF = async () => {
-  try {
-    const [file] = await pick({ type: [types.pdf] }); // returns single file
-    if (file?.uri) {
-      setForm(f => ({
-        ...f,
-        fssaiPdf: file.uri,
-        fssaiPdfName: file.name || getFilenameFromUri(file.uri),
-      }));
-      show('PDF selected', 'success');
+
+  // PDF picker - make sure this function exists
+  const pickPDF = async () => {
+    try {
+      const [file] = await pick({ type: [types.pdf] });
+      if (file?.uri) {
+        setForm(f => ({
+          ...f,
+          fssaiPdf: file.uri,
+          fssaiPdfName: file.name || getFilenameFromUri(file.uri),
+        }));
+        show('PDF selected', 'success');
+      }
+    } catch (e) {
+      if (isCancel(e)) {
+        console.log("User cancelled PDF picker");
+      } else {
+        console.error("PDF pick error", e);
+      }
     }
-  } catch (e) {
-    if (isCancel(e)) {
-      console.log("User cancelled PDF picker");
-    } else {
-      console.error("PDF pick error", e);
-    }
-  }
-};
-
-
-
+  };
 
   const openPdf = async (url)=>{
-    console.log('🔍 Attempting to open PDF:', url);
-    
     if (!url || url.trim() === '') {
       show('PDF not available', 'error');
-      console.log('❌ PDF URL is empty or null');
       return;
     }
     
     try{
-      console.log('🚀 Opening PDF directly...');
-      // Direct opening without canOpenURL check for PDFs
-      // canOpenURL sometimes fails for local server URLs
       await Linking.openURL(url);
       show('Opening PDF...', 'success');
-      console.log('✅ PDF opened successfully');
     } catch(error) {
-      console.log('❌ Error opening PDF:', error);
-      console.log('🔄 Trying alternative method...');
-      
-      // Alternative: Try with browser intent
-      try {
-        const browserUrl = url;
-        await Linking.openURL(browserUrl);
-        show('Opening in browser...', 'success');
-        console.log('✅ PDF opened in browser');
-      } catch(secondError) {
-        console.log('❌ Alternative method also failed:', secondError);
-        show('Could not open PDF. Please check if the file exists.', 'error');
-      }
+      console.log('Error opening PDF:', error);
+      show('Could not open PDF. Please check if the file exists.', 'error');
     }
   };
 
@@ -502,9 +397,13 @@ const pickPDF = async () => {
     <SafeAreaView style={{flex:1, backgroundColor:C.bg}} edges={['top','left','right']}>
       {/* Header */}
       <View style={[st.header,{paddingTop:6}]}>
-        <TouchableOpacity onPress={()=>navigation.goBack?.()} style={st.hBtn}><Icon name="chevron-back" size={20} color={C.ink}/></TouchableOpacity>
+        <TouchableOpacity onPress={()=>navigation.goBack?.()} style={st.hBtn}>
+          <Icon name="chevron-back" size={20} color={C.ink}/>
+        </TouchableOpacity>
         <Text style={st.hTitle}>Restaurants</Text>
-        <TouchableOpacity onPress={()=>startEdit(null)} style={st.hBtn}><Icon name="add" size={20} color={C.ink}/></TouchableOpacity>
+        <TouchableOpacity onPress={()=>startEdit(null)} style={st.hBtn}>
+          <Icon name="add" size={20} color={C.ink}/>
+        </TouchableOpacity>
       </View>
 
       {/* Search + Filters */}
@@ -569,7 +468,9 @@ const pickPDF = async () => {
           <View style={st.modalCard}>
             <View style={st.modalHeader}>
               <Text style={st.modalTitle}>{form?.id?'Edit hotel':'Add hotel'}</Text>
-              <TouchableOpacity onPress={()=>setFormOpen(false)} style={st.close}><Icon name="close" size={18} color={C.ink}/></TouchableOpacity>
+              <TouchableOpacity onPress={()=>setFormOpen(false)} style={st.close}>
+                <Icon name="close" size={18} color={C.ink}/>
+              </TouchableOpacity>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
@@ -596,7 +497,7 @@ const pickPDF = async () => {
                 </View>
               ))}
 
-              {/* --- Redesigned pickers (no URL fields) --- */}
+              {/* Images */}
               <Text style={[st.inputLbl,{marginTop:6}]}>Images</Text>
 
               {/* Main image */}
@@ -714,7 +615,7 @@ const pickPDF = async () => {
             <View style={{alignItems:'center'}}>
               <View style={st.warnIcon}><Icon name="trash-outline" size={20} color="#fff"/></View>
               <Text style={st.confirmTitle}>Delete hotel?</Text>
-              <Text style={st.confirmSub}>This will permanently remove “{toDelete?.name}”.</Text>
+              <Text style={st.confirmSub}>This will permanently remove "{toDelete?.name}".</Text>
             </View>
             <View style={{flexDirection:'row', gap:10, marginTop:14}}>
               <TouchableOpacity onPress={()=>setConfirmOpen(false)} style={[st.outlineBtn,{flex:1}]}>
