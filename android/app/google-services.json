@@ -30,6 +30,14 @@
           }
         },
         {
+          "client_id": "851628336447-r80tgib3kb66qu6psdjvtaf3majugmti.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.kniapp",
+            "certificate_hash": "c89b6357f366d12ff69e4880cf0f5760051f0376"
+          }
+        },
+        {
           "client_id": "851628336447-uccg7n0mbg4g2mlvb5g8nr9r55s4oje2.apps.googleusercontent.com",
           "client_type": 3
         }

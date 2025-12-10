@@ -1532,86 +1532,62 @@ const handleEnquirySubmit = async (formData, product) => {
 
   // 🔥 REFINED: Fetch product-specific services
   const fetchAll = useCallback(async () => {
-    setNetworkErr(''); 
+    setNetworkErr('');
     setLoading(true);
-    let serviceIdForTech;
-    
+
     try {
       if (productId) {
         console.log(`🔄 Fetching product ${productId} details...`);
-        
-        // Fetch product details
-        const res = await safeGet(`/app/products/${productId}`, 2, ownerId ? { owner_id: ownerId } : {});
-        const d = res?.data ?? {};
+
+        // Fetch product and services in PARALLEL
+        const [productRes, servicesRes] = await Promise.all([
+          safeGet(`/app/products/${productId}`, 2, ownerId ? { owner_id: ownerId } : {}),
+          safeGet('/app/services', 2, ownerId ? { owner_id: ownerId } : {}).catch(() => ({ data: [] })),
+        ]);
+
+        const d = productRes?.data ?? {};
 
         const resolvedImages = buildStoryImages(d, headerItem) || FALLBACK_IMAGES;
         const included   = normalizeArray(d.included,   FALLBACK_INCLUDED);
         const excluded   = normalizeArray(d.excluded,   FALLBACK_EXCLUDED);
         const conditions = normalizeArray(d.conditions, FALLBACK_CONDITIONS);
         const faqs       = normalizeArray(d.faqs,       FALLBACK_FAQS);
-        
-        let services = [];
 
-        // 🔥 METHOD 1: Try to get services directly from product response
+        let services = [];
+        let serviceIdForTech;
+
+        // METHOD 1: Try to get services directly from product response
         if (d.services && Array.isArray(d.services) && d.services.length > 0) {
-          console.log(`✅ Found ${d.services.length} services in product response`);
           services = d.services.map((s) => ({
             id: Number(s.id),
             name: s.title || s.name || `Service #${s.id}`,
             price: Number(s.price || s.mrp || 0),
           }));
           serviceIdForTech = services[0]?.id;
-        } 
-        
-        // 🔥 METHOD 2: If no services in product response, fetch all and filter by product_id
+        }
+
+        // METHOD 2: If no services in product response, filter from all services
         if (services.length === 0) {
-          try {
-            console.log(`🔄 Fetching all services to filter by product_id: ${productId}`);
-            const srvRes = await safeGet('/app/services', 2, ownerId ? { owner_id: ownerId } : {});
-            const allServices = Array.isArray(srvRes?.data) ? srvRes.data
-              : Array.isArray(srvRes?.data?.data) ? srvRes.data.data : [];
-            
-            console.log(`📦 Retrieved ${allServices.length} total services from API`);
-            
-            // 🔥 KEY FIX: Filter services by product_id
-            const filteredServices = allServices.filter(s => {
-              const serviceProductId = Number(s.product_id);
-              const currentProductId = Number(productId);
-              const match = serviceProductId === currentProductId;
-              
-              if (match) {
-                console.log(`✅ Service ${s.id} matches product ${productId}`);
-              }
-              
-              return match;
-            });
-            
-            console.log(`✅ Filtered ${filteredServices.length} services for product ${productId}`);
-            
-            if (filteredServices.length > 0) {
-              services = filteredServices.map((s) => ({
-                id: Number(s.id),
-                name: s.title || s.name || `Service #${s.id}`,
-                price: Number(s.price || s.mrp || 0),
-              }));
-              serviceIdForTech = services[0]?.id;
-            }
-          } catch (serviceErr) {
-            console.log('❌ Services API failed:', serviceErr.message);
+          const allServices = Array.isArray(servicesRes?.data) ? servicesRes.data
+            : Array.isArray(servicesRes?.data?.data) ? servicesRes.data.data : [];
+
+          const filteredServices = allServices.filter(s =>
+            Number(s.product_id) === Number(productId)
+          );
+
+          if (filteredServices.length > 0) {
+            services = filteredServices.map((s) => ({
+              id: Number(s.id),
+              name: s.title || s.name || `Service #${s.id}`,
+              price: Number(s.price || s.mrp || 0),
+            }));
+            serviceIdForTech = services[0]?.id;
           }
         }
 
-        // 🔥 METHOD 3: Show empty array if no product-specific services found
-        if (services.length === 0) {
-          console.log(`⚠️ No services found for product ${productId}`);
-        }
-
-        // Prefetch images
+        // Prefetch images in background (don't wait)
         resolvedImages.slice(0, 3).forEach((uri) =>
-          Image.prefetch(uri).then(
-            () => logImg('prefetch ok:', uri),
-            () => logImg('prefetch FAIL:', uri)
-          )
+          Image.prefetch(uri).catch(() => {})
         );
 
         setProd({
@@ -1621,8 +1597,14 @@ const handleEnquirySubmit = async (formData, product) => {
           storyImages: resolvedImages,
           included, excluded, conditions, faqs, services,
         });
+
+        // Fetch technicians and reviews in PARALLEL (don't block main content)
+        Promise.all([
+          fetchTechnicians(serviceIdForTech).catch(() => setTechnicians([])),
+          fetchReviews(productId || null).catch(() => setReviews([])),
+        ]);
+
       } else {
-        console.log('❌ No productId provided');
         setProd(p => ({ ...p, services: [] }));
       }
     } catch (e) {
@@ -1630,18 +1612,6 @@ const handleEnquirySubmit = async (formData, product) => {
       setNetworkErr(e?.message || 'Failed to load product');
       setProd(p => ({ ...p, services: [] }));
     } finally {
-      try { 
-        await fetchTechnicians(serviceIdForTech); 
-      } catch (e) { 
-        console.log('Technicians fetch failed:', e.message);
-        setTechnicians([]); 
-      }
-      try { 
-        await fetchReviews(productId || null); 
-      } catch (e) { 
-        console.log('Reviews fetch failed:', e.message);
-        setReviews([]); 
-      }
       setLoading(false);
     }
   }, [fetchTechnicians, fetchReviews, headerItem, ownerId, productId, safeGet]);
@@ -1703,6 +1673,42 @@ const handleEnquirySubmit = async (formData, product) => {
     [ownerKey, productId]
   );
 
+  // Keys for storing product metadata and services for RequestNow screen
+  const pmetaKey = useMemo(
+    () => `pmeta:${ownerKey}:${productId || 'global'}`,
+    [ownerKey, productId]
+  );
+  const rservicesKey = useMemo(
+    () => `rservices:${ownerKey}:${productId || 'global'}`,
+    [ownerKey, productId]
+  );
+
+  // Save product metadata and services to AsyncStorage when they change
+  // This ensures RequestNow screen can access product info when opened from cart
+  useEffect(() => {
+    if (!productId || productId === 'global' || !ownerKey) return;
+    (async () => {
+      try {
+        // Save product metadata
+        const meta = {
+          productId: String(productId),
+          productTitle: prod?.title || `Equipment #${productId}`,
+          category: headerItem?.category || 'General',
+          subtitle: prod?.description || '',
+          heroImage: (prod?.storyImages?.[0]) || (prod?.image) || '',
+        };
+        await AsyncStorage.setItem(pmetaKey, JSON.stringify(meta));
+
+        // Save services
+        if (Array.isArray(prod?.services) && prod.services.length > 0) {
+          await AsyncStorage.setItem(rservicesKey, JSON.stringify(prod.services));
+        }
+      } catch (e) {
+        console.log('[RequestDetail] Failed to save product meta/services:', e?.message);
+      }
+    })();
+  }, [productId, ownerKey, prod?.title, prod?.description, prod?.storyImages, prod?.services, prod?.image, headerItem?.category, pmetaKey, rservicesKey]);
+
   // reverse map product->service for server items
   const prod2svc = useMemo(() => {
     const m = {};
@@ -1714,93 +1720,69 @@ const handleEnquirySubmit = async (formData, product) => {
     }, m);
   }, [svc2prod, cart]);
 
-  // hydrate local draft (initial)
+  // Helper to convert cart object keys to numbers
+  const normalizeCartKeys = (obj) => {
+    if (!obj || typeof obj !== 'object') return {};
+    const result = {};
+    Object.entries(obj).forEach(([k, v]) => {
+      const numKey = Number(k);
+      if (!isNaN(numKey) && Number(v) > 0) {
+        result[numKey] = Number(v);
+      }
+    });
+    return result;
+  };
+
+  // Flag to track if initial hydration is complete
+  const initialHydrationDone = useRef(false);
+
+  // hydrate local draft (initial - only once)
   useEffect(() => {
-    if (!persistKey) return;
+    if (!persistKey || initialHydrationDone.current) return;
     (async () => {
       try {
         const raw = await AsyncStorage.getItem(persistKey);
         if (raw) {
           const saved = JSON.parse(raw);
           if (saved && typeof saved === 'object') {
-            setCart(prev => ({ ...prev, ...saved }));
+            setCart(prev => ({ ...prev, ...normalizeCartKeys(saved) }));
           }
         }
       } catch {}
       hydratedRef.current.local = true;
+      initialHydrationDone.current = true;
     })();
   }, [persistKey, ownerKey]);
 
-  // ⭐ Rehydrate when screen is focused
-  const rehydrateLocalDraft = useCallback(async () => {
+  // Use ref to always have latest cart for saving
+  const cartRef = useRef(cart);
+  useEffect(() => { cartRef.current = cart; }, [cart]);
+
+  // local autosave (debounced)
+  const saveCartToStorage = useCallback(async () => {
     if (!persistKey) return;
     try {
-      const raw = await AsyncStorage.getItem(persistKey);
-      const saved = raw ? JSON.parse(raw) : {};
-      if (saved && typeof saved === 'object') {
-        setCart(saved);
-      }
+      await AsyncStorage.setItem(persistKey, JSON.stringify(cartRef.current || {}));
     } catch {}
   }, [persistKey]);
 
-  useFocusEffect(
-    useCallback(() => {
-      let cancelled = false;
-      (async () => {
-        if (!cancelled) await rehydrateLocalDraft();
-      })();
-      return () => { cancelled = true; };
-    }, [rehydrateLocalDraft])
-  );
-
-  useEffect(() => { rehydrateLocalDraft(); }, [rehydrateLocalDraft]);
-
-  // hydrate from server (snapshot only)
+  const saveTimeoutRef = useRef(null);
   useEffect(() => {
-    (async () => {
-      try {
-        const params = ownerId ? { owner_id: ownerId } : {};
-        const res = await api.get('/app/cart', { params });
-        const data = res?.data?.cart ? res.data.cart : res?.data;
-        const items = Array.isArray(data?.items) ? data.items : [];
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(saveCartToStorage, 400);
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
+  }, [cart, saveCartToStorage]);
 
-        lastSyncedRef.current = {};
-        items.forEach(it => {
-          const pid = Number(it.product_id || 0);
-          const qty = Number(it.quantity || 0);
-          if (pid && qty >= 0) lastSyncedRef.current[pid] = qty;
-        });
-
-        if (!items.length) { hydratedRef.current.server = true; return; }
-
-        const fromServer = {};
-        items.forEach(it => {
-          const pid = Number(it.product_id || 0);
-          const sid = prod2svc[pid];
-          const qty = Number(it.quantity || 0);
-          if (sid && qty > 0) fromServer[sid] = qty;
-        });
-        setCart(prev => ({ ...prev, ...fromServer }));
-      } catch {}
-      hydratedRef.current.server = true;
-    })();
-  }, [ownerId, prod2svc]);
-
-  // local autosave
-  const persistDraftDebounced = useRef(
-    debounce(async () => {
-      try {
-        await AsyncStorage.setItem(persistKey, JSON.stringify(cart || {}));
-      } catch {}
-    }, 400)
-  ).current;
-  useEffect(() => { persistDraftDebounced(); }, [cart, persistDraftDebounced]);
-  useEffect(() => { persistDraftDebounced(); }, [svc2prod]);
+  // Save on unmount
   useEffect(() => {
     return () => {
-      AsyncStorage.setItem(persistKey, JSON.stringify(cart || {})).catch(()=>{});
+      if (persistKey && cartRef.current) {
+        AsyncStorage.setItem(persistKey, JSON.stringify(cartRef.current || {})).catch(()=>{});
+      }
     };
-  }, [persistKey, cart]);
+  }, [persistKey]);
 
   /* ---------- IMMEDIATE SERVER WRITE HELPERS ---------- */
   const serviceIdToProductId = useCallback((sid) => {
@@ -1808,48 +1790,66 @@ const handleEnquirySubmit = async (formData, product) => {
     return Number.isFinite(pid) && pid > 0 ? pid : null;
   }, [svc2prod]);
 
-  const writeServerQuantity = useCallback(async (sid, quantity) => {
-    if (!ownerId) return;
-    const pid = serviceIdToProductId(sid);
-    if (!pid) return;
+  // Use ref to track pending server writes (debounced)
+  const pendingWritesRef = useRef({});
+  const writeTimeoutRef = useRef(null);
 
-    try {
-      if (quantity > 0) {
-        await api.put(`/app/cart/items/${pid}`, { quantity }, { params: { owner_id: ownerId } });
-      } else {
-        await api.delete(`/app/cart/items/${pid}`, { params: { owner_id: ownerId } });
+  const flushServerWrites = useCallback(async () => {
+    if (!ownerId) return;
+    const writes = { ...pendingWritesRef.current };
+    pendingWritesRef.current = {};
+
+    for (const [sidStr, quantity] of Object.entries(writes)) {
+      const sid = Number(sidStr);
+      const pid = serviceIdToProductId(sid);
+      if (!pid) continue;
+
+      try {
+        if (quantity > 0) {
+          await api.put(`/app/cart/items/${pid}`, { quantity }, { params: { owner_id: ownerId } });
+        } else {
+          await api.delete(`/app/cart/items/${pid}`, { params: { owner_id: ownerId } });
+        }
+      } catch (e) {
+        console.log('SERVER WRITE FAIL', e?.response?.status, e?.response?.data);
       }
-    } catch (e) {
-      console.log('SERVER WRITE FAIL', e?.response?.status, e?.response?.data);
-      Alert.alert('Network', 'Could not save your selection to server right now.');
     }
   }, [ownerId, serviceIdToProductId]);
 
+  const scheduleServerWrite = useCallback((sid, quantity) => {
+    pendingWritesRef.current[sid] = quantity;
+    if (writeTimeoutRef.current) clearTimeout(writeTimeoutRef.current);
+    writeTimeoutRef.current = setTimeout(flushServerWrites, 500);
+  }, [flushServerWrites]);
+
   const add = useCallback((sid) => {
+    const numSid = Number(sid);
     setCart(prev => {
-      const nextQty = (prev[sid] || 0) + 1;
-      const next = { ...prev, [sid]: nextQty };
-      writeServerQuantity(sid, nextQty);
+      const nextQty = (prev[numSid] || 0) + 1;
+      const next = { ...prev, [numSid]: nextQty };
+      scheduleServerWrite(numSid, nextQty);
       return next;
     });
-  }, [writeServerQuantity]);
+  }, [scheduleServerWrite]);
 
   const sub = useCallback((sid) => {
+    const numSid = Number(sid);
     setCart(prev => {
-      const nextQty = Math.max(0, (prev[sid] || 0) - 1);
+      const nextQty = Math.max(0, (prev[numSid] || 0) - 1);
       const next = { ...prev };
-      if (nextQty === 0) delete next[sid]; else next[sid] = nextQty;
-      writeServerQuantity(sid, nextQty);
+      if (nextQty === 0) delete next[numSid]; else next[numSid] = nextQty;
+      scheduleServerWrite(numSid, nextQty);
       return next;
     });
-  }, [writeServerQuantity]);
+  }, [scheduleServerWrite]);
 
   /* ---------- TOTALS ---------- */
   const totals = useMemo(() => {
     try {
       let items = 0, amt = 0;
       (prod.services || []).forEach((s) => {
-        const q = cart[s.id] || 0;
+        const sid = Number(s.id);
+        const q = cart[sid] || 0;
         items += q; amt += q * Number(s.price || 0);
       });
       return { items, amt };
@@ -1885,31 +1885,6 @@ const handleEnquirySubmit = async (formData, product) => {
     setRefreshing(false);
   }, [fetchAll]);
 
-  const keyService = useCallback((s) => String(s.id), []);
-  const getServiceLayout = useCallback((_, i) => ({ length: 230, offset: 230 * i, index: i }), []);
-
-  const renderService = useCallback(({ item: s }) => {
-    const q = cart[s.id] || 0;
-    return (
-      <View style={[st.serviceChip, { width: 220 }]}>
-        <View style={{ flex: 1 }}>
-          <Text style={st.serviceTitle}>{s.name}</Text>
-          <Text style={st.servicePrice}>{Rs(s.price)}</Text>
-        </View>
-        {q === 0 ? (
-          <TouchableOpacity onPress={() => add(s.id)} style={st.addBtnSm}>
-            <Icon name="add" size={18} color="#fff" /><Text style={st.addTxt}>Add</Text>
-          </TouchableOpacity>
-        ) : (
-          <View style={st.counterSm}>
-            <TouchableOpacity onPress={() => sub(s.id)} style={st.counterBtnSm}><Icon name="remove" size={18} color={C.primary} /></TouchableOpacity>
-            <Text style={st.qty}>{q}</Text>
-            <TouchableOpacity onPress={() => add(s.id)} style={st.counterBtnSm}><Icon name="add" size={18} color={C.primary} /></TouchableOpacity>
-          </View>
-        )}
-      </View>
-    );
-  }, [add, cart, sub]);
 
   const keyTech = useCallback((t) => String(t.id), []);
   const renderTech = useCallback(({ item: t }) => {
@@ -2068,15 +2043,35 @@ const handleEnquirySubmit = async (formData, product) => {
               <Text style={st.sectionSub}>No services available for this product.</Text>
             </View>
           ) : (
-            <FlatList
+            <ScrollView
               horizontal
-              data={prod.services}
-              keyExtractor={keyService}
-              renderItem={renderService}
-              getItemLayout={getServiceLayout}
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ paddingRight: 16 }}
-            />
+            >
+              {prod.services.map((s) => {
+                const sid = Number(s.id);
+                const q = cart[sid] || 0;
+                return (
+                  <View key={`service-${sid}`} style={[st.serviceChip, { width: 220, marginRight: 10 }]}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={st.serviceTitle}>{s.name}</Text>
+                      <Text style={st.servicePrice}>{Rs(s.price)}</Text>
+                    </View>
+                    {q === 0 ? (
+                      <TouchableOpacity onPress={() => add(sid)} style={st.addBtnSm}>
+                        <Icon name="add" size={18} color="#fff" /><Text style={st.addTxt}>Add</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <View style={st.counterSm}>
+                        <TouchableOpacity onPress={() => sub(sid)} style={st.counterBtnSm}><Icon name="remove" size={18} color={C.primary} /></TouchableOpacity>
+                        <Text style={st.qty}>{q}</Text>
+                        <TouchableOpacity onPress={() => add(sid)} style={st.counterBtnSm}><Icon name="add" size={18} color={C.primary} /></TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
+            </ScrollView>
           )}
         </View>
 

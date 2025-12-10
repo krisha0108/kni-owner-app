@@ -46,36 +46,26 @@ export default function HomePremium({ navigation }) {
   // const API_URL = "http://192.168.29.88:8000/api/sponsored";
   // const res = await api.get('/sponsored');
 const [sponsoredData, setSponsoredData] = useState([]);
-useEffect(() => {
-    const fetchSponsored = async () => {
-    try {
-      const url = '/app_api/sponsored';
-      const res = await api.get(url);
-      console.log('Response:', res.data);
-      setSponsoredData(res.data);
-    } catch (error) {
-      console.error(
-        "Error fetching sponsored data:",
-        error.response?.data || error.message
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-const loadEverything = async () => {
-    setLoading(true);
-    await fetchSponsored();
-    setTimeout(() => {
-      setLoading(false);
-    }, 800); // slight delay for smooth transition
-  };
-  loadEverything();
-    // fetchSponsored();
-  }, []);
-const [banners, setBanners] = useState([]); // each: {id,title,subtitle,description,badge,cta_text,cta_link,image_url}
-  const [heroIdx, setHeroIdx] = useState(0);
-  const [guides, setGuides] = useState([]);
-const [feed, setFeed] = useState([]); // [{ id, txt, tone, icon }]
+
+// Fetch sponsored data
+const fetchSponsored = useCallback(async () => {
+  try {
+    const url = '/app_api/sponsored';
+    const res = await api.get(url);
+    console.log('[Sponsored] Response:', res.data);
+    setSponsoredData(Array.isArray(res.data) ? res.data : []);
+  } catch (error) {
+    console.error(
+      "Error fetching sponsored data:",
+      error.response?.data || error.message
+    );
+  }
+}, []);
+
+const [banners, setBanners] = useState([]);
+const [heroIdx, setHeroIdx] = useState(0);
+const [guides, setGuides] = useState([]);
+const [feed, setFeed] = useState([]);
 
 const fetchFeed = useCallback(async () => {
   try {
@@ -91,13 +81,12 @@ const fetchFeed = useCallback(async () => {
   } catch (e) {
     console.error('Feed error', e);
   }
-}, []);// GUIDES
+}, []);
+
 const fetchGuides = useCallback(async () => {
   try {
     const { data } = await api.get('/app_api/guides', { params: { per_page: 10 } });
-     console.log('[Guides] Raw response:', JSON.stringify(data, null, 2));
     const list = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
-    
     setGuides(list.map(g => ({
       id: String(g.id),
       thumb: g.thumb_url,
@@ -107,13 +96,9 @@ const fetchGuides = useCallback(async () => {
     })));
   } catch (e) {
     console.error('Guides error', e);
-    Alert.alert('Error', 'Unable to load guides right now.');
   }
-}, []);// BANNERS
-useEffect(() => {
-  fetchGuides();
-  fetchFeed();
-}, [fetchGuides]);
+}, []);
+
 const fetchBanners = useCallback(async () => {
   try {
     const { data } = await api.get('/app_api/banners', {
@@ -127,36 +112,45 @@ const fetchBanners = useCallback(async () => {
     setHeroIdx(0);
   } catch (e) {
     console.error('Banner load error', e);
-    Alert.alert('Error', 'Unable to load banners right now.');
   }
 }, []);
 
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      await fetchBanners();
-      // keep your tiny initial content delay for skeleton feel
-      setTimeout(() => setLoading(false), 400);
-    })();
-  }, [fetchBanners]);
+// Load ALL data in PARALLEL on mount
+useEffect(() => {
+  const loadAll = async () => {
+    setLoading(true);
+    await Promise.all([
+      fetchBanners(),
+      fetchFeed(),
+      fetchSponsored(),
+      fetchGuides(),
+    ]);
+    setLoading(false);
+  };
+  loadAll();
+}, [fetchBanners, fetchFeed, fetchSponsored, fetchGuides]);
 
-  const pulse = useRef(new Animated.Value(0.5)).current;
-  useEffect(()=>{
-    const t = setTimeout(()=>setLoading(false), 700);
-    const loop = Animated.loop(Animated.sequence([
-      Animated.timing(pulse,{toValue:1,duration:850,useNativeDriver:false}),
-      Animated.timing(pulse,{toValue:0.5,duration:850,useNativeDriver:false}),
-    ]));
-    loop.start(); return ()=>{ clearTimeout(t); loop.stop(); };
-  },[]);
+const pulse = useRef(new Animated.Value(0.5)).current;
+useEffect(() => {
+  const loop = Animated.loop(Animated.sequence([
+    Animated.timing(pulse, { toValue: 1, duration: 850, useNativeDriver: false }),
+    Animated.timing(pulse, { toValue: 0.5, duration: 850, useNativeDriver: false }),
+  ]));
+  loop.start();
+  return () => loop.stop();
+}, []);
 const onRefresh = useCallback(() => {
     setRefreshing(true);
     (async () => {
-      await fetchBanners();
-      await fetchFeed();
+      await Promise.all([
+        fetchBanners(),
+        fetchFeed(),
+        fetchSponsored(),
+        fetchGuides(),
+      ]);
       setTimeout(() => setRefreshing(false), 300);
     })();
-  }, [fetchBanners, fetchFeed]);
+  }, [fetchBanners, fetchFeed, fetchSponsored, fetchGuides]);
 
 
   /* hero “story” */

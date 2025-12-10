@@ -11,6 +11,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api } from '../api/client';
 import { Clipboard } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
+import RNFS from 'react-native-fs';
 
 /* ---------- MONEY & UPI HELPERS ---------- */
 const toPaise = (n) => Math.round(Number(n || 0) * 100);
@@ -153,6 +154,49 @@ export default function RequestNow({ navigation, route }) {
     })();
   }, [productId, productTitle, category, subtitle, heroImage, passedServices, pmetaKeyOf, rservicesKeyOf]);
 
+  /* ---------- FETCH PRODUCT FROM API ---------- */
+  const fetchProductFromApi = useCallback(async (pid) => {
+    try {
+      // Skip if pid is 'global' or not a valid number
+      if (!pid || pid === 'global' || isNaN(Number(pid))) {
+        return null;
+      }
+      const res = await api.get('/app/products');
+      const products = Array.isArray(res?.data?.data) ? res.data.data : (Array.isArray(res?.data) ? res.data : []);
+      const product = products.find(p => String(p.id) === String(pid));
+      if (product) {
+        return {
+          productId: String(product.id),
+          productTitle: product.title || product.name || `Product #${product.id}`,
+          category: product.category || 'General',
+          subtitle: product.description || '',
+          heroImage: product.image || product.featured_image || heroImage,
+        };
+      }
+      return null;
+    } catch (e) {
+      console.log('[RequestNow] Failed to fetch product from API:', e?.message);
+      return null;
+    }
+  }, [heroImage]);
+
+  /* ---------- FETCH SERVICES FROM API ---------- */
+  const fetchServicesFromApi = useCallback(async (pid) => {
+    try {
+      if (!pid || pid === 'global' || isNaN(Number(pid))) {
+        return [];
+      }
+      const res = await api.get('/app/services', { params: { product_id: pid } });
+      const services = Array.isArray(res?.data?.data) ? res.data.data : (Array.isArray(res?.data) ? res.data : []);
+      // Filter services for this product
+      const filtered = services.filter(s => String(s.product_id) === String(pid));
+      return filtered.length > 0 ? filtered : services;
+    } catch (e) {
+      console.log('[RequestNow] Failed to fetch services from API:', e?.message);
+      return [];
+    }
+  }, []);
+
   /* ---------- LOAD ALL CARDS ---------- */
   useEffect(() => {
     (async () => {
@@ -172,7 +216,7 @@ export default function RequestNow({ navigation, route }) {
             initialCart = Object.fromEntries(Object.entries(saved||{}).filter(([_, q])=>Number(q)>0));
           }
         } catch {}
-        
+
         await AsyncStorage.setItem(rdraftKeyOf(productId), JSON.stringify(initialCart||{})).catch(()=>{});
 
         const allKeys = await AsyncStorage.getAllKeys();
@@ -190,25 +234,55 @@ export default function RequestNow({ navigation, route }) {
           }
         }
 
-        products.set(productId, { pid: productId, cart: initialCart });
-
-        const hydrated = [];
-        for (const { pid, cart } of products.values()) {
-          let meta = null;
-          try { meta = JSON.parse(await AsyncStorage.getItem(pmetaKeyOf(pid)) || 'null') } catch {}
-          if (!meta) {
-            meta = { productId: pid, productTitle: `Equipment #${pid}`, category: '—', subtitle: '', heroImage: heroImage };
-          }
-
-          let svcs = [];
-          if (pid === productId && passedServices?.length) {
-            svcs = passedServices;
-          } else {
-            try { svcs = JSON.parse(await AsyncStorage.getItem(rservicesKeyOf(pid)) || '[]') } catch {}
-          }
-
-          hydrated.push({ pid, meta, services: Array.isArray(svcs)?svcs:[], cart });
+        // Only add current product if it has items or valid productId
+        if (Object.keys(initialCart).length > 0 || (productId !== 'global' && !isNaN(Number(productId)))) {
+          products.set(productId, { pid: productId, cart: initialCart });
         }
+
+        // Process all products in PARALLEL for faster loading
+        const productEntries = Array.from(products.values()).filter(
+          ({ pid, cart }) => !(pid === 'global' && Object.keys(cart).length === 0)
+        );
+
+        const hydrated = (await Promise.all(
+          productEntries.map(async ({ pid, cart }) => {
+            let meta = null;
+            try { meta = JSON.parse(await AsyncStorage.getItem(pmetaKeyOf(pid)) || 'null') } catch {}
+
+            // If no meta found in AsyncStorage, try to fetch from API
+            if (!meta && pid !== 'global' && !isNaN(Number(pid))) {
+              meta = await fetchProductFromApi(pid);
+              if (meta) {
+                AsyncStorage.setItem(pmetaKeyOf(pid), JSON.stringify(meta)).catch(()=>{});
+              }
+            }
+
+            if (!meta) {
+              if (pid !== 'global' && !isNaN(Number(pid))) {
+                meta = { productId: pid, productTitle: `Equipment #${pid}`, category: '—', subtitle: '', heroImage: heroImage };
+              } else {
+                return null; // Skip this product
+              }
+            }
+
+            let svcs = [];
+            if (pid === productId && passedServices?.length) {
+              svcs = passedServices;
+            } else {
+              try { svcs = JSON.parse(await AsyncStorage.getItem(rservicesKeyOf(pid)) || '[]') } catch {}
+            }
+
+            // If no services found in AsyncStorage, try to fetch from API
+            if ((!svcs || svcs.length === 0) && pid !== 'global' && !isNaN(Number(pid))) {
+              svcs = await fetchServicesFromApi(pid);
+              if (svcs.length > 0) {
+                AsyncStorage.setItem(rservicesKeyOf(pid), JSON.stringify(svcs)).catch(()=>{});
+              }
+            }
+
+            return { pid, meta, services: Array.isArray(svcs) ? svcs : [], cart };
+          })
+        )).filter(Boolean);
 
         hydrated.sort((a,b)=> (a.pid===productId?-1: b.pid===productId?1: (String(a.meta.productTitle||'').localeCompare(String(b.meta.productTitle||'')))));
 
@@ -217,7 +291,7 @@ export default function RequestNow({ navigation, route }) {
         setLoadingInit(false);
       }
     })();
-  }, [ownerKey, productId, passedCartRaw, passedServices, rdraftKeyOf, pmetaKeyOf, rservicesKeyOf, heroImage]);
+  }, [ownerKey, productId, passedCartRaw, passedServices, rdraftKeyOf, pmetaKeyOf, rservicesKeyOf, heroImage, fetchProductFromApi, fetchServicesFromApi]);
 
   /* ---------- CART MANAGEMENT ---------- */
   const updateCartFor = useCallback(async (pid, updater) => {
@@ -461,18 +535,35 @@ export default function RequestNow({ navigation, route }) {
 
   /* ---------- FIXED: Equipment Request Payload ---------- */
   const buildEquipmentRequestPayload = (pickedRestaurant) => {
-    // Get the actual product ID from route params or use a default valid ID
-    // The product_id must be a valid ID that exists in your products table
-    const defaultMeta = cards[0]?.meta || {};
-    
-    // Use the actual product ID from route params, or if that's not valid, use 1 as default
-    // You may need to adjust this based on what valid product IDs exist in your database
-    let productIdValue = Number(productId);
-    
-    // If the productId from route params is not a valid number, use a default valid ID
-    // You need to replace 1 with an actual valid product ID from your database
+    // Find the first card with a valid product ID and selected items
+    // This ensures we use the actual product data from the cart
+    const cardWithItems = cards.find(card => {
+      const cardPid = card.pid || card.meta?.productId;
+      const hasValidPid = cardPid && cardPid !== 'global' && !isNaN(Number(cardPid));
+      const hasSelectedItems = selectedItems.some(it => it.__pid === card.pid);
+      return hasValidPid && hasSelectedItems;
+    }) || cards.find(card => {
+      const cardPid = card.pid || card.meta?.productId;
+      return cardPid && cardPid !== 'global' && !isNaN(Number(cardPid));
+    }) || cards[0];
+
+    const meta = cardWithItems?.meta || {};
+
+    // Get product ID from the card's meta or pid
+    let productIdValue = Number(cardWithItems?.pid || meta.productId || productId);
+
+    // If still not valid, try to get from the first selected item's __pid
     if (!productIdValue || isNaN(productIdValue) || productIdValue === 0) {
-      productIdValue = 1; // Use a default valid product ID that exists in your database
+      const firstSelectedPid = selectedItems[0]?.__pid;
+      if (firstSelectedPid && firstSelectedPid !== 'global' && !isNaN(Number(firstSelectedPid))) {
+        productIdValue = Number(firstSelectedPid);
+      }
+    }
+
+    // Last fallback - should not happen if cart is properly loaded
+    if (!productIdValue || isNaN(productIdValue) || productIdValue === 0) {
+      console.warn('[RequestNow] No valid product_id found, using default 1');
+      productIdValue = 1;
     }
 
     // Format service date properly
@@ -484,15 +575,15 @@ export default function RequestNow({ navigation, route }) {
       serviceDate = `${year}-${month}-${day}`;
     }
 
-    // Create tags from selected items
+    // Create tags from selected items with product info
     const tags = selectedItems.map(it => `${it.name} x${it.qty}`);
 
     // Build the payload with all required fields
     const payload = {
       product_id: productIdValue,
-      product_name: defaultMeta.productTitle || 'Commercial Fridge',
+      product_name: meta.productTitle || meta.title || 'Equipment Service',
       description: `Requested for ${selectedDate ? selectedDate.toDateString() : 'Not specified'}`,
-      image: defaultMeta.heroImage || '',
+      image: meta.heroImage || meta.image || '',
       tags: tags.length > 0 ? tags : ['General Service'],
       restaurant_id: Number(pickedRestaurant?.id || 0),
       restaurant_name: pickedRestaurant?.name || 'Unknown Restaurant',
@@ -504,7 +595,7 @@ export default function RequestNow({ navigation, route }) {
       assigned_to_id: null,
     };
 
-    console.log('Equipment Request Payload:', payload);
+    console.log('[RequestNow] Equipment Request Payload:', JSON.stringify(payload, null, 2));
     return payload;
   };
 
@@ -532,12 +623,19 @@ export default function RequestNow({ navigation, route }) {
     let screenshotBase64 = null;
     if (paymentScreenshot && paymentScreenshot.uri) {
       try {
-        // For base64 conversion, you might need to use a different approach
-        // For now, we'll use the URI directly if your API accepts it
-        screenshotBase64 = paymentScreenshot.uri;
-        console.log('Screenshot ready for upload');
+        // Convert file URI to base64 using react-native-fs
+        const fileUri = paymentScreenshot.uri;
+        // Remove file:// prefix if present for RNFS
+        const filePath = fileUri.startsWith('file://') ? fileUri.slice(7) : fileUri;
+        const base64Data = await RNFS.readFile(filePath, 'base64');
+        // Add data URI prefix for the backend
+        screenshotBase64 = `data:image/jpeg;base64,${base64Data}`;
+        console.log('Screenshot converted to base64, length:', screenshotBase64.length);
       } catch (error) {
-        console.error('Error processing screenshot:', error);
+        console.error('Error converting screenshot to base64:', error);
+        Alert.alert('Error', 'Failed to process payment screenshot. Please try again.');
+        setSavingReq(false);
+        return;
       }
     }
 
