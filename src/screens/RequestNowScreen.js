@@ -533,38 +533,30 @@ export default function RequestNow({ navigation, route }) {
 
   const hasScreenshot = !!paymentScreenshot;
 
-  /* ---------- FIXED: Equipment Request Payload ---------- */
+  /* ---------- FIXED: Equipment Request Payload (supports multiple products like web) ---------- */
   const buildEquipmentRequestPayload = (pickedRestaurant) => {
-    // Find the first card with a valid product ID and selected items
-    // This ensures we use the actual product data from the cart
-    const cardWithItems = cards.find(card => {
-      const cardPid = card.pid || card.meta?.productId;
-      const hasValidPid = cardPid && cardPid !== 'global' && !isNaN(Number(cardPid));
-      const hasSelectedItems = selectedItems.some(it => it.__pid === card.pid);
-      return hasValidPid && hasSelectedItems;
-    }) || cards.find(card => {
-      const cardPid = card.pid || card.meta?.productId;
-      return cardPid && cardPid !== 'global' && !isNaN(Number(cardPid));
-    }) || cards[0];
+    // Collect all unique product names from selected items
+    const productNames = [];
+    const productIds = [];
 
-    const meta = cardWithItems?.meta || {};
+    selectedItems.forEach(item => {
+      const card = cards.find(c => c.pid === item.__pid);
+      const productName = card?.meta?.productTitle || card?.meta?.title || `Product ${item.__pid}`;
+      const productId = Number(item.__pid || card?.pid || card?.meta?.productId);
 
-    // Get product ID from the card's meta or pid
-    let productIdValue = Number(cardWithItems?.pid || meta.productId || productId);
-
-    // If still not valid, try to get from the first selected item's __pid
-    if (!productIdValue || isNaN(productIdValue) || productIdValue === 0) {
-      const firstSelectedPid = selectedItems[0]?.__pid;
-      if (firstSelectedPid && firstSelectedPid !== 'global' && !isNaN(Number(firstSelectedPid))) {
-        productIdValue = Number(firstSelectedPid);
+      if (productName && !productNames.includes(productName)) {
+        productNames.push(productName);
       }
-    }
+      if (productId && !isNaN(productId) && productId > 0 && !productIds.includes(productId)) {
+        productIds.push(productId);
+      }
+    });
 
-    // Last fallback - should not happen if cart is properly loaded
-    if (!productIdValue || isNaN(productIdValue) || productIdValue === 0) {
-      console.warn('[RequestNow] No valid product_id found, using default 1');
-      productIdValue = 1;
-    }
+    // Combine all product names (like web app does)
+    const combinedProductName = productNames.length > 0 ? productNames.join(', ') : 'Equipment Service';
+
+    // Use first valid product ID
+    let productIdValue = productIds[0] || Number(productId) || 1;
 
     // Format service date properly
     let serviceDate = null;
@@ -575,15 +567,19 @@ export default function RequestNow({ navigation, route }) {
       serviceDate = `${year}-${month}-${day}`;
     }
 
-    // Create tags from selected items with product info
+    // Create tags from ALL selected items (all products combined)
     const tags = selectedItems.map(it => `${it.name} x${it.qty}`);
 
-    // Build the payload with all required fields
+    // Get image from first product
+    const firstCard = cards.find(c => c.pid === selectedItems[0]?.__pid) || cards[0];
+    const firstMeta = firstCard?.meta || {};
+
+    // Build the payload with all products combined
     const payload = {
       product_id: productIdValue,
-      product_name: meta.productTitle || meta.title || 'Equipment Service',
+      product_name: combinedProductName,  // All product names combined
       description: `Requested for ${selectedDate ? selectedDate.toDateString() : 'Not specified'}`,
-      image: meta.heroImage || meta.image || '',
+      image: firstMeta.heroImage || firstMeta.image || '',
       tags: tags.length > 0 ? tags : ['General Service'],
       restaurant_id: Number(pickedRestaurant?.id || 0),
       restaurant_name: pickedRestaurant?.name || 'Unknown Restaurant',
@@ -595,7 +591,8 @@ export default function RequestNow({ navigation, route }) {
       assigned_to_id: null,
     };
 
-    console.log('[RequestNow] Equipment Request Payload:', JSON.stringify(payload, null, 2));
+    console.log('[RequestNow] Equipment Request Payload (multi-product):', JSON.stringify(payload, null, 2));
+    console.log('[RequestNow] Products included:', productNames);
     return payload;
   };
 
