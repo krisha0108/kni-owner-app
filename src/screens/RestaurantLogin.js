@@ -372,7 +372,19 @@ export default function RestaurantLogin({ navigation, route }) {
       }
     } catch (err) {
       console.log('Login error:', err?.response?.data || err.message);
-      Alert.alert('Login error', err?.response?.data?.message || 'Invalid credentials');
+      const responseData = err?.response?.data;
+      const statusCode = err?.response?.status;
+
+      // Handle pending or rejected account
+      if (statusCode === 403 && responseData?.approval_status) {
+        navigation.replace('PendingApproval', {
+          status: responseData.approval_status,
+          rejectionReason: responseData.rejection_reason,
+        });
+        return;
+      }
+
+      Alert.alert('Login error', responseData?.message || 'Invalid credentials');
     } finally {
       setPLoading(false);
     }
@@ -437,6 +449,15 @@ const handleGoogle = async () => {
 
     console.log('🔧 Backend response status:', res.data?.status);
 
+    // Check if account is pending approval (new user registration via Google)
+    if (res.data?.approval_status === 'pending' || res.data?.approved === false) {
+      navigation.replace('PendingApproval', {
+        status: res.data.approval_status || 'pending',
+        rejectionReason: res.data.rejection_reason,
+      });
+      return;
+    }
+
     if (res.data?.status && res.data?.token) {
       await saveSessionAndFcm(res.data.token, res.data.owner || res.data.data, 'google');
       console.log('🔧 Navigation to Home...');
@@ -452,6 +473,17 @@ const handleGoogle = async () => {
       stack: error.stack,
       response: error.response?.data
     });
+
+    // Handle pending or rejected account from Google auth
+    const responseData = error?.response?.data;
+    const statusCode = error?.response?.status;
+    if (statusCode === 403 && (responseData?.approval_status || responseData?.approved === false)) {
+      navigation.replace('PendingApproval', {
+        status: responseData.approval_status || 'pending',
+        rejectionReason: responseData.rejection_reason,
+      });
+      return;
+    }
 
     let errorMessage = 'Google sign-in failed. Please try again.';
     

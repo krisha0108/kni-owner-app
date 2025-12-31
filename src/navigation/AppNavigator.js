@@ -21,6 +21,7 @@ import Notifications from '../screens/Notifications';
 import ProfileScreen from '../screens/ProfileScreen';
 import Home from '../screens/HomeScreen';
 import EditOwnerProfile from '../screens/EditOwnerProfile';
+import PendingApprovalScreen from '../screens/PendingApprovalScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -75,6 +76,7 @@ export default function AppNavigator() {
         <Stack.Screen name="Notifications" component={Notifications} />
         <Stack.Screen name="Home" component={Home} />
         <Stack.Screen name="EditOwnerProfile" component={EditOwnerProfile} />
+        <Stack.Screen name="PendingApproval" component={PendingApprovalScreen} />
       </Stack.Navigator>
     </SafeAreaProvider>
   );

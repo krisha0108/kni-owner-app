@@ -2,7 +2,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, FlatList, ScrollView,
-  ActivityIndicator, ImageBackground, Modal, TextInput, Platform, 
+  ActivityIndicator, ImageBackground, Modal, TextInput, Platform,
   Dimensions, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard, Image, Alert
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,6 +12,7 @@ import { api } from '../api/client';
 import { Clipboard } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import RNFS from 'react-native-fs';
+import { useFocusEffect } from '@react-navigation/native';
 
 /* ---------- MONEY & UPI HELPERS ---------- */
 const toPaise = (n) => Math.round(Number(n || 0) * 100);
@@ -198,100 +199,114 @@ export default function RequestNow({ navigation, route }) {
   }, []);
 
   /* ---------- LOAD ALL CARDS ---------- */
-  useEffect(() => {
-    (async () => {
+  const loadCartData = useCallback(async () => {
+    try {
+      setLoadingInit(true);
+
+      let initialCart = {};
       try {
-        setLoadingInit(true);
-
-        let initialCart = {};
-        try {
-          const fromRD = Object.fromEntries(
-            Object.entries(passedCartRaw || {}).filter(([_, q]) => Number(q) > 0)
-          );
-          if (Object.keys(fromRD).length) {
-            initialCart = fromRD;
-          } else {
-            const raw = await AsyncStorage.getItem(rdraftKeyOf(productId));
-            const saved = raw ? JSON.parse(raw) : {};
-            initialCart = Object.fromEntries(Object.entries(saved||{}).filter(([_, q])=>Number(q)>0));
-          }
-        } catch {}
-
-        await AsyncStorage.setItem(rdraftKeyOf(productId), JSON.stringify(initialCart||{})).catch(()=>{});
-
-        const allKeys = await AsyncStorage.getAllKeys();
-        const myPrefix = `rdraft:${ownerKey}:`;
-        const otherKeys = allKeys.filter(k => k.startsWith(myPrefix));
-
-        const products = new Map();
-        for (const key of otherKeys) {
-          const pid = key.slice(myPrefix.length);
-          const raw = await AsyncStorage.getItem(key);
-          const cartObj = raw ? JSON.parse(raw) : {};
-          const filtered = Object.fromEntries(Object.entries(cartObj || {}).filter(([_, q]) => Number(q) > 0));
-          if (Object.keys(filtered).length) {
-            products.set(pid, { pid, cart: filtered });
-          }
-        }
-
-        // Only add current product if it has items or valid productId
-        if (Object.keys(initialCart).length > 0 || (productId !== 'global' && !isNaN(Number(productId)))) {
-          products.set(productId, { pid: productId, cart: initialCart });
-        }
-
-        // Process all products in PARALLEL for faster loading
-        const productEntries = Array.from(products.values()).filter(
-          ({ pid, cart }) => !(pid === 'global' && Object.keys(cart).length === 0)
+        const fromRD = Object.fromEntries(
+          Object.entries(passedCartRaw || {}).filter(([_, q]) => Number(q) > 0)
         );
+        if (Object.keys(fromRD).length) {
+          initialCart = fromRD;
+        } else {
+          const raw = await AsyncStorage.getItem(rdraftKeyOf(productId));
+          const saved = raw ? JSON.parse(raw) : {};
+          initialCart = Object.fromEntries(Object.entries(saved||{}).filter(([_, q])=>Number(q)>0));
+        }
+      } catch {}
 
-        const hydrated = (await Promise.all(
-          productEntries.map(async ({ pid, cart }) => {
-            let meta = null;
-            try { meta = JSON.parse(await AsyncStorage.getItem(pmetaKeyOf(pid)) || 'null') } catch {}
-
-            // If no meta found in AsyncStorage, try to fetch from API
-            if (!meta && pid !== 'global' && !isNaN(Number(pid))) {
-              meta = await fetchProductFromApi(pid);
-              if (meta) {
-                AsyncStorage.setItem(pmetaKeyOf(pid), JSON.stringify(meta)).catch(()=>{});
-              }
-            }
-
-            if (!meta) {
-              if (pid !== 'global' && !isNaN(Number(pid))) {
-                meta = { productId: pid, productTitle: `Equipment #${pid}`, category: '—', subtitle: '', heroImage: heroImage };
-              } else {
-                return null; // Skip this product
-              }
-            }
-
-            let svcs = [];
-            if (pid === productId && passedServices?.length) {
-              svcs = passedServices;
-            } else {
-              try { svcs = JSON.parse(await AsyncStorage.getItem(rservicesKeyOf(pid)) || '[]') } catch {}
-            }
-
-            // If no services found in AsyncStorage, try to fetch from API
-            if ((!svcs || svcs.length === 0) && pid !== 'global' && !isNaN(Number(pid))) {
-              svcs = await fetchServicesFromApi(pid);
-              if (svcs.length > 0) {
-                AsyncStorage.setItem(rservicesKeyOf(pid), JSON.stringify(svcs)).catch(()=>{});
-              }
-            }
-
-            return { pid, meta, services: Array.isArray(svcs) ? svcs : [], cart };
-          })
-        )).filter(Boolean);
-
-        hydrated.sort((a,b)=> (a.pid===productId?-1: b.pid===productId?1: (String(a.meta.productTitle||'').localeCompare(String(b.meta.productTitle||'')))));
-
-        setCards(hydrated);
-      } finally {
-        setLoadingInit(false);
+      // Only save to AsyncStorage if we have items from route params
+      if (Object.keys(initialCart).length > 0) {
+        await AsyncStorage.setItem(rdraftKeyOf(productId), JSON.stringify(initialCart||{})).catch(()=>{});
       }
-    })();
+
+      const allKeys = await AsyncStorage.getAllKeys();
+      const myPrefix = `rdraft:${ownerKey}:`;
+      const otherKeys = allKeys.filter(k => k.startsWith(myPrefix));
+
+      const products = new Map();
+      for (const key of otherKeys) {
+        const pid = key.slice(myPrefix.length);
+        const raw = await AsyncStorage.getItem(key);
+        const cartObj = raw ? JSON.parse(raw) : {};
+        const filtered = Object.fromEntries(Object.entries(cartObj || {}).filter(([_, q]) => Number(q) > 0));
+        if (Object.keys(filtered).length) {
+          products.set(pid, { pid, cart: filtered });
+        }
+      }
+
+      // Only add current product if it has items or valid productId
+      if (Object.keys(initialCart).length > 0 || (productId !== 'global' && !isNaN(Number(productId)))) {
+        products.set(productId, { pid: productId, cart: initialCart });
+      }
+
+      // Process all products in PARALLEL for faster loading
+      const productEntries = Array.from(products.values()).filter(
+        ({ pid, cart }) => !(pid === 'global' && Object.keys(cart).length === 0)
+      );
+
+      // If no products with items, set empty cards
+      if (productEntries.length === 0) {
+        setCards([]);
+        return;
+      }
+
+      const hydrated = (await Promise.all(
+        productEntries.map(async ({ pid, cart }) => {
+          let meta = null;
+          try { meta = JSON.parse(await AsyncStorage.getItem(pmetaKeyOf(pid)) || 'null') } catch {}
+
+          // If no meta found in AsyncStorage, try to fetch from API
+          if (!meta && pid !== 'global' && !isNaN(Number(pid))) {
+            meta = await fetchProductFromApi(pid);
+            if (meta) {
+              AsyncStorage.setItem(pmetaKeyOf(pid), JSON.stringify(meta)).catch(()=>{});
+            }
+          }
+
+          if (!meta) {
+            if (pid !== 'global' && !isNaN(Number(pid))) {
+              meta = { productId: pid, productTitle: `Equipment #${pid}`, category: '—', subtitle: '', heroImage: heroImage };
+            } else {
+              return null; // Skip this product
+            }
+          }
+
+          let svcs = [];
+          if (pid === productId && passedServices?.length) {
+            svcs = passedServices;
+          } else {
+            try { svcs = JSON.parse(await AsyncStorage.getItem(rservicesKeyOf(pid)) || '[]') } catch {}
+          }
+
+          // If no services found in AsyncStorage, try to fetch from API
+          if ((!svcs || svcs.length === 0) && pid !== 'global' && !isNaN(Number(pid))) {
+            svcs = await fetchServicesFromApi(pid);
+            if (svcs.length > 0) {
+              AsyncStorage.setItem(rservicesKeyOf(pid), JSON.stringify(svcs)).catch(()=>{});
+            }
+          }
+
+          return { pid, meta, services: Array.isArray(svcs) ? svcs : [], cart };
+        })
+      )).filter(Boolean);
+
+      hydrated.sort((a,b)=> (a.pid===productId?-1: b.pid===productId?1: (String(a.meta.productTitle||'').localeCompare(String(b.meta.productTitle||'')))));
+
+      setCards(hydrated);
+    } finally {
+      setLoadingInit(false);
+    }
   }, [ownerKey, productId, passedCartRaw, passedServices, rdraftKeyOf, pmetaKeyOf, rservicesKeyOf, heroImage, fetchProductFromApi, fetchServicesFromApi]);
+
+  // Load cart data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadCartData();
+    }, [loadCartData])
+  );
 
   /* ---------- CART MANAGEMENT ---------- */
   const updateCartFor = useCallback(async (pid, updater) => {
@@ -690,7 +705,14 @@ export default function RequestNow({ navigation, route }) {
         } catch (clearError) {
           console.log('Error clearing cart:', clearError);
         }
-        
+
+        // Clear local state as well
+        setCards([]);
+        setSelectedMap({});
+        setTip(0);
+        setPaymentNote('');
+        setPaymentScreenshot(null);
+
         setPaymentModal(false);
         
         // Small delay to ensure smooth transition

@@ -1754,6 +1754,32 @@ const handleEnquirySubmit = async (formData, product) => {
     })();
   }, [persistKey, ownerKey]);
 
+  // Reload cart from AsyncStorage when screen comes into focus
+  // This ensures cart is reset after order is placed
+  useFocusEffect(
+    useCallback(() => {
+      if (!persistKey) return;
+      (async () => {
+        try {
+          const raw = await AsyncStorage.getItem(persistKey);
+          if (raw) {
+            const saved = JSON.parse(raw);
+            if (saved && typeof saved === 'object') {
+              setCart(normalizeCartKeys(saved));
+            } else {
+              setCart({});
+            }
+          } else {
+            // No data in storage means cart was cleared
+            setCart({});
+          }
+        } catch {
+          setCart({});
+        }
+      })();
+    }, [persistKey])
+  );
+
   // Use ref to always have latest cart for saving
   const cartRef = useRef(cart);
   useEffect(() => { cartRef.current = cart; }, [cart]);

@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState, useEffect } from 'react';
+import React, { useMemo, useRef, useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TextInput, FlatList, ImageBackground,
   TouchableOpacity, Animated, RefreshControl, useWindowDimensions
@@ -7,6 +7,8 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import Icon from 'react-native-vector-icons/Ionicons';
 import KniBottomNav from '../components/KniBottomNav';
 import { api, IMAGE_BASE_URL } from '../api/client';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 
 const INDEX_PATH = '/app/products';
 
@@ -139,6 +141,43 @@ export default function RequestScreen({ navigation }) {
   const [activeCategory, setActiveCategory] = useState('all');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
+
+  // Calculate cart count from AsyncStorage
+  const calculateCartCount = useCallback(async () => {
+    try {
+      const a = await AsyncStorage.getItem('owner_id');
+      const b = await AsyncStorage.getItem('restaurant_owner_id');
+      const c = await AsyncStorage.getItem('ownerId');
+      const ownerId = String(a || b || c || '').trim();
+      const ownerKey = ownerId ? `owner:${ownerId}` : 'global';
+
+      const allKeys = await AsyncStorage.getAllKeys();
+      const myPrefix = `rdraft:${ownerKey}:`;
+      const rdraftKeys = allKeys.filter(k => k.startsWith(myPrefix));
+
+      let totalCount = 0;
+      for (const key of rdraftKeys) {
+        const raw = await AsyncStorage.getItem(key);
+        if (raw) {
+          const cartObj = JSON.parse(raw);
+          const itemCount = Object.values(cartObj || {}).reduce((sum, qty) => sum + Number(qty || 0), 0);
+          totalCount += itemCount;
+        }
+      }
+      setCartCount(totalCount);
+    } catch (e) {
+      console.log('Error calculating cart count:', e);
+      setCartCount(0);
+    }
+  }, []);
+
+  // Refresh cart count when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      calculateCartCount();
+    }, [calculateCartCount])
+  );
 
   const fetchFeed = async () => {
     try {
@@ -439,7 +478,7 @@ export default function RequestScreen({ navigation }) {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} tintColor={COLORS.primary} />
         }
       />
-      <KniBottomNav navigation={navigation} active="h" cartCount={3} notifCount={2} />
+      <KniBottomNav navigation={navigation} active="h" cartCount={cartCount} notifCount={0} />
     </SafeAreaView>
   );
 }

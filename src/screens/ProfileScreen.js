@@ -678,7 +678,7 @@
 
 
 // screens/ProfileUltra.js
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Image, TouchableOpacity,
   RefreshControl, Animated, Share, Linking, Alert, Dimensions, FlatList,
@@ -692,6 +692,7 @@ import axios from 'axios';
 import { api, IMAGE_BASE_URL } from '../api/client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { useFocusEffect } from '@react-navigation/native';
 
 /* ===== THEME ===== */
 const C = {
@@ -819,6 +820,43 @@ export default function ProfileScreen({navigation}) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
+
+  // Calculate cart count from AsyncStorage
+  const calculateCartCount = useCallback(async () => {
+    try {
+      const a = await AsyncStorage.getItem('owner_id');
+      const b = await AsyncStorage.getItem('restaurant_owner_id');
+      const c = await AsyncStorage.getItem('ownerId');
+      const ownerId = String(a || b || c || '').trim();
+      const ownerKey = ownerId ? `owner:${ownerId}` : 'global';
+
+      const allKeys = await AsyncStorage.getAllKeys();
+      const myPrefix = `rdraft:${ownerKey}:`;
+      const rdraftKeys = allKeys.filter(k => k.startsWith(myPrefix));
+
+      let totalCount = 0;
+      for (const key of rdraftKeys) {
+        const raw = await AsyncStorage.getItem(key);
+        if (raw) {
+          const cartObj = JSON.parse(raw);
+          const itemCount = Object.values(cartObj || {}).reduce((sum, qty) => sum + Number(qty || 0), 0);
+          totalCount += itemCount;
+        }
+      }
+      setCartCount(totalCount);
+    } catch (e) {
+      console.log('Error calculating cart count:', e);
+      setCartCount(0);
+    }
+  }, []);
+
+  // Refresh cart count when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      calculateCartCount();
+    }, [calculateCartCount])
+  );
 
   /* ===== DELETE ACCOUNT HANDLING ===== */
   const handleDeleteAccount = () => {
@@ -1263,8 +1301,8 @@ export default function ProfileScreen({navigation}) {
       <KniBottomNav
         navigation={navigation}
         active="profile"
-        cartCount={3}
-        notifCount={2}
+        cartCount={cartCount}
+        notifCount={0}
       />
     </SafeAreaView>
   );

@@ -10,6 +10,8 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import KniBottomNav from '../components/KniBottomNav';
 import { Dimensions } from 'react-native';
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 
 import { api,IMAGE_BASE_URL } from '../api/client';
 const ION_GLYPHS = (Icon.getRawGlyphMap?.() ?? {});
@@ -66,6 +68,46 @@ const [banners, setBanners] = useState([]);
 const [heroIdx, setHeroIdx] = useState(0);
 const [guides, setGuides] = useState([]);
 const [feed, setFeed] = useState([]);
+const [cartCount, setCartCount] = useState(0);
+
+// Calculate cart count from AsyncStorage
+const calculateCartCount = useCallback(async () => {
+  try {
+    // Get owner key
+    const a = await AsyncStorage.getItem('owner_id');
+    const b = await AsyncStorage.getItem('restaurant_owner_id');
+    const c = await AsyncStorage.getItem('ownerId');
+    const ownerId = String(a || b || c || '').trim();
+    const ownerKey = ownerId ? `owner:${ownerId}` : 'global';
+
+    // Get all cart keys
+    const allKeys = await AsyncStorage.getAllKeys();
+    const myPrefix = `rdraft:${ownerKey}:`;
+    const rdraftKeys = allKeys.filter(k => k.startsWith(myPrefix));
+
+    let totalCount = 0;
+    for (const key of rdraftKeys) {
+      const raw = await AsyncStorage.getItem(key);
+      if (raw) {
+        const cartObj = JSON.parse(raw);
+        // Count total items in this cart
+        const itemCount = Object.values(cartObj || {}).reduce((sum, qty) => sum + Number(qty || 0), 0);
+        totalCount += itemCount;
+      }
+    }
+    setCartCount(totalCount);
+  } catch (e) {
+    console.log('Error calculating cart count:', e);
+    setCartCount(0);
+  }
+}, []);
+
+// Refresh cart count when screen comes into focus
+useFocusEffect(
+  useCallback(() => {
+    calculateCartCount();
+  }, [calculateCartCount])
+);
 
 const fetchFeed = useCallback(async () => {
   try {
@@ -386,7 +428,7 @@ useEffect(() => {
         )}
       </ScrollView>
 
-      <KniBottomNav navigation={navigation} active="home" cartCount={3} notifCount={2} />
+      <KniBottomNav navigation={navigation} active="home" cartCount={cartCount} notifCount={0} />
     </SafeAreaView>
   );
 }
