@@ -69,6 +69,7 @@ export default function RequestNow({ navigation, route }) {
 
   /* ---------- INCOMING ---------- */
   const passedServices = Array.isArray(route?.params?.services) ? route.params.services : [];
+  const passedParts    = Array.isArray(route?.params?.parts) ? route.params.parts : [];
   const passedCartRaw  = route?.params?.cart || {};
   const productId      = String(route?.params?.productId ?? route?.params?.id ?? 'global');
   const productTitle   = route?.params?.productTitle || 'Commercial Fridge';
@@ -124,6 +125,10 @@ export default function RequestNow({ navigation, route }) {
     (pid) => `rservices:${ownerKey}:${pid || 'global'}`,
     [ownerKey]
   );
+  const rpartsKeyOf = useCallback(
+    (pid) => `rparts:${ownerKey}:${pid || 'global'}`,
+    [ownerKey]
+  );
   const pmetaKeyOf = useCallback(
     (pid) => `pmeta:${ownerKey}:${pid || 'global'}`,
     [ownerKey]
@@ -151,9 +156,12 @@ export default function RequestNow({ navigation, route }) {
         if (Array.isArray(passedServices) && passedServices.length) {
           await AsyncStorage.setItem(rservicesKeyOf(productId), JSON.stringify(passedServices));
         }
+        if (Array.isArray(passedParts) && passedParts.length) {
+          await AsyncStorage.setItem(rpartsKeyOf(productId), JSON.stringify(passedParts));
+        }
       } catch {}
     })();
-  }, [productId, productTitle, category, subtitle, heroImage, passedServices, pmetaKeyOf, rservicesKeyOf]);
+  }, [productId, productTitle, category, subtitle, heroImage, passedServices, passedParts, pmetaKeyOf, rservicesKeyOf, rpartsKeyOf]);
 
   /* ---------- FETCH PRODUCT FROM API ---------- */
   const fetchProductFromApi = useCallback(async (pid) => {
@@ -194,6 +202,21 @@ export default function RequestNow({ navigation, route }) {
       return filtered.length > 0 ? filtered : services;
     } catch (e) {
       console.log('[RequestNow] Failed to fetch services from API:', e?.message);
+      return [];
+    }
+  }, []);
+
+  /* ---------- FETCH PARTS FROM API ---------- */
+  const fetchPartsFromApi = useCallback(async (pid) => {
+    try {
+      if (!pid || pid === 'global' || isNaN(Number(pid))) {
+        return [];
+      }
+      const res = await api.get('/app/parts', { params: { product_id: pid } });
+      const parts = Array.isArray(res?.data?.data) ? res.data.data : (Array.isArray(res?.data) ? res.data : []);
+      return parts;
+    } catch (e) {
+      console.log('[RequestNow] Failed to fetch parts from API:', e?.message);
       return [];
     }
   }, []);
@@ -289,7 +312,23 @@ export default function RequestNow({ navigation, route }) {
             }
           }
 
-          return { pid, meta, services: Array.isArray(svcs) ? svcs : [], cart };
+          // Load parts
+          let prts = [];
+          if (pid === productId && passedParts?.length) {
+            prts = passedParts;
+          } else {
+            try { prts = JSON.parse(await AsyncStorage.getItem(rpartsKeyOf(pid)) || '[]') } catch {}
+          }
+
+          // If no parts found in AsyncStorage, try to fetch from API
+          if ((!prts || prts.length === 0) && pid !== 'global' && !isNaN(Number(pid))) {
+            prts = await fetchPartsFromApi(pid);
+            if (prts.length > 0) {
+              AsyncStorage.setItem(rpartsKeyOf(pid), JSON.stringify(prts)).catch(()=>{});
+            }
+          }
+
+          return { pid, meta, services: Array.isArray(svcs) ? svcs : [], parts: Array.isArray(prts) ? prts : [], cart };
         })
       )).filter(Boolean);
 
@@ -299,7 +338,7 @@ export default function RequestNow({ navigation, route }) {
     } finally {
       setLoadingInit(false);
     }
-  }, [ownerKey, productId, passedCartRaw, passedServices, rdraftKeyOf, pmetaKeyOf, rservicesKeyOf, heroImage, fetchProductFromApi, fetchServicesFromApi]);
+  }, [ownerKey, productId, passedCartRaw, passedServices, passedParts, rdraftKeyOf, pmetaKeyOf, rservicesKeyOf, rpartsKeyOf, heroImage, fetchProductFromApi, fetchServicesFromApi, fetchPartsFromApi]);
 
   // Load cart data when screen comes into focus
   useFocusEffect(
@@ -321,25 +360,60 @@ export default function RequestNow({ navigation, route }) {
     });
   }, [rdraftKeyOf]);
 
-  const makeItems = useCallback((services, cartObj) => {
-    const byId = {};
-    (services||[]).forEach(s => { byId[Number(s.id)] = { name: s.title || s.name, unit: Number(s.price||0) }; });
-    return Object.entries(cartObj||{}).map(([sidStr, qty]) => {
-      const sid  = Number(sidStr);
-      const meta = byId[sid] || { name: `Service #${sid}`, unit: 0 };
-      const q    = Number(qty||0);
-      return { service_id: sid, name: meta.name, unitPrice: meta.unit, qty: q, lineTotal: meta.unit*q };
-    }).filter(x => x.qty>0);
+  const makeItems = useCallback((services, parts, cartObj) => {
+    const items = [];
+
+    // Process services
+    const svcById = {};
+    (services||[]).forEach(s => { svcById[Number(s.id)] = { name: s.title || s.name, unit: Number(s.price||0) }; });
+
+    // Process parts
+    const partById = {};
+    (parts||[]).forEach(p => { partById[Number(p.id)] = { name: p.title || p.name, unit: Number(p.price||0) }; });
+
+    Object.entries(cartObj||{}).forEach(([key, qty]) => {
+      const q = Number(qty||0);
+      if (q <= 0) return;
+
+      // Check if it's a part (key starts with 'part:')
+      if (String(key).startsWith('part:')) {
+        const partId = Number(key.replace('part:', ''));
+        const meta = partById[partId] || { name: `Part #${partId}`, unit: 0 };
+        items.push({
+          item_id: partId,
+          item_type: 'part',
+          name: meta.name,
+          unitPrice: meta.unit,
+          qty: q,
+          lineTotal: meta.unit * q
+        });
+      } else {
+        // It's a service
+        const sid = Number(key);
+        const meta = svcById[sid] || { name: `Service #${sid}`, unit: 0 };
+        items.push({
+          service_id: sid,
+          item_id: sid,
+          item_type: 'service',
+          name: meta.name,
+          unitPrice: meta.unit,
+          qty: q,
+          lineTotal: meta.unit * q
+        });
+      }
+    });
+
+    return items;
   }, []);
 
   const flatItems = useMemo(() => {
-    return cards.flatMap(card => makeItems(card.services, card.cart).map(it => ({
+    return cards.flatMap(card => makeItems(card.services, card.parts, card.cart).map(it => ({
       ...it, __pid: card.pid
     })));
   }, [cards, makeItems]);
 
   /* ---------- SELECTION MANAGEMENT ---------- */
-  const allKeys = useMemo(() => flatItems.map(it => `${it.__pid}:${it.service_id}`), [flatItems]);
+  const allKeys = useMemo(() => flatItems.map(it => `${it.__pid}:${it.item_type}:${it.item_id}`), [flatItems]);
 
   useEffect(() => {
     const allSel = {};
@@ -347,8 +421,8 @@ export default function RequestNow({ navigation, route }) {
     setSelectedMap(allSel);
   }, [allKeys.length]);
 
-  const toggleOne = useCallback((pid, sid) => {
-    const key = `${pid}:${sid}`;
+  const toggleOne = useCallback((pid, itemType, itemId) => {
+    const key = `${pid}:${itemType}:${itemId}`;
     setSelectedMap(prev => {
       const next = { ...(prev||{}) };
       if (next[key]) delete next[key]; else next[key] = true;
@@ -371,7 +445,7 @@ export default function RequestNow({ navigation, route }) {
   }, [allSelected, allKeys]);
 
   const selectedItems = useMemo(
-    () => flatItems.filter(it => !!selectedMap[`${it.__pid}:${it.service_id}`]),
+    () => flatItems.filter(it => !!selectedMap[`${it.__pid}:${it.item_type}:${it.item_id}`]),
     [flatItems, selectedMap]
   );
 
@@ -583,7 +657,11 @@ export default function RequestNow({ navigation, route }) {
     }
 
     // Create tags from ALL selected items (all products combined)
-    const tags = selectedItems.map(it => `${it.name} x${it.qty}`);
+    // Add [Part] prefix for parts to match web format
+    const tags = selectedItems.map(it => {
+      const prefix = it.item_type === 'part' ? '[Part] ' : '';
+      return `${prefix}${it.name} x${it.qty}`;
+    });
 
     // Get image from first product
     const firstCard = cards.find(c => c.pid === selectedItems[0]?.__pid) || cards[0];
@@ -819,45 +897,51 @@ export default function RequestNow({ navigation, route }) {
 
   /* ---------- COMPONENTS ---------- */
   const ProductCard = ({ card }) => {
-    const { pid, meta, services, cart } = card;
-    const items = useMemo(()=>makeItems(services, cart),[services, cart]);
+    const { pid, meta, services, parts, cart } = card;
+    const items = useMemo(()=>makeItems(services, parts, cart),[services, parts, cart]);
 
-    const isAllSelectedInCard = items.every(it => !!selectedMap[`${pid}:${it.service_id}`]);
+    const isAllSelectedInCard = items.every(it => !!selectedMap[`${pid}:${it.item_type}:${it.item_id}`]);
 
-    const ServiceRow = ({ item }) => {
-      const key = `${pid}:${item.service_id}`;
+    // Get cart key for quantity operations
+    const getCartKey = (item) => item.item_type === 'part' ? `part:${item.item_id}` : item.item_id;
+
+    const ItemRow = ({ item }) => {
+      const key = `${pid}:${item.item_type}:${item.item_id}`;
       const isSel = !!selectedMap[key];
       const q = item.qty || 0;
+      const isPart = item.item_type === 'part';
+      const accentColor = isPart ? '#EA580C' : C.primary;
       return (
-        <View style={[st.serviceRow, isSel ? st.serviceRowActive : null]}>
-          <TouchableOpacity onPress={() => toggleOne(pid, item.service_id)} style={[st.check, isSel && st.checkActive]}>
+        <View style={[st.serviceRow, isSel ? (isPart ? { backgroundColor: '#FFF7ED' } : st.serviceRowActive) : null]}>
+          <TouchableOpacity onPress={() => toggleOne(pid, item.item_type, item.item_id)} style={[st.check, isSel && (isPart ? { backgroundColor: '#EA580C' } : st.checkActive)]}>
             {isSel ? <Icon name="checkmark" size={12} color="#fff" /> : null}
           </TouchableOpacity>
 
-          <Text style={[st.serviceTxt, !isSel && { color: C.muted }]} numberOfLines={1}>{item.name}</Text>
-
-          <View style={{ flex: 1 }} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+            {isPart && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#EA580C', marginRight: 6 }} />}
+            <Text style={[st.serviceTxt, !isSel && { color: C.muted }]} numberOfLines={1}>{item.name}</Text>
+          </View>
 
           {q > 0 ? (
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <TouchableOpacity onPress={() => decQty(pid, item.service_id)} style={[st.counterBtnSm, { marginRight: 4 }]}>
-                <Icon name="remove" size={18} color={C.primary} />
+              <TouchableOpacity onPress={() => decQty(pid, getCartKey(item))} style={[st.counterBtnSm, { marginRight: 4 }]}>
+                <Icon name="remove" size={18} color={accentColor} />
               </TouchableOpacity>
               <Text style={[st.qtyBadge, !isSel && { color: '#94A3B8' }]}>{`×${q}`}</Text>
-              <TouchableOpacity onPress={() => incQty(pid, item.service_id)} style={[st.counterBtnSm, { marginLeft: 4 }]}>
-                <Icon name="add" size={18} color={C.primary} />
+              <TouchableOpacity onPress={() => incQty(pid, getCartKey(item))} style={[st.counterBtnSm, { marginLeft: 4 }]}>
+                <Icon name="add" size={18} color={accentColor} />
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => removeLine(pid, item.service_id)} style={[st.counterBtnSm, { marginLeft: 6 }]}>
+              <TouchableOpacity onPress={() => removeLine(pid, getCartKey(item))} style={[st.counterBtnSm, { marginLeft: 6 }]}>
                 <Icon name="trash-outline" size={18} color={C.danger} />
               </TouchableOpacity>
             </View>
           ) : null}
 
-          <Text style={[st.serviceAmt, !isSel && { color: C.muted }]}>{Rs(item.lineTotal)}</Text>
+          <Text style={[st.serviceAmt, !isSel && { color: C.muted }, isPart && isSel && { color: '#EA580C' }]}>{Rs(item.lineTotal)}</Text>
         </View>
       );
     };
-    const keyRow = (it, idx) => `${pid}-${it.service_id}-${idx}`;
+    const keyRow = (it, idx) => `${pid}-${it.item_type}-${it.item_id}-${idx}`;
 
     const itemTotalCard = useMemo(()=>items.reduce((s,it)=>s+it.lineTotal,0),[items]);
 
@@ -874,13 +958,13 @@ export default function RequestNow({ navigation, route }) {
                 if (isAllSelectedInCard) {
                   setSelectedMap(prev => {
                     const n = { ...(prev||{}) };
-                    items.forEach(it => { delete n[`${pid}:${it.service_id}`]; });
+                    items.forEach(it => { delete n[`${pid}:${it.item_type}:${it.item_id}`]; });
                     return n;
                   });
                 } else {
                   setSelectedMap(prev => {
                     const n = { ...(prev||{}) };
-                    items.forEach(it => { n[`${pid}:${it.service_id}`] = true; });
+                    items.forEach(it => { n[`${pid}:${it.item_type}:${it.item_id}`] = true; });
                     return n;
                   });
                 }
@@ -904,10 +988,10 @@ export default function RequestNow({ navigation, route }) {
               </View>
             ) : items.length === 0 ? (
               <View style={{ paddingVertical: 4 }}>
-                <Text style={st.subtle}>No services selected.</Text>
+                <Text style={st.subtle}>No items selected.</Text>
               </View>
             ) : (
-              <FlatList data={items} keyExtractor={keyRow} renderItem={ServiceRow} scrollEnabled={false} />
+              <FlatList data={items} keyExtractor={keyRow} renderItem={ItemRow} scrollEnabled={false} />
             )}
           </View>
 

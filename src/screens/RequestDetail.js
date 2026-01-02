@@ -1411,6 +1411,7 @@ export default function RequestDetail({ navigation, route }) {
     conditions: FALLBACK_CONDITIONS,
     faqs: FALLBACK_FAQS,
     services: [], // Start with empty array instead of fallback services
+    parts: [], // Parts for this product
   });
 
   const [technicians, setTechnicians] = useState([]);
@@ -1539,10 +1540,11 @@ const handleEnquirySubmit = async (formData, product) => {
       if (productId) {
         console.log(`🔄 Fetching product ${productId} details...`);
 
-        // Fetch product and services in PARALLEL
-        const [productRes, servicesRes] = await Promise.all([
+        // Fetch product, services, and parts in PARALLEL
+        const [productRes, servicesRes, partsRes] = await Promise.all([
           safeGet(`/app/products/${productId}`, 2, ownerId ? { owner_id: ownerId } : {}),
           safeGet('/app/services', 2, ownerId ? { owner_id: ownerId } : {}).catch(() => ({ data: [] })),
+          safeGet('/app/parts', 2, { product_id: productId }).catch(() => ({ data: [] })),
         ]);
 
         const d = productRes?.data ?? {};
@@ -1585,6 +1587,21 @@ const handleEnquirySubmit = async (formData, product) => {
           }
         }
 
+        // Process parts from API response
+        let parts = [];
+        const partsData = Array.isArray(partsRes?.data) ? partsRes.data
+          : Array.isArray(partsRes?.data?.data) ? partsRes.data.data : [];
+
+        if (partsData.length > 0) {
+          parts = partsData.map((p) => ({
+            id: Number(p.id),
+            name: p.title || p.name || `Part #${p.id}`,
+            price: Number(p.price || 0),
+            image: p.featured_image || null,
+            description: p.description || '',
+          }));
+        }
+
         // Prefetch images in background (don't wait)
         resolvedImages.slice(0, 3).forEach((uri) =>
           Image.prefetch(uri).catch(() => {})
@@ -1595,7 +1612,7 @@ const handleEnquirySubmit = async (formData, product) => {
           description: d.description || headerItem.desc,
           price: d.price || headerItem.price,
           storyImages: resolvedImages,
-          included, excluded, conditions, faqs, services,
+          included, excluded, conditions, faqs, services, parts,
         });
 
         // Fetch technicians and reviews in PARALLEL (don't block main content)
@@ -1605,12 +1622,12 @@ const handleEnquirySubmit = async (formData, product) => {
         ]);
 
       } else {
-        setProd(p => ({ ...p, services: [] }));
+        setProd(p => ({ ...p, services: [], parts: [] }));
       }
     } catch (e) {
       console.log('❌ fetchAll error:', e.message);
       setNetworkErr(e?.message || 'Failed to load product');
-      setProd(p => ({ ...p, services: [] }));
+      setProd(p => ({ ...p, services: [], parts: [] }));
     } finally {
       setLoading(false);
     }
@@ -1703,11 +1720,16 @@ const handleEnquirySubmit = async (formData, product) => {
         if (Array.isArray(prod?.services) && prod.services.length > 0) {
           await AsyncStorage.setItem(rservicesKey, JSON.stringify(prod.services));
         }
+        // Save parts
+        const rpartsKey = `rparts:${ownerKey}:${productId}`;
+        if (Array.isArray(prod?.parts) && prod.parts.length > 0) {
+          await AsyncStorage.setItem(rpartsKey, JSON.stringify(prod.parts));
+        }
       } catch (e) {
         console.log('[RequestDetail] Failed to save product meta/services:', e?.message);
       }
     })();
-  }, [productId, ownerKey, prod?.title, prod?.description, prod?.storyImages, prod?.services, prod?.image, headerItem?.category, pmetaKey, rservicesKey]);
+  }, [productId, ownerKey, prod?.title, prod?.description, prod?.storyImages, prod?.services, prod?.parts, prod?.image, headerItem?.category, pmetaKey, rservicesKey]);
 
   // reverse map product->service for server items
   const prod2svc = useMemo(() => {
@@ -1720,14 +1742,23 @@ const handleEnquirySubmit = async (formData, product) => {
     }, m);
   }, [svc2prod, cart]);
 
-  // Helper to convert cart object keys to numbers
+  // Helper to normalize cart object keys (keeps both service IDs and part keys)
   const normalizeCartKeys = (obj) => {
     if (!obj || typeof obj !== 'object') return {};
     const result = {};
     Object.entries(obj).forEach(([k, v]) => {
-      const numKey = Number(k);
-      if (!isNaN(numKey) && Number(v) > 0) {
-        result[numKey] = Number(v);
+      const qty = Number(v);
+      if (qty > 0) {
+        // Keep part keys as strings (e.g., 'part:123')
+        if (String(k).startsWith('part:')) {
+          result[k] = qty;
+        } else {
+          // Convert service keys to numbers
+          const numKey = Number(k);
+          if (!isNaN(numKey)) {
+            result[numKey] = qty;
+          }
+        }
       }
     });
     return result;
@@ -1869,18 +1900,44 @@ const handleEnquirySubmit = async (formData, product) => {
     });
   }, [scheduleServerWrite]);
 
+  // Parts cart operations (using 'part:' prefix to distinguish from services)
+  const addPart = useCallback((partId) => {
+    const key = `part:${partId}`;
+    setCart(prev => {
+      const nextQty = (prev[key] || 0) + 1;
+      return { ...prev, [key]: nextQty };
+    });
+  }, []);
+
+  const subPart = useCallback((partId) => {
+    const key = `part:${partId}`;
+    setCart(prev => {
+      const nextQty = Math.max(0, (prev[key] || 0) - 1);
+      const next = { ...prev };
+      if (nextQty === 0) delete next[key]; else next[key] = nextQty;
+      return next;
+    });
+  }, []);
+
   /* ---------- TOTALS ---------- */
   const totals = useMemo(() => {
     try {
       let items = 0, amt = 0;
+      // Services
       (prod.services || []).forEach((s) => {
         const sid = Number(s.id);
         const q = cart[sid] || 0;
         items += q; amt += q * Number(s.price || 0);
       });
+      // Parts
+      (prod.parts || []).forEach((p) => {
+        const key = `part:${p.id}`;
+        const q = cart[key] || 0;
+        items += q; amt += q * Number(p.price || 0);
+      });
       return { items, amt };
     } catch { return { items: 0, amt: 0 }; }
-  }, [cart, prod.services]);
+  }, [cart, prod.services, prod.parts]);
 
   const shareIt = useCallback(async () => {
     try {
@@ -1900,10 +1957,11 @@ const handleEnquirySubmit = async (formData, product) => {
       subtitle: route?.params?.description || '',
       heroImage: (prod?.storyImages?.[0]) || FALLBACK_IMAGES[0],
       services: Array.isArray(prod?.services) ? prod.services : [],
+      parts: Array.isArray(prod?.parts) ? prod.parts : [],
       cart,
       ownerId,
     };
-  }, [productId, prod?.title, prod?.storyImages, prod?.services, headerItem?.category, route?.params?.subtitle, cart, ownerId]);
+  }, [productId, prod?.title, prod?.storyImages, prod?.services, prod?.parts, headerItem?.category, route?.params?.subtitle, cart, ownerId]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -2092,6 +2150,52 @@ const handleEnquirySubmit = async (formData, product) => {
                         <TouchableOpacity onPress={() => sub(sid)} style={st.counterBtnSm}><Icon name="remove" size={18} color={C.primary} /></TouchableOpacity>
                         <Text style={st.qty}>{q}</Text>
                         <TouchableOpacity onPress={() => add(sid)} style={st.counterBtnSm}><Icon name="add" size={18} color={C.primary} /></TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
+            </ScrollView>
+          )}
+        </View>
+
+        {/* Parts Section */}
+        <View style={st.section}>
+          <Text style={st.sectionTitle}>Add parts</Text>
+          <Text style={st.sectionSub}>Spare parts available for this equipment.</Text>
+
+          {loading ? (
+            <View style={[st.serviceChip, { justifyContent:'center' }]}>
+              <Text style={st.sectionSub}>Loading parts...</Text>
+            </View>
+          ) : (!prod.parts || prod.parts.length === 0) ? (
+            <View style={[st.serviceChip, { justifyContent:'center' }]}>
+              <Text style={st.sectionSub}>No parts available for this product.</Text>
+            </View>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingRight: 16 }}
+            >
+              {prod.parts.map((p) => {
+                const key = `part:${p.id}`;
+                const q = cart[key] || 0;
+                return (
+                  <View key={`part-${p.id}`} style={[st.serviceChip, { width: 220, marginRight: 10, borderColor: '#FED7AA' }]}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={st.serviceTitle}>{p.name}</Text>
+                      <Text style={[st.servicePrice, { color: '#EA580C' }]}>{Rs(p.price)}</Text>
+                    </View>
+                    {q === 0 ? (
+                      <TouchableOpacity onPress={() => addPart(p.id)} style={[st.addBtnSm, { backgroundColor: '#EA580C' }]}>
+                        <Icon name="add" size={18} color="#fff" /><Text style={st.addTxt}>Add</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <View style={[st.counterSm, { backgroundColor: '#FFF7ED' }]}>
+                        <TouchableOpacity onPress={() => subPart(p.id)} style={st.counterBtnSm}><Icon name="remove" size={18} color="#EA580C" /></TouchableOpacity>
+                        <Text style={[st.qty, { color: '#EA580C' }]}>{q}</Text>
+                        <TouchableOpacity onPress={() => addPart(p.id)} style={st.counterBtnSm}><Icon name="add" size={18} color="#EA580C" /></TouchableOpacity>
                       </View>
                     )}
                   </View>
