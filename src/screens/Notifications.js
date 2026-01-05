@@ -26,6 +26,16 @@ const TMAP = {
   engineer_assigned:      { ic:'people-outline',    bg:'#FFF7ED', fg:'#F59E0B' },
   feature:                { ic:'sparkles-outline',  bg:'#F5F3FF', fg:'#7C3AED' },
   update:                 { ic:'download-outline',  bg:'#EFF6FF', fg:'#3B82F6' },
+  // Order tracking notification types
+  order_accepted:         { ic:'checkmark-circle',  bg:'#ECFDF5', fg:'#10B981' },
+  order_in_progress:      { ic:'construct',         bg:'#EEF2FF', fg:'#4F46E5' },
+  order_completed:        { ic:'checkmark-done',    bg:'#ECFDF5', fg:'#10B981' },
+  order_update:           { ic:'cube-outline',      bg:'#F0FDFA', fg:'#14B8A6' },
+  // Order approval notification types
+  completion_approval_required: { ic:'alert-circle', bg:'#FEF3C7', fg:'#D97706' },
+  pending_approval:       { ic:'hourglass-outline', bg:'#FEF3C7', fg:'#D97706' },
+  approval_required:      { ic:'alert-circle',      bg:'#FEF3C7', fg:'#D97706' },
+  work_completed:         { ic:'checkmark-done',    bg:'#FEF3C7', fg:'#D97706' },
 };
 
 /* ---------- UTILS ---------- */
@@ -164,7 +174,10 @@ const res = await api.get(`/owners/${currentOwnerId}/notifications`, {
             unread: !notification.is_read,
             meta: {
               restaurantId: notification.restaurant_id,
-              notificationId: notification.id
+              notificationId: notification.id,
+              orderId: notification.equipment_request_id || notification.order_id,
+              equipment_request_id: notification.equipment_request_id,
+              ticketId: notification.ticket_id
             }
           };
         });
@@ -186,7 +199,16 @@ const res = await api.get(`/owners/${currentOwnerId}/notifications`, {
 
   const filtered = useMemo(()=>{
     if(filter === 'all') return items;
-    if(filter === 'tickets') return items.filter(x => x.type.startsWith('ticket') || x.type==='engineer_assigned' || x.type==='eq_request_approved');
+    if(filter === 'tickets') return items.filter(x => x.type.startsWith('ticket'));
+    if(filter === 'orders') return items.filter(x =>
+      x.type.startsWith('order_') ||
+      x.type==='engineer_assigned' ||
+      x.type==='eq_request_approved' ||
+      x.type==='completion_approval_required' ||
+      x.type==='pending_approval' ||
+      x.type==='approval_required' ||
+      x.type==='work_completed'
+    );
     if(filter === 'restaurants') return items.filter(x => x.type.startsWith('restaurant'));
     if(filter === 'product') return items.filter(x => ['feature','update'].includes(x.type));
     return items;
@@ -219,14 +241,28 @@ await api.post('/notifications/mark-all-read', { restaurant_owner_id: ownerId },
   }
 };
 
+// Approval-related notification types that should go to OrderTracking
+const APPROVAL_NOTIFICATION_TYPES = [
+  'completion_approval_required',
+  'pending_approval',
+  'approval_required',
+  'work_completed'
+];
+
 // use inside openItem
 const openItem = (n) => {
-  // navigate logic
-  if (n.type.startsWith('ticket')) navigation.navigate?.('SupportCenter', { id: n.meta?.ticketId });
-  else if (n.type.startsWith('restaurant')) navigation.navigate?.('Restaurants');
-  else if (n.type==='eq_request_approved') navigation.navigate?.('YourCart');
-  else if (n.type==='feature') navigation.navigate?.('HotelProfile');
-  else if (n.type==='update') navigation.navigate?.('SupportList');
+  // Order-related notifications -> go directly to OrderTracking
+  if (n.type==='eq_request_approved' || n.type==='engineer_assigned' || n.type.startsWith('order_') || APPROVAL_NOTIFICATION_TYPES.includes(n.type)) {
+    if (n.meta?.orderId || n.meta?.equipment_request_id) {
+      navigation.navigate?.('OrderTracking', { orderId: n.meta?.orderId || n.meta?.equipment_request_id });
+    } else {
+      navigation.navigate?.('Request');
+    }
+  }
+  // Other notifications (ticket, restaurant, feature, update) -> show detail page
+  else {
+    navigation.navigate?.('NotificationDetail', { notification: n });
+  }
 
   // update UI + backend
   setItems(prev => prev.map(x => x.id===n.id ? {...x, unread:false} : x));
@@ -271,6 +307,7 @@ const markAllRead = () => {
           contentContainerStyle={{paddingHorizontal:16, paddingBottom:4, gap:8}}
         >
           {chip('all','All','albums-outline')}
+          {chip('orders','Orders','cube-outline')}
           {chip('tickets','Tickets','construct-outline')}
           {chip('restaurants','Restaurants','storefront-outline')}
           {chip('product','Product','sparkles-outline')}

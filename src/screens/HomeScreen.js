@@ -267,6 +267,7 @@ useEffect(() => {
   /* quick navs */
   const goSupport     = ()=> navigation.navigate?.('SupportCenter');
   const goRestaurants = ()=> navigation.navigate?.('Restaurants');
+  const goOrders      = ()=> navigation.navigate?.('OrdersList');
   const goGuide       = ()=> open(guides?.[0]?.link);
 
   /* ----------- RENDER ----------- */
@@ -342,9 +343,9 @@ useEffect(() => {
 
             {/* Quick navigation */}
             <View style={st.quickRow}>
-              <QuickNav icon="headset-outline" label="Support" onPress={goSupport}/>
+              <QuickNav icon="clipboard-outline" label="My Orders" onPress={goOrders}/>
               <QuickNav icon="storefront-outline" label="Restaurants" onPress={goRestaurants}/>
-              <QuickNav icon="play-circle-outline" label="Guide" onPress={goGuide}/>
+              <QuickNav icon="headset-outline" label="Support" onPress={goSupport}/>
             </View>
 
             {/* Notifications / highlights */}

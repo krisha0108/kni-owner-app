@@ -81,6 +81,8 @@ export default function RequestNow({ navigation, route }) {
   const [ownerKey, setOwnerKey] = useState('global');
   const [cards, setCards] = useState([]);
   const [loadingInit, setLoadingInit] = useState(true);
+  const isLoadingRef = useRef(false); // Guard to prevent concurrent/infinite loads
+  const hasLoadedRef = useRef(false); // Track if data has been loaded for this session
   const [selectedMap, setSelectedMap] = useState({});
   const [tip, setTip] = useState(0);
   const [paymentNote, setPaymentNote] = useState('');
@@ -223,6 +225,13 @@ export default function RequestNow({ navigation, route }) {
 
   /* ---------- LOAD ALL CARDS ---------- */
   const loadCartData = useCallback(async () => {
+    // Prevent concurrent/infinite loads
+    if (isLoadingRef.current) {
+      console.log('[RequestNow] Already loading, skipping...');
+      return;
+    }
+    isLoadingRef.current = true;
+
     try {
       setLoadingInit(true);
 
@@ -337,14 +346,23 @@ export default function RequestNow({ navigation, route }) {
       setCards(hydrated);
     } finally {
       setLoadingInit(false);
+      isLoadingRef.current = false;
     }
   }, [ownerKey, productId, passedCartRaw, passedServices, passedParts, rdraftKeyOf, pmetaKeyOf, rservicesKeyOf, rpartsKeyOf, heroImage, fetchProductFromApi, fetchServicesFromApi, fetchPartsFromApi]);
 
-  // Load cart data when screen comes into focus
+  // Load cart data when screen comes into focus (stable - no deps to prevent re-triggers)
   useFocusEffect(
     useCallback(() => {
-      loadCartData();
-    }, [loadCartData])
+      // Only load once when screen focuses
+      if (!hasLoadedRef.current && !isLoadingRef.current) {
+        hasLoadedRef.current = true;
+        loadCartData();
+      }
+      // Reset on blur so we reload on next focus
+      return () => {
+        hasLoadedRef.current = false;
+      };
+    }, []) // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   /* ---------- CART MANAGEMENT ---------- */
@@ -917,9 +935,9 @@ export default function RequestNow({ navigation, route }) {
             {isSel ? <Icon name="checkmark" size={12} color="#fff" /> : null}
           </TouchableOpacity>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-            {isPart && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#EA580C', marginRight: 6 }} />}
-            <Text style={[st.serviceTxt, !isSel && { color: C.muted }]} numberOfLines={1}>{item.name}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', flex: 1, flexWrap: 'wrap' }}>
+            {isPart && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#EA580C', marginRight: 6, marginTop: 5 }} />}
+            <Text style={[st.serviceTxt, { flex: 1 }, !isSel && { color: C.muted }]}>{item.name}</Text>
           </View>
 
           {q > 0 ? (
@@ -1622,7 +1640,7 @@ const st = StyleSheet.create({
   check:{ width:18, height:18, borderRadius:6, borderWidth:1, borderColor:'#CBD5E1', alignItems:'center', justifyContent:'center', marginRight:8, backgroundColor:'#fff' },
   checkActive:{ backgroundColor:C.primary, borderColor:C.primary },
 
-  serviceTxt:{ color:C.ink, fontWeight:'800', maxWidth:'56%' },
+  serviceTxt:{ color:C.ink, fontWeight:'800', flexShrink: 1 },
   qtyBadge:{ marginLeft:8, color:C.muted, fontWeight:'800' },
   serviceAmt:{ color:C.ink, fontWeight:'900' },
 

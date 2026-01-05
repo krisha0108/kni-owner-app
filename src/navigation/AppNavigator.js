@@ -18,10 +18,13 @@ import RestaurantsScreen from '../screens/RestaurantsScreen';
 import SupportCenter from '../screens/SupportCenter';
 import SupportTicketDetail from '../screens/SupportTicketDetail';
 import Notifications from '../screens/Notifications';
+import NotificationDetail from '../screens/NotificationDetail';
 import ProfileScreen from '../screens/ProfileScreen';
 import Home from '../screens/HomeScreen';
 import EditOwnerProfile from '../screens/EditOwnerProfile';
 import PendingApprovalScreen from '../screens/PendingApprovalScreen';
+import OrderTrackingScreen from '../screens/OrderTrackingScreen';
+import OrdersListScreen from '../screens/OrdersListScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -74,9 +77,12 @@ export default function AppNavigator() {
         <Stack.Screen name="SupportTicketDetail" component={SupportTicketDetail} />
         <Stack.Screen name="RestaurantView" component={RestaurantView} />
         <Stack.Screen name="Notifications" component={Notifications} />
+        <Stack.Screen name="NotificationDetail" component={NotificationDetail} />
         <Stack.Screen name="Home" component={Home} />
         <Stack.Screen name="EditOwnerProfile" component={EditOwnerProfile} />
         <Stack.Screen name="PendingApproval" component={PendingApprovalScreen} />
+        <Stack.Screen name="OrderTracking" component={OrderTrackingScreen} />
+        <Stack.Screen name="OrdersList" component={OrdersListScreen} />
       </Stack.Navigator>
     </SafeAreaProvider>
   );

@@ -198,6 +198,12 @@ export default function RestaurantsScreen({ navigation }) {
       return;
     }
 
+    // FSSAI certificate is required for new restaurants
+    if (!form.id && !form.fssaiPdf) {
+      show('FSSAI certificate is required', 'error');
+      return;
+    }
+
     try {
       const fd = new FormData();
       
@@ -574,7 +580,7 @@ export default function RestaurantsScreen({ navigation }) {
               </View>
 
               {/* PDF picker */}
-              <Text style={[st.inputLbl,{marginTop:6}]}>FSSAI certificate (PDF)</Text>
+              <Text style={[st.inputLbl,{marginTop:6}]}>FSSAI certificate (PDF) <Text style={{color:'#EF4444'}}>*</Text></Text>
               <View style={{gap:8, marginBottom:12}}>
                 <View style={{flexDirection:'row', alignItems:'center', gap:10}}>
                   <TouchableOpacity onPress={pickPDF} style={[st.pdfIcon,{backgroundColor:'#FFF1F1'}]}>
