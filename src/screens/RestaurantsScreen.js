@@ -719,10 +719,11 @@ function RestaurantCard({ r, onView, onEdit, onDelete, onFSSAI, openPdf }) {
         )}
         
         {/* Status Badge */}
-        <View style={[st.statusPill, {backgroundColor: s.bg}]}>
-          <Text style={[st.statusTxt, {color: s.fg}]}>{s.label}</Text>
+        <View style={[st.statusPill,{backgroundColor:s.bg}]}>
+          <Icon name={r.status==='approved'?'checkmark-circle':r.status==='pending'?'time-outline':'close-circle'} size={14} color={s.fg}/>
+          <Text style={[st.statusTxt,{color:s.fg}]}>{s.label}</Text>
         </View>
-        
+
         {/* Thumbnails Row */}
         <View style={st.thumbRow}>
           {thumbnails.slice(0, 3).map((uri, i) => (
@@ -736,10 +737,6 @@ function RestaurantCard({ r, onView, onEdit, onDelete, onFSSAI, openPdf }) {
             </View>
           )}
         </View>
-        <View style={[st.statusPill,{backgroundColor:s.bg}]}>
-          <Icon name={r.status==='approved'?'checkmark-circle':r.status==='pending'?'time-outline':'close-circle'} size={14} color={s.fg}/>
-          <Text style={[st.statusTxt,{color:s.fg}]}>{s.label}</Text>
-        </View>
       </View>
 
       {/* Content */}
@@ -749,8 +746,6 @@ function RestaurantCard({ r, onView, onEdit, onDelete, onFSSAI, openPdf }) {
         <Text style={st.desc} numberOfLines={2}>{r.desc}</Text>
 
         <View style={st.metaRow}>
-          <View style={st.metaChip}><Icon name="repeat-outline" size={14} color={C.ink}/><Text style={st.metaTxt}>{r.servicesCount}</Text></View>
-          <View style={st.metaChip}><Icon name="cash-outline" size={14} color={C.ink}/><Text style={st.metaTxt}>{money(r.expense)}</Text></View>
           <View style={{flex:1}}/>
           <TouchableOpacity onPress={onView} style={st.linkBtn}><Text style={st.linkTxt}>View</Text><Icon name="chevron-forward" size={16} color={C.primary}/></TouchableOpacity>
         </View>
@@ -777,11 +772,13 @@ function RestaurantCard({ r, onView, onEdit, onDelete, onFSSAI, openPdf }) {
           )}
 
           {/* Delete button - only show if restaurant is not approved */}
+          {r.status !== 'approved' && (
             <TouchableOpacity onPress={onDelete} style={[st.actionMini,{backgroundColor:'#FEF2F2',borderColor:'#FCA5A5'}]}>
               <Icon name="trash-outline" size={16} color={C.danger}/>
               <Text style={[st.actionTxt,{color:C.danger}]}>Delete</Text>
             </TouchableOpacity>
-          
+          )}
+
         </View>
       </View>
     </View>

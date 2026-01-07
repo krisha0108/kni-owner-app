@@ -2313,12 +2313,14 @@ const handleEnquirySubmit = async (formData, product) => {
               </View>
             ))
           )}
+          {/* TODO: Uncomment when OwnerReviews screen is implemented
           <TouchableOpacity
             style={st.outlineBtn}
             onPress={() => navigation.navigate('OwnerReviews', { productId: productId || null })}
           >
             <Text style={st.outlineTxt}>View all reviews</Text>
           </TouchableOpacity>
+          */}
         </View>
 
         {/* Provide */}
