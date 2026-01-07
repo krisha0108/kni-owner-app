@@ -105,6 +105,7 @@ export default function OrderTrackingScreen({ navigation, route }) {
   const orderId = route?.params?.orderId;
 
   const [order, setOrder] = useState(null);
+  const [payment, setPayment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [approving, setApproving] = useState(false);
@@ -133,10 +134,16 @@ export default function OrderTrackingScreen({ navigation, route }) {
   const loadOrderDetails = async () => {
     try {
       setLoading(true);
-      const res = await api.get(`/app_api/owner/orders/${orderId}`);
-      console.log('Order tracking response:', res.data);
-      if (res.data?.success) {
-        setOrder(res.data.data);
+      const [orderRes, paymentRes] = await Promise.all([
+        api.get(`/app_api/owner/orders/${orderId}`),
+        api.get(`/restaurant-owner/equipment-requests/${orderId}/payment`).catch(() => null)
+      ]);
+      console.log('Order tracking response:', orderRes.data);
+      if (orderRes.data?.success) {
+        setOrder(orderRes.data.data);
+      }
+      if (paymentRes?.data) {
+        setPayment(paymentRes.data);
       }
     } catch (e) {
       console.log('Failed to load order details:', e?.response?.data || e?.message);
@@ -435,6 +442,122 @@ export default function OrderTrackingScreen({ navigation, route }) {
                 </View>
               </View>
             )}
+
+            {/* Payment Information */}
+            <View style={st.card}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                <View style={st.paymentIconBox}>
+                  <Icon name="card-outline" size={20} color={C.ok} />
+                </View>
+                <Text style={[st.sectionTitle, { marginLeft: 10 }]}>Payment Information</Text>
+              </View>
+
+              {payment ? (
+                <>
+                  {/* Payment Status & Amount */}
+                  <View style={st.paymentHeader}>
+                    <View>
+                      <Text style={st.paymentLabel}>Status</Text>
+                      <View style={[
+                        st.paymentStatusBadge,
+                        { backgroundColor: payment.payment_status?.toLowerCase() === 'completed' || payment.payment_status?.toLowerCase() === 'paid' || payment.payment_status?.toLowerCase() === 'approved'
+                          ? '#ECFDF5' : payment.payment_status?.toLowerCase() === 'pending' || payment.payment_status?.toLowerCase() === 'send'
+                          ? '#FEF3C7' : '#FEE2E2'
+                        }
+                      ]}>
+                        <Icon
+                          name={payment.payment_status?.toLowerCase() === 'completed' || payment.payment_status?.toLowerCase() === 'paid' || payment.payment_status?.toLowerCase() === 'approved'
+                            ? 'checkmark-circle' : payment.payment_status?.toLowerCase() === 'pending' || payment.payment_status?.toLowerCase() === 'send'
+                            ? 'time' : 'close-circle'
+                          }
+                          size={14}
+                          color={payment.payment_status?.toLowerCase() === 'completed' || payment.payment_status?.toLowerCase() === 'paid' || payment.payment_status?.toLowerCase() === 'approved'
+                            ? C.ok : payment.payment_status?.toLowerCase() === 'pending' || payment.payment_status?.toLowerCase() === 'send'
+                            ? C.warn : C.danger
+                          }
+                        />
+                        <Text style={[
+                          st.paymentStatusText,
+                          { color: payment.payment_status?.toLowerCase() === 'completed' || payment.payment_status?.toLowerCase() === 'paid' || payment.payment_status?.toLowerCase() === 'approved'
+                            ? C.ok : payment.payment_status?.toLowerCase() === 'pending' || payment.payment_status?.toLowerCase() === 'send'
+                            ? C.warn : C.danger
+                          }
+                        ]}>
+                          {payment.payment_status}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={st.paymentLabel}>Amount</Text>
+                      <Text style={st.paymentAmount}>₹{payment.amount?.toLocaleString() || 0}</Text>
+                    </View>
+                  </View>
+
+                  {/* Payment Details Grid */}
+                  <View style={st.paymentGrid}>
+                    <View style={st.paymentGridItem}>
+                      <Icon name="wallet-outline" size={16} color={C.info} />
+                      <Text style={st.paymentGridLabel}>Payment Method</Text>
+                      <Text style={st.paymentGridValue}>{payment.payment_method || 'N/A'}</Text>
+                    </View>
+                    <View style={st.paymentGridItem}>
+                      <Icon name="receipt-outline" size={16} color={C.info} />
+                      <Text style={st.paymentGridLabel}>Transaction ID</Text>
+                      <Text style={st.paymentGridValue} numberOfLines={1}>{payment.transaction_id || 'N/A'}</Text>
+                    </View>
+                    <View style={st.paymentGridItem}>
+                      <Icon name="calendar-outline" size={16} color={C.info} />
+                      <Text style={st.paymentGridLabel}>Payment Date</Text>
+                      <Text style={st.paymentGridValue}>{formatDate(payment.created_at)}</Text>
+                    </View>
+                    <View style={st.paymentGridItem}>
+                      <Icon name="time-outline" size={16} color={C.info} />
+                      <Text style={st.paymentGridLabel}>Last Updated</Text>
+                      <Text style={st.paymentGridValue}>{formatDate(payment.updated_at)}</Text>
+                    </View>
+                  </View>
+
+                  {/* Payment Note */}
+                  {payment.payment_note && (
+                    <View style={st.paymentNoteBox}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                        <Icon name="chatbubble-outline" size={14} color={C.muted} />
+                        <Text style={st.paymentNoteLabel}>Payment Note</Text>
+                      </View>
+                      <Text style={st.paymentNoteText}>{payment.payment_note}</Text>
+                    </View>
+                  )}
+
+                  {/* Payment Screenshot */}
+                  {payment.payment_screenshot && (
+                    <View style={{ marginTop: 12 }}>
+                      <Text style={st.subSectionTitle}>Payment Screenshot</Text>
+                      <TouchableOpacity
+                        onPress={() => {
+                          const url = toStorageUrl(payment.payment_screenshot);
+                          if (url) Linking.openURL(url);
+                        }}
+                      >
+                        <Image
+                          source={{ uri: toStorageUrl(payment.payment_screenshot) }}
+                          style={st.paymentScreenshot}
+                          resizeMode="cover"
+                        />
+                        <Text style={st.screenshotHint}>Tap to view full size</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </>
+              ) : (
+                <View style={st.noPaymentBox}>
+                  <View style={st.noPaymentIcon}>
+                    <Icon name="card-outline" size={32} color={C.muted} />
+                  </View>
+                  <Text style={st.noPaymentTitle}>No Payment Details</Text>
+                  <Text style={st.noPaymentText}>Payment information will appear here once available</Text>
+                </View>
+              )}
+            </View>
           </>
         ) : (
           <View style={st.emptyState}>
@@ -573,4 +696,25 @@ const st = StyleSheet.create({
   modalTitle: { color: C.ink, fontWeight: '900', fontSize: 18 },
   textInput: { borderWidth: 1, borderColor: C.border, borderRadius: 12, padding: 12, fontSize: 14, minHeight: 100, color: C.text },
   modalBtn: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 12 },
+
+  // Payment styles
+  paymentIconBox: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#ECFDF5', alignItems: 'center', justifyContent: 'center' },
+  paymentHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', backgroundColor: '#F0FDF4', borderRadius: 12, padding: 14, marginBottom: 12 },
+  paymentLabel: { fontSize: 12, color: C.muted, marginBottom: 4 },
+  paymentStatusBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20 },
+  paymentStatusText: { fontWeight: '700', fontSize: 13 },
+  paymentAmount: { fontSize: 22, fontWeight: '900', color: C.ok },
+  paymentGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  paymentGridItem: { width: '48%', backgroundColor: '#F8FAFC', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#E2E8F0' },
+  paymentGridLabel: { fontSize: 11, color: C.muted, marginTop: 6 },
+  paymentGridValue: { fontSize: 13, fontWeight: '700', color: C.text, marginTop: 2 },
+  paymentNoteBox: { marginTop: 12, backgroundColor: '#F8FAFC', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#E2E8F0' },
+  paymentNoteLabel: { fontSize: 12, color: C.muted, marginLeft: 6 },
+  paymentNoteText: { fontSize: 13, color: C.text, lineHeight: 20 },
+  paymentScreenshot: { width: '100%', height: 200, borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB' },
+  screenshotHint: { fontSize: 11, color: C.muted, textAlign: 'center', marginTop: 6 },
+  noPaymentBox: { alignItems: 'center', paddingVertical: 24 },
+  noPaymentIcon: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+  noPaymentTitle: { fontSize: 16, fontWeight: '700', color: C.muted, marginBottom: 4 },
+  noPaymentText: { fontSize: 13, color: C.muted, textAlign: 'center' },
 });

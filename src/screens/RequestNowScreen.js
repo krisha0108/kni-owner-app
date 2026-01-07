@@ -76,6 +76,7 @@ export default function RequestNow({ navigation, route }) {
   const category       = route?.params?.category || 'Commercial';
   const subtitle       = route?.params?.description || '';
   const heroImage      = route?.params?.heroImage || 'https://s3-us-west-2.amazonaws.com/speedybrandimages/tmp_ba6cd8e2-3942-4d4b-bebc-a273130e6b29.webp';
+  const selectedEquipment = route?.params?.selectedEquipment || null; // Pre-selected equipment from My Equipment
 
   /* ---------- STATE VARIABLES ---------- */
   const [ownerKey, setOwnerKey] = useState('global');
@@ -102,6 +103,7 @@ export default function RequestNow({ navigation, route }) {
   const [paymentModal, setPaymentModal] = useState(false);
   const [savingReq, setSavingReq] = useState(false);
   const [successModal, setSuccessModal] = useState(false);
+  const [problemDescription, setProblemDescription] = useState('');
 
   /* ---------- OWNER / PERSIST KEYS ---------- */
   useEffect(() => {
@@ -689,7 +691,8 @@ export default function RequestNow({ navigation, route }) {
     const payload = {
       product_id: productIdValue,
       product_name: combinedProductName,  // All product names combined
-      description: `Requested for ${selectedDate ? selectedDate.toDateString() : 'Not specified'}`,
+      description: problemDescription || `Requested for ${selectedDate ? selectedDate.toDateString() : 'Not specified'}`,
+      problem_description: problemDescription || '',
       image: firstMeta.heroImage || firstMeta.image || '',
       tags: tags.length > 0 ? tags : ['General Service'],
       restaurant_id: Number(pickedRestaurant?.id || 0),
@@ -700,6 +703,7 @@ export default function RequestNow({ navigation, route }) {
       status: 'Pending',
       assigned_to: '',
       assigned_to_id: null,
+      owner_equipment_id: selectedEquipment?.id || null, // Link to owner's equipment
     };
 
     console.log('[RequestNow] Equipment Request Payload (multi-product):', JSON.stringify(payload, null, 2));
@@ -1115,6 +1119,32 @@ export default function RequestNow({ navigation, route }) {
             })}
           </View>
           <Text style={st.tipNote}>100% of the tip goes to the professional.</Text>
+        </View>
+
+        {/* Problem Description */}
+        <View style={[st.card, { marginHorizontal: 16 }]}>
+          <Text style={st.cardTitle}>Describe the Problem</Text>
+          <Text style={{ fontSize: 13, color: C.muted, marginBottom: 10 }}>
+            Tell us what's wrong with your equipment
+          </Text>
+          <TextInput
+            value={problemDescription}
+            onChangeText={setProblemDescription}
+            placeholder="E.g., Not heating, strange noise, leaking water, display not working..."
+            style={{
+              backgroundColor: '#F9FAFB',
+              borderWidth: 1,
+              borderColor: '#E5E7EB',
+              borderRadius: 10,
+              padding: 12,
+              fontSize: 15,
+              color: C.text,
+              minHeight: 80,
+              textAlignVertical: 'top',
+            }}
+            multiline
+            placeholderTextColor="#9CA3AF"
+          />
         </View>
 
         {/* Address row */}

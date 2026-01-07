@@ -25,6 +25,13 @@ import EditOwnerProfile from '../screens/EditOwnerProfile';
 import PendingApprovalScreen from '../screens/PendingApprovalScreen';
 import OrderTrackingScreen from '../screens/OrderTrackingScreen';
 import OrdersListScreen from '../screens/OrdersListScreen';
+import MyEquipmentScreen from '../screens/MyEquipmentScreen';
+import EquipmentProfileScreen from '../screens/EquipmentProfileScreen';
+import MyAmcsScreen from '../screens/MyAmcsScreen';
+import ServiceHistoryScreen from '../screens/ServiceHistoryScreen';
+import BillingsScreen from '../screens/BillingsScreen';
+import SpendingReportsScreen from '../screens/SpendingReportsScreen';
+import ServiceRequestScreen from '../screens/ServiceRequestScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -83,6 +90,13 @@ export default function AppNavigator() {
         <Stack.Screen name="PendingApproval" component={PendingApprovalScreen} />
         <Stack.Screen name="OrderTracking" component={OrderTrackingScreen} />
         <Stack.Screen name="OrdersList" component={OrdersListScreen} />
+        <Stack.Screen name="MyEquipment" component={MyEquipmentScreen} />
+        <Stack.Screen name="EquipmentProfile" component={EquipmentProfileScreen} />
+        <Stack.Screen name="MyAmcs" component={MyAmcsScreen} />
+        <Stack.Screen name="ServiceHistory" component={ServiceHistoryScreen} />
+        <Stack.Screen name="Billings" component={BillingsScreen} />
+        <Stack.Screen name="SpendingReports" component={SpendingReportsScreen} />
+        <Stack.Screen name="ServiceRequest" component={ServiceRequestScreen} />
       </Stack.Navigator>
     </SafeAreaProvider>
   );

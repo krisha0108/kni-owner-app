@@ -1269,6 +1269,64 @@ export default function ProfileScreen({navigation}) {
           ))}
         </ScrollView>
         
+        {/* QUICK ACCESS SECTION */}
+        <View style={st.sectionHdr}>
+          <Text style={st.sectionTitle}>Quick Access</Text>
+        </View>
+        <View style={st.quickAccessContainer}>
+          <TouchableOpacity style={st.quickAccessButton} onPress={() => navigation.navigate('MyEquipment')}>
+            <View style={st.quickAccessButtonContent}>
+              <View style={[st.quickAccessIcon, { backgroundColor: '#EFF6FF' }]}>
+                <Icon name="construct-outline" size={20} color="#3B82F6" />
+              </View>
+              <View style={st.quickAccessTextWrap}>
+                <Text style={st.quickAccessTitle}>My Equipment</Text>
+                <Text style={st.quickAccessSubtitle}>Manage your kitchen equipment</Text>
+              </View>
+            </View>
+            <Icon name="chevron-forward" size={20} color={C.muted} />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={st.quickAccessButton} onPress={() => navigation.navigate('MyAmcs')}>
+            <View style={st.quickAccessButtonContent}>
+              <View style={[st.quickAccessIcon, { backgroundColor: '#ECFDF5' }]}>
+                <Icon name="shield-checkmark-outline" size={20} color="#10B981" />
+              </View>
+              <View style={st.quickAccessTextWrap}>
+                <Text style={st.quickAccessTitle}>My AMCs</Text>
+                <Text style={st.quickAccessSubtitle}>Track maintenance contracts</Text>
+              </View>
+            </View>
+            <Icon name="chevron-forward" size={20} color={C.muted} />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={st.quickAccessButton} onPress={() => navigation.navigate('ServiceHistory')}>
+            <View style={st.quickAccessButtonContent}>
+              <View style={[st.quickAccessIcon, { backgroundColor: '#FEF3C7' }]}>
+                <Icon name="time-outline" size={20} color="#F59E0B" />
+              </View>
+              <View style={st.quickAccessTextWrap}>
+                <Text style={st.quickAccessTitle}>Service History</Text>
+                <Text style={st.quickAccessSubtitle}>View spending & service reports</Text>
+              </View>
+            </View>
+            <Icon name="chevron-forward" size={20} color={C.muted} />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={[st.quickAccessButton, { borderBottomWidth: 0 }]} onPress={() => navigation.navigate('Billings')}>
+            <View style={st.quickAccessButtonContent}>
+              <View style={[st.quickAccessIcon, { backgroundColor: '#FDF2F8' }]}>
+                <Icon name="receipt-outline" size={20} color="#EC4899" />
+              </View>
+              <View style={st.quickAccessTextWrap}>
+                <Text style={st.quickAccessTitle}>My Bills</Text>
+                <Text style={st.quickAccessSubtitle}>View invoices & payment details</Text>
+              </View>
+            </View>
+            <Icon name="chevron-forward" size={20} color={C.muted} />
+          </TouchableOpacity>
+        </View>
+
         {/* ACCOUNT ACTIONS SECTION */}
         <View style={st.actionsContainer}>
           {/* LOGOUT BUTTON */}
@@ -1444,6 +1502,54 @@ const st = StyleSheet.create({
   viewMoreBox:{ alignItems:'center', justifyContent:'center', borderWidth:2, borderStyle:'dashed', borderColor:'#CBD5E1',
     paddingVertical:26, paddingHorizontal:18, borderRadius:16, backgroundColor:'#FFFFFFF2' },
   viewMoreTxt:{ marginTop:8, fontWeight:'900', color:C.ink, fontSize:16 },
+  // Quick access section styles
+  quickAccessContainer: {
+    backgroundColor: '#ffffffff',
+    borderRadius: 12,
+    marginHorizontal: 15,
+    borderWidth: 1,
+    borderColor: '#EEF2F7',
+    shadowColor: '#707070ff',
+    shadowOpacity: 0.06,
+    shadowRadius: 2,
+    elevation: 2,
+    overflow: 'hidden',
+  },
+  quickAccessButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  quickAccessButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  quickAccessIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  quickAccessTextWrap: {
+    flex: 1,
+  },
+  quickAccessTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: C.ink,
+  },
+  quickAccessSubtitle: {
+    fontSize: 12,
+    color: C.muted,
+    marginTop: 2,
+  },
   // New styles for account actions
   actionsContainer: {
     backgroundColor: '#ffffffff',
