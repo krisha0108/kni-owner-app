@@ -1,0 +1,632 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  RefreshControl,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Icon from 'react-native-vector-icons/Ionicons';
+import { api } from '../api/client';
+import LineChartCard from '../components/charts/LineChartCard';
+import PieChartCard from '../components/charts/PieChartCard';
+
+const C = {
+  primary: '#EF3A3A',
+  ink: '#1D2254',
+  text: '#0F172A',
+  muted: '#6B7280',
+  bg: '#F5F7FA',
+  card: '#FFFFFF',
+  border: '#E5E7EB',
+  ok: '#10B981',
+  warn: '#F59E0B',
+  danger: '#EF4444',
+  info: '#3B82F6',
+};
+
+// Expense categories matching web
+const EXPENSE_CATEGORIES = [
+  { value: 'FOOD', label: 'Food & Ingredients', color: '#10B981', icon: 'fast-food-outline' },
+  { value: 'UTILITIES', label: 'Utilities', color: '#3B82F6', icon: 'flash-outline' },
+  { value: 'SALARIES', label: 'Salaries & Wages', color: '#8B5CF6', icon: 'people-outline' },
+  { value: 'MAINTENANCE', label: 'Maintenance', color: '#F59E0B', icon: 'construct-outline' },
+  { value: 'RENT', label: 'Rent', color: '#EF4444', icon: 'home-outline' },
+  { value: 'SUPPLIES', label: 'Supplies', color: '#06B6D4', icon: 'cube-outline' },
+  { value: 'MARKETING', label: 'Marketing', color: '#EC4899', icon: 'megaphone-outline' },
+  { value: 'TRANSPORT', label: 'Transport', color: '#6366F1', icon: 'car-outline' },
+  { value: 'OTHER', label: 'Other', color: '#6B7280', icon: 'ellipsis-horizontal-outline' },
+];
+
+const getCategoryConfig = (categoryValue) => {
+  return EXPENSE_CATEGORIES.find(c => c.value === categoryValue) || {
+    value: categoryValue,
+    label: categoryValue,
+    color: '#6B7280',
+    icon: 'cash-outline',
+  };
+};
+
+const formatPrice = (amount) => {
+  if (!amount && amount !== 0) return '₹0';
+  return `₹${amount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+};
+
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
+
+const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+export default function ExpenseReportsScreen({ navigation }) {
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [report, setReport] = useState(null);
+  const [trendData, setTrendData] = useState([]);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [restaurants, setRestaurants] = useState([]);
+  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+
+  useEffect(() => {
+    loadRestaurants();
+  }, []);
+
+  useEffect(() => {
+    if (selectedRestaurant !== null) {
+      fetchReport();
+      fetchTrendData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedYear, selectedMonth, selectedRestaurant]);
+
+  const loadRestaurants = async () => {
+    try {
+      const res = await api.get('/owner/restaurants');
+      if (res.data.ok) {
+        const approved = res.data.data.filter(r => r.status === 'APPROVED');
+        setRestaurants(approved);
+        if (approved.length > 0) {
+          setSelectedRestaurant(approved[0].id);
+        }
+      }
+    } catch (error) {
+      console.error('Load restaurants error:', error);
+    }
+  };
+
+  const fetchReport = async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams({
+        year: selectedYear.toString(),
+        month: selectedMonth.toString(),
+      });
+      if (selectedRestaurant) {
+        params.append('restaurantId', selectedRestaurant);
+      }
+
+      const res = await api.get(`/owner/expenses/reports/monthly?${params}`);
+      if (res.data.ok) {
+        setReport(res.data.data);
+      } else {
+        setReport(null);
+      }
+    } catch (error) {
+      console.error('Fetch report error:', error);
+      setReport(null);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const fetchTrendData = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (selectedRestaurant) {
+        params.append('restaurantId', selectedRestaurant);
+      }
+
+      const res = await api.get(`/owner/expenses?${params}`);
+      if (res.data.ok) {
+        const expenses = res.data.data.expenses || [];
+
+        // Calculate last 6 months trend
+        const last6Months = Array.from({ length: 6 }, (_, i) => {
+          const d = new Date();
+          d.setMonth(d.getMonth() - (5 - i));
+          return {
+            year: d.getFullYear(),
+            month: d.getMonth() + 1,
+            monthName: SHORT_MONTHS[d.getMonth()],
+          };
+        });
+
+        const monthlyTotals = last6Months.map(({ year, month, monthName }) => {
+          const monthExpenses = expenses.filter((exp) => {
+            const expDate = new Date(exp.expenseDate || exp.date);
+            return expDate.getFullYear() === year && expDate.getMonth() + 1 === month;
+          });
+          const total = monthExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+          return {
+            month: monthName,
+            total: total / 100,
+            count: monthExpenses.length,
+          };
+        });
+
+        setTrendData(monthlyTotals);
+      }
+    } catch (error) {
+      console.error('Fetch trend error:', error);
+    }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchReport();
+    fetchTrendData();
+  };
+
+  const changeMonth = (delta) => {
+    let newMonth = selectedMonth + delta;
+    let newYear = selectedYear;
+
+    if (newMonth > 12) {
+      newMonth = 1;
+      newYear += 1;
+    } else if (newMonth < 1) {
+      newMonth = 12;
+      newYear -= 1;
+    }
+
+    setSelectedMonth(newMonth);
+    setSelectedYear(newYear);
+  };
+
+  const isCurrentMonth = () => {
+    const now = new Date();
+    return selectedYear === now.getFullYear() && selectedMonth === now.getMonth() + 1;
+  };
+
+  // Prepare category data for display
+  const getCategoryData = () => {
+    if (!report || !report.categoryTotals) return [];
+
+    return EXPENSE_CATEGORIES.map(cat => ({
+      ...cat,
+      amount: report.categoryTotals[cat.value] || 0,
+      percentage: report.totalAmount > 0
+        ? ((report.categoryTotals[cat.value] || 0) / report.totalAmount) * 100
+        : 0,
+    })).filter(c => c.amount > 0).sort((a, b) => b.amount - a.amount);
+  };
+
+  const categoryData = getCategoryData();
+  const topCategories = categoryData.slice(0, 5);
+
+  // Prepare pie chart data
+  const pieChartData = topCategories.map(cat => ({
+    name: cat.label,
+    count: cat.amount / 100,
+    color: cat.color,
+  }));
+
+  if (loading && !refreshing) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Icon name="arrow-back" size={22} color={C.ink} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Expense Reports</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={styles.loadingBox}>
+          <ActivityIndicator size="large" color={C.primary} />
+          <Text style={styles.loadingText}>Loading report...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <Icon name="arrow-back" size={22} color={C.ink} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Expense Reports</Text>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('Expenses')}
+          style={styles.backBtn}
+        >
+          <Icon name="list-outline" size={22} color={C.primary} />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} />
+        }
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* Restaurant Selector */}
+        {restaurants.length > 1 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.restaurantScroll}
+            contentContainerStyle={styles.restaurantScrollContent}
+          >
+            {restaurants.map(r => (
+              <TouchableOpacity
+                key={r.id}
+                style={[styles.restaurantChip, selectedRestaurant === r.id && styles.restaurantChipActive]}
+                onPress={() => setSelectedRestaurant(r.id)}
+              >
+                <Text style={[
+                  styles.restaurantChipText,
+                  selectedRestaurant === r.id && styles.restaurantChipTextActive
+                ]}>
+                  {r.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
+
+        {/* Month Navigator */}
+        <View style={styles.monthNav}>
+          <TouchableOpacity style={styles.navBtn} onPress={() => changeMonth(-1)}>
+            <Icon name="chevron-back" size={20} color={C.ink} />
+            <Text style={styles.navBtnText}>Previous</Text>
+          </TouchableOpacity>
+          <View style={styles.monthDisplay}>
+            <Text style={styles.monthText}>{MONTH_NAMES[selectedMonth - 1]}</Text>
+            <Text style={styles.yearText}>{selectedYear}</Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.navBtn, isCurrentMonth() && styles.navBtnDisabled]}
+            onPress={() => changeMonth(1)}
+            disabled={isCurrentMonth()}
+          >
+            <Text style={[styles.navBtnText, isCurrentMonth() && styles.navBtnTextDisabled]}>
+              Next
+            </Text>
+            <Icon
+              name="chevron-forward"
+              size={20}
+              color={isCurrentMonth() ? C.border : C.ink}
+            />
+          </TouchableOpacity>
+        </View>
+
+        {!report ? (
+          <View style={styles.noDataCard}>
+            <Icon name="document-text-outline" size={48} color={C.muted} />
+            <Text style={styles.noDataTitle}>No Data Available</Text>
+            <Text style={styles.noDataText}>
+              No expenses recorded for {MONTH_NAMES[selectedMonth - 1]} {selectedYear}
+            </Text>
+          </View>
+        ) : (
+          <>
+            {/* Summary Cards */}
+            <View style={styles.summaryRow}>
+              <View style={[styles.summaryCard, { backgroundColor: '#FEF2F2' }]}>
+                <Text style={styles.summaryLabel}>Total Expenses</Text>
+                <Text style={[styles.summaryValue, { color: C.primary }]}>
+                  {formatPrice(report.totalAmount)}
+                </Text>
+                <Text style={styles.summarySubtext}>
+                  {report.expenseCount} expense{report.expenseCount !== 1 ? 's' : ''}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.comparisonRow}>
+              <View style={[styles.comparisonCard, { flex: 1 }]}>
+                <Text style={styles.comparisonLabel}>Previous Month</Text>
+                <Text style={styles.comparisonValue}>
+                  {formatPrice(report.comparison?.previousMonthTotal || 0)}
+                </Text>
+                <Text style={styles.comparisonSubtext}>
+                  {MONTH_NAMES[(selectedMonth - 2 + 12) % 12]}
+                </Text>
+              </View>
+
+              <View style={[styles.comparisonCard, { flex: 1 }]}>
+                <Text style={styles.comparisonLabel}>Change</Text>
+                <View style={styles.changeRow}>
+                  <Icon
+                    name={report.comparison?.changeAmount >= 0 ? 'trending-up' : 'trending-down'}
+                    size={20}
+                    color={report.comparison?.changeAmount >= 0 ? C.danger : C.ok}
+                  />
+                  <Text style={[
+                    styles.changeValue,
+                    { color: report.comparison?.changeAmount >= 0 ? C.danger : C.ok }
+                  ]}>
+                    {report.comparison?.changePercentage >= 0 ? '+' : ''}
+                    {(report.comparison?.changePercentage || 0).toFixed(1)}%
+                  </Text>
+                </View>
+                <Text style={styles.comparisonSubtext}>
+                  {formatPrice(Math.abs(report.comparison?.changeAmount || 0))}
+                  {report.comparison?.changeAmount >= 0 ? ' increase' : ' decrease'}
+                </Text>
+              </View>
+            </View>
+
+            {/* Trend Chart */}
+            {trendData.length > 0 && (
+              <LineChartCard
+                title="Expense Trend (Last 6 Months)"
+                data={trendData}
+                labelKey="month"
+                valueKey="total"
+              />
+            )}
+
+            {/* Category Distribution Pie Chart */}
+            {pieChartData.length > 0 && (
+              <PieChartCard
+                title="Category Distribution"
+                data={pieChartData}
+              />
+            )}
+
+            {/* Top Categories */}
+            {topCategories.length > 0 && (
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>Top Expense Categories</Text>
+                {topCategories.map((category, index) => (
+                  <View key={category.value} style={styles.categoryItem}>
+                    <View style={styles.categoryHeader}>
+                      <View style={styles.categoryLeft}>
+                        <View style={[styles.categoryDot, { backgroundColor: category.color }]} />
+                        <Icon name={category.icon} size={18} color={category.color} />
+                        <Text style={styles.categoryName}>{category.label}</Text>
+                      </View>
+                      <View style={styles.categoryRight}>
+                        <Text style={styles.categoryAmount}>{formatPrice(category.amount)}</Text>
+                        <Text style={styles.categoryPercent}>{category.percentage.toFixed(1)}%</Text>
+                      </View>
+                    </View>
+                    <View style={styles.progressBar}>
+                      <View
+                        style={[
+                          styles.progressFill,
+                          { width: `${category.percentage}%`, backgroundColor: category.color }
+                        ]}
+                      />
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {/* All Categories Grid */}
+            {categoryData.length > 0 && (
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>All Categories</Text>
+                <View style={styles.categoryGrid}>
+                  {categoryData.map(category => (
+                    <View key={category.value} style={styles.categoryGridItem}>
+                      <View style={styles.categoryGridHeader}>
+                        <View style={[styles.categoryDotSmall, { backgroundColor: category.color }]} />
+                        <Text style={styles.categoryGridName} numberOfLines={1}>
+                          {category.label}
+                        </Text>
+                      </View>
+                      <Text style={styles.categoryGridAmount}>{formatPrice(category.amount)}</Text>
+                      <View style={styles.categoryGridBadge}>
+                        <Text style={styles.categoryGridPercent}>{category.percentage.toFixed(1)}%</Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {categoryData.length === 0 && (
+              <View style={styles.noDataCard}>
+                <Icon name="pie-chart-outline" size={48} color={C.muted} />
+                <Text style={styles.noDataTitle}>No Category Data</Text>
+                <Text style={styles.noDataText}>
+                  No expenses categorized for this month
+                </Text>
+              </View>
+            )}
+          </>
+        )}
+
+        <View style={{ height: 100 }} />
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: C.bg },
+  loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  loadingText: { marginTop: 12, fontSize: 14, color: C.muted },
+
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: C.card,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: C.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: { fontSize: 18, fontWeight: '900', color: C.ink },
+
+  scrollContent: { paddingBottom: 32 },
+
+  restaurantScroll: { marginTop: 12 },
+  restaurantScrollContent: { paddingHorizontal: 16, gap: 8 },
+  restaurantChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: C.card,
+    borderWidth: 1,
+    borderColor: C.border,
+    marginRight: 8,
+  },
+  restaurantChipActive: { backgroundColor: C.primary, borderColor: C.primary },
+  restaurantChipText: { fontSize: 13, fontWeight: '600', color: C.ink },
+  restaurantChipTextActive: { color: '#fff' },
+
+  monthNav: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  navBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: C.card,
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  navBtnDisabled: { opacity: 0.5 },
+  navBtnText: { fontSize: 13, fontWeight: '600', color: C.ink },
+  navBtnTextDisabled: { color: C.muted },
+  monthDisplay: { alignItems: 'center' },
+  monthText: { fontSize: 20, fontWeight: '900', color: C.ink },
+  yearText: { fontSize: 14, color: C.muted },
+
+  noDataCard: {
+    backgroundColor: C.card,
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 16,
+    padding: 32,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  noDataTitle: { fontSize: 16, fontWeight: '700', color: C.ink, marginTop: 12 },
+  noDataText: { fontSize: 14, color: C.muted, textAlign: 'center', marginTop: 8 },
+
+  summaryRow: { paddingHorizontal: 16, marginBottom: 12 },
+  summaryCard: {
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+  },
+  summaryLabel: { fontSize: 13, color: C.muted, fontWeight: '600' },
+  summaryValue: { fontSize: 32, fontWeight: '900', marginTop: 4 },
+  summarySubtext: { fontSize: 12, color: C.muted, marginTop: 4 },
+
+  comparisonRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    gap: 12,
+    marginBottom: 8,
+  },
+  comparisonCard: {
+    backgroundColor: C.card,
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  comparisonLabel: { fontSize: 12, color: C.muted, fontWeight: '600' },
+  comparisonValue: { fontSize: 20, fontWeight: '700', color: C.ink, marginTop: 4 },
+  comparisonSubtext: { fontSize: 11, color: C.muted, marginTop: 4 },
+  changeRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
+  changeValue: { fontSize: 20, fontWeight: '700' },
+
+  card: {
+    backgroundColor: C.card,
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  cardTitle: { fontSize: 16, fontWeight: '700', color: C.ink, marginBottom: 16 },
+
+  categoryItem: { marginBottom: 16 },
+  categoryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  categoryLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  categoryDot: { width: 10, height: 10, borderRadius: 5 },
+  categoryName: { fontSize: 14, fontWeight: '600', color: C.text },
+  categoryRight: { alignItems: 'flex-end' },
+  categoryAmount: { fontSize: 14, fontWeight: '700', color: C.ink },
+  categoryPercent: { fontSize: 11, color: C.muted },
+  progressBar: {
+    height: 8,
+    backgroundColor: C.bg,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressFill: { height: '100%', borderRadius: 4 },
+
+  categoryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  categoryGridItem: {
+    width: '47%',
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: C.bg,
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  categoryGridHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
+  categoryDotSmall: { width: 8, height: 8, borderRadius: 4 },
+  categoryGridName: { fontSize: 12, fontWeight: '600', color: C.text, flex: 1 },
+  categoryGridAmount: { fontSize: 16, fontWeight: '700', color: C.ink, marginBottom: 4 },
+  categoryGridBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: C.card,
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  categoryGridPercent: { fontSize: 11, fontWeight: '600', color: C.muted },
+});

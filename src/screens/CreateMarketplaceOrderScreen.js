@@ -1,0 +1,597 @@
+import React, { useState, useCallback, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+  TextInput,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Icon from 'react-native-vector-icons/Ionicons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { api } from '../api/client';
+import { useFocusEffect } from '@react-navigation/native';
+
+const CART_STORAGE_KEY = '@marketplace_cart';
+
+const C = {
+  primary: '#EF3A3A',
+  ink: '#1D2254',
+  text: '#0F172A',
+  muted: '#6B7280',
+  bg: '#F5F7FA',
+  card: '#FFFFFF',
+  border: '#E5E7EB',
+  ok: '#10B981',
+  warn: '#F59E0B',
+  danger: '#EF4444',
+  info: '#3B82F6',
+};
+
+export default function CreateMarketplaceOrderScreen({ navigation, route }) {
+  const { cartItems = [] } = route.params || {};
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [restaurants, setRestaurants] = useState([]);
+  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+  const [deliveryNotes, setDeliveryNotes] = useState('');
+  const [step, setStep] = useState(1); // 1: Select Restaurant, 2: Review & Confirm
+
+  useFocusEffect(
+    useCallback(() => {
+      loadRestaurants();
+    }, [])
+  );
+
+  const loadRestaurants = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/owner/restaurants');
+      if (response.data.ok && response.data.data) {
+        const approved = response.data.data.filter(r => r.status === 'APPROVED');
+        setRestaurants(approved);
+        if (approved.length === 1) {
+          setSelectedRestaurant(approved[0]);
+        }
+      }
+    } catch (error) {
+      console.log('Error loading restaurants:', error);
+      Alert.alert('Error', 'Failed to load restaurants');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const totalAmount = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+
+  const canProceed = () => {
+    if (step === 1) return !!selectedRestaurant;
+    return true;
+  };
+
+  const nextStep = () => {
+    if (step < 2) setStep(step + 1);
+  };
+
+  const prevStep = () => {
+    if (step > 1) setStep(step - 1);
+  };
+
+  const handlePlaceOrder = async () => {
+    if (!selectedRestaurant) {
+      Alert.alert('Error', 'Please select a restaurant');
+      return;
+    }
+
+    if (cartItems.length === 0) {
+      Alert.alert('Error', 'Your cart is empty');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      // Group items by vendor
+      const itemsByVendor = {};
+      cartItems.forEach(item => {
+        const vendorId = item.vendorId;
+        if (!vendorId) return;
+        if (!itemsByVendor[vendorId]) {
+          itemsByVendor[vendorId] = [];
+        }
+        itemsByVendor[vendorId].push(item);
+      });
+
+      // Create separate orders for each vendor
+      const vendorIds = Object.keys(itemsByVendor);
+      if (vendorIds.length === 0) {
+        throw new Error('No valid items in cart');
+      }
+
+      let lastResponse = null;
+      for (const vendorId of vendorIds) {
+        const vendorItems = itemsByVendor[vendorId];
+        const payload = {
+          restaurantId: selectedRestaurant.id,
+          vendorId: vendorId,
+          items: vendorItems.map(item => ({
+            productId: item.productId || item.id,
+            qty: item.quantity,
+          })),
+        };
+
+        lastResponse = await api.post('/owner/marketplace/orders', payload);
+        if (!lastResponse.data.ok) {
+          throw new Error(lastResponse.data.error || 'Failed to place order');
+        }
+      }
+
+      const response = lastResponse;
+
+      if (response.data.ok) {
+        // Clear the marketplace cart from AsyncStorage
+        try {
+          await AsyncStorage.removeItem(CART_STORAGE_KEY);
+        } catch (e) {
+          // Ignore cart clear errors
+        }
+
+        Alert.alert(
+          'Order Placed!',
+          'Your marketplace order has been placed successfully. You can track it in your orders.',
+          [
+            {
+              text: 'View Orders',
+              onPress: () => navigation.navigate('MarketplaceOrders'),
+            },
+            {
+              text: 'OK',
+              onPress: () => navigation.navigate('Home'),
+            },
+          ]
+        );
+      } else {
+        throw new Error(response.data.error || 'Failed to place order');
+      }
+    } catch (error) {
+      console.log('Order error:', error);
+      Alert.alert('Error', error.response?.data?.error || error.message || 'Failed to place order. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Icon name="arrow-back" size={22} color={C.ink} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Place Order</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={C.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (cartItems.length === 0) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Icon name="arrow-back" size={22} color={C.ink} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Place Order</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={styles.emptyContainer}>
+          <Icon name="cart-outline" size={64} color={C.muted} />
+          <Text style={styles.emptyTitle}>No Items to Order</Text>
+          <Text style={styles.emptyText}>Your cart is empty</Text>
+          <TouchableOpacity
+            style={styles.browseBtn}
+            onPress={() => navigation.navigate('Marketplace')}
+          >
+            <Text style={styles.browseBtnText}>Browse Marketplace</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <Icon name="arrow-back" size={22} color={C.ink} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Place Order</Text>
+        <View style={{ width: 40 }} />
+      </View>
+
+      {/* Progress Steps */}
+      <View style={styles.progressRow}>
+        <View style={styles.progressItem}>
+          <View style={[styles.progressDot, step >= 1 && styles.progressDotActive]}>
+            {step > 1 ? (
+              <Icon name="checkmark" size={12} color="#fff" />
+            ) : (
+              <Text style={[styles.progressNum, step >= 1 && styles.progressNumActive]}>1</Text>
+            )}
+          </View>
+          <View style={[styles.progressLine, step > 1 && styles.progressLineActive]} />
+        </View>
+        <View style={styles.progressItem}>
+          <View style={[styles.progressDot, step >= 2 && styles.progressDotActive]}>
+            <Text style={[styles.progressNum, step >= 2 && styles.progressNumActive]}>2</Text>
+          </View>
+        </View>
+      </View>
+      <View style={styles.progressLabels}>
+        <Text style={[styles.progressLabel, step === 1 && styles.progressLabelActive]}>
+          Delivery Location
+        </Text>
+        <Text style={[styles.progressLabel, step === 2 && styles.progressLabelActive]}>
+          Review & Confirm
+        </Text>
+      </View>
+
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Step 1: Select Restaurant */}
+        {step === 1 && (
+          <View style={styles.stepContainer}>
+            <Text style={styles.stepTitle}>Select Delivery Location</Text>
+            <Text style={styles.stepSubtitle}>Choose which restaurant should receive the order</Text>
+
+            {restaurants.length === 0 ? (
+              <View style={styles.emptyBox}>
+                <Icon name="restaurant-outline" size={48} color={C.muted} />
+                <Text style={styles.emptyBoxText}>No approved restaurants found</Text>
+              </View>
+            ) : (
+              restaurants.map((r) => (
+                <TouchableOpacity
+                  key={r.id}
+                  style={[
+                    styles.optionCard,
+                    selectedRestaurant?.id === r.id && styles.optionCardActive,
+                  ]}
+                  onPress={() => setSelectedRestaurant(r)}
+                >
+                  <View style={styles.optionIcon}>
+                    <Icon
+                      name="restaurant"
+                      size={24}
+                      color={selectedRestaurant?.id === r.id ? C.primary : C.muted}
+                    />
+                  </View>
+                  <View style={styles.optionInfo}>
+                    <Text style={styles.optionTitle}>{r.name}</Text>
+                    {r.address && <Text style={styles.optionSubtitle}>{r.address}</Text>}
+                  </View>
+                  {selectedRestaurant?.id === r.id && (
+                    <Icon name="checkmark-circle" size={24} color={C.primary} />
+                  )}
+                </TouchableOpacity>
+              ))
+            )}
+
+            {/* Delivery Notes */}
+            <Text style={styles.sectionLabel}>Delivery Notes (Optional)</Text>
+            <TextInput
+              style={styles.textArea}
+              placeholder="Add any special instructions for delivery..."
+              placeholderTextColor={C.muted}
+              value={deliveryNotes}
+              onChangeText={setDeliveryNotes}
+              multiline
+              numberOfLines={3}
+            />
+          </View>
+        )}
+
+        {/* Step 2: Review & Confirm */}
+        {step === 2 && (
+          <View style={styles.stepContainer}>
+            <Text style={styles.stepTitle}>Review Your Order</Text>
+            <Text style={styles.stepSubtitle}>Confirm the details before placing order</Text>
+
+            {/* Delivery Info */}
+            <View style={styles.summaryCard}>
+              <View style={styles.summaryHeader}>
+                <Icon name="location" size={20} color={C.primary} />
+                <Text style={styles.summaryHeaderText}>Delivery Location</Text>
+              </View>
+              <Text style={styles.summaryValue}>{selectedRestaurant?.name}</Text>
+              {selectedRestaurant?.address && (
+                <Text style={styles.summarySubvalue}>{selectedRestaurant.address}</Text>
+              )}
+              {deliveryNotes && (
+                <View style={styles.notesBox}>
+                  <Text style={styles.notesLabel}>Notes:</Text>
+                  <Text style={styles.notesText}>{deliveryNotes}</Text>
+                </View>
+              )}
+            </View>
+
+            {/* Order Items */}
+            <View style={styles.summaryCard}>
+              <View style={styles.summaryHeader}>
+                <Icon name="cart" size={20} color={C.primary} />
+                <Text style={styles.summaryHeaderText}>Order Items ({totalItems})</Text>
+              </View>
+              {cartItems.map((item, index) => (
+                <View key={item.id || index} style={styles.orderItem}>
+                  <View style={styles.orderItemInfo}>
+                    <Text style={styles.orderItemName}>{item.name}</Text>
+                    <Text style={styles.orderItemQty}>Qty: {item.quantity}</Text>
+                  </View>
+                  <Text style={styles.orderItemPrice}>
+                    ₹{(item.price * item.quantity).toFixed(2)}
+                  </Text>
+                </View>
+              ))}
+              <View style={styles.totalRow}>
+                <Text style={styles.totalLabel}>Total Amount</Text>
+                <Text style={styles.totalValue}>₹{totalAmount.toFixed(2)}</Text>
+              </View>
+            </View>
+
+            {/* Info Note */}
+            <View style={styles.infoBox}>
+              <Icon name="information-circle" size={20} color={C.info} />
+              <Text style={styles.infoText}>
+                Payment will be collected upon delivery or as per your payment terms with the vendor.
+              </Text>
+            </View>
+          </View>
+        )}
+
+        <View style={{ height: 120 }} />
+      </ScrollView>
+
+      {/* Bottom Actions */}
+      <View style={styles.bottomBar}>
+        {step > 1 && (
+          <TouchableOpacity style={styles.backButton} onPress={prevStep}>
+            <Icon name="arrow-back" size={20} color={C.ink} />
+            <Text style={styles.backButtonText}>Back</Text>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity
+          style={[styles.nextButton, !canProceed() && styles.nextButtonDisabled]}
+          onPress={step === 2 ? handlePlaceOrder : nextStep}
+          disabled={!canProceed() || submitting}
+        >
+          {submitting ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <>
+              <Text style={styles.nextButtonText}>
+                {step === 2 ? 'Place Order' : 'Continue'}
+              </Text>
+              {step < 2 && <Icon name="arrow-forward" size={20} color="#fff" />}
+            </>
+          )}
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: C.bg },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: C.card,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: C.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
+  emptyTitle: { fontSize: 18, fontWeight: '700', color: C.ink, marginTop: 16 },
+  emptyText: { fontSize: 14, color: C.muted, marginTop: 8 },
+  browseBtn: {
+    marginTop: 24,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: C.primary,
+  },
+  browseBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+
+  progressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 60,
+  },
+  progressItem: { flexDirection: 'row', alignItems: 'center' },
+  progressDot: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: C.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  progressDotActive: { backgroundColor: C.primary },
+  progressNum: { fontSize: 12, fontWeight: '700', color: C.muted },
+  progressNumActive: { color: '#fff' },
+  progressLine: {
+    width: 80,
+    height: 2,
+    backgroundColor: C.border,
+    marginHorizontal: 8,
+  },
+  progressLineActive: { backgroundColor: C.primary },
+  progressLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingHorizontal: 32,
+    marginBottom: 8,
+  },
+  progressLabel: { fontSize: 12, color: C.muted, textAlign: 'center' },
+  progressLabelActive: { color: C.primary, fontWeight: '600' },
+
+  content: { flex: 1, paddingHorizontal: 16 },
+  stepContainer: { paddingTop: 16 },
+  stepTitle: { fontSize: 20, fontWeight: '800', color: C.ink },
+  stepSubtitle: { fontSize: 14, color: C.muted, marginTop: 4, marginBottom: 20 },
+
+  optionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: C.card,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: C.border,
+  },
+  optionCardActive: { borderColor: C.primary, backgroundColor: '#FFF7F7' },
+  optionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: C.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  optionInfo: { flex: 1 },
+  optionTitle: { fontSize: 16, fontWeight: '700', color: C.ink },
+  optionSubtitle: { fontSize: 13, color: C.muted, marginTop: 2 },
+
+  emptyBox: { alignItems: 'center', paddingVertical: 40 },
+  emptyBoxText: { fontSize: 14, color: C.muted, marginTop: 12 },
+
+  sectionLabel: { fontSize: 14, fontWeight: '700', color: C.ink, marginTop: 20, marginBottom: 12 },
+  textArea: {
+    backgroundColor: C.card,
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: C.border,
+    fontSize: 14,
+    color: C.text,
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+
+  summaryCard: {
+    backgroundColor: C.card,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  summaryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+  },
+  summaryHeaderText: { fontSize: 15, fontWeight: '700', color: C.ink },
+  summaryValue: { fontSize: 16, fontWeight: '700', color: C.ink },
+  summarySubvalue: { fontSize: 13, color: C.muted, marginTop: 2 },
+  notesBox: { marginTop: 12, padding: 12, backgroundColor: C.bg, borderRadius: 8 },
+  notesLabel: { fontSize: 12, fontWeight: '600', color: C.muted },
+  notesText: { fontSize: 13, color: C.text, marginTop: 4 },
+
+  orderItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+  },
+  orderItemInfo: { flex: 1 },
+  orderItemName: { fontSize: 14, fontWeight: '600', color: C.ink },
+  orderItemQty: { fontSize: 12, color: C.muted, marginTop: 2 },
+  orderItemPrice: { fontSize: 14, fontWeight: '700', color: C.text },
+
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 12,
+    marginTop: 4,
+  },
+  totalLabel: { fontSize: 16, fontWeight: '700', color: C.ink },
+  totalValue: { fontSize: 20, fontWeight: '800', color: C.primary },
+
+  infoBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    backgroundColor: '#EFF6FF',
+    borderRadius: 12,
+    padding: 14,
+  },
+  infoText: { flex: 1, fontSize: 13, color: C.info, lineHeight: 18 },
+
+  bottomBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    paddingBottom: 24,
+    backgroundColor: C.card,
+    borderTopWidth: 1,
+    borderTopColor: C.border,
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: C.bg,
+  },
+  backButtonText: { fontSize: 14, fontWeight: '700', color: C.ink },
+  nextButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: C.primary,
+  },
+  nextButtonDisabled: { backgroundColor: '#FBC6C3' },
+  nextButtonText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+});

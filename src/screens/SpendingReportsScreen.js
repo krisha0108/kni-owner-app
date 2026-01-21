@@ -1,11 +1,14 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  RefreshControl, ActivityIndicator, Dimensions
+  RefreshControl, ActivityIndicator, Dimensions, Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { api } from '../api/client';
+import BarChartCard from '../components/charts/BarChartCard';
+import PieChartCard from '../components/charts/PieChartCard';
+import { exportSpendingReportPDF, openPDF } from '../services/analyticsService';
 
 const { width } = Dimensions.get('window');
 
@@ -48,6 +51,7 @@ export default function SpendingReportsScreen({ navigation }) {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
+  const [exporting, setExporting] = useState(false);
 
   const years = [2024, 2025, 2026];
 
@@ -75,7 +79,29 @@ export default function SpendingReportsScreen({ navigation }) {
     fetchReport();
   };
 
-  // Simple bar chart component
+  const handleExportPDF = async () => {
+    setExporting(true);
+    try {
+      const filters = { year: selectedYear };
+      if (selectedMonth) filters.month = selectedMonth;
+
+      const filePath = await exportSpendingReportPDF(null, filters);
+      Alert.alert(
+        'Export Successful',
+        'Spending report has been exported',
+        [
+          { text: 'Open', onPress: () => openPDF(filePath) },
+          { text: 'OK', style: 'cancel' }
+        ]
+      );
+    } catch (error) {
+      Alert.alert('Export Failed', error.message || 'Could not export report');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  // Simple bar chart component (kept for fallback)
   const BarChart = ({ data, maxValue }) => {
     const max = maxValue || Math.max(...data.map(d => d.amount), 1);
     return (
@@ -120,7 +146,17 @@ export default function SpendingReportsScreen({ navigation }) {
           <Icon name="arrow-back" size={22} color={C.ink} />
         </TouchableOpacity>
         <Text style={st.headerTitle}>Spending Reports</Text>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity
+          onPress={handleExportPDF}
+          disabled={exporting}
+          style={st.exportBtn}
+        >
+          {exporting ? (
+            <ActivityIndicator size="small" color={C.primary} />
+          ) : (
+            <Icon name="download-outline" size={22} color={C.primary} />
+          )}
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -235,10 +271,12 @@ export default function SpendingReportsScreen({ navigation }) {
         {/* Tab Content */}
         {activeTab === 'overview' && monthly_spending && (
           <View style={st.section}>
-            <Text style={st.sectionTitle}>Monthly Spending</Text>
-            <View style={st.chartCard}>
-              <BarChart data={monthly_spending} />
-            </View>
+            <BarChartCard
+              title="Monthly Spending"
+              data={monthly_spending}
+              labelKey="month"
+              valueKey="amount"
+            />
 
             {/* Monthly Details */}
             <View style={st.listCard}>
@@ -262,7 +300,19 @@ export default function SpendingReportsScreen({ navigation }) {
 
         {activeTab === 'equipment' && by_equipment && (
           <View style={st.section}>
-            <Text style={st.sectionTitle}>Spending by Equipment</Text>
+            {/* Equipment Pie Chart */}
+            {by_equipment.length > 0 && (
+              <PieChartCard
+                title="Spending by Equipment"
+                data={by_equipment.map((item, index) => ({
+                  name: item.name,
+                  count: item.amount,
+                  color: getEquipmentColor(index)
+                }))}
+              />
+            )}
+
+            {/* Equipment Details List */}
             <View style={st.listCard}>
               {by_equipment.length > 0 ? (
                 by_equipment.map((item, index) => {
@@ -295,6 +345,11 @@ export default function SpendingReportsScreen({ navigation }) {
   );
 }
 
+const getEquipmentColor = (index) => {
+  const colors = [C.primary, C.info, C.warn, C.ok, '#8B5CF6', '#EC4899', '#14B8A6', '#F97316'];
+  return colors[index % colors.length];
+};
+
 const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
@@ -306,6 +361,7 @@ const st = StyleSheet.create({
   },
   backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontSize: 18, fontWeight: '900', color: C.ink },
+  exportBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
 
   scrollContent: { paddingBottom: 32 },
 

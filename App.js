@@ -12,6 +12,7 @@
 // }
 import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import AppNavigator from './src/navigation/AppNavigator';
 import messaging from '@react-native-firebase/messaging';
 import notifee, { AndroidImportance } from '@notifee/react-native';
@@ -21,9 +22,11 @@ export default function App() {
   useNotifications(); // app-wide notification handling
 
   return (
-    <NavigationContainer>
-      <AppNavigator />
-    </NavigationContainer>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <NavigationContainer>
+        <AppNavigator />
+      </NavigationContainer>
+    </GestureHandlerRootView>
   );
 }
 

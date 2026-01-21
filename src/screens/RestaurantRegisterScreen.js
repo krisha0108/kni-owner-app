@@ -1,8 +1,8 @@
-// src/screens/RestaurantRegister.js
+// src/screens/RestaurantRegisterScreen.js
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  Image, ScrollView, ActivityIndicator, Alert, Platform
+  Image, ScrollView, ActivityIndicator, Alert
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { api } from '../api/client';
@@ -10,26 +10,33 @@ import auth from '@react-native-firebase/auth';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import messaging from '@react-native-firebase/messaging';
-import { pick } from '@react-native-documents/picker';
-import { launchImageLibrary } from 'react-native-image-picker';
+
+const C = {
+  primary: '#EF3A3A',
+  ink: '#1D2254',
+  text: '#0F172A',
+  muted: '#6B7280',
+  bg: '#F5F7FA',
+  card: '#FFFFFF',
+  border: '#E5E7EB',
+  ok: '#10B981',
+  warn: '#F59E0B',
+  danger: '#EF4444',
+};
 
 export default function RestaurantRegisterScreen({ navigation }) {
   const [form, setForm] = useState({
-    firstName: '',
-    lastName: '',
+    name: '',
     email: '',
     phone: '',
     password: '',
-    // Restaurant fields
-    hotelName: '',
-    address: '',
-    fssaiNumber: '',
+    confirmPassword: '',
   });
-  const [fssaiFile, setFssaiFile] = useState(null);
-  const [mainImage, setMainImage] = useState(null);
   const [secureText, setSecureText] = useState(true);
+  const [secureConfirmText, setSecureConfirmText] = useState(true);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [passwordErrors, setPasswordErrors] = useState([]);
 
   useEffect(() => {
     GoogleSignin.configure({
@@ -39,27 +46,46 @@ export default function RestaurantRegisterScreen({ navigation }) {
     });
   }, []);
 
-  const saveSessionAndFcm = async (token, owner, provider = 'password') => {
+  // Password validation (matching web)
+  const validatePassword = (password) => {
+    const errors = [];
+    if (password.length < 8) {
+      errors.push('At least 8 characters');
+    }
+    if (!/[A-Z]/.test(password)) {
+      errors.push('One uppercase letter');
+    }
+    if (!/[a-z]/.test(password)) {
+      errors.push('One lowercase letter');
+    }
+    if (!/[0-9]/.test(password)) {
+      errors.push('One number');
+    }
+    return errors;
+  };
+
+  const saveSessionAndFcm = async (token, user, provider = 'password') => {
     try {
       if (token) {
         await AsyncStorage.setItem('userToken', token);
         if (api && api.defaults) api.defaults.headers.common.Authorization = `Bearer ${token}`;
       }
 
-      if (owner) {
-        await AsyncStorage.setItem('user', JSON.stringify(owner));
-        if (owner?.id) await AsyncStorage.setItem('ownerId', String(owner.id));
+      if (user) {
+        await AsyncStorage.setItem('user', JSON.stringify(user));
+        if (user?.id) await AsyncStorage.setItem('ownerId', String(user.id));
       }
 
       await AsyncStorage.setItem('authProvider', provider);
 
+      // FCM token registration
       try {
         const fcmToken = await messaging().getToken();
-        if (fcmToken && owner?.id) {
+        if (fcmToken && user?.id) {
           await api.post('/owners/save-fcm-token', {
-            restaurant_owner_id: owner.id,
+            restaurant_owner_id: user.id,
             fcm_token: fcmToken,
-          }).catch(e => console.log('save-fcm-token error (ignored):', e?.message || e));
+          }).catch(e => console.log('FCM save error (ignored):', e?.message || e));
         }
       } catch (fcmErr) {
         console.log('FCM fetch error (ignored):', fcmErr?.message || fcmErr);
@@ -72,126 +98,86 @@ export default function RestaurantRegisterScreen({ navigation }) {
 
   const handleChange = (field, value) => {
     setForm(prev => ({ ...prev, [field]: value }));
-  };
 
-  const pickFssaiFile = async () => {
-    try {
-      const [result] = await pick({
-        type: ['application/pdf', 'image/*'],
-      });
-      if (result) {
-        setFssaiFile({
-          uri: result.uri,
-          type: result.type || 'application/pdf',
-          name: result.name || 'fssai_certificate.pdf',
-        });
-      }
-    } catch (err) {
-      if (err?.message?.includes('cancel')) {
-        return;
-      }
-      console.log('File pick error:', err);
-      Alert.alert('Error', 'Failed to pick file. Please try again.');
+    // Real-time password validation
+    if (field === 'password') {
+      const errors = validatePassword(value);
+      setPasswordErrors(errors);
     }
   };
 
-  const pickMainImage = () => {
-    launchImageLibrary(
-      {
-        mediaType: 'photo',
-        quality: 0.8,
-        maxWidth: 1024,
-        maxHeight: 1024,
-      },
-      (response) => {
-        if (response.didCancel) {
-          return;
-        }
-        if (response.errorCode) {
-          console.log('Image picker error:', response.errorMessage);
-          Alert.alert('Error', 'Failed to pick image. Please try again.');
-          return;
-        }
-        if (response.assets && response.assets[0]) {
-          const asset = response.assets[0];
-          setMainImage({
-            uri: asset.uri,
-            type: asset.type || 'image/jpeg',
-            name: asset.fileName || 'restaurant_image.jpg',
-          });
-        }
-      }
-    );
+  const validateForm = () => {
+    const { name, email, password, confirmPassword } = form;
+
+    if (!name || name.trim().length < 2) {
+      Alert.alert('Validation Error', 'Name must be at least 2 characters');
+      return false;
+    }
+
+    if (!email || !email.includes('@')) {
+      Alert.alert('Validation Error', 'Please enter a valid email address');
+      return false;
+    }
+
+    const passwordValidationErrors = validatePassword(password);
+    if (passwordValidationErrors.length > 0) {
+      Alert.alert(
+        'Password Requirements',
+        'Password must have:\n' + passwordValidationErrors.map(e => `• ${e}`).join('\n')
+      );
+      return false;
+    }
+
+    if (password !== confirmPassword) {
+      Alert.alert('Validation Error', 'Passwords do not match');
+      return false;
+    }
+
+    return true;
   };
 
   const handleRegister = async () => {
-    const { firstName, lastName, email, phone, password, hotelName, address, fssaiNumber } = form;
+    if (!validateForm()) return;
 
-    if (!firstName || !lastName || !email || !phone || !password) {
-      return Alert.alert('Missing Fields', 'Please fill all required personal details.');
-    }
-
-    if (!hotelName || !address) {
-      return Alert.alert('Missing Fields', 'Please fill restaurant name and address.');
-    }
+    const { name, email, phone, password, confirmPassword } = form;
 
     setLoading(true);
     try {
-      // Use FormData for file upload
-      const formData = new FormData();
-      formData.append('first_name', firstName);
-      formData.append('last_name', lastName);
-      formData.append('email', email);
-      formData.append('phone', phone);
-      formData.append('password', password);
-      formData.append('hotel_name', hotelName);
-      formData.append('address', address);
-
-      if (fssaiNumber) {
-        formData.append('fssai_number', fssaiNumber);
-      }
-
-      if (fssaiFile) {
-        formData.append('fssai_certificate', fssaiFile);
-      }
-
-      if (mainImage) {
-        formData.append('main_image', mainImage);
-      }
-
-      const res = await api.post('/restaurant/register', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+      // Call web-compatible API endpoint
+      const res = await api.post('/auth/register-owner', {
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        phone: phone || '',
+        password,
+        confirmPassword,
       });
 
-      if (res.data?.status) {
-        // Check if account is pending approval
-        if (res.data?.approval_status === 'pending') {
-          Alert.alert(
-            'Registration Successful',
-            'Your account and restaurant have been created and are pending admin approval. You will be notified once approved.',
-            [
-              {
-                text: 'OK',
-                onPress: () => navigation.replace('PendingApproval', { status: 'pending' }),
-              },
-            ]
-          );
-          return;
-        }
+      if (res.data?.ok) {
+        const user = res.data?.data?.user;
+        const token = res.data?.data?.token;
 
-        const owner = res.data?.data || res.data?.owner;
-        const token = res.data?.token;
-        await saveSessionAndFcm(token, owner, 'password');
-        Alert.alert('Success', res.data?.message || 'Registered successfully!');
-        navigation.replace('Home');
+        // Save session
+        await saveSessionAndFcm(token, user, 'password');
+
+        Alert.alert(
+          'Welcome to KNI Super App!',
+          'Registration successful. Let\'s set up your restaurant.',
+          [
+            {
+              text: 'Continue',
+              onPress: () => navigation.replace('RestaurantOnboarding'),
+            },
+          ]
+        );
       } else {
-        Alert.alert('Error', res.data?.message || 'Registration failed.');
+        Alert.alert('Registration Failed', res.data?.error || 'Please try again.');
       }
     } catch (err) {
       console.log('Register error:', err?.response?.data || err.message);
-      Alert.alert('Error', err?.response?.data?.message || 'Something went wrong.');
+      const errorMessage = err?.response?.data?.error ||
+                          err?.response?.data?.message ||
+                          'Something went wrong. Please try again.';
+      Alert.alert('Registration Failed', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -202,6 +188,7 @@ export default function RestaurantRegisterScreen({ navigation }) {
     try {
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
 
+      // Clear any existing sessions
       try { if (auth().currentUser) await auth().signOut(); } catch(_) {}
       try { await GoogleSignin.signOut(); } catch(_) {}
       try { await GoogleSignin.revokeAccess(); } catch(_) {}
@@ -212,34 +199,20 @@ export default function RestaurantRegisterScreen({ navigation }) {
       const googleAccessToken = tokens?.accessToken || userInfo?.accessToken;
 
       if (!googleIdToken && !googleAccessToken) {
-        throw new Error('Google Sign-In did not return idToken or accessToken');
+        throw new Error('Google Sign-In did not return tokens');
       }
 
-      const credential = auth.GoogleAuthProvider.credential(googleIdToken || null, googleAccessToken || null);
+      const credential = auth.GoogleAuthProvider.credential(
+        googleIdToken || null,
+        googleAccessToken || null
+      );
       const firebaseUserCredential = await auth().signInWithCredential(credential);
       const firebaseIdToken = await firebaseUserCredential.user.getIdToken(true);
 
+      // Call Firebase auth endpoint
       const res = await api.post('/owner/auth/firebase', { idToken: firebaseIdToken });
 
-      if (res.data?.approval_status === 'pending' || res.data?.approved === false) {
-        Alert.alert(
-          'Registration Successful',
-          'Your account has been created and is pending admin approval. You will be notified once approved.',
-          [
-            {
-              text: 'OK',
-              onPress: () => navigation.replace('PendingApproval', {
-                status: res.data.approval_status || 'pending',
-                rejectionReason: res.data.rejection_reason,
-              }),
-            },
-          ]
-        );
-        return;
-      }
-
       if (!res.data?.status || !res.data?.token) {
-        console.log('Backend firebase auth response:', res.data);
         throw new Error(res.data?.message || 'Server did not return token');
       }
 
@@ -247,13 +220,27 @@ export default function RestaurantRegisterScreen({ navigation }) {
       const owner = res.data.owner || res.data.data;
       await saveSessionAndFcm(appToken, owner, 'google');
 
-      navigation.replace('Home');
+      // Check if user needs to complete restaurant onboarding
+      if (!res.data?.hasRestaurant) {
+        Alert.alert(
+          'Welcome!',
+          'Let\'s set up your restaurant.',
+          [
+            {
+              text: 'Continue',
+              onPress: () => navigation.replace('RestaurantOnboarding'),
+            },
+          ]
+        );
+      } else {
+        navigation.replace('Home');
+      }
     } catch (e) {
-      console.log('[Google register error]', e?.message || e, e?.response?.data || e?.response?.status);
+      console.log('[Google register error]', e?.message || e);
       Alert.alert(
         'Google Sign-In Failed',
-        e?.message?.includes('idToken') || e?.message?.includes('accessToken')
-          ? 'Google sign-in failed to retrieve a token. Check Web client ID & SHA keys in Firebase console.'
+        e?.message?.includes('token')
+          ? 'Could not retrieve authentication token. Please check your Firebase configuration.'
           : (e?.response?.data?.message || e?.message || 'Please try again.')
       );
     } finally {
@@ -263,191 +250,187 @@ export default function RestaurantRegisterScreen({ navigation }) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
-      <Image source={require('../assets/images/kni-logo.png')} style={styles.logo} />
-      <Text style={styles.title}>Restaurant Owner Registration</Text>
+      {/* Logo */}
+      <Image
+        source={require('../assets/images/kni-logo.png')}
+        style={styles.logo}
+      />
+      <Text style={styles.title}>Create Owner Account</Text>
+      <Text style={styles.subtitle}>Manage your restaurants with ease</Text>
 
+      {/* Google Sign-In */}
       <TouchableOpacity
         style={[styles.googleBtn, { opacity: googleLoading ? 0.7 : 1 }]}
         onPress={handleGoogle}
-        disabled={googleLoading || loading}>
+        disabled={googleLoading || loading}
+      >
         <View style={styles.googleIcon}>
-          {googleLoading ? <ActivityIndicator /> : <Icon name="logo-google" size={18} color="#4285F4" />}
+          {googleLoading ? (
+            <ActivityIndicator size="small" />
+          ) : (
+            <Icon name="logo-google" size={18} color="#4285F4" />
+          )}
         </View>
         <Text style={styles.googleTxt}>Continue with Google</Text>
       </TouchableOpacity>
 
+      {/* Divider */}
       <View style={styles.divider}>
         <View style={styles.dividerLine} />
         <Text style={styles.dividerText}>or register with email</Text>
         <View style={styles.dividerLine} />
       </View>
 
-      {/* Owner Details Section */}
-      <Text style={styles.sectionTitle}>
-        <Icon name="person-outline" size={16} color="#1D2254" /> Owner Details
-      </Text>
-
+      {/* Name Field */}
       <View style={styles.inputWrapper}>
-        <Icon name="person-outline" size={20} color="#888" style={styles.icon} />
+        <Icon name="person-outline" size={20} color={C.muted} style={styles.icon} />
         <TextInput
-          placeholder="First Name *"
+          placeholder="Full Name"
           style={styles.input}
-          value={form.firstName}
-          placeholderTextColor="#999"
-          onChangeText={text => handleChange('firstName', text)}
+          value={form.name}
+          placeholderTextColor={C.muted}
+          onChangeText={text => handleChange('name', text)}
+          autoCapitalize="words"
         />
       </View>
 
+      {/* Email Field */}
       <View style={styles.inputWrapper}>
-        <Icon name="person-outline" size={20} color="#888" style={styles.icon} />
+        <Icon name="mail-outline" size={20} color={C.muted} style={styles.icon} />
         <TextInput
-          placeholder="Last Name *"
-          style={styles.input}
-          value={form.lastName}
-          placeholderTextColor="#999"
-          onChangeText={text => handleChange('lastName', text)}
-        />
-      </View>
-
-      <View style={styles.inputWrapper}>
-        <Icon name="mail-outline" size={20} color="#888" style={styles.icon} />
-        <TextInput
-          placeholder="Email *"
+          placeholder="Email Address"
           style={styles.input}
           keyboardType="email-address"
           autoCapitalize="none"
           value={form.email}
-          placeholderTextColor="#999"
+          placeholderTextColor={C.muted}
           onChangeText={text => handleChange('email', text)}
         />
       </View>
 
+      {/* Phone Field (Optional) */}
       <View style={styles.inputWrapper}>
-        <Icon name="call-outline" size={20} color="#888" style={styles.icon} />
+        <Icon name="call-outline" size={20} color={C.muted} style={styles.icon} />
         <TextInput
-          placeholder="Phone Number *"
+          placeholder="Phone Number (optional)"
           style={styles.input}
           keyboardType="phone-pad"
           value={form.phone}
-          placeholderTextColor="#999"
+          placeholderTextColor={C.muted}
           onChangeText={text => handleChange('phone', text)}
         />
       </View>
 
+      {/* Password Field */}
       <View style={styles.inputWrapper}>
-        <Icon name="lock-closed-outline" size={20} color="#888" style={styles.icon} />
+        <Icon name="lock-closed-outline" size={20} color={C.muted} style={styles.icon} />
         <TextInput
-          placeholder="Password *"
+          placeholder="Password"
           style={styles.input}
           secureTextEntry={secureText}
           value={form.password}
-          placeholderTextColor="#999"
+          placeholderTextColor={C.muted}
           onChangeText={text => handleChange('password', text)}
+          autoCapitalize="none"
         />
         <TouchableOpacity onPress={() => setSecureText(!secureText)} style={styles.eyeIcon}>
-          <Icon name={secureText ? 'eye-off-outline' : 'eye-outline'} size={20} color="#888" />
+          <Icon
+            name={secureText ? 'eye-off-outline' : 'eye-outline'}
+            size={20}
+            color={C.muted}
+          />
         </TouchableOpacity>
       </View>
 
-      {/* Restaurant Details Section */}
-      <Text style={[styles.sectionTitle, { marginTop: 20 }]}>
-        <Icon name="restaurant-outline" size={16} color="#1D2254" /> Restaurant Details
-      </Text>
-
-      <View style={styles.inputWrapper}>
-        <Icon name="restaurant-outline" size={20} color="#888" style={styles.icon} />
-        <TextInput
-          placeholder="Restaurant/Hotel Name *"
-          style={styles.input}
-          value={form.hotelName}
-          placeholderTextColor="#999"
-          onChangeText={text => handleChange('hotelName', text)}
-        />
-      </View>
-
-      {/* Restaurant Image Upload */}
-      <TouchableOpacity style={styles.imageUploadBtn} onPress={pickMainImage}>
-        {mainImage ? (
-          <View style={styles.imagePreviewContainer}>
-            <Image source={{ uri: mainImage.uri }} style={styles.imagePreview} />
-            <TouchableOpacity
-              style={styles.removeImageBtn}
-              onPress={() => setMainImage(null)}
-            >
-              <Icon name="close-circle" size={24} color="#EF4444" />
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <View style={styles.imagePlaceholder}>
-            <Icon name="camera-outline" size={32} color="#9CA3AF" />
-            <Text style={styles.imagePlaceholderText}>Add Restaurant Photo</Text>
-          </View>
-        )}
-      </TouchableOpacity>
-
-      <View style={[styles.inputWrapper, { height: 80, alignItems: 'flex-start', paddingTop: 12 }]}>
-        <Icon name="location-outline" size={20} color="#888" style={styles.icon} />
-        <TextInput
-          placeholder="Full Address with City and Pincode *"
-          style={[styles.input, { textAlignVertical: 'top' }]}
-          multiline
-          numberOfLines={3}
-          value={form.address}
-          placeholderTextColor="#999"
-          onChangeText={text => handleChange('address', text)}
-        />
-      </View>
-
-      <View style={styles.inputWrapper}>
-        <Icon name="document-text-outline" size={20} color="#888" style={styles.icon} />
-        <TextInput
-          placeholder="FSSAI Number (14 digits)"
-          style={styles.input}
-          keyboardType="numeric"
-          maxLength={14}
-          value={form.fssaiNumber}
-          placeholderTextColor="#999"
-          onChangeText={text => handleChange('fssaiNumber', text)}
-        />
-      </View>
-
-      {/* FSSAI Certificate Upload */}
-      <TouchableOpacity style={styles.uploadBtn} onPress={pickFssaiFile}>
-        <Icon name="cloud-upload-outline" size={20} color="#EF3A3A" />
-        <Text style={styles.uploadText}>
-          {fssaiFile ? 'Change FSSAI Certificate' : 'Upload FSSAI Certificate (PDF/Image)'}
-        </Text>
-      </TouchableOpacity>
-
-      {fssaiFile && (
-        <View style={styles.filePreview}>
-          <Icon name="document-attach-outline" size={18} color="#10B981" />
-          <Text style={styles.fileName} numberOfLines={1}>{fssaiFile.name}</Text>
-          <TouchableOpacity onPress={() => setFssaiFile(null)}>
-            <Icon name="close-circle" size={20} color="#EF4444" />
-          </TouchableOpacity>
+      {/* Password Requirements */}
+      {form.password && passwordErrors.length > 0 && (
+        <View style={styles.passwordHints}>
+          <Text style={styles.hintTitle}>Password must have:</Text>
+          {passwordErrors.map((error, index) => (
+            <View key={index} style={styles.hintRow}>
+              <Icon name="close-circle" size={14} color={C.danger} />
+              <Text style={styles.hintText}>{error}</Text>
+            </View>
+          ))}
         </View>
       )}
 
-      {/* Info Alert */}
-      <View style={styles.infoBox}>
-        <Icon name="information-circle-outline" size={18} color="#F59E0B" />
-        <Text style={styles.infoText}>
-          Your account will be reviewed by admin. You will be notified once approved.
-        </Text>
+      {form.password && passwordErrors.length === 0 && (
+        <View style={[styles.passwordHints, { backgroundColor: '#ECFDF5' }]}>
+          <View style={styles.hintRow}>
+            <Icon name="checkmark-circle" size={14} color={C.ok} />
+            <Text style={[styles.hintText, { color: C.ok }]}>Password meets all requirements</Text>
+          </View>
+        </View>
+      )}
+
+      {/* Confirm Password Field */}
+      <View style={styles.inputWrapper}>
+        <Icon name="lock-closed-outline" size={20} color={C.muted} style={styles.icon} />
+        <TextInput
+          placeholder="Confirm Password"
+          style={styles.input}
+          secureTextEntry={secureConfirmText}
+          value={form.confirmPassword}
+          placeholderTextColor={C.muted}
+          onChangeText={text => handleChange('confirmPassword', text)}
+          autoCapitalize="none"
+        />
+        <TouchableOpacity
+          onPress={() => setSecureConfirmText(!secureConfirmText)}
+          style={styles.eyeIcon}
+        >
+          <Icon
+            name={secureConfirmText ? 'eye-off-outline' : 'eye-outline'}
+            size={20}
+            color={C.muted}
+          />
+        </TouchableOpacity>
       </View>
 
+      {/* Password Match Indicator */}
+      {form.confirmPassword && form.password && (
+        <View style={[
+          styles.passwordHints,
+          { backgroundColor: form.password === form.confirmPassword ? '#ECFDF5' : '#FEF2F2' }
+        ]}>
+          <View style={styles.hintRow}>
+            <Icon
+              name={form.password === form.confirmPassword ? 'checkmark-circle' : 'close-circle'}
+              size={14}
+              color={form.password === form.confirmPassword ? C.ok : C.danger}
+            />
+            <Text style={[
+              styles.hintText,
+              { color: form.password === form.confirmPassword ? C.ok : C.danger }
+            ]}>
+              {form.password === form.confirmPassword ? 'Passwords match' : 'Passwords do not match'}
+            </Text>
+          </View>
+        </View>
+      )}
+
+      {/* Register Button */}
       <TouchableOpacity
         style={[styles.registerButton, { opacity: loading ? 0.7 : 1 }]}
         onPress={handleRegister}
-        disabled={loading}>
-        {loading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.registerText}>Register</Text>}
+        disabled={loading || googleLoading}
+      >
+        {loading ? (
+          <ActivityIndicator color="#FFF" />
+        ) : (
+          <Text style={styles.registerText}>Create Account</Text>
+        )}
       </TouchableOpacity>
 
+      {/* Footer */}
       <Text style={styles.footerText}>
         Already have an account?{' '}
-        <Text style={{ color: '#EF3A3A', fontWeight: '600' }} onPress={() => navigation.navigate('RestaurantLogin')}>
-          Login
+        <Text
+          style={{ color: C.primary, fontWeight: '600' }}
+          onPress={() => navigation.navigate('RestaurantLogin')}
+        >
+          Sign In
         </Text>
       </Text>
     </ScrollView>
@@ -455,19 +438,47 @@ export default function RestaurantRegisterScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F7FA', padding: 20 },
-  logo: { width: 80, height: 80, alignSelf: 'center', resizeMode: 'contain', marginBottom: 8 },
-  title: { fontSize: 20, fontWeight: '700', color: '#1D2254', textAlign: 'center', marginBottom: 20 },
+  container: {
+    flex: 1,
+    backgroundColor: C.bg,
+    padding: 20
+  },
+  logo: {
+    width: 100,
+    height: 100,
+    alignSelf: 'center',
+    resizeMode: 'contain',
+    marginTop: 20,
+    marginBottom: 12
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: C.ink,
+    textAlign: 'center',
+    marginBottom: 8
+  },
+  subtitle: {
+    fontSize: 14,
+    color: C.muted,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
   googleBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 14,
+    backgroundColor: C.card,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    paddingVertical: 12,
-    marginBottom: 10,
+    borderColor: C.border,
+    paddingVertical: 14,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   googleIcon: {
     width: 28,
@@ -476,141 +487,91 @@ const styles = StyleSheet.create({
     backgroundColor: '#F1F5FF',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 8,
+    marginRight: 10,
   },
-  googleTxt: { color: '#1D2254', fontWeight: '800' },
+  googleTxt: {
+    color: C.ink,
+    fontWeight: '700',
+    fontSize: 15,
+  },
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 15,
+    marginVertical: 20,
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: C.border,
   },
   dividerText: {
-    marginHorizontal: 10,
-    color: '#6B7280',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1D2254',
-    marginBottom: 12,
-    marginTop: 5,
+    marginHorizontal: 12,
+    color: C.muted,
+    fontSize: 13,
+    fontWeight: '500',
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF',
-    borderColor: '#DDD',
+    backgroundColor: C.card,
+    borderColor: C.border,
     borderWidth: 1,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 4,
-    marginBottom: 12,
+    marginBottom: 14,
   },
-  icon: { marginRight: 8 },
-  input: { flex: 1, fontSize: 15, color: '#000', paddingVertical: 10 },
-  eyeIcon: { paddingLeft: 8 },
-  uploadBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFF',
-    borderColor: '#EF3A3A',
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderRadius: 12,
-    paddingVertical: 14,
-    marginBottom: 10,
+  icon: { marginRight: 10 },
+  input: {
+    flex: 1,
+    fontSize: 15,
+    color: C.text,
+    paddingVertical: 12
   },
-  uploadText: {
-    marginLeft: 8,
-    color: '#EF3A3A',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  filePreview: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ECFDF5',
+  eyeIcon: { paddingLeft: 10 },
+  passwordHints: {
+    backgroundColor: '#FEF2F2',
     borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginBottom: 10,
-  },
-  fileName: {
-    flex: 1,
-    marginLeft: 8,
-    color: '#10B981',
-    fontSize: 13,
-  },
-  infoBox: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: '#FEF3C7',
-    borderRadius: 10,
     padding: 12,
-    marginBottom: 15,
+    marginBottom: 14,
   },
-  infoText: {
-    flex: 1,
-    marginLeft: 8,
-    color: '#92400E',
+  hintTitle: {
     fontSize: 12,
-    lineHeight: 18,
+    fontWeight: '600',
+    color: C.text,
+    marginBottom: 6,
+  },
+  hintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  hintText: {
+    fontSize: 12,
+    color: C.danger,
+    marginLeft: 6,
   },
   registerButton: {
-    backgroundColor: '#EF3A3A',
-    paddingVertical: 14,
+    backgroundColor: C.primary,
+    paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
-    marginTop: 5,
-    shadowColor: '#EF3A3A',
+    marginTop: 8,
+    shadowColor: C.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  registerText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
-  footerText: { textAlign: 'center', marginTop: 20, color: '#666', fontSize: 13 },
-  imageUploadBtn: {
-    marginBottom: 12,
-    borderRadius: 12,
-    overflow: 'hidden',
+  registerText: {
+    color: '#FFF',
+    fontWeight: '700',
+    fontSize: 16
   },
-  imagePreviewContainer: {
-    position: 'relative',
-  },
-  imagePreview: {
-    width: '100%',
-    height: 150,
-    borderRadius: 12,
-  },
-  removeImageBtn: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: 'white',
-    borderRadius: 12,
-  },
-  imagePlaceholder: {
-    backgroundColor: '#FFF',
-    borderWidth: 1,
-    borderColor: '#DDD',
-    borderStyle: 'dashed',
-    borderRadius: 12,
-    height: 100,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  imagePlaceholderText: {
-    marginTop: 8,
-    color: '#9CA3AF',
-    fontSize: 14,
+  footerText: {
+    textAlign: 'center',
+    marginTop: 24,
+    color: C.muted,
+    fontSize: 14
   },
 });

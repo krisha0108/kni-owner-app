@@ -38,7 +38,7 @@ const SplashScreen = ({ navigation }) => {
 const timer = setTimeout(async () => {
    const token = await AsyncStorage.getItem('userToken');
     if (token) {
-      navigation.replace('Home'); // Already logged in
+      navigation.replace('MainApp'); // Already logged in
     } else {
       navigation.replace('Onboarding'); // Not logged in
     }    }, 3000);

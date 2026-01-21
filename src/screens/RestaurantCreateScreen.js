@@ -1,0 +1,440 @@
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  Image,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Icon from 'react-native-vector-icons/Ionicons';
+import { launchImageLibrary } from 'react-native-image-picker';
+import { api } from '../api/client';
+
+const C = {
+  primary: '#EF3A3A',
+  ink: '#1D2254',
+  text: '#0F172A',
+  muted: '#6B7280',
+  bg: '#F5F7FA',
+  card: '#FFFFFF',
+  border: '#E5E7EB',
+  ok: '#10B981',
+  warn: '#F59E0B',
+  danger: '#EF4444',
+  info: '#3B82F6',
+};
+
+export default function RestaurantCreateScreen({ navigation }) {
+  const [formData, setFormData] = useState({
+    name: '',
+    address: '',
+    city: '',
+    pincode: '',
+    restaurantImageUrl: '',
+    fssaiNumber: '',
+    fssaiCertificateUrl: '',
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(null); // 'restaurant' or 'fssai'
+
+  const updateField = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const pickImage = async (type) => {
+    try {
+      const result = await launchImageLibrary({
+        mediaType: 'photo',
+        quality: 0.8,
+        maxWidth: 1200,
+        maxHeight: 1200,
+      });
+
+      if (result.didCancel || !result.assets?.[0]) return;
+
+      const asset = result.assets[0];
+      setUploadingImage(type);
+
+      // Upload the image
+      const formDataUpload = new FormData();
+      formDataUpload.append('file', {
+        uri: asset.uri,
+        type: asset.type || 'image/jpeg',
+        name: asset.fileName || 'image.jpg',
+      });
+      formDataUpload.append('folder', type === 'restaurant' ? 'restaurants' : 'fssai-certificates');
+
+      const response = await api.post('/upload', formDataUpload, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      if (response.data.ok) {
+        const field = type === 'restaurant' ? 'restaurantImageUrl' : 'fssaiCertificateUrl';
+        updateField(field, response.data.data.url);
+      } else {
+        Alert.alert('Error', 'Failed to upload image');
+      }
+    } catch (error) {
+      console.log('Image upload error:', error);
+      Alert.alert('Error', 'Failed to upload image');
+    } finally {
+      setUploadingImage(null);
+    }
+  };
+
+  const removeImage = (type) => {
+    const field = type === 'restaurant' ? 'restaurantImageUrl' : 'fssaiCertificateUrl';
+    updateField(field, '');
+  };
+
+  const handleSubmit = async () => {
+    // Validation
+    if (!formData.name.trim()) {
+      Alert.alert('Error', 'Please enter restaurant name');
+      return;
+    }
+    if (!formData.address.trim()) {
+      Alert.alert('Error', 'Please enter address');
+      return;
+    }
+    if (!formData.city.trim()) {
+      Alert.alert('Error', 'Please enter city');
+      return;
+    }
+    if (!formData.pincode.trim() || formData.pincode.length !== 6) {
+      Alert.alert('Error', 'Please enter a valid 6-digit pincode');
+      return;
+    }
+    if (!formData.fssaiNumber.trim() || formData.fssaiNumber.length !== 14) {
+      Alert.alert('Error', 'Please enter a valid 14-digit FSSAI number');
+      return;
+    }
+    if (!formData.fssaiCertificateUrl) {
+      Alert.alert('Error', 'Please upload FSSAI certificate');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const response = await api.post('/owner/restaurants', formData);
+
+      if (response.data.ok) {
+        Alert.alert(
+          'Success',
+          'Restaurant submitted for approval',
+          [
+            {
+              text: 'OK',
+              onPress: () => navigation.goBack(),
+            },
+          ]
+        );
+      } else {
+        Alert.alert('Error', response.data.error || 'Failed to create restaurant');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to create restaurant');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const renderImageUpload = (type, title, imageUrl, isOptional = false) => (
+    <View style={styles.uploadSection}>
+      <Text style={styles.sectionLabel}>
+        {title} {!isOptional && '*'}
+      </Text>
+      {imageUrl ? (
+        <View style={styles.imagePreviewContainer}>
+          <Image source={{ uri: imageUrl }} style={styles.imagePreview} />
+          <TouchableOpacity
+            style={styles.removeImageBtn}
+            onPress={() => removeImage(type)}
+          >
+            <Icon name="close-circle" size={24} color={C.danger} />
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <TouchableOpacity
+          style={styles.uploadBox}
+          onPress={() => pickImage(type)}
+          disabled={uploadingImage !== null}
+        >
+          {uploadingImage === type ? (
+            <ActivityIndicator color={C.primary} size="small" />
+          ) : (
+            <>
+              <Icon name="cloud-upload-outline" size={32} color={C.muted} />
+              <Text style={styles.uploadText}>Tap to upload</Text>
+              <Text style={styles.uploadHint}>Max 5MB, JPG/PNG</Text>
+            </>
+          )}
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <Icon name="arrow-back" size={22} color={C.ink} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Add New Restaurant</Text>
+        <View style={{ width: 40 }} />
+      </View>
+
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.keyboardView}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Text style={styles.subtitle}>
+            Register a new restaurant location for approval
+          </Text>
+
+          {/* Basic Information */}
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Basic Information</Text>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Restaurant Name *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="My Restaurant"
+                placeholderTextColor={C.muted}
+                value={formData.name}
+                onChangeText={(v) => updateField('name', v)}
+                editable={!isLoading}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Address *</Text>
+              <TextInput
+                style={[styles.input, styles.multilineInput]}
+                placeholder="123 Main Street, Downtown"
+                placeholderTextColor={C.muted}
+                value={formData.address}
+                onChangeText={(v) => updateField('address', v)}
+                editable={!isLoading}
+                multiline
+                numberOfLines={2}
+              />
+            </View>
+
+            <View style={styles.row}>
+              <View style={[styles.inputGroup, { flex: 1 }]}>
+                <Text style={styles.label}>City *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Mumbai"
+                  placeholderTextColor={C.muted}
+                  value={formData.city}
+                  onChangeText={(v) => updateField('city', v)}
+                  editable={!isLoading}
+                />
+              </View>
+              <View style={{ width: 12 }} />
+              <View style={[styles.inputGroup, { flex: 1 }]}>
+                <Text style={styles.label}>Pincode *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="400001"
+                  placeholderTextColor={C.muted}
+                  value={formData.pincode}
+                  onChangeText={(v) => updateField('pincode', v.replace(/\D/g, '').slice(0, 6))}
+                  editable={!isLoading}
+                  keyboardType="number-pad"
+                  maxLength={6}
+                />
+              </View>
+            </View>
+          </View>
+
+          {/* Restaurant Image */}
+          <View style={styles.card}>
+            <View style={styles.sectionHeader}>
+              <Icon name="image-outline" size={20} color={C.ink} />
+              <Text style={styles.sectionTitle}>Restaurant Image</Text>
+              <Text style={styles.optionalTag}>(Optional)</Text>
+            </View>
+            {renderImageUpload('restaurant', 'Restaurant Photo', formData.restaurantImageUrl, true)}
+            <Text style={styles.helperText}>
+              Upload a photo of your restaurant (front view, dining area, or logo)
+            </Text>
+          </View>
+
+          {/* FSSAI Details */}
+          <View style={styles.card}>
+            <View style={styles.sectionHeader}>
+              <Icon name="document-text-outline" size={20} color={C.ink} />
+              <Text style={styles.sectionTitle}>FSSAI Details</Text>
+              <Text style={styles.requiredTag}>(Required)</Text>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>FSSAI License Number *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="14 digit FSSAI number"
+                placeholderTextColor={C.muted}
+                value={formData.fssaiNumber}
+                onChangeText={(v) => updateField('fssaiNumber', v.replace(/\D/g, '').slice(0, 14))}
+                editable={!isLoading}
+                keyboardType="number-pad"
+                maxLength={14}
+              />
+              <Text style={styles.helperText}>
+                Enter your 14-digit FSSAI license number
+              </Text>
+            </View>
+
+            {renderImageUpload('fssai', 'FSSAI Certificate', formData.fssaiCertificateUrl)}
+            <Text style={styles.helperText}>
+              Upload a clear photo or scan of your FSSAI license certificate
+            </Text>
+          </View>
+
+          {/* Submit Button */}
+          <TouchableOpacity
+            style={[styles.submitBtn, isLoading && styles.disabledBtn]}
+            onPress={handleSubmit}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <>
+                <Icon name="checkmark-circle" size={20} color="#fff" />
+                <Text style={styles.submitBtnText}>Submit for Approval</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          <View style={{ height: 40 }} />
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: C.bg },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: C.card,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: C.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
+  keyboardView: { flex: 1 },
+  scrollContent: { padding: 16 },
+  subtitle: { fontSize: 14, color: C.muted, marginBottom: 16 },
+
+  card: {
+    backgroundColor: C.card,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: C.ink },
+  optionalTag: { fontSize: 12, color: C.muted },
+  requiredTag: { fontSize: 12, color: C.primary },
+
+  inputGroup: { marginBottom: 12 },
+  label: { fontSize: 14, fontWeight: '600', color: C.ink, marginBottom: 6 },
+  input: {
+    backgroundColor: C.bg,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: C.border,
+    paddingHorizontal: 14,
+    height: 48,
+    fontSize: 15,
+    color: C.text,
+  },
+  multilineInput: {
+    height: 80,
+    paddingTop: 12,
+    textAlignVertical: 'top',
+  },
+  row: { flexDirection: 'row' },
+  helperText: { fontSize: 12, color: C.muted, marginTop: 4 },
+
+  uploadSection: { marginBottom: 8 },
+  sectionLabel: { fontSize: 14, fontWeight: '600', color: C.ink, marginBottom: 8 },
+  uploadBox: {
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: C.border,
+    borderRadius: 12,
+    padding: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: C.bg,
+  },
+  uploadText: { fontSize: 14, fontWeight: '600', color: C.ink, marginTop: 8 },
+  uploadHint: { fontSize: 12, color: C.muted, marginTop: 4 },
+
+  imagePreviewContainer: { position: 'relative' },
+  imagePreview: {
+    width: '100%',
+    height: 150,
+    borderRadius: 12,
+    backgroundColor: C.bg,
+  },
+  removeImageBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: C.card,
+    borderRadius: 12,
+  },
+
+  submitBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: C.primary,
+    borderRadius: 12,
+    height: 52,
+    marginTop: 8,
+  },
+  disabledBtn: { opacity: 0.7 },
+  submitBtnText: { fontSize: 16, fontWeight: '700', color: '#fff' },
+});

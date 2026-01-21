@@ -1353,7 +1353,8 @@ function SkeletonRequestDetail({ insetsBottom }) {
 /* ---------- MAIN ---------- */
 export default function RequestDetail({ navigation, route }) {
   const insets = useSafeAreaInsets();
-  const productId = route?.params?.id ?? route?.params?.productId ?? null;
+  const categoryId = route?.params?.categoryId ?? route?.params?.id ?? null;
+  const productId = route?.params?.productId ?? null; // Legacy support
 
   // --- READ OWNER ID FROM ANY KEY ---
   const [ownerId, setOwnerId] = useState(null);
@@ -1363,16 +1364,20 @@ export default function RequestDetail({ navigation, route }) {
         const a = await AsyncStorage.getItem('owner_id');
         const b = await AsyncStorage.getItem('restaurant_owner_id');
         const c = await AsyncStorage.getItem('ownerId');
-        const chosen = Number(a || b || c || 0);
-        if (Number.isFinite(chosen) && chosen > 0) setOwnerId(chosen);
-        else setOwnerId(null);
+        // Handle both numeric and string (UUID) owner IDs
+        const chosen = String(a || b || c || '').trim();
+        if (chosen && chosen !== '0' && chosen !== 'null' && chosen !== 'undefined') {
+          setOwnerId(chosen);
+        } else {
+          setOwnerId(null);
+        }
       } catch {
         setOwnerId(null);
       }
     })();
   }, []);
 
-  // Build service->product map
+  // Build service->product map (now uses string IDs)
   const [svc2prod, setSvc2prod] = useState({});
   useEffect(() => {
     (async () => {
@@ -1382,9 +1387,9 @@ export default function RequestDetail({ navigation, route }) {
                   : Array.isArray(res?.data?.data) ? res.data.data : [];
         const m = {};
         arr.forEach(s => {
-          const sid = Number(s.id);
-          const pid = Number(s.product_id);
-          if (sid > 0 && pid > 0) m[sid] = pid;
+          const sid = String(s.id || '');
+          const pid = String(s.product_id || s.category_id || '');
+          if (sid && pid) m[sid] = pid;
         });
         setSvc2prod(m);
       } catch { setSvc2prod({}); }
@@ -1414,12 +1419,11 @@ export default function RequestDetail({ navigation, route }) {
     parts: [], // Parts for this product
   });
 
-  const [technicians, setTechnicians] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [networkErr, setNetworkErr] = useState('');
   const [refreshing, setRefreshing] = useState(false);
-  
+
   // Enquiry states
   const [enquiryModalVisible, setEnquiryModalVisible] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -1438,24 +1442,6 @@ export default function RequestDetail({ navigation, route }) {
   }, []);
 
   const normalizeArray = (val, fb = []) => (Array.isArray(val) && val.length ? val : fb);
-
-  /** Technicians */
-  const fetchTechnicians = useCallback(async (serviceId) => {
-    const qs = (serviceId !== undefined && serviceId !== null && String(serviceId) !== '')
-      ? { service_id: String(serviceId) } : {};
-    const res = await safeGet('/app/technicians', 2, ownerId ? { ...qs, owner_id: ownerId } : qs);
-    const payload = res?.data;
-    const arr = Array.isArray(payload) ? payload : [];
-    const mapped = arr.map((t) => ({
-      id: String(t.id ?? ''),
-      name: t.name || 'Unknown',
-      avatar: (t.avatar && typeof t.avatar === 'string' && t.avatar.startsWith('http')) ? t.avatar : '',
-      rating: Number.isFinite(Number(t.rating)) ? Number(t.rating) : 0,
-      jobs: Number.isFinite(Number(t.jobs)) ? Number(t.jobs) : 0,
-    })).filter(x => x.id);
-    const top3 = mapped.sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 3);
-    setTechnicians(top3);
-  }, [ownerId, safeGet]);
 
   /** Reviews */
   const fetchReviews = useCallback(async (productIdMaybe) => {
@@ -1531,107 +1517,70 @@ const handleEnquirySubmit = async (formData, product) => {
     setEnquiryModalVisible(true);
   };
 
-  // 🔥 REFINED: Fetch product-specific services
+  // 🔥 Fetch category with services and parts (matching web flow)
   const fetchAll = useCallback(async () => {
     setNetworkErr('');
     setLoading(true);
 
     try {
-      if (productId) {
-        console.log(`🔄 Fetching product ${productId} details...`);
+      const idToFetch = categoryId || productId;
+      if (idToFetch) {
+        console.log(`🔄 Fetching category ${idToFetch} details...`);
 
-        // Fetch product, services, and parts in PARALLEL
-        const [productRes, servicesRes, partsRes] = await Promise.all([
-          safeGet(`/app/products/${productId}`, 2, ownerId ? { owner_id: ownerId } : {}),
-          safeGet('/app/services', 2, ownerId ? { owner_id: ownerId } : {}).catch(() => ({ data: [] })),
-          safeGet('/app/parts', 2, { product_id: productId }).catch(() => ({ data: [] })),
-        ]);
+        // Fetch category with services and parts from public API
+        const categoryRes = await safeGet(`/public/categories/${idToFetch}`, 2, {});
 
-        const d = productRes?.data ?? {};
+        const d = categoryRes?.data?.data ?? categoryRes?.data ?? {};
+        const category = d.category || {};
+        const servicesData = d.services || [];
+        const partsData = d.parts || [];
 
-        const resolvedImages = buildStoryImages(d, headerItem) || FALLBACK_IMAGES;
-        const included   = normalizeArray(d.included,   FALLBACK_INCLUDED);
-        const excluded   = normalizeArray(d.excluded,   FALLBACK_EXCLUDED);
-        const conditions = normalizeArray(d.conditions, FALLBACK_CONDITIONS);
-        const faqs       = normalizeArray(d.faqs,       FALLBACK_FAQS);
+        console.log(`📦 Loaded: ${servicesData.length} services, ${partsData.length} parts`);
 
-        let services = [];
-        let serviceIdForTech;
+        // Map services to standard format
+        const services = servicesData.map((s) => ({
+          id: s.id,
+          name: s.name || `Service #${s.id}`,
+          description: s.description || '',
+          price: Number(s.price || 0),
+          subCategory: s.subCategory?.name || null,
+          itemType: 'SERVICE',
+        }));
 
-        // METHOD 1: Try to get services directly from product response
-        if (d.services && Array.isArray(d.services) && d.services.length > 0) {
-          services = d.services.map((s) => ({
-            id: Number(s.id),
-            name: s.title || s.name || `Service #${s.id}`,
-            price: Number(s.price || s.mrp || 0),
-          }));
-          serviceIdForTech = services[0]?.id;
-        }
-
-        // METHOD 2: If no services in product response, filter from all services
-        if (services.length === 0) {
-          const allServices = Array.isArray(servicesRes?.data) ? servicesRes.data
-            : Array.isArray(servicesRes?.data?.data) ? servicesRes.data.data : [];
-
-          const filteredServices = allServices.filter(s =>
-            Number(s.product_id) === Number(productId)
-          );
-
-          if (filteredServices.length > 0) {
-            services = filteredServices.map((s) => ({
-              id: Number(s.id),
-              name: s.title || s.name || `Service #${s.id}`,
-              price: Number(s.price || s.mrp || 0),
-            }));
-            serviceIdForTech = services[0]?.id;
-          }
-        }
-
-        // Process parts from API response
-        let parts = [];
-        const partsData = Array.isArray(partsRes?.data) ? partsRes.data
-          : Array.isArray(partsRes?.data?.data) ? partsRes.data.data : [];
-
-        if (partsData.length > 0) {
-          parts = partsData.map((p) => ({
-            id: Number(p.id),
-            name: p.title || p.name || `Part #${p.id}`,
-            price: Number(p.price || 0),
-            image: p.featured_image || null,
-            description: p.description || '',
-          }));
-        }
-
-        // Prefetch images in background (don't wait)
-        resolvedImages.slice(0, 3).forEach((uri) =>
-          Image.prefetch(uri).catch(() => {})
-        );
+        // Map parts to standard format
+        const parts = partsData.map((p) => ({
+          id: p.id,
+          name: p.name || `Part #${p.id}`,
+          description: p.description || '',
+          price: Number(p.price || 0),
+          subCategory: p.subCategory?.name || null,
+          itemType: 'PART',
+        }));
 
         setProd({
-          title: d.title || headerItem.title,
-          description: d.description || headerItem.desc,
-          price: d.price || headerItem.price,
-          storyImages: resolvedImages,
-          included, excluded, conditions, faqs, services, parts,
+          title: category.name || headerItem.title,
+          description: headerItem.desc || `Browse services and parts in ${category.name || 'this category'}`,
+          price: null,
+          storyImages: FALLBACK_IMAGES,
+          included: FALLBACK_INCLUDED,
+          excluded: FALLBACK_EXCLUDED,
+          conditions: FALLBACK_CONDITIONS,
+          faqs: FALLBACK_FAQS,
+          services,
+          parts,
         });
-
-        // Fetch technicians and reviews in PARALLEL (don't block main content)
-        Promise.all([
-          fetchTechnicians(serviceIdForTech).catch(() => setTechnicians([])),
-          fetchReviews(productId || null).catch(() => setReviews([])),
-        ]);
 
       } else {
         setProd(p => ({ ...p, services: [], parts: [] }));
       }
     } catch (e) {
       console.log('❌ fetchAll error:', e.message);
-      setNetworkErr(e?.message || 'Failed to load product');
+      setNetworkErr(e?.message || 'Failed to load category');
       setProd(p => ({ ...p, services: [], parts: [] }));
     } finally {
       setLoading(false);
     }
-  }, [fetchTechnicians, fetchReviews, headerItem, ownerId, productId, safeGet]);
+  }, [headerItem, ownerId, categoryId, productId, safeGet]);
 
   useEffect(() => { 
     fetchAll(); 
@@ -1640,13 +1589,13 @@ const handleEnquirySubmit = async (formData, product) => {
   // Debug effect to monitor services
   useEffect(() => {
     console.log('🔍 Current State:', {
-      productId,
+      categoryId,
       servicesCount: prod.services?.length || 0,
-      services: prod.services,
+      partsCount: prod.parts?.length || 0,
       loading,
       hasOwnerId: !!ownerId
     });
-  }, [prod.services, productId, loading, ownerId]);
+  }, [prod.services, prod.parts, categoryId, loading, ownerId]);
 
   /* ---------- HERO PROGRESS ---------- */
   const [idx, setIdx] = useState(0);
@@ -1731,34 +1680,25 @@ const handleEnquirySubmit = async (formData, product) => {
     })();
   }, [productId, ownerKey, prod?.title, prod?.description, prod?.storyImages, prod?.services, prod?.parts, prod?.image, headerItem?.category, pmetaKey, rservicesKey]);
 
-  // reverse map product->service for server items
+  // reverse map product->service for server items (now uses string IDs)
   const prod2svc = useMemo(() => {
     const m = {};
-    Object.entries(svc2prod || {}).forEach(([sid, pid]) => { if (pid) m[Number(pid)] = Number(sid); });
+    Object.entries(svc2prod || {}).forEach(([sid, pid]) => { if (pid) m[String(pid)] = String(sid); });
     return Object.keys(cart || {}).reduce((acc, sidStr) => {
-      const sid = Number(sidStr);
-      if (!(sid in acc)) acc[sid] = sid;
+      if (!(sidStr in acc)) acc[sidStr] = sidStr;
       return acc;
     }, m);
   }, [svc2prod, cart]);
 
-  // Helper to normalize cart object keys (keeps both service IDs and part keys)
+  // Helper to normalize cart object keys (keeps both service IDs and part keys as strings)
   const normalizeCartKeys = (obj) => {
     if (!obj || typeof obj !== 'object') return {};
     const result = {};
     Object.entries(obj).forEach(([k, v]) => {
       const qty = Number(v);
       if (qty > 0) {
-        // Keep part keys as strings (e.g., 'part:123')
-        if (String(k).startsWith('part:')) {
-          result[k] = qty;
-        } else {
-          // Convert service keys to numbers
-          const numKey = Number(k);
-          if (!isNaN(numKey)) {
-            result[numKey] = qty;
-          }
-        }
+        // Keep all keys as strings (both part keys like 'part:123' and service IDs)
+        result[String(k)] = qty;
       }
     });
     return result;
@@ -1841,64 +1781,27 @@ const handleEnquirySubmit = async (formData, product) => {
     };
   }, [persistKey]);
 
-  /* ---------- IMMEDIATE SERVER WRITE HELPERS ---------- */
-  const serviceIdToProductId = useCallback((sid) => {
-    const pid = Number(svc2prod[sid] ?? sid);
-    return Number.isFinite(pid) && pid > 0 ? pid : null;
-  }, [svc2prod]);
-
-  // Use ref to track pending server writes (debounced)
-  const pendingWritesRef = useRef({});
-  const writeTimeoutRef = useRef(null);
-
-  const flushServerWrites = useCallback(async () => {
-    if (!ownerId) return;
-    const writes = { ...pendingWritesRef.current };
-    pendingWritesRef.current = {};
-
-    for (const [sidStr, quantity] of Object.entries(writes)) {
-      const sid = Number(sidStr);
-      const pid = serviceIdToProductId(sid);
-      if (!pid) continue;
-
-      try {
-        if (quantity > 0) {
-          await api.put(`/app/cart/items/${pid}`, { quantity }, { params: { owner_id: ownerId } });
-        } else {
-          await api.delete(`/app/cart/items/${pid}`, { params: { owner_id: ownerId } });
-        }
-      } catch (e) {
-        console.log('SERVER WRITE FAIL', e?.response?.status, e?.response?.data);
-      }
-    }
-  }, [ownerId, serviceIdToProductId]);
-
-  const scheduleServerWrite = useCallback((sid, quantity) => {
-    pendingWritesRef.current[sid] = quantity;
-    if (writeTimeoutRef.current) clearTimeout(writeTimeoutRef.current);
-    writeTimeoutRef.current = setTimeout(flushServerWrites, 500);
-  }, [flushServerWrites]);
+  /* ---------- CART OPERATIONS ---------- */
+  // Cart is stored locally (AsyncStorage) and passed to RequestNow when proceeding
+  // Server sync happens when the booking is created
 
   const add = useCallback((sid) => {
-    const numSid = Number(sid);
+    const strSid = String(sid);
     setCart(prev => {
-      const nextQty = (prev[numSid] || 0) + 1;
-      const next = { ...prev, [numSid]: nextQty };
-      scheduleServerWrite(numSid, nextQty);
-      return next;
+      const nextQty = (prev[strSid] || 0) + 1;
+      return { ...prev, [strSid]: nextQty };
     });
-  }, [scheduleServerWrite]);
+  }, []);
 
   const sub = useCallback((sid) => {
-    const numSid = Number(sid);
+    const strSid = String(sid);
     setCart(prev => {
-      const nextQty = Math.max(0, (prev[numSid] || 0) - 1);
+      const nextQty = Math.max(0, (prev[strSid] || 0) - 1);
       const next = { ...prev };
-      if (nextQty === 0) delete next[numSid]; else next[numSid] = nextQty;
-      scheduleServerWrite(numSid, nextQty);
+      if (nextQty === 0) delete next[strSid]; else next[strSid] = nextQty;
       return next;
     });
-  }, [scheduleServerWrite]);
+  }, []);
 
   // Parts cart operations (using 'part:' prefix to distinguish from services)
   const addPart = useCallback((partId) => {
@@ -1925,7 +1828,7 @@ const handleEnquirySubmit = async (formData, product) => {
       let items = 0, amt = 0;
       // Services
       (prod.services || []).forEach((s) => {
-        const sid = Number(s.id);
+        const sid = String(s.id);
         const q = cart[sid] || 0;
         items += q; amt += q * Number(s.price || 0);
       });
@@ -1970,46 +1873,11 @@ const handleEnquirySubmit = async (formData, product) => {
   }, [fetchAll]);
 
 
-  const keyTech = useCallback((t) => String(t.id), []);
-  const renderTech = useCallback(({ item: t }) => {
-    const rating = Number.isFinite(Number(t.rating)) ? Number(t.rating) : 0;
-    const jobs   = Number.isFinite(Number(t.jobs)) ? Number(t.jobs) : 0;
-    const avatar = (t.avatar && typeof t.avatar === 'string' && t.avatar.startsWith('http'))
-      ? t.avatar
-      : FALLBACK_IMAGES[0];
-
-    return (
-      <View style={st.techCard}>
-        <ImageBackground
-          source={{ uri: avatar }}
-          style={st.techPic}
-          imageStyle={{ borderRadius: 12 }}
-        />
-        <View style={{ flex: 1, marginLeft: 10, minWidth: 0 }}>
-          <Text style={st.techName} numberOfLines={1}>{t.name}</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
-            <Text style={st.techJobs}>⭐ {rating.toFixed(1)} • {jobs} jobs</Text>
-          </View>
-        </View>
-      </View>
-    );
-  }, []);
-
   /* ---------- CONFIRM ---------- */
-  const onConfirm = async () => {
-    if (!ownerId) {
-      Alert.alert('Owner not set', 'Please login again so we can save your request.');
-      return;
-    }
-    try {
-      const resp = await api.post('/app/cart/confirm', {}, { params: { owner_id: ownerId } });
-      const cid = resp?.data?.cart_id || null;
-      navigation.navigate('RequestNow', { ...requestNowParams, cartId: cid });
-    } catch (e) {
-      const msg = e?.response?.data?.message || e?.message || 'Could not confirm right now';
-      Alert.alert('Note', `${msg}\nProceeding with your selection.`);
-      navigation.navigate('RequestNow', { ...requestNowParams, cartId: null });
-    }
+  const onConfirm = () => {
+    // Navigate directly to RequestNow with cart items
+    // The cart data is already in requestNowParams
+    navigation.navigate('RequestNow', { ...requestNowParams, cartId: null });
   };
 
   /* ---------- EARLY RETURNS ---------- */
@@ -2133,7 +2001,7 @@ const handleEnquirySubmit = async (formData, product) => {
               contentContainerStyle={{ paddingRight: 16 }}
             >
               {prod.services.map((s) => {
-                const sid = Number(s.id);
+                const sid = String(s.id);
                 const q = cart[sid] || 0;
                 return (
                   <View key={`service-${sid}`} style={[st.serviceChip, { width: 220, marginRight: 10 }]}>
@@ -2257,24 +2125,6 @@ const handleEnquirySubmit = async (formData, product) => {
               </View>
             ))}
           </View>
-        </View>
-
-        {/* Technicians */}
-        <View style={st.section}>
-          <Text style={st.sectionTitle}>Top technicians</Text>
-          {technicians.length === 0 ? (
-            <Text style={st.sectionSub}>Technicians will appear here when available.</Text>
-          ) : (
-            <FlatList
-              data={technicians}
-              keyExtractor={keyTech}
-              renderItem={renderTech}
-              numColumns={2}
-              columnWrapperStyle={{ gap: 10 }}
-              contentContainerStyle={{ paddingBottom: 4 }}
-              scrollEnabled={false}
-            />
-          )}
         </View>
 
         {/* FAQs */}
@@ -2457,7 +2307,7 @@ enquiryButtonSection: {
   shadowRadius: 4,
   elevation: 3,
 },
-enquiryButtonText: {
+enquiryButtonTextSection: {
   color: '#fff',
   fontSize: 15,
   fontWeight: '700',

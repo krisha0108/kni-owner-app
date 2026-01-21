@@ -11,12 +11,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api } from '../api/client';
 import { Clipboard } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
-import RNFS from 'react-native-fs';
 import { useFocusEffect } from '@react-navigation/native';
 
 /* ---------- MONEY & UPI HELPERS ---------- */
-const toPaise = (n) => Math.round(Number(n || 0) * 100);
-const fromPaise = (p) => (p / 100);
+const toAmount = (n) => Math.round(Number(n || 0) * 100) / 100;
+const formatAmount = (n) => Number(n || 0);
 
 /** Build a React-Native-safe UPI url (no URLSearchParams). */
 const buildUpiUrl = ({ pa, pn, am, cu = 'INR', tn }) => {
@@ -383,13 +382,13 @@ export default function RequestNow({ navigation, route }) {
   const makeItems = useCallback((services, parts, cartObj) => {
     const items = [];
 
-    // Process services
+    // Process services - use string IDs (UUIDs)
     const svcById = {};
-    (services||[]).forEach(s => { svcById[Number(s.id)] = { name: s.title || s.name, unit: Number(s.price||0) }; });
+    (services||[]).forEach(s => { svcById[String(s.id)] = { name: s.title || s.name, unit: Number(s.price||0) }; });
 
-    // Process parts
+    // Process parts - use string IDs (UUIDs)
     const partById = {};
-    (parts||[]).forEach(p => { partById[Number(p.id)] = { name: p.title || p.name, unit: Number(p.price||0) }; });
+    (parts||[]).forEach(p => { partById[String(p.id)] = { name: p.title || p.name, unit: Number(p.price||0) }; });
 
     Object.entries(cartObj||{}).forEach(([key, qty]) => {
       const q = Number(qty||0);
@@ -397,7 +396,7 @@ export default function RequestNow({ navigation, route }) {
 
       // Check if it's a part (key starts with 'part:')
       if (String(key).startsWith('part:')) {
-        const partId = Number(key.replace('part:', ''));
+        const partId = key.replace('part:', '');
         const meta = partById[partId] || { name: `Part #${partId}`, unit: 0 };
         items.push({
           item_id: partId,
@@ -409,7 +408,7 @@ export default function RequestNow({ navigation, route }) {
         });
       } else {
         // It's a service
-        const sid = Number(key);
+        const sid = String(key);
         const meta = svcById[sid] || { name: `Service #${sid}`, unit: 0 };
         items.push({
           service_id: sid,
@@ -471,16 +470,16 @@ export default function RequestNow({ navigation, route }) {
 
   /* ---------- TOTALS ---------- */
   const totals = useMemo(() => {
-    const itemPaise = selectedItems.reduce((sum, it) => sum + toPaise(it.lineTotal), 0);
-    const gstPaise  = Math.round(itemPaise * GST_RATE);
-    const tipPaise  = toPaise(tip);
-    const payPaise  = itemPaise + gstPaise + tipPaise;
+    const itemTotal = selectedItems.reduce((sum, it) => sum + Number(it.lineTotal || 0), 0);
+    const gstTotal  = Math.round(itemTotal * GST_RATE * 100) / 100;
+    const tipTotal  = Number(tip || 0);
+    const payTotal  = itemTotal + gstTotal + tipTotal;
 
     return {
-      item: fromPaise(itemPaise),
-      gst: fromPaise(gstPaise),
-      tip: fromPaise(tipPaise),
-      payable: fromPaise(payPaise),
+      item: itemTotal,
+      gst: gstTotal,
+      tip: tipTotal,
+      payable: payTotal,
     };
   }, [selectedItems, tip]);
 
@@ -576,23 +575,18 @@ export default function RequestNow({ navigation, route }) {
 
       const res = await api.get('/app/restaurantlist', { params: { restaurant_owner_id: chosen } });
       const rows = Array.isArray(res?.data?.data) ? res.data.data : [];
-      const onlyMine = rows.filter(r => {
-        let ownerId = '';
-        if (r.restaurant_owner_id != null) ownerId = r.restaurant_owner_id;
-        else if (r.owner && r.owner.id != null) ownerId = r.owner.id;
-        return String(ownerId) === String(chosen);
-      });
 
-      const normalized = (onlyMine||[]).map((r, i) => ({
+      // API already filters by ownerId, no need to filter again
+      const normalized = rows.map((r, i) => ({
         id: String(r.id ?? i),
-        name: r.hotel_name || 'Restaurant',
+        name: r.hotel_name || r.name || 'Restaurant',
         addr: r.address || '',
+        city: r.city || '',
+        pincode: r.pincode || '',
         fssai: r.fssai_number || '',
         approved: String(r.status || '').toLowerCase() === 'approved',
-        image: r.main_image || '',
-        ownerId: r.restaurant_owner_id ?? r?.owner?.id ?? null,
-        ownerName: r.owner ? `${r.owner.first_name} ${r.owner.last_name}` : '',
-        ownerPhone: r.owner?.phone || '',
+        image: r.image || r.restaurant_image || '',
+        ownerId: chosen,
       }));
 
       setRestaurants(normalized);
@@ -695,7 +689,7 @@ export default function RequestNow({ navigation, route }) {
       problem_description: problemDescription || '',
       image: firstMeta.heroImage || firstMeta.image || '',
       tags: tags.length > 0 ? tags : ['General Service'],
-      restaurant_id: Number(pickedRestaurant?.id || 0),
+      restaurant_id: String(pickedRestaurant?.id || ''),  // Keep as string (UUID)
       restaurant_name: pickedRestaurant?.name || 'Unknown Restaurant',
       restaurant_owner_name: pickedRestaurant?.ownerName || '',
       location: address.line1 || 'Location not specified',
@@ -711,7 +705,7 @@ export default function RequestNow({ navigation, route }) {
     return payload;
   };
 
-  /* ---------- FIXED: Payment Confirmation ---------- */
+  /* ---------- FIXED: Payment Confirmation (matches web owner portal flow) ---------- */
   const handleConfirmPayment = async () => {
     if (!hasScreenshot) {
       alert("Please upload your payment screenshot before confirming.");
@@ -719,33 +713,38 @@ export default function RequestNow({ navigation, route }) {
     }
 
     console.log('Processing payment confirmation...');
-    
-    // Extract numeric owner ID from ownerKey
-    const extractOwnerId = (ownerKey) => {
-      if (ownerKey.includes(':')) {
-        return ownerKey.split(':')[1];
-      }
-      return ownerKey;
-    };
 
-    const numericOwnerId = extractOwnerId(ownerKey);
-    const transactionId = 'UPI_' + new Date().getTime();
-
-    // Convert image to base64 for upload
-    let screenshotBase64 = null;
+    // Upload screenshot image first to get a URL (same as web portal)
+    let screenshotUrl = null;
     if (paymentScreenshot && paymentScreenshot.uri) {
       try {
-        // Convert file URI to base64 using react-native-fs
-        const fileUri = paymentScreenshot.uri;
-        // Remove file:// prefix if present for RNFS
-        const filePath = fileUri.startsWith('file://') ? fileUri.slice(7) : fileUri;
-        const base64Data = await RNFS.readFile(filePath, 'base64');
-        // Add data URI prefix for the backend
-        screenshotBase64 = `data:image/jpeg;base64,${base64Data}`;
-        console.log('Screenshot converted to base64, length:', screenshotBase64.length);
+        console.log('Uploading payment screenshot...');
+
+        // Create form data for image upload
+        const formData = new FormData();
+        formData.append('file', {
+          uri: paymentScreenshot.uri,
+          type: paymentScreenshot.type || 'image/jpeg',
+          name: paymentScreenshot.fileName || `payment_${Date.now()}.jpg`,
+        });
+        formData.append('folder', 'payment-proofs');
+
+        // Upload to /upload endpoint
+        const uploadResponse = await api.post('/upload', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+
+        if (uploadResponse.data?.ok && uploadResponse.data?.url) {
+          screenshotUrl = uploadResponse.data.url;
+          console.log('Screenshot uploaded successfully:', screenshotUrl);
+        } else {
+          throw new Error(uploadResponse.data?.error || 'Failed to upload screenshot');
+        }
       } catch (error) {
-        console.error('Error converting screenshot to base64:', error);
-        Alert.alert('Error', 'Failed to process payment screenshot. Please try again.');
+        console.error('Error uploading screenshot:', error);
+        Alert.alert('Error', 'Failed to upload payment screenshot. Please try again.');
         setSavingReq(false);
         return;
       }
@@ -769,30 +768,22 @@ export default function RequestNow({ navigation, route }) {
       const equipmentResponse = await api.post('/app/equipment-requests', equipmentRequestPayload);
       console.log('Equipment request created:', equipmentResponse.data);
 
-      // STEP 2: Then process the payment
-      console.log('Processing payment...');
-      const paymentData = {
-        owner_id: numericOwnerId,
-        amount: parseFloat(payable),
-        payment_method: 'UPI',
-        payment_status: 'completed',
-        transaction_id: transactionId,
-        payment_note: paymentNote || 'Service payment via UPI',
-        payment_screenshot: screenshotBase64,
-        equipment_request_id: equipmentResponse.data.data?.id || null,
-      };
+      // STEP 2: Upload payment proof (same as web owner portal)
+      const bookingId = equipmentResponse.data.data?.id || equipmentResponse.data.data?.booking_id;
 
-      console.log('Sending payment data:', { ...paymentData, payment_screenshot: 'BASE64_IMAGE' });
+      if (!bookingId) {
+        throw new Error('Booking ID not received from server');
+      }
 
-      const paymentResponse = await api.post('/app/owner-payment', paymentData, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      console.log('Uploading payment proof for booking:', bookingId);
+
+      const paymentResponse = await api.post(`/owner/bookings/${bookingId}/upload-payment`, {
+        screenshotUrl: screenshotUrl,
       });
-      
+
       console.log('Payment API Response:', paymentResponse.data);
 
-      if (paymentResponse.data.message === 'Payment details saved successfully.') {
+      if (paymentResponse.data.ok) {
         console.log('Payment saved successfully with screenshot');
         
         // Clear the cart after successful payment
@@ -836,7 +827,10 @@ export default function RequestNow({ navigation, route }) {
         
         errorDetails = error.response.data?.message || JSON.stringify(error.response.data);
         
-        if (error.response.status === 422) {
+        if (error.response.status === 400) {
+          // Handle validation errors from upload-payment
+          errorMessage = error.response.data?.error || 'Invalid request. Please try again.';
+        } else if (error.response.status === 422) {
           // More specific error handling for product_id validation
           if (error.response.data?.errors?.product_id) {
             errorMessage = `Product ID Error: ${error.response.data.errors.product_id[0]}. Please contact support.`;
@@ -844,7 +838,7 @@ export default function RequestNow({ navigation, route }) {
             errorMessage = `Validation Error: ${errorDetails}`;
           }
         } else if (error.response.status === 404) {
-          errorMessage = 'Payment endpoint not found. Please check the server.';
+          errorMessage = 'Booking not found. Please try creating the request again.';
         } else if (error.response.status === 500) {
           errorMessage = 'Server error. Please try again later.';
         } else if (error.response.data?.error) {

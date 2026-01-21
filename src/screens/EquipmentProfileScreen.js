@@ -1,12 +1,11 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  RefreshControl, ActivityIndicator, Alert, Share, Platform
+  RefreshControl, ActivityIndicator, Alert, Modal, TextInput, Image, Switch
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { api } from '../api/client';
-import RNHTMLtoPDF from 'react-native-html-to-pdf';
+import { api, getImageUrl } from '../api/client';
 
 const C = {
   primary: '#EF3A3A',
@@ -20,64 +19,149 @@ const C = {
   warn: '#F59E0B',
   danger: '#EF4444',
   info: '#3B82F6',
+  purple: '#8B5CF6',
+};
+
+const durationOptions = [
+  { key: 'MONTHLY', label: 'Monthly (1 month)' },
+  { key: 'QUARTERLY', label: 'Quarterly (3 months)' },
+  { key: 'YEARLY', label: 'Yearly (12 months)' },
+];
+
+const getDurationLabel = (duration) => {
+  return durationOptions.find(d => d.key === duration)?.label || duration;
+};
+
+const getWarrantyStatus = (warrantyEndDate) => {
+  if (!warrantyEndDate) {
+    return { color: 'gray', label: 'No Warranty' };
+  }
+  const endDate = new Date(warrantyEndDate);
+  const now = new Date();
+  const thirtyDaysFromNow = new Date();
+  thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+
+  if (endDate < now) {
+    return { color: 'red', label: 'Expired' };
+  } else if (endDate <= thirtyDaysFromNow) {
+    return { color: 'yellow', label: 'Expiring Soon' };
+  }
+  return { color: 'green', label: 'Active' };
+};
+
+const getWarrantyStyle = (status) => {
+  switch (status.color) {
+    case 'green':
+      return { bg: '#ECFDF5', text: C.ok };
+    case 'yellow':
+      return { bg: '#FFFBEB', text: C.warn };
+    case 'red':
+      return { bg: '#FEF2F2', text: C.danger };
+    default:
+      return { bg: '#F3F4F6', text: C.muted };
+  }
 };
 
 const getStatusStyle = (status) => {
   switch (status) {
-    case 'completed':
+    case 'AVAILABLE':
+      return { bg: '#ECFDF5', text: C.ok, label: 'Available' };
+    case 'IN_USE':
+      return { bg: '#EFF6FF', text: C.info, label: 'In Use' };
+    case 'MAINTENANCE':
+      return { bg: '#FFFBEB', text: C.warn, label: 'Maintenance' };
+    case 'RETIRED':
+      return { bg: '#F3F4F6', text: C.muted, label: 'Retired' };
+    default:
+      return { bg: '#F3F4F6', text: C.muted, label: status };
+  }
+};
+
+const getAmcStatusStyle = (status) => {
+  switch (status) {
+    case 'ACTIVE':
+      return { bg: '#ECFDF5', text: C.ok, label: 'Active' };
+    case 'EXPIRED':
+      return { bg: '#FEF2F2', text: C.danger, label: 'Expired' };
+    case 'CANCELLED':
+      return { bg: '#F3F4F6', text: C.muted, label: 'Cancelled' };
+    default:
+      return { bg: '#F3F4F6', text: C.muted, label: status };
+  }
+};
+
+const getServiceStatusStyle = (status) => {
+  switch (status) {
+    case 'COMPLETED':
       return { bg: '#ECFDF5', color: C.ok, icon: 'checkmark-circle' };
-    case 'in_progress':
-    case 'accepted':
+    case 'IN_PROGRESS':
+    case 'ACCEPTED':
       return { bg: '#EFF6FF', color: C.info, icon: 'time' };
-    case 'pending':
+    case 'PENDING':
       return { bg: '#FFFBEB', color: C.warn, icon: 'hourglass' };
-    case 'cancelled':
-    case 'rejected':
+    case 'CANCELLED':
+    case 'REJECTED':
       return { bg: '#FEF2F2', color: C.danger, icon: 'close-circle' };
     default:
       return { bg: '#F3F4F6', color: C.muted, icon: 'ellipse' };
   }
 };
 
-const getWarrantyStyle = (status) => {
-  switch (status) {
-    case 'active':
-      return { bg: '#ECFDF5', color: C.ok, label: 'Active' };
-    case 'expiring_soon':
-      return { bg: '#FFFBEB', color: C.warn, label: 'Expiring Soon' };
-    case 'expired':
-      return { bg: '#FEF2F2', color: C.danger, label: 'Expired' };
-    default:
-      return { bg: '#F3F4F6', color: C.muted, label: 'Unknown' };
-  }
-};
-
-const getAmcStatusStyle = (status) => {
-  switch (status) {
-    case 'active':
-      return { bg: '#ECFDF5', color: C.ok };
-    case 'expiring_soon':
-      return { bg: '#FFFBEB', color: C.warn };
-    case 'expired':
-      return { bg: '#FEF2F2', color: C.danger };
-    default:
-      return { bg: '#F3F4F6', color: C.muted };
-  }
+const formatDate = (dateString) => {
+  if (!dateString) return '-';
+  return new Date(dateString).toLocaleDateString('en-IN', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
 };
 
 export default function EquipmentProfileScreen({ navigation, route }) {
   const { equipmentId } = route.params || {};
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [data, setData] = useState(null);
-  const [activeTab, setActiveTab] = useState('history');
-  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [equipment, setEquipment] = useState(null);
+  const [amcSubscriptions, setAmcSubscriptions] = useState([]);
+  const [activeTab, setActiveTab] = useState('details');
+  const [selectedImage, setSelectedImage] = useState(null);
+
+  // AMC form state
+  const [showAmcModal, setShowAmcModal] = useState(false);
+  const [amcSaving, setAmcSaving] = useState(false);
+  const [amcForm, setAmcForm] = useState({
+    planName: '',
+    planDescription: '',
+    duration: 'MONTHLY',
+    serviceLimit: '1',
+    featuresJson: [],
+    totalAmount: '',
+    startDate: '',
+    autoRenew: false,
+  });
+  const [featureInput, setFeatureInput] = useState('');
+  const [durationPickerVisible, setDurationPickerVisible] = useState(false);
+
+  // Service booking state
+  const [showServiceModal, setShowServiceModal] = useState(false);
+  const [serviceSaving, setServiceSaving] = useState(false);
+  const [selectedServices, setSelectedServices] = useState([]);
+  const [serviceForm, setServiceForm] = useState({
+    slotDate: '',
+    slotTime: '',
+    problemDescription: '',
+  });
 
   const fetchEquipment = useCallback(async () => {
     if (!equipmentId) return;
     try {
-      const { data: res } = await api.get(`/restaurant-owner/my-equipment/${equipmentId}`);
-      setData(res);
+      const { data } = await api.get(`/owner/equipment/${equipmentId}`);
+      if (data.ok && data.data) {
+        setEquipment(data.data);
+        setAmcForm(f => ({
+          ...f,
+          planName: `${data.data.name} Maintenance Plan`,
+        }));
+      }
     } catch (error) {
       console.log('Error fetching equipment:', error);
       Alert.alert('Error', 'Failed to load equipment details');
@@ -87,55 +171,187 @@ export default function EquipmentProfileScreen({ navigation, route }) {
     }
   }, [equipmentId]);
 
+  const fetchAmcSubscriptions = useCallback(async () => {
+    if (!equipmentId) return;
+    try {
+      const { data } = await api.get(`/owner/equipment/${equipmentId}/amc`);
+      if (data.ok) {
+        setAmcSubscriptions(data.data || []);
+      }
+    } catch (error) {
+      console.log('Error fetching AMC:', error);
+    }
+  }, [equipmentId]);
+
   useEffect(() => {
     fetchEquipment();
-  }, [fetchEquipment]);
+    fetchAmcSubscriptions();
+  }, [fetchEquipment, fetchAmcSubscriptions]);
 
   const onRefresh = () => {
     setRefreshing(true);
     fetchEquipment();
+    fetchAmcSubscriptions();
   };
 
-  const downloadPdf = async () => {
-    if (!equipmentId || downloadingPdf) return;
+  // AMC functions
+  const handleAddFeature = () => {
+    if (featureInput.trim()) {
+      setAmcForm(f => ({
+        ...f,
+        featuresJson: [...f.featuresJson, featureInput.trim()],
+      }));
+      setFeatureInput('');
+    }
+  };
 
-    setDownloadingPdf(true);
+  const handleRemoveFeature = (index) => {
+    setAmcForm(f => ({
+      ...f,
+      featuresJson: f.featuresJson.filter((_, i) => i !== index),
+    }));
+  };
+
+  const handleCreateAmc = async () => {
+    if (!amcForm.planName.trim()) {
+      Alert.alert('Error', 'Please enter plan name');
+      return;
+    }
+    if (!amcForm.startDate) {
+      Alert.alert('Error', 'Please enter start date');
+      return;
+    }
+    if (!amcForm.serviceLimit || parseInt(amcForm.serviceLimit) < 1) {
+      Alert.alert('Error', 'Please enter valid service limit');
+      return;
+    }
+
+    setAmcSaving(true);
     try {
-      const { data: res } = await api.get(`/restaurant-owner/my-equipment/${equipmentId}/pdf`);
+      const payload = {
+        equipmentId,
+        planName: amcForm.planName,
+        planDescription: amcForm.planDescription || undefined,
+        duration: amcForm.duration,
+        serviceLimit: parseInt(amcForm.serviceLimit),
+        featuresJson: amcForm.featuresJson.length > 0 ? amcForm.featuresJson : undefined,
+        totalAmount: Math.round(parseFloat(amcForm.totalAmount || 0) * 100),
+        startDate: new Date(amcForm.startDate).toISOString(),
+        autoRenew: amcForm.autoRenew,
+      };
 
-      if (res.success && res.html) {
-        const options = {
-          html: res.html,
-          fileName: `Equipment_${res.equipment_name || equipmentId}_${Date.now()}`,
-          directory: Platform.OS === 'ios' ? 'Documents' : 'Download',
-        };
-
-        const file = await RNHTMLtoPDF.convert(options);
-
-        Alert.alert(
-          'PDF Downloaded',
-          `Equipment profile saved to ${Platform.OS === 'ios' ? 'Files app' : 'Downloads folder'}`,
-          [
-            { text: 'OK' },
-            {
-              text: 'Share',
-              onPress: () => {
-                Share.share({
-                  url: Platform.OS === 'ios' ? file.filePath : `file://${file.filePath}`,
-                  title: `Equipment Profile - ${res.equipment_name}`,
-                });
-              },
-            },
-          ]
-        );
+      const { data } = await api.post(`/owner/equipment/${equipmentId}/amc`, payload);
+      if (data.ok) {
+        Alert.alert('Success', 'AMC subscription created successfully');
+        setShowAmcModal(false);
+        setAmcForm({
+          planName: equipment?.name ? `${equipment.name} Maintenance Plan` : '',
+          planDescription: '',
+          duration: 'MONTHLY',
+          serviceLimit: '1',
+          featuresJson: [],
+          totalAmount: '',
+          startDate: '',
+          autoRenew: false,
+        });
+        fetchAmcSubscriptions();
       } else {
-        Alert.alert('Error', 'Failed to generate PDF');
+        Alert.alert('Error', data.error || 'Failed to create AMC');
       }
     } catch (error) {
-      console.log('Error downloading PDF:', error);
-      Alert.alert('Error', 'Failed to download equipment PDF');
+      Alert.alert('Error', 'Failed to create AMC subscription');
     } finally {
-      setDownloadingPdf(false);
+      setAmcSaving(false);
+    }
+  };
+
+  const handleCancelAmc = (amcId) => {
+    Alert.alert(
+      'Cancel AMC',
+      'Are you sure you want to cancel this AMC subscription?',
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Yes, Cancel',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await api.delete(`/owner/equipment/${equipmentId}/amc/${amcId}`);
+              Alert.alert('Success', 'AMC subscription cancelled');
+              fetchAmcSubscriptions();
+            } catch (error) {
+              Alert.alert('Error', 'Failed to cancel AMC');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleToggleAutoRenew = async (amcId, currentValue) => {
+    try {
+      const { data } = await api.patch(`/owner/equipment/${equipmentId}/amc/${amcId}`, {
+        autoRenew: !currentValue,
+      });
+      if (data.ok) {
+        Alert.alert('Success', `Auto-renew ${!currentValue ? 'enabled' : 'disabled'}`);
+        fetchAmcSubscriptions();
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update auto-renew');
+    }
+  };
+
+  // Service booking
+  const toggleServiceSelection = (serviceId) => {
+    setSelectedServices(prev =>
+      prev.includes(serviceId)
+        ? prev.filter(id => id !== serviceId)
+        : [...prev, serviceId]
+    );
+  };
+
+  const handleServiceBooking = async () => {
+    if (!serviceForm.slotDate || !serviceForm.slotTime) {
+      Alert.alert('Error', 'Please provide slot date and time');
+      return;
+    }
+
+    const templates = equipment?.equipmentType?.serviceTemplates || [];
+    if (templates.length > 0 && selectedServices.length === 0) {
+      Alert.alert('Error', 'Please select at least one service');
+      return;
+    }
+
+    setServiceSaving(true);
+    try {
+      const slotDateTime = new Date(`${serviceForm.slotDate}T${serviceForm.slotTime}`);
+
+      const { data } = await api.post('/owner/equipment-booking', {
+        restaurantId: equipment.restaurant.id,
+        equipmentId: equipment.id,
+        serviceTemplateIds: selectedServices.length > 0 ? selectedServices : undefined,
+        slotStartDateTime: slotDateTime.toISOString(),
+        problemDescription: serviceForm.problemDescription || undefined,
+      });
+
+      if (data.ok) {
+        Alert.alert('Success', 'Service request created successfully');
+        setShowServiceModal(false);
+        setSelectedServices([]);
+        setServiceForm({
+          slotDate: '',
+          slotTime: '',
+          problemDescription: '',
+        });
+        fetchEquipment();
+      } else {
+        Alert.alert('Error', data.error || 'Failed to create service request');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to create service request');
+    } finally {
+      setServiceSaving(false);
     }
   };
 
@@ -149,7 +365,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
     );
   }
 
-  if (!data || !data.equipment) {
+  if (!equipment) {
     return (
       <SafeAreaView style={st.container} edges={['top']}>
         <View style={st.header}>
@@ -167,8 +383,12 @@ export default function EquipmentProfileScreen({ navigation, route }) {
     );
   }
 
-  const { equipment, stats, active_amc, amcs, service_history } = data;
-  const warrantyStyle = getWarrantyStyle(equipment.warranty_status);
+  const warrantyStatus = getWarrantyStatus(equipment.warrantyEndDate);
+  const warrantyStyle = getWarrantyStyle(warrantyStatus);
+  const statusStyle = getStatusStyle(equipment.status);
+  const activeAmc = amcSubscriptions.find(amc => amc.status === 'ACTIVE');
+  const photoUrls = Array.isArray(equipment.photoUrls) ? equipment.photoUrls : [];
+  const serviceHistory = equipment.serviceHistory || [];
 
   return (
     <SafeAreaView style={st.container} edges={['top']}>
@@ -178,16 +398,8 @@ export default function EquipmentProfileScreen({ navigation, route }) {
           <Icon name="arrow-back" size={22} color={C.ink} />
         </TouchableOpacity>
         <Text style={st.headerTitle} numberOfLines={1}>{equipment.name}</Text>
-        <TouchableOpacity
-          onPress={downloadPdf}
-          style={st.backBtn}
-          disabled={downloadingPdf}
-        >
-          {downloadingPdf ? (
-            <ActivityIndicator size="small" color={C.primary} />
-          ) : (
-            <Icon name="download-outline" size={22} color={C.primary} />
-          )}
+        <TouchableOpacity onPress={() => setShowServiceModal(true)} style={st.serviceBtn}>
+          <Icon name="construct" size={20} color="#fff" />
         </TouchableOpacity>
       </View>
 
@@ -201,137 +413,186 @@ export default function EquipmentProfileScreen({ navigation, route }) {
         <View style={st.infoCard}>
           <View style={st.infoHeader}>
             <View style={st.iconBox}>
-              <Icon name="hardware-chip-outline" size={32} color={C.primary} />
+              {photoUrls.length > 0 ? (
+                <Image source={{ uri: getImageUrl(photoUrls[0]) }} style={st.equipImage} />
+              ) : (
+                <Icon name="hardware-chip-outline" size={32} color={C.primary} />
+              )}
             </View>
             <View style={st.infoMain}>
               <Text style={st.equipName}>{equipment.name}</Text>
-              {equipment.brand && (
-                <Text style={st.equipSub}>
-                  {equipment.brand}{equipment.model_number ? ` - ${equipment.model_number}` : ''}
-                </Text>
-              )}
-              {equipment.category && (
-                <View style={st.catBadge}>
-                  <Text style={st.catText}>{equipment.category}</Text>
+              <Text style={st.equipCategory}>
+                {equipment.equipmentType?.category?.name || equipment.category}
+              </Text>
+              <View style={st.badgeRow}>
+                <View style={[st.badge, { backgroundColor: statusStyle.bg }]}>
+                  <Text style={[st.badgeText, { color: statusStyle.text }]}>{statusStyle.label}</Text>
                 </View>
-              )}
+                <View style={[st.badge, { backgroundColor: warrantyStyle.bg }]}>
+                  <Text style={[st.badgeText, { color: warrantyStyle.text }]}>{warrantyStatus.label}</Text>
+                </View>
+              </View>
             </View>
           </View>
 
           {/* Quick Stats */}
-          <View style={st.statsRow}>
-            <View style={st.statBox}>
-              <Text style={st.statValue}>{stats.total_services}</Text>
-              <Text style={st.statLabel}>Services</Text>
+          <View style={st.statsGrid}>
+            <View style={st.statCard}>
+              <View style={[st.statIcon, { backgroundColor: '#EFF6FF' }]}>
+                <Icon name="time-outline" size={20} color={C.info} />
+              </View>
+              <Text style={st.statValue}>{serviceHistory.length}</Text>
+              <Text style={st.statLabel}>Total Services</Text>
             </View>
-            <View style={st.statBox}>
-              <Text style={[st.statValue, { color: C.ok }]}>{stats.completed_services}</Text>
+            <View style={st.statCard}>
+              <View style={[st.statIcon, { backgroundColor: '#ECFDF5' }]}>
+                <Icon name="checkmark-circle-outline" size={20} color={C.ok} />
+              </View>
+              <Text style={st.statValue}>{equipment.completedServicesCount || 0}</Text>
               <Text style={st.statLabel}>Completed</Text>
             </View>
-            <View style={st.statBox}>
-              <Text style={[st.statValue, { color: C.primary }]}>
-                {stats.total_spent > 0 ? `₹${stats.total_spent.toLocaleString()}` : '₹0'}
+            <View style={st.statCard}>
+              <View style={[st.statIcon, { backgroundColor: '#FFF7ED' }]}>
+                <Icon name="cash-outline" size={20} color="#F97316" />
+              </View>
+              <Text style={st.statValue}>
+                {equipment.totalSpend > 0 ? `₹${(equipment.totalSpend / 100).toLocaleString()}` : '₹0'}
               </Text>
-              <Text style={st.statLabel}>Total Spent</Text>
+              <Text style={st.statLabel}>Total Spend</Text>
             </View>
-          </View>
-        </View>
-
-        {/* Warranty & AMC Status */}
-        <View style={st.statusRow}>
-          {equipment.warranty_end_date && (
-            <View style={[st.statusCard, { backgroundColor: warrantyStyle.bg }]}>
-              <Icon name="shield-checkmark-outline" size={20} color={warrantyStyle.color} />
-              <View style={st.statusInfo}>
-                <Text style={[st.statusTitle, { color: warrantyStyle.color }]}>Warranty</Text>
-                <Text style={st.statusValue}>
-                  {equipment.warranty_status === 'expired' ? 'Expired' : `Until ${equipment.warranty_end_date}`}
-                </Text>
-              </View>
-            </View>
-          )}
-
-          {active_amc && (
-            <View style={[st.statusCard, { backgroundColor: getAmcStatusStyle(active_amc.status).bg }]}>
-              <Icon name="document-text-outline" size={20} color={getAmcStatusStyle(active_amc.status).color} />
-              <View style={st.statusInfo}>
-                <Text style={[st.statusTitle, { color: getAmcStatusStyle(active_amc.status).color }]}>AMC Active</Text>
-                <Text style={st.statusValue}>{active_amc.remaining_visits} visits left</Text>
-              </View>
-            </View>
-          )}
-        </View>
-
-        {/* Equipment Details */}
-        <View style={st.section}>
-          <Text style={st.sectionTitle}>Equipment Details</Text>
-          <View style={st.detailsCard}>
-            {equipment.serial_number && (
-              <View style={st.detailRow}>
-                <Text style={st.detailLabel}>Serial Number</Text>
-                <Text style={st.detailValue}>{equipment.serial_number}</Text>
-              </View>
-            )}
-            {equipment.purchase_date && (
-              <View style={st.detailRow}>
-                <Text style={st.detailLabel}>Purchase Date</Text>
-                <Text style={st.detailValue}>{equipment.purchase_date}</Text>
-              </View>
-            )}
-            {stats.last_service_date && (
-              <View style={st.detailRow}>
-                <Text style={st.detailLabel}>Last Service</Text>
-                <Text style={st.detailValue}>{stats.last_service_date}</Text>
-              </View>
-            )}
-            {equipment.restaurant && (
-              <View style={st.detailRow}>
-                <Text style={st.detailLabel}>Location</Text>
-                <Text style={st.detailValue}>{equipment.restaurant.name}</Text>
-              </View>
-            )}
-            {equipment.description && (
-              <View style={[st.detailRow, { borderBottomWidth: 0 }]}>
-                <Text style={st.detailLabel}>Notes</Text>
-                <Text style={st.detailValue}>{equipment.description}</Text>
-              </View>
-            )}
           </View>
         </View>
 
         {/* Tabs */}
         <View style={st.tabBar}>
-          <TouchableOpacity
-            style={[st.tab, activeTab === 'history' && st.tabActive]}
-            onPress={() => setActiveTab('history')}
-          >
-            <Icon name="time-outline" size={18} color={activeTab === 'history' ? C.primary : C.muted} />
-            <Text style={[st.tabText, activeTab === 'history' && st.tabTextActive]}>Service History</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[st.tab, activeTab === 'amc' && st.tabActive]}
-            onPress={() => setActiveTab('amc')}
-          >
-            <Icon name="shield-outline" size={18} color={activeTab === 'amc' ? C.primary : C.muted} />
-            <Text style={[st.tabText, activeTab === 'amc' && st.tabTextActive]}>AMC Contracts</Text>
-          </TouchableOpacity>
+          {['details', 'amc', 'images', 'history'].map(tab => (
+            <TouchableOpacity
+              key={tab}
+              style={[st.tab, activeTab === tab && st.tabActive]}
+              onPress={() => setActiveTab(tab)}
+            >
+              <Text style={[st.tabText, activeTab === tab && st.tabTextActive]}>
+                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
         {/* Tab Content */}
+        {activeTab === 'details' && (
+          <View style={st.section}>
+            <View style={st.detailsCard}>
+              <View style={st.detailRow}>
+                <Text style={st.detailLabel}>Restaurant</Text>
+                <Text style={st.detailValue}>{equipment.restaurant?.name || '-'}</Text>
+              </View>
+              <View style={st.detailRow}>
+                <Text style={st.detailLabel}>Serial Number</Text>
+                <Text style={[st.detailValue, { fontFamily: 'monospace' }]}>
+                  {equipment.serialNumber || '-'}
+                </Text>
+              </View>
+              <View style={st.detailRow}>
+                <Text style={st.detailLabel}>Purchase Date</Text>
+                <Text style={st.detailValue}>{formatDate(equipment.purchaseDate)}</Text>
+              </View>
+              <View style={st.detailRow}>
+                <Text style={st.detailLabel}>Warranty Until</Text>
+                <Text style={[st.detailValue, { color: warrantyStyle.text }]}>
+                  {equipment.warrantyEndDate ? formatDate(equipment.warrantyEndDate) : 'No Warranty'}
+                </Text>
+              </View>
+              {equipment.notes && (
+                <View style={[st.detailRow, { borderBottomWidth: 0 }]}>
+                  <Text style={st.detailLabel}>Notes</Text>
+                  <Text style={st.detailValue}>{equipment.notes}</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+
+        {activeTab === 'images' && (
+          <View style={st.section}>
+            {/* Documents */}
+            {(equipment.billImageUrl || equipment.warrantyCardUrl) && (
+              <View style={st.imagesSection}>
+                <Text style={st.sectionTitle}>Documents</Text>
+                <View style={st.docsGrid}>
+                  {equipment.billImageUrl && (
+                    <TouchableOpacity
+                      style={st.docCard}
+                      onPress={() => setSelectedImage(getImageUrl(equipment.billImageUrl))}
+                    >
+                      <Image source={{ uri: getImageUrl(equipment.billImageUrl) }} style={st.docImage} />
+                      <View style={st.docOverlay}>
+                        <Icon name="document-text" size={24} color="#fff" />
+                      </View>
+                      <Text style={st.docLabel}>Purchase Bill</Text>
+                    </TouchableOpacity>
+                  )}
+                  {equipment.warrantyCardUrl && (
+                    <TouchableOpacity
+                      style={st.docCard}
+                      onPress={() => setSelectedImage(getImageUrl(equipment.warrantyCardUrl))}
+                    >
+                      <Image source={{ uri: getImageUrl(equipment.warrantyCardUrl) }} style={st.docImage} />
+                      <View style={st.docOverlay}>
+                        <Icon name="shield-checkmark" size={24} color="#fff" />
+                      </View>
+                      <Text style={st.docLabel}>Warranty Card</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            )}
+
+            {/* Equipment Photos */}
+            {photoUrls.length > 0 ? (
+              <View style={st.imagesSection}>
+                <Text style={st.sectionTitle}>Equipment Photos</Text>
+                <View style={st.photosGrid}>
+                  {photoUrls.map((url, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={st.photoCard}
+                      onPress={() => setSelectedImage(getImageUrl(url))}
+                    >
+                      <Image source={{ uri: getImageUrl(url) }} style={st.photoImage} />
+                      <View style={st.photoIndex}>
+                        <Text style={st.photoIndexText}>{index + 1}</Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            ) : (
+              !equipment.billImageUrl && !equipment.warrantyCardUrl && (
+                <View style={st.emptySection}>
+                  <Icon name="images-outline" size={48} color={C.muted} />
+                  <Text style={st.emptySectionText}>No images uploaded</Text>
+                </View>
+              )
+            )}
+          </View>
+        )}
+
         {activeTab === 'history' && (
           <View style={st.section}>
-            {service_history && service_history.length > 0 ? (
-              service_history.map((service, index) => {
-                const statusStyle = getStatusStyle(service.status);
+            {serviceHistory.length > 0 ? (
+              serviceHistory.slice(0, 10).map((service, index) => {
+                const statusStyle = getServiceStatusStyle(service.status);
                 return (
                   <View key={service.id} style={st.historyCard}>
                     <View style={st.historyTimeline}>
                       <View style={[st.timelineDot, { backgroundColor: statusStyle.color }]} />
-                      {index < service_history.length - 1 && <View style={st.timelineLine} />}
+                      {index < serviceHistory.length - 1 && <View style={st.timelineLine} />}
                     </View>
                     <View style={st.historyContent}>
                       <View style={st.historyHeader}>
-                        <Text style={st.historyDate}>{service.service_date || service.created_at}</Text>
+                        <Text style={st.historyDate}>
+                          {formatDate(service.slotStartDateTime || service.createdAt)}
+                        </Text>
                         <View style={[st.historyStatus, { backgroundColor: statusStyle.bg }]}>
                           <Icon name={statusStyle.icon} size={12} color={statusStyle.color} />
                           <Text style={[st.historyStatusText, { color: statusStyle.color }]}>
@@ -340,21 +601,13 @@ export default function EquipmentProfileScreen({ navigation, route }) {
                         </View>
                       </View>
                       <Text style={st.historyDesc} numberOfLines={2}>
-                        {service.description || service.product_name || 'Service request'}
+                        {service.items?.map(item => item.serviceItem?.name || item.partItem?.name).join(', ') ||
+                          service.problemDescription || 'Service Request'}
                       </Text>
                       <View style={st.historyFooter}>
-                        {service.engineer && (
-                          <View style={st.historyMeta}>
-                            <Icon name="person-outline" size={12} color={C.muted} />
-                            <Text style={st.historyMetaText}>{service.engineer.name}</Text>
-                          </View>
-                        )}
-                        {service.cost > 0 && (
-                          <View style={st.historyMeta}>
-                            <Icon name="cash-outline" size={12} color={C.ok} />
-                            <Text style={[st.historyMetaText, { color: C.ok }]}>₹{service.cost}</Text>
-                          </View>
-                        )}
+                        <Text style={st.historyCost}>
+                          ₹{((service.totalAmount || 0) / 100).toLocaleString()}
+                        </Text>
                       </View>
                     </View>
                   </View>
@@ -364,6 +617,13 @@ export default function EquipmentProfileScreen({ navigation, route }) {
               <View style={st.emptySection}>
                 <Icon name="construct-outline" size={48} color={C.muted} />
                 <Text style={st.emptySectionText}>No service history yet</Text>
+                <TouchableOpacity
+                  style={st.emptyBtn}
+                  onPress={() => setShowServiceModal(true)}
+                >
+                  <Icon name="add" size={18} color="#fff" />
+                  <Text style={st.emptyBtnText}>Request First Service</Text>
+                </TouchableOpacity>
               </View>
             )}
           </View>
@@ -371,79 +631,450 @@ export default function EquipmentProfileScreen({ navigation, route }) {
 
         {activeTab === 'amc' && (
           <View style={st.section}>
-            {amcs && amcs.length > 0 ? (
-              amcs.map(amc => {
-                const amcStyle = getAmcStatusStyle(amc.status);
-                return (
-                  <View key={amc.id} style={st.amcCard}>
-                    <View style={st.amcHeader}>
-                      <View style={st.amcInfo}>
-                        <Text style={st.amcVendor}>{amc.vendor_name || 'AMC Contract'}</Text>
-                        {amc.contract_number && (
-                          <Text style={st.amcContract}>#{amc.contract_number}</Text>
-                        )}
-                      </View>
-                      <View style={[st.amcStatus, { backgroundColor: amcStyle.bg }]}>
-                        <Text style={[st.amcStatusText, { color: amcStyle.color }]}>
-                          {amc.status?.replace('_', ' ')}
-                        </Text>
-                      </View>
-                    </View>
-                    <View style={st.amcDetails}>
-                      <View style={st.amcDetail}>
-                        <Text style={st.amcDetailLabel}>Period</Text>
-                        <Text style={st.amcDetailValue}>{amc.start_date} to {amc.end_date}</Text>
-                      </View>
-                      <View style={st.amcDetail}>
-                        <Text style={st.amcDetailLabel}>Visits</Text>
-                        <Text style={st.amcDetailValue}>
-                          {amc.service_visits_used}/{amc.service_visits_included} used
-                        </Text>
-                      </View>
-                      {amc.amount > 0 && (
-                        <View style={st.amcDetail}>
-                          <Text style={st.amcDetailLabel}>Amount</Text>
-                          <Text style={st.amcDetailValue}>₹{amc.amount}</Text>
-                        </View>
-                      )}
-                    </View>
-                    <View style={st.amcProgress}>
-                      <View style={st.progressBar}>
-                        <View
-                          style={[
-                            st.progressFill,
-                            {
-                              width: `${Math.min(100, (amc.service_visits_used / amc.service_visits_included) * 100)}%`,
-                              backgroundColor: amc.remaining_visits > 0 ? C.ok : C.danger
-                            }
-                          ]}
-                        />
-                      </View>
-                      <Text style={st.progressText}>{amc.remaining_visits} visits remaining</Text>
-                    </View>
+            {/* Active AMC */}
+            {activeAmc ? (
+              <View style={st.amcActiveCard}>
+                <View style={st.amcActiveHeader}>
+                  <View style={st.amcActiveBadge}>
+                    <Icon name="checkmark-circle" size={16} color={C.ok} />
+                    <Text style={st.amcActiveLabel}>Active AMC</Text>
                   </View>
-                );
-              })
+                </View>
+                <Text style={st.amcPlanName}>{activeAmc.planName || 'Custom Plan'}</Text>
+                {activeAmc.planDescription && (
+                  <Text style={st.amcDescription}>{activeAmc.planDescription}</Text>
+                )}
+
+                <View style={st.amcDetails}>
+                  <View style={st.amcDetailItem}>
+                    <Text style={st.amcDetailLabel}>Duration</Text>
+                    <Text style={st.amcDetailValue}>{getDurationLabel(activeAmc.duration)}</Text>
+                  </View>
+                  <View style={st.amcDetailItem}>
+                    <Text style={st.amcDetailLabel}>Amount</Text>
+                    <Text style={st.amcDetailValue}>₹{(activeAmc.totalAmount / 100).toFixed(2)}</Text>
+                  </View>
+                  <View style={st.amcDetailItem}>
+                    <Text style={st.amcDetailLabel}>Period</Text>
+                    <Text style={st.amcDetailValue}>
+                      {formatDate(activeAmc.startDate)} - {formatDate(activeAmc.endDate)}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Service Usage */}
+                <View style={st.usageBox}>
+                  <View style={st.usageHeader}>
+                    <Text style={st.usageLabel}>Service Usage</Text>
+                    <Text style={st.usageText}>
+                      {activeAmc.servicesUsed} / {activeAmc.serviceLimit}
+                    </Text>
+                  </View>
+                  <View style={st.progressBar}>
+                    <View
+                      style={[
+                        st.progressFill,
+                        {
+                          width: `${Math.min(100, (activeAmc.servicesUsed / activeAmc.serviceLimit) * 100)}%`,
+                          backgroundColor: activeAmc.servicesUsed >= activeAmc.serviceLimit ? C.danger : C.ok,
+                        },
+                      ]}
+                    />
+                  </View>
+                  <Text style={st.usageRemaining}>
+                    {activeAmc.serviceLimit - activeAmc.servicesUsed} services remaining
+                  </Text>
+                </View>
+
+                {/* Features */}
+                {activeAmc.featuresJson && activeAmc.featuresJson.length > 0 && (
+                  <View style={st.featuresBox}>
+                    <Text style={st.featuresTitle}>Features</Text>
+                    {activeAmc.featuresJson.map((feature, index) => (
+                      <View key={index} style={st.featureItem}>
+                        <Icon name="checkmark" size={14} color={C.ok} />
+                        <Text style={st.featureText}>{feature}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                {/* Auto-renew toggle */}
+                <View style={st.autoRenewRow}>
+                  <Text style={st.autoRenewLabel}>Auto-Renew</Text>
+                  <Switch
+                    value={activeAmc.autoRenew}
+                    onValueChange={() => handleToggleAutoRenew(activeAmc.id, activeAmc.autoRenew)}
+                    trackColor={{ false: C.border, true: C.ok }}
+                    thumbColor={activeAmc.autoRenew ? '#fff' : '#f4f3f4'}
+                  />
+                </View>
+
+                <TouchableOpacity
+                  style={st.cancelAmcBtn}
+                  onPress={() => handleCancelAmc(activeAmc.id)}
+                >
+                  <Text style={st.cancelAmcText}>Cancel AMC</Text>
+                </TouchableOpacity>
+              </View>
             ) : (
-              <View style={st.emptySection}>
-                <Icon name="document-text-outline" size={48} color={C.muted} />
-                <Text style={st.emptySectionText}>No AMC contracts</Text>
+              <View style={st.noAmcCard}>
+                <Icon name="shield-outline" size={48} color={C.muted} />
+                <Text style={st.noAmcTitle}>No Active AMC</Text>
+                <Text style={st.noAmcText}>Create a maintenance plan for this equipment</Text>
+                <TouchableOpacity style={st.createAmcBtn} onPress={() => setShowAmcModal(true)}>
+                  <Icon name="add" size={18} color="#fff" />
+                  <Text style={st.createAmcText}>Create AMC Plan</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* AMC History */}
+            {amcSubscriptions.length > 0 && (
+              <View style={st.amcHistorySection}>
+                <Text style={st.sectionTitle}>AMC History</Text>
+                {amcSubscriptions.map(amc => {
+                  const amcStyle = getAmcStatusStyle(amc.status);
+                  return (
+                    <View key={amc.id} style={st.amcHistoryCard}>
+                      <View style={st.amcHistoryHeader}>
+                        <Text style={st.amcHistoryName}>{amc.planName || 'Custom Plan'}</Text>
+                        <View style={[st.amcHistoryBadge, { backgroundColor: amcStyle.bg }]}>
+                          <Text style={[st.amcHistoryStatus, { color: amcStyle.text }]}>
+                            {amcStyle.label}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={st.amcHistoryDuration}>{getDurationLabel(amc.duration)}</Text>
+                      <Text style={st.amcHistoryPeriod}>
+                        {formatDate(amc.startDate)} - {formatDate(amc.endDate)}
+                      </Text>
+                      <Text style={st.amcHistoryUsage}>
+                        {amc.servicesUsed} / {amc.serviceLimit} services used
+                      </Text>
+                    </View>
+                  );
+                })}
               </View>
             )}
           </View>
         )}
       </ScrollView>
 
-      {/* Request Service Button */}
+      {/* Footer Request Service Button */}
       <View style={st.footer}>
-        <TouchableOpacity
-          style={st.requestBtn}
-          onPress={() => navigation.navigate('ServiceRequest', { equipmentId: equipment.id, equipmentName: equipment.name })}
-        >
+        <TouchableOpacity style={st.requestBtn} onPress={() => setShowServiceModal(true)}>
           <Icon name="construct-outline" size={20} color="#fff" />
           <Text style={st.requestBtnText}>Request Service</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Image Preview Modal */}
+      <Modal visible={!!selectedImage} animationType="fade" transparent>
+        <View style={st.imageModal}>
+          <TouchableOpacity style={st.imageModalClose} onPress={() => setSelectedImage(null)}>
+            <Icon name="close" size={28} color="#fff" />
+          </TouchableOpacity>
+          {selectedImage && (
+            <Image source={{ uri: selectedImage }} style={st.imageModalImage} resizeMode="contain" />
+          )}
+        </View>
+      </Modal>
+
+      {/* Create AMC Modal */}
+      <Modal visible={showAmcModal} animationType="slide" transparent>
+        <View style={st.modalOverlay}>
+          <View style={st.modalContent}>
+            <View style={st.modalHeader}>
+              <Text style={st.modalTitle}>Create AMC Plan</Text>
+              <TouchableOpacity onPress={() => setShowAmcModal(false)}>
+                <Icon name="close" size={24} color={C.ink} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={st.modalBody}>
+              <Text style={st.label}>Plan Name *</Text>
+              <TextInput
+                style={st.input}
+                placeholder="e.g., Monthly Oven Maintenance"
+                placeholderTextColor={C.muted}
+                value={amcForm.planName}
+                onChangeText={v => setAmcForm(f => ({ ...f, planName: v }))}
+              />
+
+              <Text style={st.label}>Description</Text>
+              <TextInput
+                style={[st.input, { height: 80, textAlignVertical: 'top' }]}
+                placeholder="Describe what's included..."
+                placeholderTextColor={C.muted}
+                multiline
+                value={amcForm.planDescription}
+                onChangeText={v => setAmcForm(f => ({ ...f, planDescription: v }))}
+              />
+
+              <Text style={st.label}>Duration *</Text>
+              <TouchableOpacity
+                style={st.pickerBtn}
+                onPress={() => setDurationPickerVisible(true)}
+              >
+                <Text style={st.pickerText}>{getDurationLabel(amcForm.duration)}</Text>
+                <Icon name="chevron-down" size={18} color={C.muted} />
+              </TouchableOpacity>
+
+              <Text style={st.label}>Service Limit *</Text>
+              <TextInput
+                style={st.input}
+                placeholder="Number of services"
+                placeholderTextColor={C.muted}
+                keyboardType="numeric"
+                value={amcForm.serviceLimit}
+                onChangeText={v => setAmcForm(f => ({ ...f, serviceLimit: v }))}
+              />
+
+              <Text style={st.label}>Plan Cost (₹) *</Text>
+              <TextInput
+                style={st.input}
+                placeholder="0.00"
+                placeholderTextColor={C.muted}
+                keyboardType="decimal-pad"
+                value={amcForm.totalAmount}
+                onChangeText={v => setAmcForm(f => ({ ...f, totalAmount: v }))}
+              />
+
+              <Text style={st.label}>Features</Text>
+              <View style={st.featureInputRow}>
+                <TextInput
+                  style={[st.input, { flex: 1 }]}
+                  placeholder="Add a feature"
+                  placeholderTextColor={C.muted}
+                  value={featureInput}
+                  onChangeText={setFeatureInput}
+                />
+                <TouchableOpacity style={st.addFeatureBtn} onPress={handleAddFeature}>
+                  <Icon name="add" size={20} color="#fff" />
+                </TouchableOpacity>
+              </View>
+              {amcForm.featuresJson.length > 0 && (
+                <View style={st.featuresList}>
+                  {amcForm.featuresJson.map((feature, index) => (
+                    <View key={index} style={st.featureBadge}>
+                      <Text style={st.featureBadgeText}>{feature}</Text>
+                      <TouchableOpacity onPress={() => handleRemoveFeature(index)}>
+                        <Icon name="close-circle" size={16} color={C.muted} />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              <Text style={st.label}>Start Date *</Text>
+              <TextInput
+                style={st.input}
+                placeholder="YYYY-MM-DD"
+                placeholderTextColor={C.muted}
+                value={amcForm.startDate}
+                onChangeText={v => setAmcForm(f => ({ ...f, startDate: v }))}
+              />
+
+              <View style={st.switchRow}>
+                <Text style={st.switchLabel}>Enable auto-renewal</Text>
+                <Switch
+                  value={amcForm.autoRenew}
+                  onValueChange={v => setAmcForm(f => ({ ...f, autoRenew: v }))}
+                  trackColor={{ false: C.border, true: C.ok }}
+                  thumbColor={amcForm.autoRenew ? '#fff' : '#f4f3f4'}
+                />
+              </View>
+            </ScrollView>
+
+            <View style={st.modalFooter}>
+              <TouchableOpacity style={st.cancelBtn} onPress={() => setShowAmcModal(false)}>
+                <Text style={st.cancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={st.saveBtn} onPress={handleCreateAmc} disabled={amcSaving}>
+                {amcSaving ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={st.saveText}>Create AMC</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Duration Picker Modal */}
+      <Modal visible={durationPickerVisible} animationType="slide" transparent>
+        <View style={st.modalOverlay}>
+          <View style={st.pickerModal}>
+            <View style={st.modalHeader}>
+              <Text style={st.modalTitle}>Select Duration</Text>
+              <TouchableOpacity onPress={() => setDurationPickerVisible(false)}>
+                <Icon name="close" size={24} color={C.ink} />
+              </TouchableOpacity>
+            </View>
+            <View style={st.pickerList}>
+              {durationOptions.map(opt => (
+                <TouchableOpacity
+                  key={opt.key}
+                  style={[st.pickerItem, amcForm.duration === opt.key && st.pickerItemActive]}
+                  onPress={() => {
+                    setAmcForm(f => ({ ...f, duration: opt.key }));
+                    setDurationPickerVisible(false);
+                  }}
+                >
+                  <Text style={[st.pickerItemText, amcForm.duration === opt.key && { color: C.primary }]}>
+                    {opt.label}
+                  </Text>
+                  {amcForm.duration === opt.key && (
+                    <Icon name="checkmark-circle" size={20} color={C.primary} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Service Booking Modal */}
+      <Modal visible={showServiceModal} animationType="slide" transparent>
+        <View style={st.modalOverlay}>
+          <View style={st.modalContent}>
+            <View style={st.modalHeader}>
+              <Text style={st.modalTitle}>Request Service</Text>
+              <TouchableOpacity onPress={() => setShowServiceModal(false)}>
+                <Icon name="close" size={24} color={C.ink} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={st.modalBody}>
+              {/* Service Templates */}
+              {equipment.equipmentType?.serviceTemplates?.length > 0 && (
+                <>
+                  <Text style={st.label}>Available Services</Text>
+                  {equipment.equipmentType.serviceTemplates.map(service => (
+                    <TouchableOpacity
+                      key={service.id}
+                      style={[
+                        st.serviceCard,
+                        selectedServices.includes(service.id) && st.serviceCardActive,
+                      ]}
+                      onPress={() => toggleServiceSelection(service.id)}
+                    >
+                      <View style={st.serviceCheckbox}>
+                        {selectedServices.includes(service.id) ? (
+                          <Icon name="checkmark-circle" size={22} color={C.primary} />
+                        ) : (
+                          <Icon name="ellipse-outline" size={22} color={C.muted} />
+                        )}
+                      </View>
+                      <View style={st.serviceInfo}>
+                        <Text style={st.serviceName}>{service.name}</Text>
+                        {service.description && (
+                          <Text style={st.serviceDesc}>{service.description}</Text>
+                        )}
+                      </View>
+                      {service.estimatedPrice && (
+                        <Text style={st.servicePrice}>
+                          ₹{(service.estimatedPrice / 100).toFixed(2)}
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </>
+              )}
+
+              <Text style={st.label}>Preferred Date *</Text>
+              {/* Quick Date Selection */}
+              <View style={st.quickDateRow}>
+                {[
+                  { label: 'Today', days: 0 },
+                  { label: 'Tomorrow', days: 1 },
+                  { label: 'In 2 Days', days: 2 },
+                  { label: 'In 3 Days', days: 3 },
+                ].map(opt => {
+                  const date = new Date();
+                  date.setDate(date.getDate() + opt.days);
+                  const dateStr = date.toISOString().split('T')[0];
+                  const isSelected = serviceForm.slotDate === dateStr;
+                  return (
+                    <TouchableOpacity
+                      key={opt.days}
+                      style={[st.quickDateChip, isSelected && st.quickDateChipActive]}
+                      onPress={() => setServiceForm(f => ({ ...f, slotDate: dateStr }))}
+                    >
+                      <Text style={[st.quickDateText, isSelected && st.quickDateTextActive]}>
+                        {opt.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              <TextInput
+                style={st.input}
+                placeholder="Or enter date: YYYY-MM-DD"
+                placeholderTextColor={C.muted}
+                value={serviceForm.slotDate}
+                onChangeText={v => setServiceForm(f => ({ ...f, slotDate: v }))}
+              />
+
+              <Text style={st.label}>Preferred Time *</Text>
+              {/* Quick Time Selection */}
+              <View style={st.quickTimeRow}>
+                {['09:00', '10:00', '11:00', '14:00', '15:00', '16:00'].map(time => {
+                  const isSelected = serviceForm.slotTime === time;
+                  return (
+                    <TouchableOpacity
+                      key={time}
+                      style={[st.quickTimeChip, isSelected && st.quickTimeChipActive]}
+                      onPress={() => setServiceForm(f => ({ ...f, slotTime: time }))}
+                    >
+                      <Icon
+                        name="time-outline"
+                        size={14}
+                        color={isSelected ? '#fff' : C.muted}
+                      />
+                      <Text style={[st.quickTimeText, isSelected && st.quickTimeTextActive]}>
+                        {time}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              <TextInput
+                style={st.input}
+                placeholder="Or enter time: HH:MM (e.g., 10:30)"
+                placeholderTextColor={C.muted}
+                value={serviceForm.slotTime}
+                onChangeText={v => setServiceForm(f => ({ ...f, slotTime: v }))}
+              />
+
+              <Text style={st.label}>Problem Description</Text>
+              <TextInput
+                style={[st.input, { height: 100, textAlignVertical: 'top' }]}
+                placeholder="Describe the issue or maintenance needed..."
+                placeholderTextColor={C.muted}
+                multiline
+                value={serviceForm.problemDescription}
+                onChangeText={v => setServiceForm(f => ({ ...f, problemDescription: v }))}
+              />
+            </ScrollView>
+
+            <View style={st.modalFooter}>
+              <TouchableOpacity style={st.cancelBtn} onPress={() => setShowServiceModal(false)}>
+                <Text style={st.cancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={st.saveBtn} onPress={handleServiceBooking} disabled={serviceSaving}>
+                {serviceSaving ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={st.saveText}>Request Service</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -461,6 +1092,7 @@ const st = StyleSheet.create({
   },
   backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontSize: 18, fontWeight: '900', color: C.ink, flex: 1, textAlign: 'center' },
+  serviceBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' },
 
   scrollContent: { paddingBottom: 100 },
 
@@ -470,28 +1102,28 @@ const st = StyleSheet.create({
   },
   infoHeader: { flexDirection: 'row', gap: 12 },
   iconBox: {
-    width: 56, height: 56, borderRadius: 16, backgroundColor: '#FFE8E8',
-    alignItems: 'center', justifyContent: 'center'
+    width: 64, height: 64, borderRadius: 16, backgroundColor: '#FFE8E8',
+    alignItems: 'center', justifyContent: 'center', overflow: 'hidden'
   },
+  equipImage: { width: 64, height: 64, borderRadius: 16 },
   infoMain: { flex: 1 },
   equipName: { fontSize: 20, fontWeight: '900', color: C.ink },
-  equipSub: { fontSize: 14, color: C.muted, marginTop: 2 },
-  catBadge: { marginTop: 6, paddingHorizontal: 10, paddingVertical: 4, backgroundColor: C.bg, borderRadius: 8, alignSelf: 'flex-start' },
-  catText: { fontSize: 12, fontWeight: '600', color: C.muted },
+  equipCategory: { fontSize: 14, color: C.muted, marginTop: 2 },
+  badgeRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
+  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+  badgeText: { fontSize: 11, fontWeight: '700' },
 
-  statsRow: { flexDirection: 'row', marginTop: 16, gap: 8 },
-  statBox: { flex: 1, alignItems: 'center', padding: 12, backgroundColor: C.bg, borderRadius: 12 },
-  statValue: { fontSize: 18, fontWeight: '900', color: C.ink },
+  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 16 },
+  statCard: { flex: 1, minWidth: '45%', alignItems: 'center', padding: 12, backgroundColor: C.bg, borderRadius: 12 },
+  statIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  statValue: { fontSize: 16, fontWeight: '900', color: C.ink },
   statLabel: { fontSize: 11, color: C.muted, marginTop: 2 },
 
-  statusRow: { flexDirection: 'row', paddingHorizontal: 16, gap: 12 },
-  statusCard: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10,
-    padding: 12, borderRadius: 12
-  },
-  statusInfo: { flex: 1 },
-  statusTitle: { fontSize: 12, fontWeight: '700' },
-  statusValue: { fontSize: 11, color: C.muted, marginTop: 2 },
+  tabBar: { flexDirection: 'row', marginHorizontal: 16, backgroundColor: C.card, borderRadius: 12, padding: 4 },
+  tab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 10 },
+  tabActive: { backgroundColor: C.bg },
+  tabText: { fontSize: 13, fontWeight: '600', color: C.muted },
+  tabTextActive: { color: C.primary },
 
   section: { padding: 16 },
   sectionTitle: { fontSize: 16, fontWeight: '900', color: C.ink, marginBottom: 12 },
@@ -501,11 +1133,32 @@ const st = StyleSheet.create({
   detailLabel: { fontSize: 13, color: C.muted },
   detailValue: { fontSize: 13, fontWeight: '600', color: C.ink, textAlign: 'right', flex: 1, marginLeft: 16 },
 
-  tabBar: { flexDirection: 'row', marginHorizontal: 16, backgroundColor: C.card, borderRadius: 12, padding: 4 },
-  tab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 10 },
-  tabActive: { backgroundColor: C.bg },
-  tabText: { fontSize: 13, fontWeight: '600', color: C.muted },
-  tabTextActive: { color: C.primary },
+  imagesSection: { marginBottom: 24 },
+  docsGrid: { flexDirection: 'row', gap: 12 },
+  docCard: { flex: 1, position: 'relative' },
+  docImage: { width: '100%', aspectRatio: 16 / 9, borderRadius: 12, backgroundColor: C.bg },
+  docOverlay: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 12, alignItems: 'center', justifyContent: 'center'
+  },
+  docLabel: { fontSize: 12, fontWeight: '600', color: C.ink, marginTop: 6, textAlign: 'center' },
+
+  photosGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  photoCard: { position: 'relative' },
+  photoImage: { width: 100, height: 100, borderRadius: 12, backgroundColor: C.bg },
+  photoIndex: {
+    position: 'absolute', top: 6, left: 6,
+    backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2
+  },
+  photoIndexText: { fontSize: 10, fontWeight: '700', color: '#fff' },
+
+  emptySection: { alignItems: 'center', paddingVertical: 32 },
+  emptySectionText: { fontSize: 14, color: C.muted, marginTop: 8 },
+  emptyBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 16,
+    paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, backgroundColor: C.primary
+  },
+  emptyBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
 
   historyCard: { flexDirection: 'row', marginBottom: 4 },
   historyTimeline: { width: 24, alignItems: 'center' },
@@ -520,28 +1173,60 @@ const st = StyleSheet.create({
   historyStatus: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   historyStatusText: { fontSize: 10, fontWeight: '700', textTransform: 'capitalize' },
   historyDesc: { fontSize: 13, color: C.muted, marginTop: 6 },
-  historyFooter: { flexDirection: 'row', gap: 12, marginTop: 8 },
-  historyMeta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  historyMetaText: { fontSize: 11, color: C.muted },
+  historyFooter: { marginTop: 8 },
+  historyCost: { fontSize: 13, fontWeight: '700', color: C.ink },
 
-  amcCard: { backgroundColor: C.card, borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: C.border },
-  amcHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  amcInfo: { flex: 1 },
-  amcVendor: { fontSize: 15, fontWeight: '700', color: C.ink },
-  amcContract: { fontSize: 12, color: C.muted, marginTop: 2 },
-  amcStatus: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  amcStatusText: { fontSize: 11, fontWeight: '700', textTransform: 'capitalize' },
-  amcDetails: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 12, gap: 16 },
-  amcDetail: {},
-  amcDetailLabel: { fontSize: 11, color: C.muted },
-  amcDetailValue: { fontSize: 13, fontWeight: '600', color: C.ink, marginTop: 2 },
-  amcProgress: { marginTop: 12 },
-  progressBar: { height: 6, backgroundColor: C.bg, borderRadius: 3, overflow: 'hidden' },
+  // AMC Styles
+  amcActiveCard: {
+    backgroundColor: C.card, borderRadius: 16, padding: 16,
+    borderWidth: 2, borderColor: C.ok
+  },
+  amcActiveHeader: { marginBottom: 8 },
+  amcActiveBadge: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  amcActiveLabel: { fontSize: 13, fontWeight: '700', color: C.ok },
+  amcPlanName: { fontSize: 18, fontWeight: '900', color: C.ink },
+  amcDescription: { fontSize: 13, color: C.muted, marginTop: 4 },
+  amcDetails: { marginTop: 16, gap: 12 },
+  amcDetailItem: { flexDirection: 'row', justifyContent: 'space-between' },
+  amcDetailLabel: { fontSize: 13, color: C.muted },
+  amcDetailValue: { fontSize: 13, fontWeight: '600', color: C.ink },
+  usageBox: { marginTop: 16, padding: 12, backgroundColor: C.bg, borderRadius: 12 },
+  usageHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+  usageLabel: { fontSize: 12, fontWeight: '600', color: C.muted },
+  usageText: { fontSize: 12, fontWeight: '700', color: C.ink },
+  progressBar: { height: 6, backgroundColor: C.border, borderRadius: 3, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: 3 },
-  progressText: { fontSize: 11, color: C.muted, marginTop: 4 },
+  usageRemaining: { fontSize: 11, color: C.muted, marginTop: 6, textAlign: 'center' },
+  featuresBox: { marginTop: 16 },
+  featuresTitle: { fontSize: 13, fontWeight: '700', color: C.ink, marginBottom: 8 },
+  featureItem: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+  featureText: { fontSize: 13, color: C.text },
+  autoRenewRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: C.border },
+  autoRenewLabel: { fontSize: 14, fontWeight: '600', color: C.ink },
+  cancelAmcBtn: { marginTop: 16, paddingVertical: 12, borderRadius: 10, backgroundColor: '#FEF2F2', alignItems: 'center' },
+  cancelAmcText: { fontSize: 14, fontWeight: '700', color: C.danger },
 
-  emptySection: { alignItems: 'center', paddingVertical: 32 },
-  emptySectionText: { fontSize: 14, color: C.muted, marginTop: 8 },
+  noAmcCard: {
+    backgroundColor: C.card, borderRadius: 16, padding: 24,
+    alignItems: 'center', borderWidth: 1, borderColor: C.border
+  },
+  noAmcTitle: { fontSize: 18, fontWeight: '900', color: C.ink, marginTop: 12 },
+  noAmcText: { fontSize: 14, color: C.muted, marginTop: 4, textAlign: 'center' },
+  createAmcBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 16,
+    paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12, backgroundColor: C.primary
+  },
+  createAmcText: { fontSize: 14, fontWeight: '700', color: '#fff' },
+
+  amcHistorySection: { marginTop: 24 },
+  amcHistoryCard: { backgroundColor: C.card, borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: C.border },
+  amcHistoryHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  amcHistoryName: { fontSize: 14, fontWeight: '700', color: C.ink },
+  amcHistoryBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  amcHistoryStatus: { fontSize: 10, fontWeight: '700' },
+  amcHistoryDuration: { fontSize: 12, color: C.muted, marginTop: 4 },
+  amcHistoryPeriod: { fontSize: 12, color: C.muted, marginTop: 2 },
+  amcHistoryUsage: { fontSize: 12, fontWeight: '600', color: C.ink, marginTop: 4 },
 
   footer: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, backgroundColor: C.card, borderTopWidth: 1, borderTopColor: C.border },
   requestBtn: {
@@ -549,4 +1234,89 @@ const st = StyleSheet.create({
     backgroundColor: C.primary, paddingVertical: 14, borderRadius: 12
   },
   requestBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+
+  // Modal Styles
+  imageModal: { flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', alignItems: 'center' },
+  imageModalClose: { position: 'absolute', top: 50, right: 20, zIndex: 10 },
+  imageModalImage: { width: '100%', height: '80%' },
+
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: C.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '90%' },
+  modalHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    padding: 16, borderBottomWidth: 1, borderBottomColor: C.border
+  },
+  modalTitle: { fontSize: 18, fontWeight: '900', color: C.ink },
+  modalBody: { padding: 16 },
+  modalFooter: { flexDirection: 'row', gap: 12, padding: 16, borderTopWidth: 1, borderTopColor: C.border },
+
+  label: { fontSize: 12, fontWeight: '700', color: C.muted, marginBottom: 6, marginTop: 12 },
+  input: {
+    backgroundColor: C.bg, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12,
+    fontSize: 14, color: C.text, borderWidth: 1, borderColor: C.border
+  },
+  pickerBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: C.bg, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 14,
+    borderWidth: 1, borderColor: C.border
+  },
+  pickerText: { fontSize: 14, color: C.text },
+
+  featureInputRow: { flexDirection: 'row', gap: 8 },
+  addFeatureBtn: { width: 48, height: 48, borderRadius: 12, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' },
+  featuresList: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
+  featureBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: C.bg, borderRadius: 8 },
+  featureBadgeText: { fontSize: 12, color: C.ink },
+
+  switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 },
+  switchLabel: { fontSize: 14, color: C.ink },
+
+  cancelBtn: { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: C.bg, alignItems: 'center' },
+  cancelText: { fontSize: 14, fontWeight: '700', color: C.ink },
+  saveBtn: {
+    flex: 1, flexDirection: 'row', paddingVertical: 14, borderRadius: 12,
+    backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center', gap: 6
+  },
+  saveText: { fontSize: 14, fontWeight: '700', color: '#fff' },
+
+  pickerModal: { backgroundColor: C.card, borderTopLeftRadius: 24, borderTopRightRadius: 24 },
+  pickerList: { padding: 16 },
+  pickerItem: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: C.border
+  },
+  pickerItemActive: { backgroundColor: '#FFF5F5' },
+  pickerItemText: { fontSize: 15, fontWeight: '600', color: C.ink },
+
+  serviceCard: {
+    flexDirection: 'row', alignItems: 'center', padding: 12,
+    backgroundColor: C.card, borderRadius: 12, marginBottom: 8,
+    borderWidth: 1, borderColor: C.border
+  },
+  serviceCardActive: { borderColor: C.primary, backgroundColor: '#FFF5F5' },
+  serviceCheckbox: { marginRight: 12 },
+  serviceInfo: { flex: 1 },
+  serviceName: { fontSize: 14, fontWeight: '600', color: C.ink },
+  serviceDesc: { fontSize: 12, color: C.muted, marginTop: 2 },
+  servicePrice: { fontSize: 14, fontWeight: '700', color: C.ink },
+
+  // Quick Date/Time Selection Styles
+  quickDateRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
+  quickDateChip: {
+    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8,
+    backgroundColor: C.bg, borderWidth: 1, borderColor: C.border,
+  },
+  quickDateChipActive: { backgroundColor: C.primary, borderColor: C.primary },
+  quickDateText: { fontSize: 12, fontWeight: '600', color: C.ink },
+  quickDateTextActive: { color: '#fff' },
+
+  quickTimeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
+  quickTimeChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8,
+    backgroundColor: C.bg, borderWidth: 1, borderColor: C.border,
+  },
+  quickTimeChipActive: { backgroundColor: C.info, borderColor: C.info },
+  quickTimeText: { fontSize: 12, fontWeight: '600', color: C.ink },
+  quickTimeTextActive: { color: '#fff' },
 });

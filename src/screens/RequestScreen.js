@@ -10,7 +10,7 @@ import { api, IMAGE_BASE_URL } from '../api/client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 
-const INDEX_PATH = '/app/products';
+const INDEX_PATH = '/public/categories';
 
 const makeAbsolute = (u) => {
   if (!u) return null;
@@ -183,25 +183,26 @@ export default function RequestScreen({ navigation }) {
     try {
       setLoading(true);
       const res = await api.get(INDEX_PATH, { timeout: 10000 });
-      const mapped = (Array.isArray(res.data) ? res.data : []).map(p => {
-        let images = [];
-        if (Array.isArray(p.images)) images = p.images;
-        else if (typeof p.images === 'string') {
-          try { images = JSON.parse(p.images) || []; } catch {}
-        }
-        const firstImage = images[0] || p.image || p.image_url || p.thumb || null;
-        const imageUrl = firstImage ? makeAbsolute(firstImage) : null;
+      // API returns { ok: true, data: [...] } with categories
+      const categories = res.data?.data || res.data || [];
+      const mapped = (Array.isArray(categories) ? categories : []).map(cat => {
+        const servicesCount = cat._count?.serviceItems || 0;
+        const partsCount = cat._count?.partItems || 0;
+        const totalItems = servicesCount + partsCount;
 
         return {
-          id: String(p.id),
-          title: p.title || "",
-          catLabel: toTitle(p.category || ""),
-          desc: p.description || "",
-          image: imageUrl,
-          price: p.price, // Add price from API
-          rating: p.rating ?? 4.8,
-          requests: p.services_count ?? 0,
-          tags: p.tags ?? [],
+          id: String(cat.id),
+          title: cat.name || "",
+          catLabel: cat.name || "",
+          desc: `${servicesCount} services, ${partsCount} parts available`,
+          image: cat.imageUrl ? makeAbsolute(cat.imageUrl) : null,
+          price: null, // Categories don't have price
+          rating: 4.8,
+          requests: totalItems,
+          servicesCount,
+          partsCount,
+          subCategories: cat.subCategories || [],
+          tags: [],
           serviceKey: null,
           serviceLabel: null,
           serviceIcon: null,
@@ -388,8 +389,6 @@ export default function RequestScreen({ navigation }) {
 
   const renderItem = ({ item }) => {
     if (loading) return <SkeletonCard width={cardW} />;
-    const leftIcon = item.serviceIcon || 'pricetags-outline';
-    const leftLabel = item.serviceLabel || item.catLabel || '—';
 
     return (
       <TouchableOpacity
@@ -397,22 +396,30 @@ export default function RequestScreen({ navigation }) {
         style={[styles.card, { width: cardW }]}
         onPress={() => navigation.navigate('RequestDetail', {
           id: item.id,
-          productId: item.id,
+          categoryId: item.id,
           item: {
             title: item.title,
             category: item.catLabel,
-            price: item.price, // Pass price to detail screen
-            rating: item.rating,
-            requests: item.requests,
+            servicesCount: item.servicesCount,
+            partsCount: item.partsCount,
             desc: item.desc,
             image: item.image,
           },
         })}
       >
-        <ImageBackground source={{ uri: item.image }} style={styles.cardImage} imageStyle={styles.cardImageR}>
+        <ImageBackground
+          source={item.image ? { uri: item.image } : null}
+          style={styles.cardImage}
+          imageStyle={styles.cardImageR}
+        >
+          {!item.image && (
+            <View style={[styles.cardImage, { backgroundColor: COLORS.border, justifyContent: 'center', alignItems: 'center' }]}>
+              <Icon name="grid-outline" size={40} color={COLORS.muted} />
+            </View>
+          )}
           <View style={styles.badge}>
-            <Icon name="star" size={12} color="#fff" />
-            <Text style={styles.badgeText}>{item.rating ?? 0}</Text>
+            <Icon name="construct" size={12} color="#fff" />
+            <Text style={styles.badgeText}>{item.servicesCount || 0}</Text>
           </View>
           <View style={styles.overlay} />
         </ImageBackground>
@@ -420,24 +427,17 @@ export default function RequestScreen({ navigation }) {
         <View style={{ paddingHorizontal: 12, paddingBottom: 12 }}>
           <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
           <Text style={styles.cardDesc} numberOfLines={2}>{item.desc}</Text>
-          
-          {/* Price Display */}
-          <Text style={styles.priceText}>{formatPrice(item.price)}</Text>
 
           <View style={styles.metaRow}>
             <View style={styles.metaLeft}>
-  <Icon name={leftIcon} size={14} color={COLORS.muted} />
-  <Text 
-    style={styles.metaText} 
-    numberOfLines={1} 
-    ellipsizeMode="tail"
-  >
-    {leftLabel}
-  </Text>
-</View>
+              <Icon name="construct-outline" size={14} color={COLORS.muted} />
+              <Text style={styles.metaText} numberOfLines={1} ellipsizeMode="tail">
+                {item.servicesCount || 0} Services
+              </Text>
+            </View>
             <View style={styles.metaRight}>
-              <Icon name="flash-outline" size={14} color={COLORS.primary} />
-              <Text style={[styles.metaText, { color: COLORS.primary }]}>{item.requests ?? 0} req</Text>
+              <Icon name="hardware-chip-outline" size={14} color={COLORS.primary} />
+              <Text style={[styles.metaText, { color: COLORS.primary }]}>{item.partsCount || 0} Parts</Text>
             </View>
           </View>
 

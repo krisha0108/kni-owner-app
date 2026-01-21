@@ -682,7 +682,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Image, TouchableOpacity,
   RefreshControl, Animated, Share, Linking, Alert, Dimensions, FlatList,
-  Modal, TextInput
+  Modal, TextInput, Switch, ActivityIndicator
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -811,6 +811,264 @@ const DeleteAccountModal = ({ visible, onClose, user }) => {
   );
 };
 
+/* ===== PASSWORD CHANGE MODAL COMPONENT ===== */
+const PasswordChangeModal = ({ visible, onClose }) => {
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  const resetForm = () => {
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setShowCurrent(false);
+    setShowNew(false);
+    setShowConfirm(false);
+  };
+
+  const handleChangePassword = async () => {
+    if (!currentPassword.trim()) {
+      Alert.alert('Error', 'Please enter your current password');
+      return;
+    }
+    if (!newPassword.trim()) {
+      Alert.alert('Error', 'Please enter a new password');
+      return;
+    }
+    if (newPassword.length < 8) {
+      Alert.alert('Error', 'New password must be at least 8 characters');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await api.post('/owner/profile/password', {
+        currentPassword,
+        newPassword,
+      });
+
+      if (response.data.ok) {
+        Alert.alert('Success', 'Password changed successfully');
+        resetForm();
+        onClose();
+      } else {
+        Alert.alert('Error', response.data.error || 'Failed to change password');
+      }
+    } catch (error) {
+      const errorMsg = error.response?.data?.error || 'Failed to change password';
+      Alert.alert('Error', errorMsg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
+      <View style={pwStyles.modalOverlay}>
+        <View style={pwStyles.modalContent}>
+          <View style={pwStyles.modalHeader}>
+            <Text style={pwStyles.modalTitle}>Change Password</Text>
+            <TouchableOpacity onPress={handleClose} style={pwStyles.closeButton}>
+              <Icon name="close" size={24} color={C.muted} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={pwStyles.modalBody} showsVerticalScrollIndicator={false}>
+            <Text style={pwStyles.label}>Current Password</Text>
+            <View style={pwStyles.inputWrapper}>
+              <TextInput
+                style={pwStyles.input}
+                placeholder="Enter current password"
+                placeholderTextColor={C.muted}
+                secureTextEntry={!showCurrent}
+                value={currentPassword}
+                onChangeText={setCurrentPassword}
+              />
+              <TouchableOpacity onPress={() => setShowCurrent(!showCurrent)} style={pwStyles.eyeBtn}>
+                <Icon name={showCurrent ? 'eye-off' : 'eye'} size={20} color={C.muted} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={pwStyles.label}>New Password</Text>
+            <View style={pwStyles.inputWrapper}>
+              <TextInput
+                style={pwStyles.input}
+                placeholder="At least 8 characters"
+                placeholderTextColor={C.muted}
+                secureTextEntry={!showNew}
+                value={newPassword}
+                onChangeText={setNewPassword}
+              />
+              <TouchableOpacity onPress={() => setShowNew(!showNew)} style={pwStyles.eyeBtn}>
+                <Icon name={showNew ? 'eye-off' : 'eye'} size={20} color={C.muted} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={pwStyles.label}>Confirm New Password</Text>
+            <View style={pwStyles.inputWrapper}>
+              <TextInput
+                style={pwStyles.input}
+                placeholder="Re-enter new password"
+                placeholderTextColor={C.muted}
+                secureTextEntry={!showConfirm}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+              />
+              <TouchableOpacity onPress={() => setShowConfirm(!showConfirm)} style={pwStyles.eyeBtn}>
+                <Icon name={showConfirm ? 'eye-off' : 'eye'} size={20} color={C.muted} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={pwStyles.tipBox}>
+              <Icon name="information-circle" size={18} color={C.info} />
+              <Text style={pwStyles.tipText}>
+                Password must be at least 8 characters and include a mix of letters and numbers for security.
+              </Text>
+            </View>
+          </ScrollView>
+
+          <View style={pwStyles.modalFooter}>
+            <TouchableOpacity style={pwStyles.cancelButton} onPress={handleClose}>
+              <Text style={pwStyles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[pwStyles.saveButton, loading && { opacity: 0.6 }]}
+              onPress={handleChangePassword}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={pwStyles.saveButtonText}>Update Password</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
+/* ===== NOTIFICATION SETTINGS MODAL COMPONENT ===== */
+const NotificationSettingsModal = ({ visible, onClose, settings, onSave }) => {
+  const [notifSettings, setNotifSettings] = useState({
+    emailNotifications: true,
+    pushNotifications: true,
+    smsNotifications: false,
+    bookingUpdates: true,
+    marketingEmails: false,
+    ...settings,
+  });
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (settings) {
+      setNotifSettings(prev => ({ ...prev, ...settings }));
+    }
+  }, [settings]);
+
+  const handleToggle = (key) => {
+    setNotifSettings(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      const response = await api.patch('/owner/profile', {
+        notificationPreferences: notifSettings,
+      });
+
+      if (response.data.ok || response.status === 200) {
+        Alert.alert('Success', 'Notification preferences updated');
+        onSave(notifSettings);
+        onClose();
+      } else {
+        Alert.alert('Error', 'Failed to update preferences');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update notification preferences');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const renderToggleRow = (label, key, icon, description) => (
+    <View style={notifStyles.toggleRow}>
+      <View style={notifStyles.toggleLeft}>
+        <View style={notifStyles.toggleIcon}>
+          <Icon name={icon} size={20} color={C.primary} />
+        </View>
+        <View style={notifStyles.toggleInfo}>
+          <Text style={notifStyles.toggleLabel}>{label}</Text>
+          <Text style={notifStyles.toggleDesc}>{description}</Text>
+        </View>
+      </View>
+      <Switch
+        value={notifSettings[key]}
+        onValueChange={() => handleToggle(key)}
+        trackColor={{ false: C.border, true: '#FFD0D0' }}
+        thumbColor={notifSettings[key] ? C.primary : '#f4f3f4'}
+      />
+    </View>
+  );
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <View style={notifStyles.modalOverlay}>
+        <View style={notifStyles.modalContent}>
+          <View style={notifStyles.modalHeader}>
+            <Text style={notifStyles.modalTitle}>Notification Settings</Text>
+            <TouchableOpacity onPress={onClose} style={notifStyles.closeButton}>
+              <Icon name="close" size={24} color={C.muted} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={notifStyles.modalBody} showsVerticalScrollIndicator={false}>
+            <Text style={notifStyles.sectionTitle}>Notification Channels</Text>
+            {renderToggleRow('Push Notifications', 'pushNotifications', 'notifications', 'Receive instant alerts on your device')}
+            {renderToggleRow('Email Notifications', 'emailNotifications', 'mail', 'Get updates in your inbox')}
+            {renderToggleRow('SMS Notifications', 'smsNotifications', 'chatbubble-ellipses', 'Receive text message alerts')}
+
+            <Text style={notifStyles.sectionTitle}>Notification Types</Text>
+            {renderToggleRow('Booking Updates', 'bookingUpdates', 'calendar', 'Service booking confirmations and changes')}
+            {renderToggleRow('Marketing & Offers', 'marketingEmails', 'pricetag', 'Special offers and promotions')}
+          </ScrollView>
+
+          <View style={notifStyles.modalFooter}>
+            <TouchableOpacity style={notifStyles.cancelButton} onPress={onClose}>
+              <Text style={notifStyles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[notifStyles.saveButton, loading && { opacity: 0.6 }]}
+              onPress={handleSave}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={notifStyles.saveButtonText}>Save Preferences</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
 /* ===== SCREEN ===== */
 export default function ProfileScreen({navigation}) {
   const insets = useSafeAreaInsets();
@@ -820,6 +1078,9 @@ export default function ProfileScreen({navigation}) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [passwordModalVisible, setPasswordModalVisible] = useState(false);
+  const [notificationModalVisible, setNotificationModalVisible] = useState(false);
+  const [notificationSettings, setNotificationSettings] = useState({});
   const [cartCount, setCartCount] = useState(0);
 
   // Calculate cart count from AsyncStorage
@@ -1287,20 +1548,7 @@ export default function ProfileScreen({navigation}) {
             <Icon name="chevron-forward" size={20} color={C.muted} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={st.quickAccessButton} onPress={() => navigation.navigate('MyAmcs')}>
-            <View style={st.quickAccessButtonContent}>
-              <View style={[st.quickAccessIcon, { backgroundColor: '#ECFDF5' }]}>
-                <Icon name="shield-checkmark-outline" size={20} color="#10B981" />
-              </View>
-              <View style={st.quickAccessTextWrap}>
-                <Text style={st.quickAccessTitle}>My AMCs</Text>
-                <Text style={st.quickAccessSubtitle}>Track maintenance contracts</Text>
-              </View>
-            </View>
-            <Icon name="chevron-forward" size={20} color={C.muted} />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={st.quickAccessButton} onPress={() => navigation.navigate('ServiceHistory')}>
+          <TouchableOpacity style={[st.quickAccessButton, { borderBottomWidth: 0 }]} onPress={() => navigation.navigate('ServiceHistory')}>
             <View style={st.quickAccessButtonContent}>
               <View style={[st.quickAccessIcon, { backgroundColor: '#FEF3C7' }]}>
                 <Icon name="time-outline" size={20} color="#F59E0B" />
@@ -1312,15 +1560,47 @@ export default function ProfileScreen({navigation}) {
             </View>
             <Icon name="chevron-forward" size={20} color={C.muted} />
           </TouchableOpacity>
+        </View>
 
-          <TouchableOpacity style={[st.quickAccessButton, { borderBottomWidth: 0 }]} onPress={() => navigation.navigate('Billings')}>
+        {/* SETTINGS SECTION */}
+        <View style={st.sectionHdr}>
+          <Text style={st.sectionTitle}>Settings</Text>
+        </View>
+        <View style={st.quickAccessContainer}>
+          <TouchableOpacity style={st.quickAccessButton} onPress={() => navigation.navigate('TeamManagement')}>
             <View style={st.quickAccessButtonContent}>
-              <View style={[st.quickAccessIcon, { backgroundColor: '#FDF2F8' }]}>
-                <Icon name="receipt-outline" size={20} color="#EC4899" />
+              <View style={[st.quickAccessIcon, { backgroundColor: '#F3E8FF' }]}>
+                <Icon name="people-outline" size={20} color="#8B5CF6" />
               </View>
               <View style={st.quickAccessTextWrap}>
-                <Text style={st.quickAccessTitle}>My Bills</Text>
-                <Text style={st.quickAccessSubtitle}>View invoices & payment details</Text>
+                <Text style={st.quickAccessTitle}>Team Management</Text>
+                <Text style={st.quickAccessSubtitle}>Invite and manage team members</Text>
+              </View>
+            </View>
+            <Icon name="chevron-forward" size={20} color={C.muted} />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={st.quickAccessButton} onPress={() => setPasswordModalVisible(true)}>
+            <View style={st.quickAccessButtonContent}>
+              <View style={[st.quickAccessIcon, { backgroundColor: '#FEF2F2' }]}>
+                <Icon name="lock-closed-outline" size={20} color={C.primary} />
+              </View>
+              <View style={st.quickAccessTextWrap}>
+                <Text style={st.quickAccessTitle}>Change Password</Text>
+                <Text style={st.quickAccessSubtitle}>Update your account password</Text>
+              </View>
+            </View>
+            <Icon name="chevron-forward" size={20} color={C.muted} />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={[st.quickAccessButton, { borderBottomWidth: 0 }]} onPress={() => setNotificationModalVisible(true)}>
+            <View style={st.quickAccessButtonContent}>
+              <View style={[st.quickAccessIcon, { backgroundColor: '#EFF6FF' }]}>
+                <Icon name="notifications-outline" size={20} color="#3B82F6" />
+              </View>
+              <View style={st.quickAccessTextWrap}>
+                <Text style={st.quickAccessTitle}>Notification Settings</Text>
+                <Text style={st.quickAccessSubtitle}>Manage notification preferences</Text>
               </View>
             </View>
             <Icon name="chevron-forward" size={20} color={C.muted} />
@@ -1354,6 +1634,20 @@ export default function ProfileScreen({navigation}) {
         visible={deleteModalVisible}
         onClose={() => setDeleteModalVisible(false)}
         user={user}
+      />
+
+      {/* PASSWORD CHANGE MODAL */}
+      <PasswordChangeModal
+        visible={passwordModalVisible}
+        onClose={() => setPasswordModalVisible(false)}
+      />
+
+      {/* NOTIFICATION SETTINGS MODAL */}
+      <NotificationSettingsModal
+        visible={notificationModalVisible}
+        onClose={() => setNotificationModalVisible(false)}
+        settings={notificationSettings}
+        onSave={setNotificationSettings}
       />
 
       <KniBottomNav
@@ -1752,4 +2046,221 @@ const stSK = StyleSheet.create({
   hero:{ width:'100%', backgroundColor:'#E9EEF5' },
   circle:{ backgroundColor:'#E9EEF5', borderRadius:999 },
   line:{ backgroundColor:'#E9EEF5', borderRadius:8 },
+});
+
+/* ===== PASSWORD CHANGE MODAL STYLES ===== */
+const pwStyles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '85%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: C.ink,
+  },
+  closeButton: {
+    padding: 4,
+  },
+  modalBody: {
+    padding: 20,
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: C.muted,
+    marginBottom: 8,
+    marginTop: 16,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5F7FA',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  input: {
+    flex: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    fontSize: 14,
+    color: C.text,
+  },
+  eyeBtn: {
+    padding: 12,
+  },
+  tipBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#EFF6FF',
+    padding: 12,
+    borderRadius: 10,
+    marginTop: 20,
+    gap: 10,
+  },
+  tipText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#3B82F6',
+    lineHeight: 18,
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    padding: 20,
+    gap: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: C.ink,
+  },
+  saveButton: {
+    flex: 1,
+    backgroundColor: C.primary,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
+  },
+});
+
+/* ===== NOTIFICATION SETTINGS MODAL STYLES ===== */
+const notifStyles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '85%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: C.ink,
+  },
+  closeButton: {
+    padding: 4,
+  },
+  modalBody: {
+    padding: 20,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: C.ink,
+    marginBottom: 12,
+    marginTop: 16,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F8FAFC',
+    padding: 14,
+    borderRadius: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  toggleLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  toggleIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: '#FFE8E8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  toggleInfo: {
+    flex: 1,
+  },
+  toggleLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: C.ink,
+  },
+  toggleDesc: {
+    fontSize: 12,
+    color: C.muted,
+    marginTop: 2,
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    padding: 20,
+    gap: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: C.ink,
+  },
+  saveButton: {
+    flex: 1,
+    backgroundColor: C.primary,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
+  },
 });

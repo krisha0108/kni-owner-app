@@ -2,177 +2,398 @@ import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ScrollView, Platform, Alert,
-  PermissionsAndroid, Linking
+  ActivityIndicator, Image
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { pick } from '@react-native-documents/picker'; // ✅ NEW IMPORT
+import { launchImageLibrary } from 'react-native-image-picker';
 import LinearGradient from 'react-native-linear-gradient';
+import { api } from '../api/client';
 
-const RestaurantOnboarding = ({ navigation }) => {
-  const [hotelName, setHotelName] = useState('');
-  const [address, setAddress] = useState('');
-  const [fssaiNumber, setFssaiNumber] = useState('');
+const C = {
+  primary: '#EF3A3A',
+  ink: '#1D2254',
+  text: '#0F172A',
+  muted: '#6B7280',
+  bg: '#F5F7FA',
+  card: '#FFFFFF',
+  border: '#E5E7EB',
+  ok: '#10B981',
+  warn: '#F59E0B',
+};
+
+const RestaurantOnboarding = ({ navigation, route }) => {
+  const isFirstRestaurant = route?.params?.isFirstRestaurant !== false; // default true for backward compatibility
+  const [form, setForm] = useState({
+    hotelName: '',
+    address: '',
+    city: '',
+    pincode: '',
+    fssaiNumber: '',
+  });
   const [fssaiFile, setFssaiFile] = useState(null);
+  const [mainImage, setMainImage] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  const requestStoragePermission = async () => {
-    if (Platform.OS === 'android') {
-      try {
-        const granted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES,
-          {
-            title: 'Storage Permission',
-            message: 'App needs access to your storage to select files',
-            buttonNeutral: 'Ask Me Later',
-            buttonNegative: 'Cancel',
-            buttonPositive: 'OK',
-          }
-        );
-        return granted === PermissionsAndroid.RESULTS.GRANTED;
-      } catch (err) {
-        console.warn(err);
-        return false;
-      }
-    }
-    return true;
+  const handleChange = (field, value) => {
+    setForm(prev => ({ ...prev, [field]: value }));
   };
 
-  const handlePickFile = async () => {
-    try {
-      const hasPermission = await requestStoragePermission();
-
-      if (!hasPermission) {
-        Alert.alert(
-          'Permission Required',
-          'Please grant storage permission to upload files',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Open Settings',
-              onPress: () => Linking.openSettings()
-            },
-          ]
-        );
-        return;
+  const handlePickFile = () => {
+    launchImageLibrary(
+      {
+        mediaType: 'photo',
+        quality: 0.8,
+        maxWidth: 1920,
+        maxHeight: 1920,
+      },
+      (response) => {
+        if (response.didCancel) {
+          return;
+        }
+        if (response.errorCode) {
+          console.log('Image picker error:', response.errorMessage);
+          Alert.alert('Error', 'Failed to pick image');
+          return;
+        }
+        if (response.assets && response.assets[0]) {
+          const asset = response.assets[0];
+          setFssaiFile({
+            uri: asset.uri,
+            type: asset.type || 'image/jpeg',
+            name: asset.fileName || 'fssai_certificate.jpg',
+          });
+        }
       }
-
-      const [file] = await pick({
-        type: ['application/pdf', 'image/*'], // ✅ modern format
-      });
-
-      setFssaiFile(file);
-    } catch (err) {
-      if (err.code === 'DOCUMENT_PICKER_CANCELED') {
-        console.log('User cancelled file picker');
-      } else {
-        console.error('DocumentPicker Error: ', err);
-        Alert.alert('Error', 'Failed to pick file');
-      }
-    }
+    );
   };
 
-  const handleSubmit = () => {
-    if (!hotelName || !address || !fssaiNumber || !fssaiFile) {
-      Alert.alert('Required', 'Please fill all fields and upload FSSAI certificate.');
+  const handlePickImage = () => {
+    launchImageLibrary(
+      {
+        mediaType: 'photo',
+        quality: 0.8,
+        maxWidth: 1024,
+        maxHeight: 1024,
+      },
+      (response) => {
+        if (response.didCancel) {
+          return;
+        }
+        if (response.errorCode) {
+          console.log('Image picker error:', response.errorMessage);
+          Alert.alert('Error', 'Failed to pick image');
+          return;
+        }
+        if (response.assets && response.assets[0]) {
+          const asset = response.assets[0];
+          setMainImage({
+            uri: asset.uri,
+            type: asset.type || 'image/jpeg',
+            name: asset.fileName || 'restaurant_image.jpg',
+          });
+        }
+      }
+    );
+  };
+
+  const handleSubmit = async () => {
+    const { hotelName, address, city, pincode, fssaiNumber } = form;
+
+    // Validation
+    if (!hotelName || hotelName.trim().length < 2) {
+      Alert.alert('Required', 'Restaurant name must be at least 2 characters');
       return;
     }
 
-    const formData = new FormData();
-    formData.append('hotelName', hotelName);
-    formData.append('address', address);
-    formData.append('fssaiNumber', fssaiNumber);
-    formData.append('fssaiFile', {
-      uri: fssaiFile.uri,
-      type: fssaiFile.type,
-      name: fssaiFile.name
-    });
+    if (!address || address.trim().length < 5) {
+      Alert.alert('Required', 'Address must be at least 5 characters');
+      return;
+    }
 
-    console.log('Submitting:', { hotelName, address, fssaiNumber, fssaiFile });
-    navigation.replace('OwnerDashboard');
+    if (!city || city.trim().length < 2) {
+      Alert.alert('Required', 'City must be at least 2 characters');
+      return;
+    }
+
+    if (!fssaiNumber || fssaiNumber.length !== 14) {
+      Alert.alert('Required', 'FSSAI Number must be exactly 14 digits');
+      return;
+    }
+
+    if (pincode && pincode.length !== 6) {
+      Alert.alert('Invalid', 'Pincode must be exactly 6 digits');
+      return;
+    }
+
+    if (!fssaiFile) {
+      Alert.alert('Required', 'Please upload FSSAI Certificate');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Upload files first
+      let restaurantImageUrl = '';
+      let fssaiCertificateUrl = '';
+
+      // Upload main image if provided
+      if (mainImage) {
+        const imageFormData = new FormData();
+        imageFormData.append('file', {
+          uri: mainImage.uri,
+          type: mainImage.type || 'image/jpeg',
+          name: mainImage.name || 'restaurant.jpg',
+        });
+        imageFormData.append('folder', 'restaurants');
+
+        const imageRes = await api.post('/upload', imageFormData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+
+        if (imageRes.data?.ok) {
+          restaurantImageUrl = imageRes.data.data.url;
+        }
+      }
+
+      // Upload FSSAI certificate image
+      const certFormData = new FormData();
+      certFormData.append('file', {
+        uri: fssaiFile.uri,
+        type: fssaiFile.type || 'image/jpeg',
+        name: fssaiFile.name || 'fssai_certificate.jpg',
+      });
+      certFormData.append('folder', 'fssai-certificates');
+
+      const certRes = await api.post('/upload', certFormData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      if (!certRes.data?.ok) {
+        throw new Error('Failed to upload FSSAI certificate');
+      }
+
+      fssaiCertificateUrl = certRes.data.data.url;
+
+      // Create restaurant with URLs
+      const res = await api.post('/owner/restaurants', {
+        name: hotelName.trim(),
+        address: address.trim(),
+        city: city.trim(),
+        pincode: pincode || undefined,
+        fssaiNumber: fssaiNumber,
+        fssaiCertificateUrl,
+        restaurantImageUrl: restaurantImageUrl || undefined,
+      });
+
+      if (res.data?.ok) {
+        const restaurant = res.data?.data;
+
+        // Navigate based on restaurant status and user type
+        if (isFirstRestaurant) {
+          // First-time user after registration
+          if (restaurant?.status === 'PENDING') {
+            Alert.alert(
+              'Restaurant Submitted',
+              'Your restaurant details have been submitted for admin approval. You will be notified once approved.',
+              [
+                {
+                  text: 'OK',
+                  onPress: () => navigation.replace('MyRestaurants'),
+                },
+              ]
+            );
+          } else {
+            Alert.alert(
+              'Success!',
+              'Your restaurant has been set up successfully.',
+              [
+                {
+                  text: 'Go to Home',
+                  onPress: () => navigation.replace('Home'),
+                },
+              ]
+            );
+          }
+        } else {
+          // Existing user adding another restaurant - same flow as web
+          Alert.alert(
+            'Restaurant Added Successfully',
+            restaurant?.status === 'PENDING'
+              ? 'Your restaurant is pending admin approval.'
+              : 'Your restaurant has been added.',
+            [
+              {
+                text: 'OK',
+                onPress: () => navigation.goBack(), // Go back to MyRestaurants
+              },
+            ]
+          );
+        }
+      } else {
+        Alert.alert('Error', res.data?.error || 'Failed to create restaurant');
+      }
+    } catch (err) {
+      console.log('Restaurant creation error:', err?.response?.data || err.message);
+      const errorMessage =
+        err?.response?.data?.error ||
+        err?.response?.data?.message ||
+        'Could not create restaurant. Please try again.';
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <LinearGradient colors={['#f2f4f7', '#dfe7ee']} style={styles.container}>
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContainer}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.heading}>Onboard Your Restaurant</Text>
+        <Text style={styles.heading}>Set Up Your Restaurant</Text>
+        <Text style={styles.subheading}>
+          Add your restaurant details to get started
+        </Text>
 
         <View style={styles.card}>
+          {/* Restaurant Image Upload */}
+          <TouchableOpacity style={styles.imageUploadBtn} onPress={handlePickImage}>
+            {mainImage ? (
+              <View style={styles.imagePreviewContainer}>
+                <Image source={{ uri: mainImage.uri }} style={styles.imagePreview} />
+                <TouchableOpacity
+                  style={styles.removeImageBtn}
+                  onPress={() => setMainImage(null)}
+                >
+                  <Icon name="close-circle" size={24} color={C.primary} />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.imagePlaceholder}>
+                <Icon name="camera-outline" size={40} color={C.muted} />
+                <Text style={styles.imagePlaceholderText}>Add Restaurant Photo</Text>
+                <Text style={styles.imagePlaceholderHint}>(Optional)</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
           {/* Hotel Name */}
           <View style={styles.inputBox}>
-            <Icon name="business" size={18} color="#EF3A3A" style={styles.inputIcon} />
+            <Icon name="business" size={18} color={C.primary} style={styles.inputIcon} />
             <TextInput
-              placeholder="Hotel / Restaurant Name"
+              placeholder="Restaurant/Hotel Name *"
               style={styles.input}
-              value={hotelName}
-              onChangeText={setHotelName}
-              placeholderTextColor="#888"
+              value={form.hotelName}
+              onChangeText={text => handleChange('hotelName', text)}
+              placeholderTextColor={C.muted}
               returnKeyType="next"
             />
           </View>
 
           {/* Address */}
-          <View style={styles.inputBox}>
-            <Icon name="location" size={18} color="#EF3A3A" style={styles.inputIcon} />
+          <View style={[styles.inputBox, { alignItems: 'flex-start' }]}>
+            <Icon name="location" size={18} color={C.primary} style={[styles.inputIcon, { marginTop: 12 }]} />
             <TextInput
-              placeholder="Full Address"
-              style={[styles.input, { height: 70 }]}
+              placeholder="Full Address (Street, Area, Landmark) *"
+              style={[styles.input, { minHeight: 70, textAlignVertical: 'top', paddingTop: 10 }]}
               multiline
-              value={address}
-              onChangeText={setAddress}
-              placeholderTextColor="#888"
+              numberOfLines={3}
+              value={form.address}
+              onChangeText={text => handleChange('address', text)}
+              placeholderTextColor={C.muted}
+              returnKeyType="next"
+            />
+          </View>
+
+          {/* City */}
+          <View style={styles.inputBox}>
+            <Icon name="business" size={18} color={C.primary} style={styles.inputIcon} />
+            <TextInput
+              placeholder="City *"
+              style={styles.input}
+              value={form.city}
+              onChangeText={text => handleChange('city', text)}
+              placeholderTextColor={C.muted}
+              returnKeyType="next"
+            />
+          </View>
+
+          {/* Pincode */}
+          <View style={styles.inputBox}>
+            <Icon name="location-outline" size={18} color={C.primary} style={styles.inputIcon} />
+            <TextInput
+              placeholder="Pincode (6 digits, optional)"
+              style={styles.input}
+              value={form.pincode}
+              onChangeText={text => handleChange('pincode', text)}
+              placeholderTextColor={C.muted}
+              keyboardType="numeric"
+              maxLength={6}
               returnKeyType="next"
             />
           </View>
 
           {/* FSSAI Number */}
           <View style={styles.inputBox}>
-            <Icon name="document-text" size={18} color="#EF3A3A" style={styles.inputIcon} />
+            <Icon name="document-text" size={18} color={C.primary} style={styles.inputIcon} />
             <TextInput
-              placeholder="FSSAI Number"
+              placeholder="FSSAI Number (14 digits) *"
               style={styles.input}
-              value={fssaiNumber}
-              onChangeText={setFssaiNumber}
-              placeholderTextColor="#888"
+              value={form.fssaiNumber}
+              onChangeText={text => handleChange('fssaiNumber', text)}
+              placeholderTextColor={C.muted}
+              keyboardType="numeric"
+              maxLength={14}
               returnKeyType="done"
             />
           </View>
 
           {/* Upload FSSAI Certificate */}
-          <TouchableOpacity 
-            style={styles.uploadContainer} 
+          <TouchableOpacity
+            style={styles.uploadContainer}
             onPress={handlePickFile}
             activeOpacity={0.7}
           >
-            <Icon name="cloud-upload-outline" size={20} color="#EF3A3A" />
+            <Icon name="cloud-upload-outline" size={20} color={C.primary} />
             <Text style={styles.uploadText} numberOfLines={1}>
-              {fssaiFile ? `Uploaded: ${fssaiFile.name}` : 'Upload FSSAI Certificate'}
+              {fssaiFile ? fssaiFile.name : 'Upload FSSAI Certificate Image *'}
             </Text>
             {fssaiFile && (
-              <Icon 
-                name="checkmark-circle" 
-                size={20} 
-                color="green" 
-                style={styles.uploadSuccessIcon} 
-              />
+              <TouchableOpacity onPress={() => setFssaiFile(null)}>
+                <Icon name="close-circle" size={20} color={C.primary} />
+              </TouchableOpacity>
             )}
           </TouchableOpacity>
 
+          {/* Info Box */}
+          <View style={styles.infoBox}>
+            <Icon name="information-circle-outline" size={18} color={C.warn} />
+            <Text style={styles.infoText}>
+              All fields marked with * are required. Your restaurant will be reviewed by admin before activation.
+            </Text>
+          </View>
+
           {/* Submit Button */}
-          <TouchableOpacity 
-            onPress={handleSubmit} 
+          <TouchableOpacity
+            onPress={handleSubmit}
             activeOpacity={0.9}
             style={styles.submitButtonContainer}
+            disabled={loading}
           >
-            <LinearGradient 
-              colors={['#ef3a3a', '#c22525']} 
-              style={styles.submitButton}
-              start={{x: 0, y: 0}} 
-              end={{x: 1, y: 0}}
+            <LinearGradient
+              colors={['#ef3a3a', '#c22525']}
+              style={[styles.submitButton, { opacity: loading ? 0.7 : 1 }]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
             >
-              <Text style={styles.submitText}>Finish Onboarding</Text>
-              <Icon name="arrow-forward" size={20} color="#fff" style={styles.submitIcon} />
+              {loading ? (
+                <ActivityIndicator color="#FFF" />
+              ) : (
+                <>
+                  <Text style={styles.submitText}>Complete Setup</Text>
+                  <Icon name="arrow-forward" size={20} color="#fff" style={styles.submitIcon} />
+                </>
+              )}
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -189,16 +410,23 @@ const styles = StyleSheet.create({
     paddingBottom: 60,
   },
   heading: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '700',
-    color: '#1D2254',
+    color: C.ink,
     textAlign: 'center',
-    marginTop: 50,
+    marginTop: 40,
+    marginBottom: 8,
+  },
+  subheading: {
+    fontSize: 14,
+    color: C.muted,
+    textAlign: 'center',
     marginBottom: 25,
+    paddingHorizontal: 30,
   },
   card: {
-    backgroundColor: 'rgba(255, 255, 255, 0.85)',
-    marginHorizontal: 25,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    marginHorizontal: 20,
     borderRadius: 20,
     padding: 20,
     shadowColor: '#000',
@@ -206,24 +434,64 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 8,
   },
+  imageUploadBtn: {
+    marginBottom: 16,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  imagePreviewContainer: {
+    position: 'relative',
+  },
+  imagePreview: {
+    width: '100%',
+    height: 180,
+    borderRadius: 12,
+  },
+  removeImageBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'white',
+    borderRadius: 12,
+  },
+  imagePlaceholder: {
+    backgroundColor: C.bg,
+    borderWidth: 2,
+    borderColor: C.border,
+    borderStyle: 'dashed',
+    borderRadius: 12,
+    height: 140,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imagePlaceholderText: {
+    marginTop: 10,
+    color: C.text,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  imagePlaceholderHint: {
+    marginTop: 4,
+    color: C.muted,
+    fontSize: 12,
+  },
   inputBox: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#eee',
+    borderColor: C.border,
     backgroundColor: '#fff',
     borderRadius: 12,
     paddingHorizontal: 14,
-    paddingVertical: Platform.OS === 'ios' ? 14 : 10,
-    marginBottom: 18,
+    paddingVertical: Platform.OS === 'ios' ? 12 : 10,
+    marginBottom: 14,
   },
   inputIcon: {
     marginRight: 10,
-    marginTop: 4,
   },
   input: {
     flex: 1,
-    color: '#111',
+    color: C.text,
     fontSize: 15,
   },
   uploadContainer: {
@@ -232,32 +500,44 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     borderWidth: 1,
     borderRadius: 12,
-    borderColor: '#EF3A3A',
+    borderColor: C.primary,
     padding: 14,
-    marginBottom: 25,
+    marginBottom: 16,
     backgroundColor: '#fff',
   },
   uploadText: {
     marginLeft: 10,
-    color: '#EF3A3A',
+    color: C.primary,
     fontSize: 14,
     fontWeight: '600',
     flex: 1,
   },
-  uploadSuccessIcon: {
-    marginLeft: 6
+  infoBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#FEF3C7',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 20,
+  },
+  infoText: {
+    flex: 1,
+    marginLeft: 8,
+    color: '#92400E',
+    fontSize: 12,
+    lineHeight: 18,
   },
   submitButtonContainer: {
     borderRadius: 14,
     overflow: 'hidden',
   },
   submitButton: {
-    paddingVertical: 15,
+    paddingVertical: 16,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    shadowColor: '#EF3A3A',
+    shadowColor: C.primary,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.4,
     shadowRadius: 8,
@@ -266,11 +546,11 @@ const styles = StyleSheet.create({
   submitText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   submitIcon: {
-    marginLeft: 10
-  }
+    marginLeft: 10,
+  },
 });
 
 export default RestaurantOnboarding;
