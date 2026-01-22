@@ -11,7 +11,7 @@ const LOCAL_IP = '192.168.29.54';  // ✅ Updated with your local IP
 
 // API URLs
 const DEV_API_BASE_URL = `http://${LOCAL_IP}:3000/api`;
-const PROD_API_BASE_URL = 'https://your-kni-super-app.vercel.app/api';  // ⚠️ UPDATE AFTER DEPLOYMENT
+const PROD_API_BASE_URL = 'https://app.kitchennetworkinternational.com/api';  // ⚠️ UPDATE AFTER DEPLOYMENT
 
 // Determine environment
 const __DEV__ = typeof __DEV__ !== 'undefined' ? __DEV__ : true;
@@ -19,7 +19,7 @@ const API_BASE_URL = __DEV__ ? DEV_API_BASE_URL : PROD_API_BASE_URL;
 
 // Image URLs (for uploaded files)
 const DEV_IMAGE_BASE_URL = `http://${LOCAL_IP}:3000`;
-const PROD_IMAGE_BASE_URL = 'https://your-kni-super-app.vercel.app';
+const PROD_IMAGE_BASE_URL = 'https://app.kitchennetworkinternational.com/storage';
 const IMAGE_BASE_URL = __DEV__ ? DEV_IMAGE_BASE_URL : PROD_IMAGE_BASE_URL;
 
 console.log('🔧 API Configuration:', {

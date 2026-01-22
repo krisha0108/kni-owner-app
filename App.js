@@ -10,20 +10,30 @@
 //     </NavigationContainer>
 //   );
 // }
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import AppNavigator from './src/navigation/AppNavigator';
 import messaging from '@react-native-firebase/messaging';
 import notifee, { AndroidImportance } from '@notifee/react-native';
 import { Alert, PermissionsAndroid, Platform } from 'react-native';
+import notificationService from './src/services/notificationService';
 
 export default function App() {
+  const navigationRef = useRef(null);
+
   useNotifications(); // app-wide notification handling
+
+  // Set navigation ref for notification service
+  useEffect(() => {
+    if (navigationRef.current) {
+      notificationService.setNavigationRef(navigationRef);
+    }
+  }, []);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <NavigationContainer>
+      <NavigationContainer ref={navigationRef}>
         <AppNavigator />
       </NavigationContainer>
     </GestureHandlerRootView>
@@ -77,8 +87,9 @@ function useNotifications() {
 
         if (enabled) {
           console.log('✅ Push permission granted:', authStatus);
-          const token = await messaging().getToken();
-          console.log('🔥 FCM Token:', token);
+
+          // Initialize notification service (registers token with backend)
+          await notificationService.initialize();
         } else {
           console.log('❌ Push permission denied:', authStatus);
         }

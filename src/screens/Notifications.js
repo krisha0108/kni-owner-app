@@ -146,7 +146,7 @@ export default function Notifications({ navigation }) {
         return;
       }
       
-const res = await api.get(`/owners/${currentOwnerId}/notifications`, {
+const res = await api.get('/owner/notifications', {
   headers: {
     Authorization: `Bearer ${currentToken}`,
   }
@@ -158,20 +158,23 @@ const res = await api.get(`/owners/${currentOwnerId}/notifications`, {
       const json = res.data;
       console.log('Raw API response:', json);
       console.log('Response type:', typeof json);
-      console.log('Is array:', Array.isArray(json));
+
+      // Handle response format: { ok: true, data: [...] }
+      const notificationsArray = json?.data || (Array.isArray(json) ? json : []);
+      console.log('Notifications array:', notificationsArray.length);
 
       // Transform backend data to match frontend format
-      if (json && Array.isArray(json)) {
-        console.log('Processing array of notifications:', json.length);
-        const transformedData = json.map(notification => {
+      if (notificationsArray && Array.isArray(notificationsArray) && notificationsArray.length > 0) {
+        console.log('Processing array of notifications:', notificationsArray.length);
+        const transformedData = notificationsArray.map(notification => {
           console.log('Processing notification:', notification);
           return {
             id: notification.id,
             type: notification.type || 'restaurant_approved',
             title: notification.title,
             body: notification.message,
-            ts: notification.created_at,
-            unread: !notification.is_read,
+            ts: notification.createdAt || notification.created_at,
+            unread: !notification.isRead && !notification.is_read,
             meta: {
               restaurantId: notification.restaurant_id,
               notificationId: notification.id,
