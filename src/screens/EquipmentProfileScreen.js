@@ -601,7 +601,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
                         </View>
                       </View>
                       <Text style={st.historyDesc} numberOfLines={2}>
-                        {service.items?.map(item => item.serviceItem?.name || item.partItem?.name).join(', ') ||
+                        {(service.items?.map(item => item.serviceItem?.name || item.partItem?.name) || []).join(', ') ||
                           service.problemDescription || 'Service Request'}
                       </Text>
                       <View style={st.historyFooter}>
