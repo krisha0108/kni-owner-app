@@ -14,7 +14,7 @@ import React, { useEffect, useRef } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import AppNavigator from './src/navigation/AppNavigator';
-import messaging from '@react-native-firebase/messaging';
+import { getMessaging, requestPermission as requestFCMPermission, onMessage, onNotificationOpenedApp, getInitialNotification, AuthorizationStatus } from '@react-native-firebase/messaging';
 import notifee, { AndroidImportance } from '@notifee/react-native';
 import { Alert, PermissionsAndroid, Platform } from 'react-native';
 import notificationService from './src/services/notificationService';
@@ -75,15 +75,15 @@ function useNotifications() {
         }
 
         // Request Firebase messaging permission (iOS)
-        const authStatus = await messaging().requestPermission({
+        const authStatus = await requestFCMPermission(getMessaging(), {
           alert: true,
           badge: true,
           sound: true,
         });
 
         const enabled =
-          authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-          authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+          authStatus === AuthorizationStatus.AUTHORIZED ||
+          authStatus === AuthorizationStatus.PROVISIONAL;
 
         if (enabled) {
           console.log('✅ Push permission granted:', authStatus);
@@ -101,7 +101,7 @@ function useNotifications() {
     requestPermission();
 
     // Foreground notifications
-    const unsubscribe = messaging().onMessage(async remoteMessage => {
+    const unsubscribe = onMessage(getMessaging(), async remoteMessage => {
       console.log('📩 Foreground message:', remoteMessage);
 
       // Show notification with Notifee
@@ -115,7 +115,7 @@ function useNotifications() {
     });
 
     // App opened from background
-    const unsubscribeOpened = messaging().onNotificationOpenedApp(remoteMessage => {
+    const unsubscribeOpened = onNotificationOpenedApp(getMessaging(), remoteMessage => {
       console.log('🚀 App opened from background:', remoteMessage);
       if (remoteMessage.data?.screen) {
         console.log('👉 Navigate to:', remoteMessage.data.screen);
@@ -123,8 +123,7 @@ function useNotifications() {
     });
 
     // App opened from quit state
-    messaging()
-      .getInitialNotification()
+    getInitialNotification(getMessaging())
       .then(remoteMessage => {
         if (remoteMessage) {
           console.log('🚀 App opened from quit state:', remoteMessage);

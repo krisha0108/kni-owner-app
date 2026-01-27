@@ -1,4 +1,4 @@
-import messaging from '@react-native-firebase/messaging';
+import { getMessaging, requestPermission, getToken, onTokenRefresh, onMessage, setBackgroundMessageHandler, onNotificationOpenedApp, getInitialNotification, hasPermission, AuthorizationStatus } from '@react-native-firebase/messaging';
 import notifee from '@notifee/react-native';
 import { api } from '../api/client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -20,6 +20,15 @@ class NotificationService {
       console.log('🔔 Initializing notification service');
       await this.setupFCM();
       await this.setupNotificationListeners();
+
+      // If user is already logged in, register the FCM token
+      const userToken = await AsyncStorage.getItem('userToken');
+      const fcmTokenRegistered = await AsyncStorage.getItem('fcmTokenRegistered');
+      if (userToken && !fcmTokenRegistered) {
+        console.log('📤 User already logged in, registering FCM token');
+        await this.registerTokenAfterLogin();
+      }
+
       console.log('✅ Notification service initialized');
     } catch (error) {
       console.error('❌ Notification service initialization error:', error);
@@ -36,14 +45,15 @@ class NotificationService {
 
   /**
    * Setup Firebase Cloud Messaging
+   * Note: Token registration with backend is deferred until user is authenticated
    */
   async setupFCM() {
     try {
       // Request permission
-      const authStatus = await messaging().requestPermission();
+      const authStatus = await requestPermission(getMessaging());
       const enabled =
-        authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-        authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+        authStatus === AuthorizationStatus.AUTHORIZED ||
+        authStatus === AuthorizationStatus.PROVISIONAL;
 
       if (!enabled) {
         console.log('🚫 Push notification permission denied');
@@ -52,17 +62,23 @@ class NotificationService {
 
       console.log('✅ Push notification permission granted');
 
-      // Get FCM token
-      const token = await messaging().getToken();
+      // Get FCM token and store locally (don't register with backend yet)
+      const token = await getToken(getMessaging());
       console.log('📱 FCM Token:', token);
 
-      // Register token with backend
-      await this.registerToken(token);
+      // Store token locally for later registration after login
+      await AsyncStorage.setItem('fcmToken', token);
 
-      // Listen for token refresh
-      messaging().onTokenRefresh(async (newToken) => {
+      // Listen for token refresh - only register if user is authenticated
+      onTokenRefresh(getMessaging(), async (newToken) => {
         console.log('🔄 FCM token refreshed:', newToken);
-        await this.registerToken(newToken);
+        await AsyncStorage.setItem('fcmToken', newToken);
+
+        // Only register with backend if user is authenticated
+        const userToken = await AsyncStorage.getItem('userToken');
+        if (userToken) {
+          await this.registerToken(newToken);
+        }
       });
 
     } catch (error) {
@@ -83,13 +99,31 @@ class NotificationService {
       });
 
       if (response.data.ok) {
-        await AsyncStorage.setItem('fcmToken', token);
+        await AsyncStorage.setItem('fcmTokenRegistered', 'true');
         console.log('✅ FCM token registered successfully');
       } else {
         console.error('❌ Failed to register FCM token:', response.data.error);
       }
     } catch (error) {
       console.error('❌ Register FCM token error:', error);
+    }
+  }
+
+  /**
+   * Register stored FCM token after user login
+   * Call this method after successful authentication
+   */
+  async registerTokenAfterLogin() {
+    try {
+      const token = await AsyncStorage.getItem('fcmToken');
+      if (token) {
+        console.log('📤 Registering FCM token after login');
+        await this.registerToken(token);
+      } else {
+        console.log('⚠️ No FCM token found to register');
+      }
+    } catch (error) {
+      console.error('❌ Register token after login error:', error);
     }
   }
 
@@ -107,7 +141,8 @@ class NotificationService {
         token: token,
       });
 
-      await AsyncStorage.removeItem('fcmToken');
+      // Clear the registered flag so it can be re-registered on next login
+      await AsyncStorage.removeItem('fcmTokenRegistered');
       console.log('✅ FCM token unregistered successfully');
     } catch (error) {
       console.error('❌ Unregister FCM token error:', error);
@@ -119,25 +154,25 @@ class NotificationService {
    */
   async setupNotificationListeners() {
     // Foreground messages
-    messaging().onMessage(async (remoteMessage) => {
+    onMessage(getMessaging(), async (remoteMessage) => {
       console.log('📬 Foreground notification received:', remoteMessage);
       await this.displayNotification(remoteMessage);
     });
 
     // Background messages (when app is in background but not killed)
-    messaging().setBackgroundMessageHandler(async (remoteMessage) => {
+    setBackgroundMessageHandler(getMessaging(), async (remoteMessage) => {
       console.log('📬 Background notification received:', remoteMessage);
       await this.displayNotification(remoteMessage);
     });
 
     // Handle notification opened app from background/killed state
-    messaging().onNotificationOpenedApp((remoteMessage) => {
+    onNotificationOpenedApp(getMessaging(), (remoteMessage) => {
       console.log('📱 Notification opened app from background:', remoteMessage);
       this.handleNotificationNavigation(remoteMessage);
     });
 
     // Check if app was opened by a notification when completely killed
-    const initialNotification = await messaging().getInitialNotification();
+    const initialNotification = await getInitialNotification(getMessaging());
     if (initialNotification) {
       console.log('📱 App opened by notification (killed state):', initialNotification);
       // Handle navigation after a slight delay to ensure app is ready
@@ -229,10 +264,10 @@ class NotificationService {
    */
   async requestPermissions() {
     try {
-      const authStatus = await messaging().requestPermission();
+      const authStatus = await requestPermission(getMessaging());
       return (
-        authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-        authStatus === messaging.AuthorizationStatus.PROVISIONAL
+        authStatus === AuthorizationStatus.AUTHORIZED ||
+        authStatus === AuthorizationStatus.PROVISIONAL
       );
     } catch (error) {
       console.error('❌ Request permissions error:', error);
@@ -245,10 +280,10 @@ class NotificationService {
    */
   async checkPermissions() {
     try {
-      const authStatus = await messaging().hasPermission();
+      const authStatus = await hasPermission(getMessaging());
       return (
-        authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-        authStatus === messaging.AuthorizationStatus.PROVISIONAL
+        authStatus === AuthorizationStatus.AUTHORIZED ||
+        authStatus === AuthorizationStatus.PROVISIONAL
       );
     } catch (error) {
       console.error('❌ Check permissions error:', error);

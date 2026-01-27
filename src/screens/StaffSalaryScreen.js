@@ -47,7 +47,8 @@ const getStatusConfig = (status) => {
 };
 
 const formatPrice = (amount) => {
-  const num = (amount || 0);
+  // Convert from paise to rupees (API stores amounts in paise)
+  const num = (amount || 0) / 100;
   return `₹${num.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 };
 

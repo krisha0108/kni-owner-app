@@ -17,7 +17,7 @@ import { api } from '../api/client';
 import auth from '@react-native-firebase/auth';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import messaging from '@react-native-firebase/messaging';
+import notificationService from '../services/notificationService';
 
 export default function RestaurantLogin({ navigation }) {
   const [email, setEmail] = useState('');
@@ -43,16 +43,11 @@ export default function RestaurantLogin({ navigation }) {
         }
       }
 
-      // Register FCM token for push notifications
+      // Register FCM token for push notifications (token was already stored during app init)
       try {
-        const fcmToken = await messaging().getToken();
-        if (fcmToken && userData?.id) {
-          await api.post('/notifications/register-token', {
-            token: fcmToken,
-          }).catch(e => console.log('FCM token registration error (ignored):', e?.message || e));
-        }
+        await notificationService.registerTokenAfterLogin();
       } catch (fcmErr) {
-        console.log('FCM fetch error (ignored):', fcmErr?.message || fcmErr);
+        console.log('FCM registration error (ignored):', fcmErr?.message || fcmErr);
       }
     } catch (err) {
       console.log('saveSessionAndFcm error:', err?.message || err);
@@ -119,8 +114,14 @@ export default function RestaurantLogin({ navigation }) {
       console.log('🔵 Starting Google Sign-In...');
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
 
-      const { idToken } = await GoogleSignin.signIn();
+      const signInResult = await GoogleSignin.signIn();
+      // v15+ returns { data: { idToken, user } } structure
+      const idToken = signInResult.data?.idToken || signInResult.idToken;
       console.log('🔵 Got Google ID token:', idToken ? 'Yes' : 'No');
+
+      if (!idToken) {
+        throw new Error('Failed to get ID token from Google Sign-In');
+      }
 
       const googleCredential = auth.GoogleAuthProvider.credential(idToken);
       const userCredential = await auth().signInWithCredential(googleCredential);

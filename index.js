@@ -13,11 +13,11 @@ import 'react-native-gesture-handler';
 import { AppRegistry } from 'react-native';
 import App from './App';
 import { name as appName } from './app.json';
-import messaging from '@react-native-firebase/messaging';
+import { getMessaging, setBackgroundMessageHandler, getInitialNotification } from '@react-native-firebase/messaging';
 import notifee from '@notifee/react-native';
 
 // Register background handler - MUST be done at top level
-messaging().setBackgroundMessageHandler(async remoteMessage => {
+setBackgroundMessageHandler(getMessaging(), async remoteMessage => {
   console.log('📩 Background message received:', remoteMessage);
 
   // Show a local notification using Notifee
@@ -34,8 +34,7 @@ messaging().setBackgroundMessageHandler(async remoteMessage => {
 });
 
 // Handle notification click when app closed (quit state)
-messaging()
-  .getInitialNotification()
+getInitialNotification(getMessaging())
   .then(remoteMessage => {
     if (remoteMessage) {
       console.log('🚀 App opened from quit state:', remoteMessage);

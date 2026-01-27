@@ -7,16 +7,19 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // NOTE: Update LOCAL_IP with your computer's local IP address
 // To find your IP: Windows (ipconfig) | Mac/Linux (ifconfig)
-const LOCAL_IP = '192.168.29.54';  // ✅ Updated with your local IP
+const LOCAL_IP = '192.168.29.54';
 
-// API URLs - HARDCODED FOR PRODUCTION TESTING
-const API_BASE_URL = 'https://kitchennetworkinternational.com/api';
-const IMAGE_BASE_URL = 'https://kitchennetworkinternational.com';
-
-// Keep these for reference
+// API URLs
 const DEV_API_BASE_URL = `http://${LOCAL_IP}:3000/api`;
 const DEV_IMAGE_BASE_URL = `http://${LOCAL_IP}:3000`;
-const IS_DEV = false; // Hardcoded for testing
+const PROD_API_BASE_URL = 'https://kitchennetworkinternational.com/api';
+const PROD_IMAGE_BASE_URL = 'https://kitchennetworkinternational.com';
+
+// ⚠️ SWITCH: true = LOCAL, false = PRODUCTION
+const IS_DEV = false;
+
+const API_BASE_URL = IS_DEV ? DEV_API_BASE_URL : PROD_API_BASE_URL;
+const IMAGE_BASE_URL = IS_DEV ? DEV_IMAGE_BASE_URL : PROD_IMAGE_BASE_URL;
 
 console.log('🔧 API Configuration:', {
   environment: IS_DEV ? 'DEVELOPMENT' : 'PRODUCTION',
@@ -28,7 +31,7 @@ console.log('🔧 API Configuration:', {
 const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000,
-  withCredentials: true,  // ✅ Enable cookie support for session-based auth
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
@@ -39,7 +42,6 @@ const api = axios.create({
 api.interceptors.request.use(
   async (config) => {
     try {
-      // Get token from AsyncStorage
       const token = await AsyncStorage.getItem('userToken');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
@@ -61,7 +63,6 @@ api.interceptors.request.use(
 // Response interceptor - Handle errors and session expiry
 api.interceptors.response.use(
   (response) => {
-    // Log successful responses
     console.log('✅ Response:', response.config.method.toUpperCase(), response.config.url, response.status);
     return response;
   },
@@ -74,15 +75,12 @@ api.interceptors.response.use(
     };
     console.error('❌ Response error:', JSON.stringify(errorDetails, null, 2));
 
-    // Handle authentication errors
     if (error.response?.status === 401) {
       console.log('🔒 Unauthorized - Clearing session');
       await AsyncStorage.removeItem('userToken');
       await AsyncStorage.removeItem('userData');
-      // Note: Navigation to login should be handled by the screen components
     }
 
-    // Handle forbidden errors (pending approval, rejected account)
     if (error.response?.status === 403) {
       console.log('🚫 Forbidden - Account may be pending approval or rejected');
     }
@@ -95,17 +93,14 @@ api.interceptors.response.use(
 export const getImageUrl = (relativePath) => {
   if (!relativePath) return null;
 
-  // If already a full URL, return as is
   if (relativePath.startsWith('http://') || relativePath.startsWith('https://')) {
     return relativePath;
   }
 
-  // If starts with /uploads or /public, prepend base URL
   if (relativePath.startsWith('/uploads') || relativePath.startsWith('/public')) {
     return `${IMAGE_BASE_URL}${relativePath}`;
   }
 
-  // Otherwise, assume it's a relative path
   return `${IMAGE_BASE_URL}/uploads/${relativePath}`;
 };
 

@@ -1,5 +1,6 @@
 import { api } from '../api/client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import notificationService from './notificationService';
 
 /**
  * Authentication Service for KNI Owner App
@@ -184,6 +185,9 @@ class AuthService {
   async logout() {
     try {
       console.log('👋 Logging out');
+
+      // Unregister FCM token from backend
+      await notificationService.unregisterToken();
 
       // Call backend logout endpoint
       await api.post('/auth/logout');

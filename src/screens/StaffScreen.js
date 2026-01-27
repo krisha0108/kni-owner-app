@@ -47,12 +47,25 @@ const STAFF_STATUSES = [
   { value: 'TERMINATED', label: 'Terminated', color: '#EF4444' },
 ];
 
+const getStatusColor = (status) => {
+  const found = STAFF_STATUSES.find(s => s.value === status);
+  return found?.color || C.muted;
+};
+
+const getStatusLabel = (status) => {
+  const found = STAFF_STATUSES.find(s => s.value === status);
+  return found?.label || status;
+};
+
 export default function StaffScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [staff, setStaff] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
+  const [actionModalVisible, setActionModalVisible] = useState(false);
+  const [selectedStaff, setSelectedStaff] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
   const [restaurants, setRestaurants] = useState([]);
 
@@ -68,6 +81,8 @@ export default function StaffScreen({ navigation }) {
     restaurantId: '',
   });
 
+  const isEditMode = form.id !== null;
+
   useFocusEffect(
     useCallback(() => {
       loadData();
@@ -81,18 +96,22 @@ export default function StaffScreen({ navigation }) {
 
       // Load restaurants first
       const restaurantsRes = await api.get('/owner/restaurants');
+      let currentRestaurantId = selectedRestaurant;
+
       if (restaurantsRes.data.ok) {
         const approvedRestaurants = restaurantsRes.data.data.filter(r => r.status === 'APPROVED');
         setRestaurants(approvedRestaurants);
 
-        if (approvedRestaurants.length > 0 && !selectedRestaurant) {
-          setSelectedRestaurant(approvedRestaurants[0].id);
+        // Use local variable to track which restaurant to load staff for
+        if (approvedRestaurants.length > 0 && !currentRestaurantId) {
+          currentRestaurantId = approvedRestaurants[0].id;
+          setSelectedRestaurant(currentRestaurantId);
         }
       }
 
-      // Load staff if restaurant is selected
-      if (selectedRestaurant) {
-        const response = await api.get(`/owner/staff?restaurantId=${selectedRestaurant}`);
+      // Load staff using local variable (not state which may not be updated yet)
+      if (currentRestaurantId) {
+        const response = await api.get(`/owner/staff?restaurantId=${currentRestaurantId}`);
         if (response.data.ok) {
           setStaff(response.data.data);
         }
@@ -112,8 +131,9 @@ export default function StaffScreen({ navigation }) {
 
   const openForm = (item = null) => {
     if (item) {
-      const salaryValue = item.monthlySalary ? item.monthlySalary.toString() :
-                          item.dailyWage ? item.dailyWage.toString() : '';
+      // Convert from paise to rupees for display (divide by 100)
+      const salaryValue = item.monthlySalary ? (item.monthlySalary / 100).toString() :
+                          item.dailyWage ? (item.dailyWage / 100).toString() : '';
       setForm({
         id: item.id,
         name: item.name || '',
@@ -139,6 +159,11 @@ export default function StaffScreen({ navigation }) {
       });
     }
     setModalVisible(true);
+  };
+
+  const openActionModal = (item) => {
+    setSelectedStaff(item);
+    setActionModalVisible(true);
   };
 
   const saveStaff = async () => {
@@ -173,6 +198,7 @@ export default function StaffScreen({ navigation }) {
         phone: form.phone,
         designation: form.role,
         staffType: form.staffType,
+        status: form.status,
         joiningDate: form.joiningDate,
         ...(form.staffType === 'PART_TIME'
           ? { dailyWage: salaryValue }
@@ -180,10 +206,12 @@ export default function StaffScreen({ navigation }) {
         ),
       };
 
-      if (form.id) {
+      if (isEditMode) {
+        // Update existing staff
         await api.patch(`/owner/staff/${form.id}`, payload);
         Alert.alert('Success', 'Staff updated successfully');
       } else {
+        // Create new staff
         await api.post('/owner/staff', payload);
         Alert.alert('Success', 'Staff added successfully');
       }
@@ -197,22 +225,54 @@ export default function StaffScreen({ navigation }) {
     }
   };
 
-  const deleteStaff = (item) => {
+  const handleStatusChange = async (newStatus) => {
+    if (!selectedStaff) return;
+
+    try {
+      await api.patch(`/owner/staff/${selectedStaff.id}`, { status: newStatus });
+      Alert.alert('Success', `Status updated to ${getStatusLabel(newStatus)}`);
+      setActionModalVisible(false);
+      setSelectedStaff(null);
+      loadData();
+    } catch (error) {
+      Alert.alert('Error', error.response?.data?.error || 'Failed to update status');
+    }
+  };
+
+  const handleEdit = () => {
+    setActionModalVisible(false);
+    openForm(selectedStaff);
+    setSelectedStaff(null);
+  };
+
+  const handleDelete = () => {
+    if (!selectedStaff) return;
+
+    if (selectedStaff.status === 'TERMINATED') {
+      Alert.alert('Info', 'Staff member is already terminated');
+      return;
+    }
+
     Alert.alert(
-      'Delete Staff',
-      `Are you sure you want to delete ${item.name}?`,
+      'Terminate Staff',
+      `Are you sure you want to terminate ${selectedStaff.name}? This will mark them as terminated.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Delete',
+          text: 'Terminate',
           style: 'destructive',
           onPress: async () => {
+            setDeleting(true);
             try {
-              await api.delete(`/owner/staff/${item.id}`);
-              Alert.alert('Success', 'Staff deleted');
+              await api.delete(`/owner/staff/${selectedStaff.id}`);
+              Alert.alert('Success', 'Staff member terminated');
+              setActionModalVisible(false);
+              setSelectedStaff(null);
               loadData();
             } catch (error) {
-              Alert.alert('Error', 'Failed to delete staff');
+              Alert.alert('Error', 'Failed to terminate staff');
+            } finally {
+              setDeleting(false);
             }
           }
         }
@@ -220,15 +280,25 @@ export default function StaffScreen({ navigation }) {
     );
   };
 
+  const formatSalary = (item) => {
+    if (item.monthlySalary) {
+      return `₹${(item.monthlySalary / 100).toLocaleString('en-IN')}/month`;
+    }
+    if (item.dailyWage) {
+      return `₹${(item.dailyWage / 100).toLocaleString('en-IN')}/day`;
+    }
+    return '-';
+  };
+
   const renderStaffCard = ({ item }) => (
-    <View style={styles.card}>
+    <TouchableOpacity style={styles.card} onPress={() => openActionModal(item)}>
       <View style={styles.cardHeader}>
         <View style={styles.iconBox}>
           <Icon name="person" size={24} color={C.primary} />
         </View>
         <View style={styles.cardInfo}>
           <Text style={styles.cardTitle}>{item.name}</Text>
-          {item.role && <Text style={styles.cardSub}>{item.role}</Text>}
+          {item.designation && <Text style={styles.cardSub}>{item.designation}</Text>}
           {item.phone && (
             <View style={styles.phoneRow}>
               <Icon name="call-outline" size={12} color={C.muted} />
@@ -236,26 +306,39 @@ export default function StaffScreen({ navigation }) {
             </View>
           )}
         </View>
+        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}>
+          <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
+            {getStatusLabel(item.status)}
+          </Text>
+        </View>
       </View>
 
-      {item.salary && (
-        <View style={styles.salaryBox}>
-          <Text style={styles.salaryLabel}>Monthly Salary</Text>
-          <Text style={styles.salaryValue}>₹{item.salary}</Text>
+      <View style={styles.salaryBox}>
+        <View style={styles.salaryItem}>
+          <Text style={styles.salaryLabel}>
+            {item.monthlySalary ? 'Monthly Salary' : item.dailyWage ? 'Daily Wage' : 'Salary'}
+          </Text>
+          <Text style={styles.salaryValue}>{formatSalary(item)}</Text>
         </View>
-      )}
+        <View style={styles.salaryItem}>
+          <Text style={styles.salaryLabel}>Type</Text>
+          <Text style={styles.salaryValue}>
+            {STAFF_TYPES.find(t => t.value === item.staffType)?.label || item.staffType}
+          </Text>
+        </View>
+      </View>
 
-      <View style={styles.cardActions}>
-        <TouchableOpacity style={styles.editBtn} onPress={() => openForm(item)}>
+      <View style={styles.cardFooter}>
+        <TouchableOpacity style={styles.actionBtn} onPress={() => { setSelectedStaff(item); handleEdit(); }}>
           <Icon name="pencil-outline" size={16} color={C.info} />
           <Text style={[styles.actionText, { color: C.info }]}>Edit</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.deleteBtn} onPress={() => deleteStaff(item)}>
-          <Icon name="trash-outline" size={16} color={C.danger} />
-          <Text style={[styles.actionText, { color: C.danger }]}>Delete</Text>
+        <TouchableOpacity style={styles.actionBtn} onPress={() => openActionModal(item)}>
+          <Icon name="ellipsis-horizontal" size={16} color={C.muted} />
+          <Text style={[styles.actionText, { color: C.muted }]}>More</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   if (loading && !refreshing) {
@@ -351,7 +434,7 @@ export default function StaffScreen({ navigation }) {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{form.id ? 'Edit Staff' : 'Add Staff'}</Text>
+              <Text style={styles.modalTitle}>{isEditMode ? 'Edit Staff' : 'Add Staff'}</Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
                 <Icon name="close" size={24} color={C.ink} />
               </TouchableOpacity>
@@ -410,24 +493,28 @@ export default function StaffScreen({ navigation }) {
                 ))}
               </View>
 
-              <Text style={styles.label}>Status</Text>
-              <View style={styles.statusRow}>
-                {STAFF_STATUSES.map(s => (
-                  <TouchableOpacity
-                    key={s.value}
-                    style={[
-                      styles.statusChip,
-                      form.status === s.value && { backgroundColor: s.color, borderColor: s.color }
-                    ]}
-                    onPress={() => setForm(f => ({ ...f, status: s.value }))}
-                  >
-                    <View style={[styles.statusDot, { backgroundColor: form.status === s.value ? '#fff' : s.color }]} />
-                    <Text style={[styles.statusText, form.status === s.value && { color: '#fff' }]}>
-                      {s.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+              {isEditMode && (
+                <>
+                  <Text style={styles.label}>Status</Text>
+                  <View style={styles.statusRow}>
+                    {STAFF_STATUSES.map(s => (
+                      <TouchableOpacity
+                        key={s.value}
+                        style={[
+                          styles.statusChip,
+                          form.status === s.value && { backgroundColor: s.color, borderColor: s.color }
+                        ]}
+                        onPress={() => setForm(f => ({ ...f, status: s.value }))}
+                      >
+                        <View style={[styles.statusDot, { backgroundColor: form.status === s.value ? '#fff' : s.color }]} />
+                        <Text style={[styles.statusChipText, form.status === s.value && { color: '#fff' }]}>
+                          {s.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </>
+              )}
 
               <Text style={styles.label}>Joining Date *</Text>
               <TextInput
@@ -457,12 +544,83 @@ export default function StaffScreen({ navigation }) {
                 {saving ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Text style={styles.saveText}>{form.id ? 'Save' : 'Add'}</Text>
+                  <Text style={styles.saveText}>{isEditMode ? 'Save Changes' : 'Add Staff'}</Text>
                 )}
               </TouchableOpacity>
             </View>
           </View>
         </View>
+      </Modal>
+
+      {/* Action Modal */}
+      <Modal visible={actionModalVisible} animationType="fade" transparent>
+        <TouchableOpacity
+          style={styles.actionModalOverlay}
+          activeOpacity={1}
+          onPress={() => setActionModalVisible(false)}
+        >
+          <View style={styles.actionModalContent}>
+            <View style={styles.actionModalHeader}>
+              <Text style={styles.actionModalTitle}>{selectedStaff?.name}</Text>
+              <Text style={styles.actionModalSubtitle}>{selectedStaff?.designation}</Text>
+            </View>
+
+            <TouchableOpacity style={styles.actionItem} onPress={handleEdit}>
+              <Icon name="pencil-outline" size={20} color={C.info} />
+              <Text style={styles.actionItemText}>Edit Details</Text>
+            </TouchableOpacity>
+
+            <View style={styles.actionDivider} />
+            <Text style={styles.actionSectionTitle}>Change Status</Text>
+
+            {STAFF_STATUSES.map(status => (
+              <TouchableOpacity
+                key={status.value}
+                style={[
+                  styles.actionItem,
+                  selectedStaff?.status === status.value && styles.actionItemDisabled
+                ]}
+                onPress={() => handleStatusChange(status.value)}
+                disabled={selectedStaff?.status === status.value}
+              >
+                <View style={[styles.statusIndicator, { backgroundColor: status.color }]} />
+                <Text style={[
+                  styles.actionItemText,
+                  selectedStaff?.status === status.value && styles.actionItemTextDisabled
+                ]}>
+                  {status.label}
+                  {selectedStaff?.status === status.value && ' (Current)'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+
+            <View style={styles.actionDivider} />
+
+            <TouchableOpacity
+              style={[styles.actionItem, styles.actionItemDanger]}
+              onPress={handleDelete}
+              disabled={deleting || selectedStaff?.status === 'TERMINATED'}
+            >
+              {deleting ? (
+                <ActivityIndicator size="small" color={C.danger} />
+              ) : (
+                <>
+                  <Icon name="trash-outline" size={20} color={C.danger} />
+                  <Text style={[styles.actionItemText, { color: C.danger }]}>
+                    {selectedStaff?.status === 'TERMINATED' ? 'Already Terminated' : 'Terminate Staff'}
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionCancelBtn}
+              onPress={() => setActionModalVisible(false)}
+            >
+              <Text style={styles.actionCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
       </Modal>
     </SafeAreaView>
   );
@@ -510,7 +668,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.border,
   },
-  cardHeader: { flexDirection: 'row', gap: 12, marginBottom: 12 },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   iconBox: {
     width: 48,
     height: 48,
@@ -518,27 +676,33 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFE8E8',
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 12,
   },
   cardInfo: { flex: 1 },
   cardTitle: { fontSize: 16, fontWeight: '700', color: C.ink },
   cardSub: { fontSize: 13, color: C.muted, marginTop: 2 },
   phoneRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
   phoneText: { fontSize: 12, color: C.muted },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusText: { fontSize: 11, fontWeight: '600' },
 
   salaryBox: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     backgroundColor: C.bg,
     padding: 12,
     borderRadius: 8,
     marginBottom: 12,
   },
-  salaryLabel: { fontSize: 13, color: C.muted },
-  salaryValue: { fontSize: 16, fontWeight: '700', color: C.ok },
+  salaryItem: { flex: 1 },
+  salaryLabel: { fontSize: 11, color: C.muted, marginBottom: 4 },
+  salaryValue: { fontSize: 14, fontWeight: '700', color: C.ink },
 
-  cardActions: { flexDirection: 'row', gap: 8 },
-  editBtn: {
+  cardFooter: { flexDirection: 'row', gap: 8 },
+  actionBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
@@ -546,17 +710,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 10,
     borderRadius: 10,
-    backgroundColor: '#EFF6FF',
-  },
-  deleteBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: C.bg,
   },
   actionText: { fontSize: 13, fontWeight: '600' },
 
@@ -612,7 +766,6 @@ const styles = StyleSheet.create({
   roleText: { fontSize: 13, fontWeight: '600', color: C.ink },
   roleTextActive: { color: '#fff' },
 
-  // Staff type styles
   typeRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -634,7 +787,6 @@ const styles = StyleSheet.create({
   typeText: { fontSize: 12, fontWeight: '600', color: C.ink },
   typeTextActive: { color: '#fff' },
 
-  // Staff status styles
   statusRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -657,7 +809,7 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
   },
-  statusText: { fontSize: 12, fontWeight: '600', color: C.ink },
+  statusChipText: { fontSize: 12, fontWeight: '600', color: C.ink },
 
   cancelBtn: { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: C.bg, alignItems: 'center' },
   cancelText: { fontSize: 14, fontWeight: '700', color: C.ink },
@@ -670,4 +822,66 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   saveText: { fontSize: 14, fontWeight: '700', color: '#fff' },
+
+  // Action Modal Styles
+  actionModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  actionModalContent: {
+    backgroundColor: C.card,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 8,
+    paddingBottom: 24,
+  },
+  actionModalHeader: {
+    alignItems: 'center',
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+    marginBottom: 8,
+  },
+  actionModalTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
+  actionModalSubtitle: { fontSize: 14, color: C.muted, marginTop: 4 },
+  actionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+  },
+  actionItemDisabled: { opacity: 0.5 },
+  actionItemDanger: { marginTop: 8 },
+  actionItemText: { fontSize: 15, color: C.ink },
+  actionItemTextDisabled: { color: C.muted },
+  actionDivider: {
+    height: 1,
+    backgroundColor: C.border,
+    marginVertical: 8,
+    marginHorizontal: 20,
+  },
+  actionSectionTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: C.muted,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    textTransform: 'uppercase',
+  },
+  statusIndicator: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  actionCancelBtn: {
+    marginHorizontal: 20,
+    marginTop: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: C.bg,
+    alignItems: 'center',
+  },
+  actionCancelText: { fontSize: 15, fontWeight: '600', color: C.ink },
 });
