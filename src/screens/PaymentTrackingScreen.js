@@ -1,7 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  RefreshControl, ActivityIndicator, Alert, Image
+  RefreshControl, ActivityIndicator, Alert, Image,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -10,6 +11,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
+import { scale, moderateScale, isTablet, getContainerMaxWidth } from '../utils/responsive';
 
 const C = {
   primary: '#EF3A3A',
@@ -369,111 +371,111 @@ const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   emptyBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: C.ink, marginTop: 16 },
+  emptyTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink, marginTop: scale(16) },
 
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 12, backgroundColor: C.card,
+    paddingHorizontal: scale(16), paddingVertical: scale(12), backgroundColor: C.card,
     borderBottomWidth: 1, borderBottomColor: C.border,
   },
-  backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '900', color: C.ink },
+  backBtn: { width: scale(40), height: scale(40), borderRadius: scale(12), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { fontSize: moderateScale(18), fontWeight: '900', color: C.ink },
 
-  scrollContent: { padding: 16 },
+  scrollContent: { padding: scale(16) },
 
   statusCard: {
-    alignItems: 'center', padding: 24, backgroundColor: C.card,
-    borderRadius: 20, borderWidth: 2, marginBottom: 16,
+    alignItems: 'center', padding: scale(24), backgroundColor: C.card,
+    borderRadius: scale(20), borderWidth: 2, marginBottom: scale(16),
   },
   statusIconBox: {
-    width: 72, height: 72, borderRadius: 36,
-    alignItems: 'center', justifyContent: 'center', marginBottom: 12,
+    width: scale(72), height: scale(72), borderRadius: scale(36),
+    alignItems: 'center', justifyContent: 'center', marginBottom: scale(12),
   },
-  statusLabel: { fontSize: 18, fontWeight: '900', marginBottom: 4 },
-  bookingId: { fontSize: 13, color: C.muted },
+  statusLabel: { fontSize: moderateScale(18), fontWeight: '900', marginBottom: scale(4) },
+  bookingId: { fontSize: moderateScale(13), color: C.muted },
 
-  section: { marginBottom: 16 },
-  sectionTitle: { fontSize: 16, fontWeight: '900', color: C.ink, marginBottom: 12 },
+  section: { marginBottom: scale(16) },
+  sectionTitle: { fontSize: moderateScale(16), fontWeight: '900', color: C.ink, marginBottom: scale(12) },
 
   summaryCard: {
-    backgroundColor: C.card, borderRadius: 16, padding: 16,
+    backgroundColor: C.card, borderRadius: scale(16), padding: scale(16),
     borderWidth: 1, borderColor: C.border,
   },
   summaryRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: C.border,
+    paddingVertical: scale(12), borderBottomWidth: 1, borderBottomColor: C.border,
   },
-  summaryRowLast: { borderBottomWidth: 0, paddingTop: 16 },
-  summaryLabel: { fontSize: 14, color: C.muted },
-  summaryValue: { fontSize: 14, fontWeight: '600', color: C.ink },
-  summaryLabelLg: { fontSize: 16, fontWeight: '700', color: C.ink },
-  summaryValueLg: { fontSize: 20, fontWeight: '900', color: C.primary },
-  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  statusBadgeText: { fontSize: 12, fontWeight: '700' },
+  summaryRowLast: { borderBottomWidth: 0, paddingTop: scale(16) },
+  summaryLabel: { fontSize: moderateScale(14), color: C.muted },
+  summaryValue: { fontSize: moderateScale(14), fontWeight: '600', color: C.ink },
+  summaryLabelLg: { fontSize: moderateScale(16), fontWeight: '700', color: C.ink },
+  summaryValueLg: { fontSize: moderateScale(20), fontWeight: '900', color: C.primary },
+  statusBadge: { paddingHorizontal: scale(10), paddingVertical: scale(4), borderRadius: scale(8) },
+  statusBadgeText: { fontSize: moderateScale(12), fontWeight: '700' },
 
   itemsCard: {
-    backgroundColor: C.card, borderRadius: 16, padding: 12,
+    backgroundColor: C.card, borderRadius: scale(16), padding: scale(12),
     borderWidth: 1, borderColor: C.border,
   },
   itemRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: C.border,
+    paddingVertical: scale(10), borderBottomWidth: 1, borderBottomColor: C.border,
   },
   itemInfo: { flex: 1 },
-  itemName: { fontSize: 14, fontWeight: '600', color: C.ink },
-  itemQty: { fontSize: 12, color: C.muted, marginTop: 2 },
-  itemPrice: { fontSize: 14, fontWeight: '700', color: C.ink },
+  itemName: { fontSize: moderateScale(14), fontWeight: '600', color: C.ink },
+  itemQty: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(2) },
+  itemPrice: { fontSize: moderateScale(14), fontWeight: '700', color: C.ink },
 
   proofCard: {
-    backgroundColor: C.card, borderRadius: 16, overflow: 'hidden',
+    backgroundColor: C.card, borderRadius: scale(16), overflow: 'hidden',
     borderWidth: 1, borderColor: C.border,
   },
-  proofImage: { width: '100%', height: 200 },
-  proofInfo: { padding: 16 },
+  proofImage: { width: '100%', height: scale(200) },
+  proofInfo: { padding: scale(16) },
   proofStatus: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, alignSelf: 'flex-start',
+    flexDirection: 'row', alignItems: 'center', gap: scale(6),
+    paddingHorizontal: scale(10), paddingVertical: scale(6), borderRadius: scale(8), alignSelf: 'flex-start',
   },
-  proofStatusText: { fontSize: 12, fontWeight: '700' },
-  proofDate: { fontSize: 12, color: C.muted, marginTop: 8 },
+  proofStatusText: { fontSize: moderateScale(12), fontWeight: '700' },
+  proofDate: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(8) },
   reuploadBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    padding: 12, borderTopWidth: 1, borderTopColor: C.border,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: scale(6),
+    padding: scale(12), borderTopWidth: 1, borderTopColor: C.border,
   },
-  reuploadText: { fontSize: 14, fontWeight: '700', color: C.primary },
+  reuploadText: { fontSize: moderateScale(14), fontWeight: '700', color: C.primary },
 
   uploadCard: {
-    alignItems: 'center', padding: 32, backgroundColor: C.card,
-    borderRadius: 16, borderWidth: 2, borderStyle: 'dashed', borderColor: C.border,
+    alignItems: 'center', padding: scale(32), backgroundColor: C.card,
+    borderRadius: scale(16), borderWidth: 2, borderStyle: 'dashed', borderColor: C.border,
   },
-  uploadTitle: { fontSize: 16, fontWeight: '700', color: C.ink, marginTop: 12 },
-  uploadText: { fontSize: 13, color: C.muted, textAlign: 'center', marginTop: 4 },
+  uploadTitle: { fontSize: moderateScale(16), fontWeight: '700', color: C.ink, marginTop: scale(12) },
+  uploadText: { fontSize: moderateScale(13), color: C.muted, textAlign: 'center', marginTop: scale(4) },
   uploadBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16,
-    paddingHorizontal: 24, paddingVertical: 14, borderRadius: 12, backgroundColor: C.primary,
+    flexDirection: 'row', alignItems: 'center', gap: scale(8), marginTop: scale(16),
+    paddingHorizontal: scale(24), paddingVertical: scale(14), borderRadius: scale(12), backgroundColor: C.primary,
   },
   uploadBtnDisabled: { opacity: 0.6 },
-  uploadBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  uploadBtnText: { fontSize: moderateScale(15), fontWeight: '700', color: '#fff' },
 
   historyCard: {
-    backgroundColor: C.card, borderRadius: 16, padding: 16,
+    backgroundColor: C.card, borderRadius: scale(16), padding: scale(16),
     borderWidth: 1, borderColor: C.border,
   },
-  historyRow: { flexDirection: 'row', marginBottom: 12 },
+  historyRow: { flexDirection: 'row', marginBottom: scale(12) },
   historyDot: {
-    width: 10, height: 10, borderRadius: 5, backgroundColor: C.primary, marginTop: 4, marginRight: 12,
+    width: scale(10), height: scale(10), borderRadius: scale(5), backgroundColor: C.primary, marginTop: scale(4), marginRight: scale(12),
   },
   historyContent: { flex: 1 },
-  historyAction: { fontSize: 14, fontWeight: '600', color: C.ink },
-  historyDate: { fontSize: 12, color: C.muted, marginTop: 2 },
+  historyAction: { fontSize: moderateScale(14), fontWeight: '600', color: C.ink },
+  historyDate: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(2) },
 
   helpCard: {
-    flexDirection: 'row', alignItems: 'center', padding: 16,
-    backgroundColor: '#EFF6FF', borderRadius: 16, marginTop: 8,
+    flexDirection: 'row', alignItems: 'center', padding: scale(16),
+    backgroundColor: '#EFF6FF', borderRadius: scale(16), marginTop: scale(8),
   },
-  helpContent: { flex: 1, marginLeft: 12 },
-  helpTitle: { fontSize: 14, fontWeight: '700', color: C.ink },
-  helpText: { fontSize: 12, color: C.muted, marginTop: 2 },
-  helpBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, backgroundColor: C.info },
-  helpBtnText: { fontSize: 12, fontWeight: '700', color: '#fff' },
+  helpContent: { flex: 1, marginLeft: scale(12) },
+  helpTitle: { fontSize: moderateScale(14), fontWeight: '700', color: C.ink },
+  helpText: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(2) },
+  helpBtn: { paddingHorizontal: scale(14), paddingVertical: scale(8), borderRadius: scale(8), backgroundColor: C.info },
+  helpBtnText: { fontSize: moderateScale(12), fontWeight: '700', color: '#fff' },
 });

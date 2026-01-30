@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -42,6 +42,17 @@ const ENTRY_TYPES = [
   { value: 'BANK_OUT', label: 'Bank Out', icon: 'arrow-up', color: C.danger, bgColor: '#FEF2F2' },
 ];
 
+// Filter config for stylish summary tabs
+const FILTER_CONFIG = {
+  all: { bg: '#F3F4F6', color: C.ink, icon: 'list-outline', label: 'All' },
+  CASH_IN: { bg: '#ECFDF5', color: '#10B981', icon: 'arrow-down-circle-outline', label: 'Cash In' },
+  CASH_OUT: { bg: '#FEE2E2', color: '#EF4444', icon: 'arrow-up-circle-outline', label: 'Cash Out' },
+  BANK_IN: { bg: '#DBEAFE', color: '#2563EB', icon: 'arrow-down-circle-outline', label: 'Bank In' },
+  BANK_OUT: { bg: '#FEF3C7', color: '#D97706', icon: 'arrow-up-circle-outline', label: 'Bank Out' },
+};
+
+const FILTER_OPTIONS = ['all', 'CASH_IN', 'CASH_OUT', 'BANK_IN', 'BANK_OUT'];
+
 const PAYMENT_MODES = ['CASH', 'BANK_TRANSFER', 'UPI', 'CHEQUE', 'CARD', 'OTHER'];
 
 const EXPENSE_CATEGORIES = [
@@ -57,8 +68,7 @@ const EXPENSE_CATEGORIES = [
 
 const formatPrice = (amount) => {
   const num = Number(amount) || 0;
-  // Amount is stored in paisa
-  return `₹${(num / 100).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+  return `₹${num.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 };
 
 export default function CashbookScreen({ navigation }) {
@@ -91,6 +101,17 @@ export default function CashbookScreen({ navigation }) {
     entryDate: new Date().toISOString().split('T')[0],
   });
   const [menuVisible, setMenuVisible] = useState(false);
+
+  // Calculate entry counts for summary tabs
+  const entryCounts = useMemo(() => {
+    const counts = { all: entries.length, CASH_IN: 0, CASH_OUT: 0, BANK_IN: 0, BANK_OUT: 0 };
+    entries.forEach(e => {
+      if (counts[e.entryType] !== undefined) {
+        counts[e.entryType]++;
+      }
+    });
+    return counts;
+  }, [entries]);
 
   const loadData = useCallback(async () => {
     if (!selectedRestaurantId) return;
@@ -142,7 +163,7 @@ export default function CashbookScreen({ navigation }) {
       setForm({
         id: item.id,
         entryType: item.entryType,
-        amount: ((item.amount || 0) / 100).toString(),
+        amount: (item.amount || 0).toString(),
         paymentMode: item.paymentMode || 'CASH',
         category: item.category || '',
         description: item.description || '',
@@ -301,38 +322,54 @@ export default function CashbookScreen({ navigation }) {
   );
 
   const renderFilters = () => (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow}>
-      <TouchableOpacity
-        style={[styles.filterChip, filterType === 'all' && styles.filterChipActive]}
-        onPress={() => setFilterType('all')}
+    <View style={styles.summaryFilterSection}>
+      <View style={styles.filterHeader}>
+        <Icon name="funnel" size={14} color={C.primary} />
+        <Text style={styles.filterLabel}>Filter by Type</Text>
+        {filterType !== 'all' && (
+          <TouchableOpacity style={styles.clearFilterBtn} onPress={() => setFilterType('all')}>
+            <Icon name="close-circle" size={16} color={C.muted} />
+          </TouchableOpacity>
+        )}
+      </View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.summaryScroll}
       >
-        <Text style={[styles.filterText, filterType === 'all' && styles.filterTextActive]}>
-          All Entries
-        </Text>
-      </TouchableOpacity>
-      {ENTRY_TYPES.map((type) => (
-        <TouchableOpacity
-          key={type.value}
-          style={[
-            styles.filterChip,
-            filterType === type.value && { backgroundColor: type.color, borderColor: type.color }
-          ]}
-          onPress={() => setFilterType(type.value)}
-        >
-          <Icon
-            name={type.icon}
-            size={14}
-            color={filterType === type.value ? '#fff' : type.color}
-          />
-          <Text style={[
-            styles.filterText,
-            filterType === type.value && styles.filterTextActive
-          ]}>
-            {type.label}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </ScrollView>
+        {FILTER_OPTIONS.map(filterKey => {
+          const config = FILTER_CONFIG[filterKey];
+          const count = entryCounts[filterKey] || 0;
+          const isActive = filterType === filterKey;
+
+          return (
+            <TouchableOpacity
+              key={filterKey}
+              onPress={() => setFilterType(filterKey)}
+              style={[
+                styles.summaryCard,
+                isActive && styles.summaryCardActive,
+                { borderColor: isActive ? config.color : C.border },
+              ]}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.summaryIcon, { backgroundColor: config.bg }]}>
+                <Icon name={config.icon} size={16} color={config.color} />
+              </View>
+              <Text style={[styles.summaryCount, isActive && { color: config.color }]}>
+                {count}
+              </Text>
+              <Text style={[styles.summaryLabel, isActive && { color: config.color }]}>
+                {config.label}
+              </Text>
+              {isActive && (
+                <View style={[styles.summaryActiveBar, { backgroundColor: config.color }]} />
+              )}
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+    </View>
   );
 
   const renderEntryCard = ({ item }) => {
@@ -713,7 +750,77 @@ const styles = StyleSheet.create({
   },
   quickActionLabel: { fontSize: 13, fontWeight: '600', color: C.ink },
 
-  // Filters
+  // Stylish summary filter cards
+  summaryFilterSection: { marginBottom: 12 },
+  filterHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    marginBottom: 10,
+  },
+  filterLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: C.muted,
+    marginLeft: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    flex: 1,
+  },
+  clearFilterBtn: { padding: 4 },
+  summaryScroll: { paddingHorizontal: 16, gap: 10 },
+  summaryCard: {
+    alignItems: 'center',
+    backgroundColor: C.card,
+    borderRadius: 14,
+    padding: 10,
+    minWidth: 70,
+    borderWidth: 2,
+    borderColor: C.border,
+    position: 'relative',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  summaryCardActive: {
+    backgroundColor: '#FAFAFA',
+    shadowOpacity: 0.1,
+    elevation: 5,
+  },
+  summaryIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  summaryCount: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: C.ink,
+  },
+  summaryLabel: {
+    fontSize: 9,
+    fontWeight: '600',
+    color: C.muted,
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  summaryActiveBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    borderBottomLeftRadius: 14,
+    borderBottomRightRadius: 14,
+  },
+
+  // Legacy filters (keeping for reference)
   filterRow: { paddingHorizontal: 16, paddingVertical: 12 },
   filterChip: {
     flexDirection: 'row',

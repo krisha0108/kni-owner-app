@@ -17,6 +17,15 @@ const C = {
 };
 const R = 18;
 
+/* ---------- FILTER CONFIG ---------- */
+const FILTER_CONFIG = {
+  all: { bg: '#F3F4F6', color: C.ink, icon: 'albums-outline', label: 'All' },
+  orders: { bg: '#DBEAFE', color: '#2563EB', icon: 'cube-outline', label: 'Orders' },
+  tickets: { bg: '#FEF3C7', color: '#D97706', icon: 'construct-outline', label: 'Tickets' },
+  restaurants: { bg: '#ECFDF5', color: '#10B981', icon: 'storefront-outline', label: 'Restaurants' },
+  product: { bg: '#F5F3FF', color: '#7C3AED', icon: 'sparkles-outline', label: 'Product' },
+};
+
 /* ---------- TYPE → UI MAP ---------- */
 const TMAP = {
   ticket_seen:            { ic:'eye',               bg:'#E0F2FE', fg:'#0369A1' },
@@ -199,6 +208,26 @@ const res = await api.get('/owner/notifications', {
     return ()=>{ loop.stop(); };
   },[pulse, initializeUserData]);
 
+  // Calculate counts for each filter
+  const filterCounts = useMemo(() => {
+    const counts = { all: items.length, orders: 0, tickets: 0, restaurants: 0, product: 0 };
+    items.forEach(x => {
+      if (x.type.startsWith('ticket')) counts.tickets++;
+      else if (
+        x.type.startsWith('order_') ||
+        x.type === 'engineer_assigned' ||
+        x.type === 'eq_request_approved' ||
+        x.type === 'completion_approval_required' ||
+        x.type === 'pending_approval' ||
+        x.type === 'approval_required' ||
+        x.type === 'work_completed'
+      ) counts.orders++;
+      else if (x.type.startsWith('restaurant')) counts.restaurants++;
+      else if (['feature', 'update'].includes(x.type)) counts.product++;
+    });
+    return counts;
+  }, [items]);
+
   const filtered = useMemo(()=>{
     if(filter === 'all') return items;
     if(filter === 'tickets') return items.filter(x => x.type.startsWith('ticket'));
@@ -324,12 +353,34 @@ const markAllRead = () => {
 };
 
 
-  const chip = (key, label, ic)=>{
-    const on = filter===key;
+  // Stylish summary card component
+  const SummaryCard = ({ filterKey }) => {
+    const config = FILTER_CONFIG[filterKey];
+    const count = filterCounts[filterKey] || 0;
+    const isActive = filter === filterKey;
+
     return (
-      <TouchableOpacity key={key} onPress={()=>setFilter(key)} style={[st.chip, on && st.chipOn]}>
-        {ic && <Icon name={ic} size={14} color={on?C.card:C.muted} />}
-        <Text style={[st.chipTxt, on && {color:'#fff'}]}>{label}</Text>
+      <TouchableOpacity
+        onPress={() => setFilter(filterKey)}
+        style={[
+          st.summaryCard,
+          isActive && st.summaryCardActive,
+          { borderColor: isActive ? config.color : C.border },
+        ]}
+        activeOpacity={0.7}
+      >
+        <View style={[st.summaryIcon, { backgroundColor: config.bg }]}>
+          <Icon name={config.icon} size={18} color={config.color} />
+        </View>
+        <Text style={[st.summaryCount, isActive && { color: config.color }]}>
+          {count}
+        </Text>
+        <Text style={[st.summaryLabel, isActive && { color: config.color }]}>
+          {config.label}
+        </Text>
+        {isActive && (
+          <View style={[st.summaryActiveBar, { backgroundColor: config.color }]} />
+        )}
       </TouchableOpacity>
     );
   };
@@ -355,18 +406,18 @@ const markAllRead = () => {
         </View>
       </View>
 
-      {/* Filter chips */}
-      <View style={{paddingHorizontal:0}}>
+      {/* Stylish Summary Filter Cards */}
+      <View style={st.summaryContainer}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{paddingHorizontal:16, paddingBottom:4, gap:8}}
+          contentContainerStyle={st.summaryScroll}
         >
-          {chip('all','All','albums-outline')}
-          {chip('orders','Orders','cube-outline')}
-          {chip('tickets','Tickets','construct-outline')}
-          {chip('restaurants','Restaurants','storefront-outline')}
-          {chip('product','Product','sparkles-outline')}
+          <SummaryCard filterKey="all" />
+          <SummaryCard filterKey="orders" />
+          <SummaryCard filterKey="tickets" />
+          <SummaryCard filterKey="restaurants" />
+          <SummaryCard filterKey="product" />
         </ScrollView>
       </View>
 
@@ -434,6 +485,59 @@ const st = StyleSheet.create({
   header:{ paddingHorizontal:16, paddingBottom:8, flexDirection:'row', alignItems:'center', justifyContent:'space-between' },
   hBtn:{ width:38, height:38, borderRadius:12, borderWidth:1, borderColor:'#EEF2F7', backgroundColor:'#fff', alignItems:'center', justifyContent:'center' },
   hTitle:{ color:C.ink, fontSize:22, fontWeight:'900' },
+
+  // Stylish summary cards
+  summaryContainer: { marginBottom: 12 },
+  summaryScroll: { paddingHorizontal: 16, gap: 10 },
+  summaryCard: {
+    alignItems: 'center',
+    backgroundColor: C.card,
+    borderRadius: 16,
+    padding: 12,
+    minWidth: 80,
+    borderWidth: 2,
+    borderColor: C.border,
+    position: 'relative',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  summaryCardActive: {
+    backgroundColor: '#FAFAFA',
+    shadowOpacity: 0.1,
+    elevation: 5,
+  },
+  summaryIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  summaryCount: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: C.ink,
+  },
+  summaryLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: C.muted,
+    marginTop: 2,
+  },
+  summaryActiveBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+  },
 
   chip:{ flexDirection:'row', alignItems:'center', gap:6, borderWidth:1, borderColor:'#E5E7EB', backgroundColor:'#fff', paddingHorizontal:12, paddingVertical:8, borderRadius:999 },
   chipOn:{ backgroundColor:C.primary, borderColor:C.primary },

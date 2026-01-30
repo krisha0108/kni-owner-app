@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -51,6 +51,17 @@ const STAFF_STATUSES = [
   { value: 'TERMINATED', label: 'Terminated', color: '#EF4444' },
 ];
 
+// Status filter config for stylish summary tabs
+const STATUS_CONFIG = {
+  all: { bg: '#F3F4F6', color: '#1D2254', icon: 'people-outline', label: 'All' },
+  ACTIVE: { bg: '#ECFDF5', color: '#10B981', icon: 'checkmark-circle-outline', label: 'Active' },
+  ON_LEAVE: { bg: '#FEF3C7', color: '#F59E0B', icon: 'airplane-outline', label: 'On Leave' },
+  RESIGNED: { bg: '#F3F4F6', color: '#6B7280', icon: 'exit-outline', label: 'Resigned' },
+  TERMINATED: { bg: '#FEE2E2', color: '#EF4444', icon: 'close-circle-outline', label: 'Terminated' },
+};
+
+const STATUS_FILTER_OPTIONS = ['all', 'ACTIVE', 'ON_LEAVE', 'RESIGNED', 'TERMINATED'];
+
 const getStatusColor = (status) => {
   const found = STAFF_STATUSES.find(s => s.value === status);
   return found?.color || C.muted;
@@ -80,6 +91,24 @@ export default function StaffScreen({ navigation }) {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [activeStatusTab, setActiveStatusTab] = useState('all');
+
+  // Calculate status counts for summary tabs
+  const statusCounts = useMemo(() => {
+    const counts = { all: staff.length, ACTIVE: 0, ON_LEAVE: 0, RESIGNED: 0, TERMINATED: 0 };
+    staff.forEach(s => {
+      if (counts[s.status] !== undefined) {
+        counts[s.status]++;
+      }
+    });
+    return counts;
+  }, [staff]);
+
+  // Filter staff by status
+  const filteredStaff = useMemo(() => {
+    if (activeStatusTab === 'all') return staff;
+    return staff.filter(s => s.status === activeStatusTab);
+  }, [staff, activeStatusTab]);
 
   const [form, setForm] = useState({
     id: null,
@@ -131,9 +160,8 @@ export default function StaffScreen({ navigation }) {
 
   const openForm = (item = null) => {
     if (item) {
-      // Convert from paise to rupees for display (divide by 100)
-      const salaryValue = item.monthlySalary ? (item.monthlySalary / 100).toString() :
-                          item.dailyWage ? (item.dailyWage / 100).toString() : '';
+      const salaryValue = item.monthlySalary ? item.monthlySalary.toString() :
+                          item.dailyWage ? item.dailyWage.toString() : '';
       setForm({
         id: item.id,
         name: item.name || '',
@@ -282,10 +310,10 @@ export default function StaffScreen({ navigation }) {
 
   const formatSalary = (item) => {
     if (item.monthlySalary) {
-      return `₹${(item.monthlySalary / 100).toLocaleString('en-IN')}/month`;
+      return `₹${item.monthlySalary.toLocaleString('en-IN')}/month`;
     }
     if (item.dailyWage) {
-      return `₹${(item.dailyWage / 100).toLocaleString('en-IN')}/day`;
+      return `₹${item.dailyWage.toLocaleString('en-IN')}/day`;
     }
     return '-';
   };
@@ -395,8 +423,49 @@ export default function StaffScreen({ navigation }) {
       {/* Restaurant Selector - Global */}
       <RestaurantSelectorBar />
 
+      {/* Stylish Status Filter Tabs */}
+      <View style={styles.summaryContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.summaryScroll}
+        >
+          {STATUS_FILTER_OPTIONS.map(statusKey => {
+            const config = STATUS_CONFIG[statusKey];
+            const count = statusCounts[statusKey] || 0;
+            const isActive = activeStatusTab === statusKey;
+
+            return (
+              <TouchableOpacity
+                key={statusKey}
+                onPress={() => setActiveStatusTab(statusKey)}
+                style={[
+                  styles.summaryCard,
+                  isActive && styles.summaryCardActive,
+                  { borderColor: isActive ? config.color : C.border },
+                ]}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.summaryIcon, { backgroundColor: config.bg }]}>
+                  <Icon name={config.icon} size={18} color={config.color} />
+                </View>
+                <Text style={[styles.summaryCount, isActive && { color: config.color }]}>
+                  {count}
+                </Text>
+                <Text style={[styles.summaryLabel, isActive && { color: config.color }]}>
+                  {config.label}
+                </Text>
+                {isActive && (
+                  <View style={[styles.summaryActiveBar, { backgroundColor: config.color }]} />
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+
       <FlatList
-        data={staff}
+        data={filteredStaff}
         keyExtractor={item => item.id.toString()}
         renderItem={renderStaffCard}
         contentContainerStyle={styles.list}
@@ -404,12 +473,20 @@ export default function StaffScreen({ navigation }) {
         ListEmptyComponent={
           <View style={styles.emptyBox}>
             <Icon name="people-outline" size={64} color={C.muted} />
-            <Text style={styles.emptyTitle}>No Staff Yet</Text>
-            <Text style={styles.emptyText}>Add your first staff member</Text>
-            <TouchableOpacity style={styles.emptyBtn} onPress={() => openForm()}>
-              <Icon name="add" size={18} color="#fff" />
-              <Text style={styles.emptyBtnText}>Add Staff</Text>
-            </TouchableOpacity>
+            <Text style={styles.emptyTitle}>
+              {staff.length === 0 ? 'No Staff Yet' : 'No Results'}
+            </Text>
+            <Text style={styles.emptyText}>
+              {staff.length === 0
+                ? 'Add your first staff member'
+                : `No ${STATUS_CONFIG[activeStatusTab]?.label || ''} staff found`}
+            </Text>
+            {staff.length === 0 && (
+              <TouchableOpacity style={styles.emptyBtn} onPress={() => openForm()}>
+                <Icon name="add" size={18} color="#fff" />
+                <Text style={styles.emptyBtnText}>Add Staff</Text>
+              </TouchableOpacity>
+            )}
           </View>
         }
       />
@@ -632,6 +709,67 @@ const styles = StyleSheet.create({
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
   emptyTitle: { fontSize: 18, fontWeight: '700', color: C.ink, marginTop: 16 },
   emptyText: { fontSize: 14, color: C.muted, textAlign: 'center', marginTop: 8 },
+
+  // Stylish summary cards
+  summaryContainer: {
+    paddingVertical: 12,
+    backgroundColor: C.card,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+  },
+  summaryScroll: {
+    paddingHorizontal: 16,
+    gap: 10,
+  },
+  summaryCard: {
+    alignItems: 'center',
+    backgroundColor: C.card,
+    borderRadius: 14,
+    padding: 10,
+    minWidth: 72,
+    borderWidth: 2,
+    borderColor: C.border,
+    position: 'relative',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  summaryCardActive: {
+    backgroundColor: '#FAFAFA',
+    shadowOpacity: 0.1,
+    elevation: 5,
+  },
+  summaryIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  summaryCount: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: C.ink,
+  },
+  summaryLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: C.muted,
+    marginTop: 2,
+  },
+  summaryActiveBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    borderBottomLeftRadius: 14,
+    borderBottomRightRadius: 14,
+  },
 
   filterRow: { paddingHorizontal: 16, paddingVertical: 12 },
   filterChip: {

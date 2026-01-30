@@ -1,15 +1,28 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
 import { BarChart } from 'react-native-chart-kit';
+import { scale, moderateScale, isTablet, getContainerMaxWidth } from '../../utils/responsive';
 
 export default function BarChartCard({ title, data, labelKey, valueKey }) {
+  const { width } = useWindowDimensions();
+
+  // Responsive sizing
+  const isTabletDevice = isTablet(width);
+  const containerPadding = isTabletDevice ? scale(24) : scale(16);
+  const horizontalMargin = isTabletDevice ? scale(24) : scale(16);
+  const chartHeight = isTabletDevice ? scale(280) : scale(220);
+
+  // Calculate chart width based on container constraints
+  const containerMaxWidth = getContainerMaxWidth(width);
+  const chartWidth = Math.min(width, containerMaxWidth) - (horizontalMargin * 2) - (containerPadding * 2);
+
   // Handle empty or invalid data
   if (!data || data.length === 0) {
     return (
-      <View style={styles.chartCard}>
-        <Text style={styles.chartTitle}>{title}</Text>
-        <View style={styles.noDataContainer}>
-          <Text style={styles.noDataText}>No data available</Text>
+      <View style={[styles.chartCard, { padding: containerPadding, marginHorizontal: horizontalMargin }]}>
+        <Text style={[styles.chartTitle, { fontSize: moderateScale(18) }]}>{title}</Text>
+        <View style={[styles.noDataContainer, { height: chartHeight }]}>
+          <Text style={[styles.noDataText, { fontSize: moderateScale(16) }]}>No data available</Text>
         </View>
       </View>
     );
@@ -25,12 +38,12 @@ export default function BarChartCard({ title, data, labelKey, valueKey }) {
   };
 
   return (
-    <View style={styles.chartCard}>
-      <Text style={styles.chartTitle}>{title}</Text>
+    <View style={[styles.chartCard, { padding: containerPadding, marginHorizontal: horizontalMargin }]}>
+      <Text style={[styles.chartTitle, { fontSize: moderateScale(18) }]}>{title}</Text>
       <BarChart
         data={chartData}
-        width={Dimensions.get('window').width - 48}
-        height={220}
+        width={chartWidth}
+        height={chartHeight}
         chartConfig={{
           backgroundColor: '#FFFFFF',
           backgroundGradientFrom: '#FFFFFF',
@@ -39,11 +52,11 @@ export default function BarChartCard({ title, data, labelKey, valueKey }) {
           color: (opacity = 1) => `rgba(239, 58, 58, ${opacity})`,
           labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
           style: {
-            borderRadius: 16
+            borderRadius: scale(16)
           },
-          barPercentage: 0.7,
+          barPercentage: isTabletDevice ? 0.6 : 0.7,
         }}
-        style={styles.chart}
+        style={[styles.chart, { borderRadius: scale(16) }]}
         showValuesOnTopOfBars
       />
     </View>
@@ -53,10 +66,8 @@ export default function BarChartCard({ title, data, labelKey, valueKey }) {
 const styles = StyleSheet.create({
   chartCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginHorizontal: 16,
-    marginVertical: 8,
+    borderRadius: scale(12),
+    marginVertical: scale(8),
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -64,24 +75,20 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   chartTitle: {
-    fontSize: 18,
     fontWeight: '600',
     color: '#1F2937',
-    marginBottom: 12,
+    marginBottom: scale(12),
   },
   chart: {
-    marginVertical: 8,
-    borderRadius: 16,
+    marginVertical: scale(8),
   },
   noDataContainer: {
-    height: 220,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#F9FAFB',
-    borderRadius: 12,
+    borderRadius: scale(12),
   },
   noDataText: {
-    fontSize: 16,
     color: '#6B7280',
   },
 });

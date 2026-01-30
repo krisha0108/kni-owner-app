@@ -36,6 +36,7 @@ const C = {
 };
 
 const STATUS_CONFIG = {
+  all: { bg: '#F3F4F6', color: C.ink, icon: 'list-outline', label: 'All' },
   PLACED: { bg: '#FEF3C7', color: '#D97706', icon: 'time-outline', label: 'Placed' },
   PENDING: { bg: '#FEF3C7', color: '#D97706', icon: 'time-outline', label: 'Pending' },
   CONFIRMED: { bg: '#DBEAFE', color: '#2563EB', icon: 'checkmark-circle-outline', label: 'Confirmed' },
@@ -44,6 +45,16 @@ const STATUS_CONFIG = {
   DELIVERED: { bg: '#D1FAE5', color: '#059669', icon: 'checkmark-done-outline', label: 'Delivered' },
   CANCELLED: { bg: '#FEE2E2', color: '#DC2626', icon: 'close-circle-outline', label: 'Cancelled' },
 };
+
+const STATUS_OPTIONS = [
+  { value: 'all', label: 'All' },
+  { value: 'PLACED', label: 'Placed' },
+  { value: 'CONFIRMED', label: 'Confirmed' },
+  { value: 'PROCESSING', label: 'Processing' },
+  { value: 'SHIPPED', label: 'Shipped' },
+  { value: 'DELIVERED', label: 'Delivered' },
+  { value: 'CANCELLED', label: 'Cancelled' },
+];
 
 const formatDate = (dateString) => {
   if (!dateString) return '-';
@@ -79,6 +90,25 @@ export default function MarketplaceOrdersScreen({ navigation }) {
 
   // Navigation Menu
   const [menuVisible, setMenuVisible] = useState(false);
+
+  // Status filter tab
+  const [activeStatusTab, setActiveStatusTab] = useState('all');
+
+  // Calculate status counts for summary cards
+  const statusCounts = React.useMemo(() => {
+    const counts = { all: orders.length };
+    orders.forEach((o) => {
+      const status = o.status || 'PLACED';
+      counts[status] = (counts[status] || 0) + 1;
+    });
+    return counts;
+  }, [orders]);
+
+  // Filter orders by status tab
+  const filteredOrders = React.useMemo(() => {
+    if (activeStatusTab === 'all') return orders;
+    return orders.filter(o => o.status === activeStatusTab);
+  }, [orders, activeStatusTab]);
 
   const loadData = useCallback(async () => {
     if (!selectedRestaurantId) return;
@@ -280,8 +310,35 @@ export default function MarketplaceOrdersScreen({ navigation }) {
       {/* Global Restaurant Selector */}
       <RestaurantSelectorBar />
 
+      {/* Status Summary Cards - Stylish Horizontal Tabs */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.summaryContainer}
+      >
+        {STATUS_OPTIONS.map((status) => {
+          const config = STATUS_CONFIG[status.value] || STATUS_CONFIG.all;
+          const isActive = activeStatusTab === status.value;
+          const count = statusCounts[status.value] || 0;
+
+          return (
+            <TouchableOpacity
+              key={status.value}
+              style={[styles.summaryCard, isActive && styles.summaryCardActive]}
+              onPress={() => setActiveStatusTab(status.value)}
+            >
+              <View style={[styles.summaryIcon, isActive && { backgroundColor: `${config.color}20` }]}>
+                <Icon name={config.icon} size={20} color={isActive ? config.color : C.muted} />
+              </View>
+              <Text style={[styles.summaryCount, isActive && { color: config.color }]}>{count}</Text>
+              <Text style={[styles.summaryLabel, isActive && { color: config.color }]}>{status.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
       <FlatList
-        data={orders}
+        data={filteredOrders}
         keyExtractor={item => item.id.toString()}
         renderItem={renderOrderCard}
         contentContainerStyle={styles.list}
@@ -528,6 +585,51 @@ const styles = StyleSheet.create({
     borderColor: C.primary,
   },
   switchText: { fontSize: 12, fontWeight: '600', color: C.primary },
+
+  // Summary Cards - Stylish Status Tabs
+  summaryContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  summaryCard: {
+    backgroundColor: C.card,
+    borderRadius: 12,
+    padding: 12,
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: C.border,
+    alignItems: 'center',
+    minWidth: 80,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  summaryCardActive: {
+    borderColor: C.primary,
+    backgroundColor: '#FEF2F2',
+  },
+  summaryIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: C.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  summaryCount: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: C.ink,
+  },
+  summaryLabel: {
+    fontSize: 10,
+    color: C.muted,
+    marginTop: 2,
+    textAlign: 'center',
+  },
 
   list: { padding: 16 },
 

@@ -6,9 +6,11 @@ import {
   Modal,
   TouchableOpacity,
   ScrollView,
-  StatusBar,
+  useWindowDimensions,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { scale, moderateScale, isTablet, getContainerMaxWidth } from '../utils/responsive';
 
 const C = {
   primary: '#EF3A3A',
@@ -92,6 +94,20 @@ const MENU_SECTIONS = [
 ];
 
 export default function NavigationMenu({ visible, onClose, navigation }) {
+  const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+
+  const isTabletDevice = isTablet(width);
+  const maxWidth = getContainerMaxWidth(width);
+
+  // Responsive sizing
+  const menuMaxHeight = isTabletDevice ? height * 0.75 : height * 0.85;
+  const menuWidth = isTabletDevice ? Math.min(480, width * 0.8) : '100%';
+  const horizontalPadding = isTabletDevice ? scale(24) : scale(20);
+  const iconSize = isTabletDevice ? scale(24) : scale(20);
+  const labelSize = isTabletDevice ? moderateScale(16) : moderateScale(15);
+  const sectionTitleSize = isTabletDevice ? moderateScale(12) : moderateScale(11);
+
   const handleNavigate = (screen) => {
     onClose();
     navigation.navigate(screen);
@@ -100,46 +116,69 @@ export default function NavigationMenu({ visible, onClose, navigation }) {
   return (
     <Modal
       visible={visible}
-      animationType="slide"
+      animationType={isTabletDevice ? 'fade' : 'slide'}
       transparent={true}
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
         <TouchableOpacity style={styles.backdrop} onPress={onClose} activeOpacity={1} />
 
-        <View style={styles.menuContainer}>
+        <View style={[
+          styles.menuContainer,
+          {
+            maxHeight: menuMaxHeight,
+            width: menuWidth,
+            paddingBottom: Math.max(scale(20), insets.bottom),
+            alignSelf: isTabletDevice ? 'center' : 'stretch',
+            borderRadius: isTabletDevice ? scale(24) : undefined,
+            borderTopLeftRadius: scale(24),
+            borderTopRightRadius: scale(24),
+          }
+        ]}>
           {/* Header */}
-          <View style={styles.menuHeader}>
+          <View style={[styles.menuHeader, { paddingHorizontal: horizontalPadding }]}>
             <View style={styles.headerLeft}>
-              <View style={styles.logoBox}>
-                <Icon name="storefront" size={20} color="#fff" />
+              <View style={[styles.logoBox, { width: scale(36), height: scale(36), borderRadius: scale(10) }]}>
+                <Icon name="storefront" size={scale(20)} color="#fff" />
               </View>
-              <Text style={styles.menuTitle}>KNI Owner</Text>
+              <Text style={[styles.menuTitle, { fontSize: moderateScale(18) }]}>KNI Owner</Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <Icon name="close" size={24} color={C.ink} />
+              <Icon name="close" size={scale(24)} color={C.ink} />
             </TouchableOpacity>
           </View>
 
           {/* Menu Items */}
-          <ScrollView style={styles.menuScroll} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            style={[styles.menuScroll, { paddingHorizontal: scale(12) }]}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={isTabletDevice ? { flexDirection: 'row', flexWrap: 'wrap' } : undefined}
+          >
             {MENU_SECTIONS.map((section, sectionIndex) => (
-              <View key={sectionIndex} style={styles.section}>
-                <Text style={styles.sectionTitle}>{section.title}</Text>
+              <View
+                key={sectionIndex}
+                style={[
+                  styles.section,
+                  isTabletDevice && { width: '50%', paddingHorizontal: scale(4) }
+                ]}
+              >
+                <Text style={[styles.sectionTitle, { fontSize: sectionTitleSize, paddingHorizontal: scale(8) }]}>
+                  {section.title}
+                </Text>
                 {section.items.map((item, itemIndex) => (
                   <TouchableOpacity
                     key={itemIndex}
-                    style={styles.menuItem}
+                    style={[styles.menuItem, { paddingVertical: scale(14), paddingHorizontal: scale(12), borderRadius: scale(12) }]}
                     onPress={() => handleNavigate(item.screen)}
                   >
-                    <Icon name={item.icon} size={20} color={C.primary} />
-                    <Text style={styles.menuItemText}>{item.label}</Text>
-                    <Icon name="chevron-forward" size={18} color={C.border} />
+                    <Icon name={item.icon} size={iconSize} color={C.primary} />
+                    <Text style={[styles.menuItemText, { fontSize: labelSize, marginLeft: scale(12) }]}>{item.label}</Text>
+                    <Icon name="chevron-forward" size={scale(18)} color={C.border} />
                   </TouchableOpacity>
                 ))}
               </View>
             ))}
-            <View style={{ height: 20 }} />
+            <View style={{ height: scale(20), width: '100%' }} />
           </ScrollView>
         </View>
       </View>
@@ -158,17 +197,12 @@ const styles = StyleSheet.create({
   },
   menuContainer: {
     backgroundColor: C.card,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: '85%',
-    paddingBottom: 20,
   },
   menuHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: scale(16),
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
@@ -177,52 +211,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
     backgroundColor: C.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
+    marginRight: scale(10),
   },
   menuTitle: {
-    fontSize: 18,
     fontWeight: 'bold',
     color: C.ink,
   },
   closeBtn: {
-    padding: 4,
+    padding: scale(4),
   },
-  menuScroll: {
-    paddingHorizontal: 12,
-  },
+  menuScroll: {},
   section: {
-    marginTop: 16,
+    marginTop: scale(16),
   },
   sectionTitle: {
-    fontSize: 11,
     fontWeight: '700',
     color: C.muted,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    paddingHorizontal: 8,
-    marginBottom: 8,
+    marginBottom: scale(8),
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 14,
-    borderRadius: 12,
-    marginVertical: 1,
     backgroundColor: C.bg,
-    marginBottom: 4,
+    marginBottom: scale(4),
   },
   menuItemText: {
     flex: 1,
-    fontSize: 15,
     color: C.text,
-    marginLeft: 12,
     fontWeight: '500',
   },
 });

@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal,
-  ActivityIndicator, Alert, TextInput
+  ActivityIndicator, Alert, TextInput, useWindowDimensions
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRestaurant } from '../context/RestaurantContext';
+import { scale, moderateScale, isTablet, getContainerMaxWidth } from '../utils/responsive';
 
 const C = {
   primary: '#EF3A3A',
@@ -493,113 +494,113 @@ const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 12, backgroundColor: C.card,
+    paddingHorizontal: scale(16), paddingVertical: scale(12), backgroundColor: C.card,
     borderBottomWidth: 1, borderBottomColor: C.border
   },
-  backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
+  backBtn: { width: scale(40), height: scale(40), borderRadius: scale(12), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
-  progressRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, paddingHorizontal: 32 },
+  progressRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: scale(16), paddingHorizontal: scale(32) },
   progressItem: { flexDirection: 'row', alignItems: 'center' },
   progressDot: {
-    width: 28, height: 28, borderRadius: 14, backgroundColor: C.border,
+    width: scale(28), height: scale(28), borderRadius: scale(14), backgroundColor: C.border,
     alignItems: 'center', justifyContent: 'center'
   },
   progressDotActive: { backgroundColor: C.primary },
-  progressNum: { fontSize: 12, fontWeight: '700', color: C.muted },
+  progressNum: { fontSize: moderateScale(12), fontWeight: '700', color: C.muted },
   progressNumActive: { color: '#fff' },
-  progressLine: { width: 40, height: 2, backgroundColor: C.border, marginHorizontal: 4 },
+  progressLine: { width: scale(40), height: scale(2), backgroundColor: C.border, marginHorizontal: scale(4) },
   progressLineActive: { backgroundColor: C.primary },
-  progressLabels: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 24, marginBottom: 8 },
-  progressLabel: { fontSize: 10, color: C.muted, width: 60, textAlign: 'center' },
+  progressLabels: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: scale(24), marginBottom: scale(8) },
+  progressLabel: { fontSize: moderateScale(10), color: C.muted, width: scale(60), textAlign: 'center' },
   progressLabelActive: { color: C.primary, fontWeight: '600' },
 
-  content: { flex: 1, paddingHorizontal: 16 },
-  stepContainer: { paddingTop: 16 },
-  stepTitle: { fontSize: 20, fontWeight: '800', color: C.ink },
-  stepSubtitle: { fontSize: 14, color: C.muted, marginTop: 4, marginBottom: 20 },
+  content: { flex: 1, paddingHorizontal: scale(16) },
+  stepContainer: { paddingTop: scale(16) },
+  stepTitle: { fontSize: moderateScale(20), fontWeight: '800', color: C.ink },
+  stepSubtitle: { fontSize: moderateScale(14), color: C.muted, marginTop: scale(4), marginBottom: scale(20) },
 
   optionCard: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: C.card,
-    borderRadius: 16, padding: 16, marginBottom: 12,
+    borderRadius: scale(16), padding: scale(16), marginBottom: scale(12),
     borderWidth: 2, borderColor: C.border
   },
   optionCardActive: { borderColor: C.primary, backgroundColor: '#FFF7F7' },
   optionIcon: {
-    width: 48, height: 48, borderRadius: 12, backgroundColor: C.bg,
-    alignItems: 'center', justifyContent: 'center', marginRight: 12
+    width: scale(48), height: scale(48), borderRadius: scale(12), backgroundColor: C.bg,
+    alignItems: 'center', justifyContent: 'center', marginRight: scale(12)
   },
   optionInfo: { flex: 1 },
-  optionTitle: { fontSize: 16, fontWeight: '700', color: C.ink },
-  optionSubtitle: { fontSize: 13, color: C.muted, marginTop: 2 },
+  optionTitle: { fontSize: moderateScale(16), fontWeight: '700', color: C.ink },
+  optionSubtitle: { fontSize: moderateScale(13), color: C.muted, marginTop: scale(2) },
 
-  emptyBox: { alignItems: 'center', paddingVertical: 40 },
-  emptyText: { fontSize: 14, color: C.muted, marginTop: 12 },
+  emptyBox: { alignItems: 'center', paddingVertical: scale(40) },
+  emptyText: { fontSize: moderateScale(14), color: C.muted, marginTop: scale(12) },
 
-  sectionLabel: { fontSize: 14, fontWeight: '700', color: C.ink, marginTop: 20, marginBottom: 12 },
+  sectionLabel: { fontSize: moderateScale(14), fontWeight: '700', color: C.ink, marginTop: scale(20), marginBottom: scale(12) },
 
-  dateScroll: { marginBottom: 8 },
+  dateScroll: { marginBottom: scale(8) },
   dateCard: {
-    alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12,
-    backgroundColor: C.card, borderRadius: 16, marginRight: 10,
-    borderWidth: 2, borderColor: C.border, minWidth: 70
+    alignItems: 'center', paddingHorizontal: scale(16), paddingVertical: scale(12),
+    backgroundColor: C.card, borderRadius: scale(16), marginRight: scale(10),
+    borderWidth: 2, borderColor: C.border, minWidth: scale(70)
   },
   dateCardActive: { borderColor: C.primary, backgroundColor: C.primary },
-  dateTag: { fontSize: 9, fontWeight: '700', color: C.warn, marginBottom: 4 },
+  dateTag: { fontSize: moderateScale(9), fontWeight: '700', color: C.warn, marginBottom: scale(4) },
   dateTagActive: { color: '#fff' },
-  dateDay: { fontSize: 12, fontWeight: '600', color: C.muted },
+  dateDay: { fontSize: moderateScale(12), fontWeight: '600', color: C.muted },
   dateDayActive: { color: '#fff' },
-  dateNum: { fontSize: 20, fontWeight: '800', color: C.ink, marginVertical: 2 },
+  dateNum: { fontSize: moderateScale(20), fontWeight: '800', color: C.ink, marginVertical: scale(2) },
   dateNumActive: { color: '#fff' },
-  dateMonth: { fontSize: 11, color: C.muted },
+  dateMonth: { fontSize: moderateScale(11), color: C.muted },
   dateMonthActive: { color: '#fff' },
 
-  timeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  timeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: scale(10) },
   timeChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12,
+    flexDirection: 'row', alignItems: 'center', gap: scale(6),
+    paddingHorizontal: scale(14), paddingVertical: scale(10), borderRadius: scale(12),
     backgroundColor: C.card, borderWidth: 1, borderColor: C.border
   },
   timeChipActive: { backgroundColor: C.primary, borderColor: C.primary },
-  timeText: { fontSize: 13, fontWeight: '600', color: C.ink },
+  timeText: { fontSize: moderateScale(13), fontWeight: '600', color: C.ink },
   timeTextActive: { color: '#fff' },
 
   textArea: {
-    backgroundColor: C.card, borderRadius: 12, padding: 14,
-    borderWidth: 1, borderColor: C.border, fontSize: 14, color: C.text,
-    minHeight: 100, textAlignVertical: 'top'
+    backgroundColor: C.card, borderRadius: scale(12), padding: scale(14),
+    borderWidth: 1, borderColor: C.border, fontSize: moderateScale(14), color: C.text,
+    minHeight: scale(100), textAlignVertical: 'top'
   },
 
-  summaryCard: { backgroundColor: C.card, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: C.border },
-  summaryRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  summaryCard: { backgroundColor: C.card, borderRadius: scale(16), padding: scale(16), borderWidth: 1, borderColor: C.border },
+  summaryRow: { flexDirection: 'row', alignItems: 'flex-start', gap: scale(12) },
   summaryInfo: { flex: 1 },
-  summaryLabel: { fontSize: 12, color: C.muted },
-  summaryValue: { fontSize: 15, fontWeight: '600', color: C.ink, marginTop: 2 },
-  summaryDivider: { height: 1, backgroundColor: C.border, marginVertical: 12 },
+  summaryLabel: { fontSize: moderateScale(12), color: C.muted },
+  summaryValue: { fontSize: moderateScale(15), fontWeight: '600', color: C.ink, marginTop: scale(2) },
+  summaryDivider: { height: 1, backgroundColor: C.border, marginVertical: scale(12) },
 
   noteBox: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
-    backgroundColor: '#EFF6FF', borderRadius: 12, padding: 14, marginTop: 16
+    flexDirection: 'row', alignItems: 'flex-start', gap: scale(10),
+    backgroundColor: '#EFF6FF', borderRadius: scale(12), padding: scale(14), marginTop: scale(16)
   },
-  noteText: { flex: 1, fontSize: 13, color: C.info, lineHeight: 18 },
+  noteText: { flex: 1, fontSize: moderateScale(13), color: C.info, lineHeight: scale(18) },
 
   bottomBar: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingHorizontal: 16, paddingVertical: 12, paddingBottom: 24,
+    flexDirection: 'row', alignItems: 'center', gap: scale(12),
+    paddingHorizontal: scale(16), paddingVertical: scale(12), paddingBottom: scale(24),
     backgroundColor: C.card, borderTopWidth: 1, borderTopColor: C.border
   },
   backButton: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 16, paddingVertical: 14, borderRadius: 12,
+    flexDirection: 'row', alignItems: 'center', gap: scale(6),
+    paddingHorizontal: scale(16), paddingVertical: scale(14), borderRadius: scale(12),
     backgroundColor: C.bg
   },
-  backButtonText: { fontSize: 14, fontWeight: '700', color: C.ink },
+  backButtonText: { fontSize: moderateScale(14), fontWeight: '700', color: C.ink },
   nextButton: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    paddingVertical: 14, borderRadius: 12, backgroundColor: C.primary
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: scale(8),
+    paddingVertical: scale(14), borderRadius: scale(12), backgroundColor: C.primary
   },
   nextButtonDisabled: { backgroundColor: '#FBC6C3' },
-  nextButtonText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  nextButtonText: { fontSize: moderateScale(15), fontWeight: '700', color: '#fff' },
 });

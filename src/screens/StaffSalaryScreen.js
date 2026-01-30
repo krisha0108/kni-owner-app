@@ -50,8 +50,7 @@ const getStatusConfig = (status) => {
 };
 
 const formatPrice = (amount) => {
-  // Convert from paise to rupees (API stores amounts in paise)
-  const num = (amount || 0) / 100;
+  const num = amount || 0;
   return `₹${num.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 };
 
@@ -146,7 +145,7 @@ export default function StaffSalaryScreen({ navigation }) {
   };
 
   const openPaymentDialog = (record) => {
-    const remaining = (record.totalPayable - record.totalPaid) / 100;
+    const remaining = record.totalPayable - record.totalPaid;
     setPaymentAmount(remaining.toFixed(2));
     setPaymentModal(record);
   };
@@ -160,9 +159,9 @@ export default function StaffSalaryScreen({ navigation }) {
       return;
     }
 
-    const remainingAmount = (paymentModal.totalPayable - paymentModal.totalPaid) / 100;
+    const remainingAmount = paymentModal.totalPayable - paymentModal.totalPaid;
     if (amount > remainingAmount) {
-      Alert.alert('Error', `Payment amount cannot exceed remaining amount (${formatPrice(paymentModal.totalPayable - paymentModal.totalPaid)})`);
+      Alert.alert('Error', `Payment amount cannot exceed remaining amount (${formatPrice(remainingAmount)})`);
       return;
     }
 

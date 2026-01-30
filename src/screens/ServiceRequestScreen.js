@@ -24,7 +24,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  TextInput, ActivityIndicator, Alert, Modal, Image
+  TextInput, ActivityIndicator, Alert, Modal, Image,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -34,6 +35,7 @@ import { api } from '../api/client';
 import { useRestaurant } from '../context/RestaurantContext';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
+import { scale, moderateScale, isTablet, getContainerMaxWidth } from '../utils/responsive';
 
 // Constants - matching owner web
 const GST_RATE = 0.18;
@@ -62,9 +64,9 @@ const C = {
   orange: '#F97316',
 };
 
-const formatPrice = (paise) => {
-  const rupees = (paise / 100).toFixed(2);
-  return `₹${rupees}`;
+const formatPrice = (amount) => {
+  const num = amount || 0;
+  return `₹${num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
 export default function ServiceRequestScreen({ navigation, route }) {
@@ -76,6 +78,11 @@ export default function ServiceRequestScreen({ navigation, route }) {
     subCategoryId,
     subCategoryName
   } = route.params || {};
+
+  // Responsive dimensions
+  const { width, height } = useWindowDimensions();
+  const isTabletDevice = isTablet(width);
+  const containerMaxWidth = getContainerMaxWidth(width);
 
   // Restaurant context
   const { selectedRestaurant, selectedRestaurantId } = useRestaurant();
@@ -211,8 +218,8 @@ export default function ServiceRequestScreen({ navigation, route }) {
       itemTotal += item.price * item.qty;
     });
     const gst = Math.round(itemTotal * GST_RATE);
-    const total = itemTotal + gst + (tip * 100); // tip is in rupees, convert to paise
-    return { itemTotal, gst, tip: tip * 100, total };
+    const total = itemTotal + gst + tip;
+    return { itemTotal, gst, tip, total };
   }, [selectedItems, tip]);
 
   // Copy UPI ID
@@ -313,7 +320,7 @@ export default function ServiceRequestScreen({ navigation, route }) {
         slotStartDateTime: slotStart.toISOString(),
         slotEndDateTime: slotEnd.toISOString(),
         problemDescription: problemDescription || `Service request for ${equipmentName || 'Equipment'}`,
-        tip: tip * 100, // Convert to paise
+        tip: tip,
         items,
         paymentScreenshotUrl: paymentScreenshot,
       };
@@ -894,232 +901,232 @@ const st = StyleSheet.create({
   // Header
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 12, backgroundColor: C.card,
+    paddingHorizontal: scale(16), paddingVertical: scale(12), backgroundColor: C.card,
     borderBottomWidth: 1, borderBottomColor: C.border
   },
   headerBackBtn: {
-    width: 40, height: 40, borderRadius: 12, backgroundColor: C.bg,
+    width: scale(40), height: scale(40), borderRadius: scale(12), backgroundColor: C.bg,
     alignItems: 'center', justifyContent: 'center'
   },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: C.ink },
+  headerTitle: { fontSize: moderateScale(18), fontWeight: '800', color: C.ink },
 
   // Progress
   progressRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    paddingVertical: 16, backgroundColor: C.card
+    paddingVertical: scale(16), backgroundColor: C.card
   },
   progressItem: { flexDirection: 'row', alignItems: 'center' },
   progressDot: {
-    width: 32, height: 32, borderRadius: 16, backgroundColor: C.border,
+    width: scale(32), height: scale(32), borderRadius: scale(16), backgroundColor: C.border,
     alignItems: 'center', justifyContent: 'center'
   },
   progressDotActive: { backgroundColor: C.primary },
   progressDotCompleted: { backgroundColor: C.ok },
-  progressNum: { fontSize: 14, fontWeight: '700', color: C.muted },
+  progressNum: { fontSize: moderateScale(14), fontWeight: '700', color: C.muted },
   progressNumActive: { color: '#fff' },
-  progressLine: { width: 40, height: 2, backgroundColor: C.border, marginHorizontal: 8 },
+  progressLine: { width: scale(40), height: scale(2), backgroundColor: C.border, marginHorizontal: scale(8) },
 
   subtitle: {
-    textAlign: 'center', fontSize: 13, color: C.muted,
-    paddingHorizontal: 16, paddingBottom: 12, backgroundColor: C.card
+    textAlign: 'center', fontSize: moderateScale(13), color: C.muted,
+    paddingHorizontal: scale(16), paddingBottom: scale(12), backgroundColor: C.card
   },
 
   // Content
-  scrollContent: { flex: 1, padding: 16 },
+  scrollContent: { flex: 1, padding: scale(16) },
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
   // Equipment Card
   equipmentCard: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: C.card,
-    borderRadius: 16, padding: 16, marginBottom: 20,
+    borderRadius: scale(16), padding: scale(16), marginBottom: scale(20),
     borderWidth: 1, borderColor: C.border
   },
   equipmentIcon: {
-    width: 56, height: 56, borderRadius: 14, backgroundColor: '#FFE8E8',
+    width: scale(56), height: scale(56), borderRadius: scale(14), backgroundColor: '#FFE8E8',
     alignItems: 'center', justifyContent: 'center'
   },
-  equipmentInfo: { flex: 1, marginLeft: 12 },
-  equipmentName: { fontSize: 18, fontWeight: '800', color: C.ink },
-  equipmentCategory: { fontSize: 13, color: C.muted, marginTop: 2 },
+  equipmentInfo: { flex: 1, marginLeft: scale(12) },
+  equipmentName: { fontSize: moderateScale(18), fontWeight: '800', color: C.ink },
+  equipmentCategory: { fontSize: moderateScale(13), color: C.muted, marginTop: scale(2) },
 
   // Sections
-  section: { marginBottom: 20 },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
-  sectionTitle: { fontSize: 16, fontWeight: '800', color: C.ink },
+  section: { marginBottom: scale(20) },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: scale(8), marginBottom: scale(12) },
+  sectionTitle: { fontSize: moderateScale(16), fontWeight: '800', color: C.ink },
 
   // Item Cards
   itemCard: {
-    backgroundColor: C.card, borderRadius: 14, padding: 14,
-    marginBottom: 10, borderWidth: 1, borderColor: C.border
+    backgroundColor: C.card, borderRadius: scale(14), padding: scale(14),
+    marginBottom: scale(10), borderWidth: 1, borderColor: C.border
   },
   itemContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   itemInfo: { flex: 1, flexDirection: 'row', alignItems: 'flex-start' },
-  partDot: { width: 8, height: 8, borderRadius: 4, marginTop: 6, marginRight: 8 },
-  itemName: { fontSize: 15, fontWeight: '700', color: C.ink },
-  itemDesc: { fontSize: 12, color: C.muted, marginTop: 4 },
-  itemActions: { alignItems: 'flex-end', marginLeft: 12 },
-  itemPrice: { fontSize: 16, fontWeight: '800' },
-  qtyRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8, gap: 8 },
+  partDot: { width: scale(8), height: scale(8), borderRadius: scale(4), marginTop: scale(6), marginRight: scale(8) },
+  itemName: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink },
+  itemDesc: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(4) },
+  itemActions: { alignItems: 'flex-end', marginLeft: scale(12) },
+  itemPrice: { fontSize: moderateScale(16), fontWeight: '800' },
+  qtyRow: { flexDirection: 'row', alignItems: 'center', marginTop: scale(8), gap: scale(8) },
   qtyBtn: {
-    width: 28, height: 28, borderRadius: 8, backgroundColor: C.bg,
+    width: scale(28), height: scale(28), borderRadius: scale(8), backgroundColor: C.bg,
     alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.border
   },
-  qtyText: { fontSize: 14, fontWeight: '700', color: C.ink, minWidth: 20, textAlign: 'center' },
+  qtyText: { fontSize: moderateScale(14), fontWeight: '700', color: C.ink, minWidth: scale(20), textAlign: 'center' },
   addBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8,
-    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1
+    flexDirection: 'row', alignItems: 'center', gap: scale(4), marginTop: scale(8),
+    paddingHorizontal: scale(12), paddingVertical: scale(6), borderRadius: scale(8), borderWidth: 1
   },
-  addBtnText: { fontSize: 13, fontWeight: '700' },
+  addBtnText: { fontSize: moderateScale(13), fontWeight: '700' },
 
   // Date picker
   datePickerBtn: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: C.card,
-    borderRadius: 12, padding: 14, borderWidth: 1, borderColor: C.border
+    borderRadius: scale(12), padding: scale(14), borderWidth: 1, borderColor: C.border
   },
-  datePickerText: { flex: 1, fontSize: 15, fontWeight: '600', color: C.ink, marginLeft: 12 },
+  datePickerText: { flex: 1, fontSize: moderateScale(15), fontWeight: '600', color: C.ink, marginLeft: scale(12) },
 
   // Time slots
-  slotsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  slotsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: scale(10) },
   slotBtn: {
-    width: '48%', paddingVertical: 14, borderRadius: 12,
+    width: '48%', paddingVertical: scale(14), borderRadius: scale(12),
     backgroundColor: C.card, borderWidth: 1, borderColor: C.border, alignItems: 'center'
   },
   slotBtnActive: { backgroundColor: C.primary, borderColor: C.primary },
-  slotText: { fontSize: 13, fontWeight: '600', color: C.ink },
+  slotText: { fontSize: moderateScale(13), fontWeight: '600', color: C.ink },
   slotTextActive: { color: '#fff' },
 
   // Text area
   textArea: {
-    backgroundColor: C.card, borderRadius: 12, borderWidth: 1, borderColor: C.border,
-    padding: 14, fontSize: 15, color: C.text, minHeight: 100
+    backgroundColor: C.card, borderRadius: scale(12), borderWidth: 1, borderColor: C.border,
+    padding: scale(14), fontSize: moderateScale(15), color: C.text, minHeight: scale(100)
   },
 
   // Summary
-  summaryCard: { backgroundColor: C.card, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: C.border },
-  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  summaryLabel: { fontSize: 14, color: C.muted },
-  summaryValue: { fontSize: 14, fontWeight: '600', color: C.ink },
-  summaryTotal: { borderTopWidth: 1, borderTopColor: C.border, paddingTop: 12, marginTop: 8 },
-  totalLabel: { fontSize: 16, fontWeight: '800', color: C.ink },
-  totalValue: { fontSize: 18, fontWeight: '800', color: C.primary },
+  summaryCard: { backgroundColor: C.card, borderRadius: scale(12), padding: scale(16), borderWidth: 1, borderColor: C.border },
+  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: scale(8) },
+  summaryLabel: { fontSize: moderateScale(14), color: C.muted },
+  summaryValue: { fontSize: moderateScale(14), fontWeight: '600', color: C.ink },
+  summaryTotal: { borderTopWidth: 1, borderTopColor: C.border, paddingTop: scale(12), marginTop: scale(8) },
+  totalLabel: { fontSize: moderateScale(16), fontWeight: '800', color: C.ink },
+  totalValue: { fontSize: moderateScale(18), fontWeight: '800', color: C.primary },
 
   // Tip
-  tipRow: { flexDirection: 'row', gap: 12 },
+  tipRow: { flexDirection: 'row', gap: scale(12) },
   tipBtn: {
-    flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: C.card,
+    flex: 1, paddingVertical: scale(14), borderRadius: scale(12), backgroundColor: C.card,
     borderWidth: 1, borderColor: C.border, alignItems: 'center'
   },
   tipBtnActive: { backgroundColor: C.primary, borderColor: C.primary },
-  tipText: { fontSize: 16, fontWeight: '700', color: C.ink },
+  tipText: { fontSize: moderateScale(16), fontWeight: '700', color: C.ink },
   tipTextActive: { color: '#fff' },
 
   // UPI
   qrContainer: {
     alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff',
-    borderRadius: 12, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: C.border
+    borderRadius: scale(12), padding: scale(16), marginBottom: scale(16), borderWidth: 1, borderColor: C.border
   },
-  qrImage: { width: 180, height: 180 },
-  upiCard: { backgroundColor: C.bg, borderRadius: 12, padding: 14, marginBottom: 16 },
+  qrImage: { width: scale(180), height: scale(180) },
+  upiCard: { backgroundColor: C.bg, borderRadius: scale(12), padding: scale(14), marginBottom: scale(16) },
   upiRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  upiLabel: { fontSize: 12, color: C.muted },
-  copyBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  copyText: { fontSize: 13, fontWeight: '600', color: C.primary },
-  upiId: { fontSize: 16, fontWeight: '700', color: C.ink, marginTop: 4, fontFamily: 'monospace' },
-  upiDivider: { height: 1, backgroundColor: C.border, marginVertical: 10 },
-  accountName: { fontSize: 15, fontWeight: '600', color: C.ink, marginTop: 4 },
+  upiLabel: { fontSize: moderateScale(12), color: C.muted },
+  copyBtn: { flexDirection: 'row', alignItems: 'center', gap: scale(4) },
+  copyText: { fontSize: moderateScale(13), fontWeight: '600', color: C.primary },
+  upiId: { fontSize: moderateScale(16), fontWeight: '700', color: C.ink, marginTop: scale(4), fontFamily: 'monospace' },
+  upiDivider: { height: 1, backgroundColor: C.border, marginVertical: scale(10) },
+  accountName: { fontSize: moderateScale(15), fontWeight: '600', color: C.ink, marginTop: scale(4) },
   instructionsCard: {
-    backgroundColor: '#EFF6FF', borderRadius: 12, padding: 14, marginBottom: 16,
+    backgroundColor: '#EFF6FF', borderRadius: scale(12), padding: scale(14), marginBottom: scale(16),
     borderWidth: 1, borderColor: '#BFDBFE'
   },
-  instructionsText: { fontSize: 13, color: '#1E40AF', lineHeight: 20 },
+  instructionsText: { fontSize: moderateScale(13), color: '#1E40AF', lineHeight: scale(20) },
   warningCard: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFBEB',
-    borderRadius: 12, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: '#FDE68A', gap: 10
+    borderRadius: scale(12), padding: scale(14), marginBottom: scale(16), borderWidth: 1, borderColor: '#FDE68A', gap: scale(10)
   },
-  warningText: { flex: 1, fontSize: 13, color: '#92400E' },
+  warningText: { flex: 1, fontSize: moderateScale(13), color: '#92400E' },
 
   // Upload
-  uploadLabel: { fontSize: 14, fontWeight: '600', color: C.ink, marginBottom: 8 },
+  uploadLabel: { fontSize: moderateScale(14), fontWeight: '600', color: C.ink, marginBottom: scale(8) },
   uploadBox: {
-    borderWidth: 2, borderColor: C.border, borderStyle: 'dashed', borderRadius: 12,
-    padding: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: C.card
+    borderWidth: 2, borderColor: C.border, borderStyle: 'dashed', borderRadius: scale(12),
+    padding: scale(24), alignItems: 'center', justifyContent: 'center', backgroundColor: C.card
   },
-  uploadText: { fontSize: 14, color: C.muted, marginTop: 8 },
+  uploadText: { fontSize: moderateScale(14), color: C.muted, marginTop: scale(8) },
   uploadedBox: { alignItems: 'center' },
-  uploadedText: { fontSize: 14, fontWeight: '600', color: C.ok, marginTop: 8 },
-  removeText: { fontSize: 13, color: C.danger, marginTop: 8 },
+  uploadedText: { fontSize: moderateScale(14), fontWeight: '600', color: C.ok, marginTop: scale(8) },
+  removeText: { fontSize: moderateScale(13), color: C.danger, marginTop: scale(8) },
 
   // Confirm
-  confirmContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  confirmCard: { backgroundColor: C.card, borderRadius: 20, padding: 32, alignItems: 'center', width: '100%' },
+  confirmContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: scale(24) },
+  confirmCard: { backgroundColor: C.card, borderRadius: scale(20), padding: scale(32), alignItems: 'center', width: '100%' },
   confirmIcon: {
-    width: 80, height: 80, borderRadius: 20, backgroundColor: C.ok,
-    alignItems: 'center', justifyContent: 'center', marginBottom: 20
+    width: scale(80), height: scale(80), borderRadius: scale(20), backgroundColor: C.ok,
+    alignItems: 'center', justifyContent: 'center', marginBottom: scale(20)
   },
-  confirmTitle: { fontSize: 24, fontWeight: '900', color: C.ink, marginBottom: 8 },
-  confirmText: { fontSize: 14, color: C.muted, textAlign: 'center', marginBottom: 24 },
-  confirmBtn: { backgroundColor: C.primary, borderRadius: 12, paddingVertical: 14, paddingHorizontal: 32 },
-  confirmBtnText: { fontSize: 16, fontWeight: '700', color: '#fff' },
+  confirmTitle: { fontSize: moderateScale(24), fontWeight: '900', color: C.ink, marginBottom: scale(8) },
+  confirmText: { fontSize: moderateScale(14), color: C.muted, textAlign: 'center', marginBottom: scale(24) },
+  confirmBtn: { backgroundColor: C.primary, borderRadius: scale(12), paddingVertical: scale(14), paddingHorizontal: scale(32) },
+  confirmBtnText: { fontSize: moderateScale(16), fontWeight: '700', color: '#fff' },
 
   // Footer
   footer: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
     backgroundColor: C.card, borderTopWidth: 1, borderTopColor: C.border,
-    paddingHorizontal: 16, paddingVertical: 12, paddingBottom: 80
+    paddingHorizontal: scale(16), paddingVertical: scale(12), paddingBottom: scale(80)
   },
   footerSummary: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  footerItems: { fontSize: 12, color: C.muted },
-  footerTotal: { fontSize: 18, fontWeight: '800', color: C.primary },
-  footerBtns: { flexDirection: 'row', gap: 10 },
+  footerItems: { fontSize: moderateScale(12), color: C.muted },
+  footerTotal: { fontSize: moderateScale(18), fontWeight: '800', color: C.primary },
+  footerBtns: { flexDirection: 'row', gap: scale(10) },
   backBtn: {
-    width: 44, height: 44, borderRadius: 12, backgroundColor: C.bg,
+    width: scale(44), height: scale(44), borderRadius: scale(12), backgroundColor: C.bg,
     alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.border
   },
   continueBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: C.primary, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12
+    flexDirection: 'row', alignItems: 'center', gap: scale(8),
+    backgroundColor: C.primary, paddingHorizontal: scale(20), paddingVertical: scale(12), borderRadius: scale(12)
   },
   continueBtnDisabled: { backgroundColor: '#FECACA' },
-  continueBtnText: { fontSize: 14, fontWeight: '700', color: '#fff' },
+  continueBtnText: { fontSize: moderateScale(14), fontWeight: '700', color: '#fff' },
 
   // Empty
-  emptyBox: { alignItems: 'center', paddingVertical: 40 },
-  emptyTitle: { fontSize: 18, fontWeight: '800', color: C.ink, marginTop: 16 },
-  emptyText: { fontSize: 14, color: C.muted, textAlign: 'center', marginTop: 8, paddingHorizontal: 20 },
+  emptyBox: { alignItems: 'center', paddingVertical: scale(40) },
+  emptyTitle: { fontSize: moderateScale(18), fontWeight: '800', color: C.ink, marginTop: scale(16) },
+  emptyText: { fontSize: moderateScale(14), color: C.muted, textAlign: 'center', marginTop: scale(8), paddingHorizontal: scale(20) },
 
   // Error
-  errorContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  errorTitle: { fontSize: 20, fontWeight: '800', color: C.ink, marginTop: 16 },
-  errorText: { fontSize: 14, color: C.muted, textAlign: 'center', marginTop: 8, marginBottom: 24 },
-  errorBtn: { backgroundColor: C.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },
-  errorBtnText: { fontSize: 14, fontWeight: '700', color: '#fff' },
+  errorContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: scale(24) },
+  errorTitle: { fontSize: moderateScale(20), fontWeight: '800', color: C.ink, marginTop: scale(16) },
+  errorText: { fontSize: moderateScale(14), color: C.muted, textAlign: 'center', marginTop: scale(8), marginBottom: scale(24) },
+  errorBtn: { backgroundColor: C.primary, paddingHorizontal: scale(24), paddingVertical: scale(12), borderRadius: scale(12) },
+  errorBtnText: { fontSize: moderateScale(14), fontWeight: '700', color: '#fff' },
 
   // Modal
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   modalSheet: {
-    backgroundColor: C.card, borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    padding: 20, maxHeight: '80%'
+    backgroundColor: C.card, borderTopLeftRadius: scale(24), borderTopRightRadius: scale(24),
+    padding: scale(20), maxHeight: '80%'
   },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  modalTitle: { fontSize: 20, fontWeight: '800', color: C.ink },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: scale(20) },
+  modalTitle: { fontSize: moderateScale(20), fontWeight: '800', color: C.ink },
   modalCloseBtn: {
-    width: 36, height: 36, borderRadius: 10, backgroundColor: C.bg,
+    width: scale(36), height: scale(36), borderRadius: scale(10), backgroundColor: C.bg,
     alignItems: 'center', justifyContent: 'center'
   },
-  modalBtn: { backgroundColor: C.primary, borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 20 },
+  modalBtn: { backgroundColor: C.primary, borderRadius: scale(12), paddingVertical: scale(14), alignItems: 'center', marginTop: scale(20) },
   modalBtnDisabled: { backgroundColor: '#FECACA' },
-  modalBtnText: { fontSize: 16, fontWeight: '700', color: '#fff' },
+  modalBtnText: { fontSize: moderateScale(16), fontWeight: '700', color: '#fff' },
 
   // Calendar
-  calendarHeader: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 8 },
-  calendarDay: { width: 40, textAlign: 'center', fontSize: 13, fontWeight: '700', color: C.muted },
+  calendarHeader: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: scale(8) },
+  calendarDay: { width: scale(40), textAlign: 'center', fontSize: moderateScale(13), fontWeight: '700', color: C.muted },
   calendarGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-start' },
   calendarCell: {
     width: '14.28%', aspectRatio: 1, alignItems: 'center', justifyContent: 'center',
-    marginBottom: 4
+    marginBottom: scale(4)
   },
-  calendarCellActive: { backgroundColor: C.primary, borderRadius: 10 },
-  calendarCellToday: { borderWidth: 2, borderColor: C.primary, borderRadius: 10 },
-  calendarCellText: { fontSize: 14, fontWeight: '600', color: C.ink },
+  calendarCellActive: { backgroundColor: C.primary, borderRadius: scale(10) },
+  calendarCellToday: { borderWidth: 2, borderColor: C.primary, borderRadius: scale(10) },
+  calendarCellText: { fontSize: moderateScale(14), fontWeight: '600', color: C.ink },
   calendarCellTextActive: { color: '#fff' },
 });

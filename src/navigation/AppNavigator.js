@@ -18,6 +18,7 @@ import AnalyticsScreen from '../screens/AnalyticsScreen';
 
 // Restaurant Management
 import MyRestaurantsScreen from '../screens/MyRestaurantsScreen';
+import RestaurantEditScreen from '../screens/RestaurantEditScreen';
 import RestaurantStatusScreen from '../screens/RestaurantStatusScreen';
 import MenuManagementScreen from '../screens/MenuManagementScreen';
 
@@ -135,6 +136,7 @@ export default function AppNavigator() {
         <Stack.Screen name="Dashboard" component={DashboardScreen} />
         <Stack.Screen name="Analytics" component={AnalyticsScreen} />
         <Stack.Screen name="MyRestaurants" component={MyRestaurantsScreen} />
+        <Stack.Screen name="RestaurantEdit" component={RestaurantEditScreen} />
         <Stack.Screen name="RestaurantCreate" component={RestaurantCreateScreen} />
         <Stack.Screen name="RestaurantStatus" component={RestaurantStatusScreen} />
         <Stack.Screen name="MenuManagement" component={MenuManagementScreen} />

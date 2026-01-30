@@ -8,10 +8,12 @@ import {
   FlatList,
   StyleSheet,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useRestaurant } from '../context/RestaurantContext';
+import { scale, moderateScale, isTablet, getContainerMaxWidth } from '../utils/responsive';
 
 const C = {
   primary: '#EF3A3A',
@@ -201,16 +203,31 @@ export function RestaurantSelectorChips({ style }) {
 // Modal for selecting restaurant
 function RestaurantModal({ visible, onClose, restaurants, selectedId, onSelect }) {
   const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isTabletDevice = isTablet(width);
+  const modalWidth = isTabletDevice ? Math.min(480, width * 0.7) : '100%';
+  const modalMaxHeight = isTabletDevice ? height * 0.6 : '75%';
 
   return (
     <Modal
       visible={visible}
-      animationType="slide"
+      animationType={isTabletDevice ? 'fade' : 'slide'}
       transparent={true}
       onRequestClose={onClose}
     >
       <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, { paddingBottom: insets.bottom + 16 }]}>
+        <View style={[
+          styles.modalContent,
+          {
+            paddingBottom: insets.bottom + scale(16),
+            width: modalWidth,
+            maxHeight: modalMaxHeight,
+            alignSelf: isTabletDevice ? 'center' : 'stretch',
+            borderRadius: isTabletDevice ? scale(24) : undefined,
+            borderTopLeftRadius: scale(24),
+            borderTopRightRadius: scale(24),
+          }
+        ]}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Select Restaurant</Text>
             <TouchableOpacity onPress={onClose} style={styles.modalClose}>

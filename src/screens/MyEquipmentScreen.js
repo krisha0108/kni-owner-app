@@ -1,9 +1,11 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
+// Updated with stylish status tabs pattern
 import {
   View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput,
-  RefreshControl, Modal, ScrollView, Alert, ActivityIndicator, Image
+  RefreshControl, Modal, ScrollView, Alert, ActivityIndicator, Image,
+  useWindowDimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { api, getImageUrl } from '../api/client';
@@ -11,6 +13,7 @@ import { useRestaurant } from '../context/RestaurantContext';
 import { RestaurantSelectorBar } from '../components/RestaurantSelector';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
+import { scale, moderateScale, isTablet, getContainerMaxWidth, getGridColumns } from '../utils/responsive';
 
 const C = {
   primary: '#EF3A3A',
@@ -27,11 +30,11 @@ const C = {
 };
 
 const statusFilters = [
-  { key: 'all', label: 'All', icon: 'list-outline' },
-  { key: 'AVAILABLE', label: 'Available', icon: 'checkmark-circle-outline' },
-  { key: 'IN_USE', label: 'In Use', icon: 'play-circle-outline' },
-  { key: 'MAINTENANCE', label: 'Maintenance', icon: 'construct-outline' },
-  { key: 'RETIRED', label: 'Retired', icon: 'archive-outline' },
+  { key: 'all', label: 'All', icon: 'list-outline', bg: '#F3F4F6', color: '#1D2254' },
+  { key: 'AVAILABLE', label: 'Available', icon: 'checkmark-circle-outline', bg: '#ECFDF5', color: '#10B981' },
+  { key: 'IN_USE', label: 'In Use', icon: 'play-circle-outline', bg: '#DBEAFE', color: '#2563EB' },
+  { key: 'MAINTENANCE', label: 'Maintenance', icon: 'construct-outline', bg: '#FEF3C7', color: '#D97706' },
+  { key: 'RETIRED', label: 'Retired', icon: 'archive-outline', bg: '#F3F4F6', color: '#6B7280' },
 ];
 
 const warrantyFilters = [
@@ -88,6 +91,14 @@ const getStatusStyle = (status) => {
 };
 
 export default function MyEquipmentScreen({ navigation }) {
+  // Responsive sizing
+  const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const isTabletDevice = isTablet(width);
+  const gridColumns = isTabletDevice ? 2 : 1;
+  const horizontalPadding = isTabletDevice ? scale(24) : scale(16);
+  const cardGap = isTabletDevice ? scale(16) : scale(12);
+
   // Global restaurant context
   const {
     restaurants,
@@ -112,8 +123,12 @@ export default function MyEquipmentScreen({ navigation }) {
 
   const [form, setForm] = useState({
     id: null,
-    category: '',
+    categoryId: '',
+    subCategoryId: '',
+    brand: '',
+    model: '',
     serialNumber: '',
+    installLocation: '',
     purchaseDate: '',
     warrantyEndDate: '',
     notes: '',
@@ -121,11 +136,12 @@ export default function MyEquipmentScreen({ navigation }) {
     warrantyCardUrl: '',
     photoUrls: [],
   });
+  const [subCategories, setSubCategories] = useState([]);
 
-  // Fetch categories
+  // Fetch categories (with subCategories included)
   const fetchCategories = useCallback(async () => {
     try {
-      const { data } = await api.get('/public/subcategories');
+      const { data } = await api.get('/public/categories');
       if (data.ok && data.data) {
         setCategories(data.data);
       }
@@ -133,6 +149,20 @@ export default function MyEquipmentScreen({ navigation }) {
       console.log('Error fetching categories:', error);
     }
   }, []);
+
+  // Update subcategories when category changes
+  useEffect(() => {
+    if (form.categoryId) {
+      const selectedCategory = categories.find(c => c.id === form.categoryId);
+      setSubCategories(selectedCategory?.subCategories || []);
+      // Reset subcategory when category changes
+      if (!form.id) {
+        setForm(f => ({ ...f, subCategoryId: '' }));
+      }
+    } else {
+      setSubCategories([]);
+    }
+  }, [form.categoryId, categories]);
 
   // Fetch equipment
   const fetchEquipments = useCallback(async () => {
@@ -168,6 +198,17 @@ export default function MyEquipmentScreen({ navigation }) {
     await fetchEquipments();
   };
 
+  // Calculate status counts for summary cards
+  const statusCounts = useMemo(() => {
+    const counts = { all: equipments.length, AVAILABLE: 0, IN_USE: 0, MAINTENANCE: 0, RETIRED: 0 };
+    equipments.forEach(e => {
+      if (counts[e.status] !== undefined) {
+        counts[e.status]++;
+      }
+    });
+    return counts;
+  }, [equipments]);
+
   // Filter equipment
   const filtered = equipments.filter(e => {
     const q = search.toLowerCase();
@@ -196,11 +237,16 @@ export default function MyEquipmentScreen({ navigation }) {
   const openForm = (equipment = null) => {
     if (equipment) {
       // Handle both object and string category formats
-      const categoryName = typeof equipment.category === 'object' ? equipment.category?.name : equipment.category;
+      const categoryObj = typeof equipment.category === 'object' ? equipment.category : null;
+      const subCategoryObj = typeof equipment.subCategory === 'object' ? equipment.subCategory : null;
       setForm({
         id: equipment.id,
-        category: categoryName || '',
+        categoryId: categoryObj?.id || equipment.categoryId || '',
+        subCategoryId: subCategoryObj?.id || equipment.subCategoryId || '',
+        brand: equipment.brand || '',
+        model: equipment.model || '',
         serialNumber: equipment.serialNumber || '',
+        installLocation: equipment.installLocation || '',
         purchaseDate: equipment.purchaseDate ? equipment.purchaseDate.split('T')[0] : '',
         warrantyEndDate: equipment.warrantyEndDate ? equipment.warrantyEndDate.split('T')[0] : '',
         notes: equipment.notes || '',
@@ -211,8 +257,12 @@ export default function MyEquipmentScreen({ navigation }) {
     } else {
       setForm({
         id: null,
-        category: '',
+        categoryId: '',
+        subCategoryId: '',
+        brand: '',
+        model: '',
         serialNumber: '',
+        installLocation: '',
         purchaseDate: '',
         warrantyEndDate: '',
         notes: '',
@@ -282,7 +332,7 @@ export default function MyEquipmentScreen({ navigation }) {
   };
 
   const saveEquipment = async () => {
-    if (!form.category) {
+    if (!form.categoryId) {
       Alert.alert('Error', 'Please select a category');
       return;
     }
@@ -293,12 +343,20 @@ export default function MyEquipmentScreen({ navigation }) {
 
     setSaving(true);
     try {
-      // Use category name as equipment name
+      // Derive equipment name from category/subcategory (same as web)
+      const selectedCategory = categories.find(c => c.id === form.categoryId);
+      const selectedSubCategory = subCategories.find(sc => sc.id === form.subCategoryId);
+      const equipmentName = selectedSubCategory?.name || selectedCategory?.name || 'Equipment';
+
       const payload = {
         restaurantId: selectedRestaurantId,
-        name: form.category,
-        category: form.category,
+        name: equipmentName,
+        categoryId: form.categoryId,
+        subCategoryId: form.subCategoryId || undefined,
+        brand: form.brand || undefined,
+        model: form.model || undefined,
         serialNumber: form.serialNumber || undefined,
+        installLocation: form.installLocation || undefined,
         purchaseDate: new Date(form.purchaseDate).toISOString(),
         warrantyEndDate: form.warrantyEndDate ? new Date(form.warrantyEndDate).toISOString() : undefined,
         notes: form.notes || undefined,
@@ -462,6 +520,7 @@ export default function MyEquipmentScreen({ navigation }) {
   // Restaurant picker modal
   const [restaurantPickerVisible, setRestaurantPickerVisible] = useState(false);
   const [categoryPickerVisible, setCategoryPickerVisible] = useState(false);
+  const [subCategoryPickerVisible, setSubCategoryPickerVisible] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
 
   return (
@@ -506,7 +565,7 @@ export default function MyEquipmentScreen({ navigation }) {
         </View>
       </View>
 
-      {/* Status Filter */}
+      {/* Status Filter - Stylish Summary Cards */}
       <View style={st.filterSection}>
         <View style={st.filterHeader}>
           <Icon name="flag" size={14} color={C.primary} />
@@ -519,31 +578,30 @@ export default function MyEquipmentScreen({ navigation }) {
         >
           {statusFilters.map((filter, index) => {
             const isActive = statusFilter === filter.key;
+            const count = statusCounts[filter.key] || 0;
             return (
               <TouchableOpacity
                 key={filter.key}
                 style={[
-                  st.filterChip,
-                  isActive && st.filterChipActive,
+                  st.summaryCard,
+                  isActive && st.summaryCardActive,
+                  { borderColor: isActive ? filter.color : C.border },
                   index === 0 && { marginLeft: 0 }
                 ]}
                 onPress={() => setStatusFilter(filter.key)}
                 activeOpacity={0.7}
               >
-                <View style={[st.filterIconBox, isActive && st.filterIconBoxActive]}>
-                  <Icon
-                    name={filter.icon}
-                    size={14}
-                    color={isActive ? '#fff' : C.primary}
-                  />
+                <View style={[st.summaryIcon, { backgroundColor: filter.bg }]}>
+                  <Icon name={filter.icon} size={16} color={filter.color} />
                 </View>
-                <Text style={[st.filterText, isActive && st.filterTextActive]}>
+                <Text style={[st.summaryCount, isActive && { color: filter.color }]}>
+                  {count}
+                </Text>
+                <Text style={[st.summaryLabel, isActive && { color: filter.color }]}>
                   {filter.label}
                 </Text>
                 {isActive && (
-                  <View style={st.filterCheckBox}>
-                    <Icon name="checkmark" size={10} color={C.primary} />
-                  </View>
+                  <View style={[st.summaryActiveBar, { backgroundColor: filter.color }]} />
                 )}
               </TouchableOpacity>
             );
@@ -621,8 +679,20 @@ export default function MyEquipmentScreen({ navigation }) {
         <FlatList
           data={filtered}
           keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => <EquipmentCard item={item} />}
-          contentContainerStyle={st.list}
+          renderItem={({ item, index }) => (
+            <View style={{
+              flex: 1,
+              maxWidth: isTabletDevice ? '50%' : '100%',
+              paddingLeft: isTabletDevice && index % 2 === 1 ? cardGap / 2 : 0,
+              paddingRight: isTabletDevice && index % 2 === 0 ? cardGap / 2 : 0,
+            }}>
+              <EquipmentCard item={item} />
+            </View>
+          )}
+          numColumns={gridColumns}
+          key={`grid-${gridColumns}`}
+          contentContainerStyle={[st.list, { paddingHorizontal: horizontalPadding }]}
+          columnWrapperStyle={gridColumns > 1 ? { marginBottom: cardGap } : undefined}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} />
           }
@@ -658,16 +728,63 @@ export default function MyEquipmentScreen({ navigation }) {
             </View>
 
             <ScrollView style={st.modalBody}>
+              {/* Restaurant Display (read-only) */}
+              <Text style={st.label}>Restaurant</Text>
+              <View style={st.restaurantDisplay}>
+                <Icon name="business" size={18} color={C.muted} />
+                <Text style={st.restaurantDisplayText}>{selectedRestaurant?.name || 'No restaurant selected'}</Text>
+              </View>
+
+              {/* Category Picker */}
               <Text style={st.label}>Category *</Text>
               <TouchableOpacity
                 style={st.pickerBtn}
                 onPress={() => setCategoryPickerVisible(true)}
               >
-                <Text style={form.category ? st.pickerText : st.pickerPlaceholder}>
-                  {form.category || 'Select category'}
+                <Text style={form.categoryId ? st.pickerText : st.pickerPlaceholder}>
+                  {categories.find(c => c.id === form.categoryId)?.name || 'Select category'}
                 </Text>
                 <Icon name="chevron-down" size={18} color={C.muted} />
               </TouchableOpacity>
+
+              {/* Subcategory Picker */}
+              <Text style={st.label}>Subcategory</Text>
+              <TouchableOpacity
+                style={[st.pickerBtn, !form.categoryId && st.pickerBtnDisabled]}
+                onPress={() => form.categoryId && setSubCategoryPickerVisible(true)}
+                disabled={!form.categoryId}
+              >
+                <Text style={form.subCategoryId ? st.pickerText : st.pickerPlaceholder}>
+                  {form.categoryId
+                    ? (subCategories.find(sc => sc.id === form.subCategoryId)?.name || 'Select subcategory')
+                    : 'Select category first'}
+                </Text>
+                <Icon name="chevron-down" size={18} color={C.muted} />
+              </TouchableOpacity>
+
+              {/* Brand & Model in a row */}
+              <View style={st.formRow}>
+                <View style={st.formCol}>
+                  <Text style={st.label}>Brand</Text>
+                  <TextInput
+                    style={st.input}
+                    placeholder="e.g., Samsung"
+                    placeholderTextColor={C.muted}
+                    value={form.brand}
+                    onChangeText={v => setForm(f => ({ ...f, brand: v }))}
+                  />
+                </View>
+                <View style={st.formCol}>
+                  <Text style={st.label}>Model</Text>
+                  <TextInput
+                    style={st.input}
+                    placeholder="e.g., XYZ-123"
+                    placeholderTextColor={C.muted}
+                    value={form.model}
+                    onChangeText={v => setForm(f => ({ ...f, model: v }))}
+                  />
+                </View>
+              </View>
 
               <Text style={st.label}>Serial Number</Text>
               <TextInput
@@ -676,6 +793,15 @@ export default function MyEquipmentScreen({ navigation }) {
                 placeholderTextColor={C.muted}
                 value={form.serialNumber}
                 onChangeText={v => setForm(f => ({ ...f, serialNumber: v }))}
+              />
+
+              <Text style={st.label}>Install Location</Text>
+              <TextInput
+                style={st.input}
+                placeholder="e.g., Main Kitchen"
+                placeholderTextColor={C.muted}
+                value={form.installLocation}
+                onChangeText={v => setForm(f => ({ ...f, installLocation: v }))}
               />
 
               <Text style={st.label}>Purchase Date *</Text>
@@ -861,26 +987,70 @@ export default function MyEquipmentScreen({ navigation }) {
               </TouchableOpacity>
             </View>
             <ScrollView style={st.pickerList}>
-              {categories.map(c => (
-                <TouchableOpacity
-                  key={c.id}
-                  style={[st.pickerItem, form.category === c.name && st.pickerItemActive]}
-                  onPress={() => {
-                    setForm(f => ({ ...f, category: c.name }));
-                    setCategoryPickerVisible(false);
-                  }}
-                >
-                  <View style={st.categoryInfo}>
-                    <Text style={st.categoryParent}>{c.category?.name || 'General'}</Text>
-                    <Text style={[st.pickerItemText, form.category === c.name && { color: C.primary }]}>
+              {categories.length === 0 ? (
+                <View style={st.emptyPickerBox}>
+                  <Text style={st.emptyPickerText}>No categories available</Text>
+                </View>
+              ) : (
+                categories.map(c => (
+                  <TouchableOpacity
+                    key={c.id}
+                    style={[st.pickerItem, form.categoryId === c.id && st.pickerItemActive]}
+                    onPress={() => {
+                      setForm(f => ({ ...f, categoryId: c.id, subCategoryId: '' }));
+                      setCategoryPickerVisible(false);
+                    }}
+                  >
+                    <Icon name="folder-outline" size={20} color={form.categoryId === c.id ? C.primary : C.muted} />
+                    <Text style={[st.pickerItemText, form.categoryId === c.id && { color: C.primary }]}>
                       {c.name}
                     </Text>
-                  </View>
-                  {form.category === c.name && (
-                    <Icon name="checkmark-circle" size={20} color={C.primary} />
-                  )}
-                </TouchableOpacity>
-              ))}
+                    {form.categoryId === c.id && (
+                      <Icon name="checkmark-circle" size={20} color={C.primary} />
+                    )}
+                  </TouchableOpacity>
+                ))
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Subcategory Picker Modal */}
+      <Modal visible={subCategoryPickerVisible} animationType="slide" transparent>
+        <View style={st.modalOverlay}>
+          <View style={st.pickerModal}>
+            <View style={st.modalHeader}>
+              <Text style={st.modalTitle}>Select Subcategory</Text>
+              <TouchableOpacity onPress={() => setSubCategoryPickerVisible(false)}>
+                <Icon name="close" size={24} color={C.ink} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={st.pickerList}>
+              {subCategories.length === 0 ? (
+                <View style={st.emptyPickerBox}>
+                  <Text style={st.emptyPickerText}>No subcategories for this category</Text>
+                </View>
+              ) : (
+                subCategories.map(sc => (
+                  <TouchableOpacity
+                    key={sc.id}
+                    style={[st.pickerItem, form.subCategoryId === sc.id && st.pickerItemActive]}
+                    onPress={() => {
+                      setForm(f => ({ ...f, subCategoryId: sc.id }));
+                      setSubCategoryPickerVisible(false);
+                    }}
+                  >
+                    <Icon name="layers-outline" size={20} color={form.subCategoryId === sc.id ? C.primary : C.muted} />
+                    <Text style={[st.pickerItemText, form.subCategoryId === sc.id && { color: C.primary }]}>
+                      {sc.name}
+                    </Text>
+                    {form.subCategoryId === sc.id && (
+                      <Icon name="checkmark-circle" size={20} color={C.primary} />
+                    )}
+                  </TouchableOpacity>
+                ))
+              )}
             </ScrollView>
           </View>
         </View>
@@ -932,7 +1102,61 @@ const st = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginBottom: 8
   },
   filterLabel: { fontSize: 12, fontWeight: '700', color: C.muted, marginLeft: 6, textTransform: 'uppercase', letterSpacing: 0.5 },
-  filterScrollContent: { paddingHorizontal: 16 },
+  filterScrollContent: { paddingHorizontal: 16, gap: 10 },
+
+  // Stylish summary cards for status filter
+  summaryCard: {
+    alignItems: 'center',
+    backgroundColor: C.card,
+    borderRadius: 14,
+    padding: 10,
+    minWidth: 72,
+    borderWidth: 2,
+    borderColor: C.border,
+    position: 'relative',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 3,
+    marginLeft: 8,
+  },
+  summaryCardActive: {
+    backgroundColor: '#FAFAFA',
+    shadowOpacity: 0.1,
+    elevation: 5,
+  },
+  summaryIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  summaryCount: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: C.ink,
+  },
+  summaryLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: C.muted,
+    marginTop: 2,
+  },
+  summaryActiveBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    borderBottomLeftRadius: 14,
+    borderBottomRightRadius: 14,
+  },
+
+  // Legacy filter chip styles (keeping for warranty filter)
   filterChip: {
     flexDirection: 'row', alignItems: 'center',
     paddingLeft: 4, paddingRight: 12, paddingVertical: 4, borderRadius: 12,
@@ -1053,8 +1277,32 @@ const st = StyleSheet.create({
     backgroundColor: C.bg, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 14,
     borderWidth: 1, borderColor: C.border
   },
+  pickerBtnDisabled: {
+    opacity: 0.6,
+  },
   pickerText: { fontSize: 14, color: C.text },
   pickerPlaceholder: { fontSize: 14, color: C.muted },
+
+  restaurantDisplay: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: C.bg, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 14,
+    borderWidth: 1, borderColor: C.border
+  },
+  restaurantDisplayText: { fontSize: 14, fontWeight: '600', color: C.ink },
+
+  formRow: {
+    flexDirection: 'row', gap: 12,
+  },
+  formCol: {
+    flex: 1,
+  },
+
+  emptyPickerBox: {
+    padding: 20, alignItems: 'center', justifyContent: 'center',
+  },
+  emptyPickerText: {
+    fontSize: 14, color: C.muted, textAlign: 'center',
+  },
 
   uploadBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,

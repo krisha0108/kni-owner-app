@@ -139,7 +139,7 @@ export default function ExpenseReportsScreen({ navigation }) {
           const total = monthExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
           return {
             month: monthName,
-            total: total / 100,
+            total: total,
             count: monthExpenses.length,
           };
         });
@@ -206,7 +206,7 @@ export default function ExpenseReportsScreen({ navigation }) {
   // Prepare pie chart data
   const pieChartData = topCategories.map(cat => ({
     name: cat.label,
-    count: cat.amount / 100,
+    count: cat.amount,
     color: cat.color,
   }));
 

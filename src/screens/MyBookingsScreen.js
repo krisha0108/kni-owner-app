@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   ScrollView,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -24,6 +25,7 @@ import { useRestaurant } from '../context/RestaurantContext';
 import { RestaurantSelectorBar } from '../components/RestaurantSelector';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
+import { scale, moderateScale, isTablet, getContainerMaxWidth } from '../utils/responsive';
 
 const C = {
   primary: '#EF3A3A',
@@ -61,15 +63,26 @@ const getStatusStyle = (status) => {
 };
 
 const STATUS_OPTIONS = [
-  { value: 'all', label: 'All' },
-  { value: 'PENDING_PAYMENT', label: 'Pending Payment' },
-  { value: 'PAYMENT_UPLOADED', label: 'Payment Uploaded' },
-  { value: 'PAYMENT_VERIFIED', label: 'Payment Verified' },
-  { value: 'SCHEDULED', label: 'Scheduled' },
-  { value: 'IN_PROGRESS', label: 'In Progress' },
-  { value: 'COMPLETED', label: 'Completed' },
-  { value: 'CANCELLED', label: 'Cancelled' },
+  { value: 'all', label: 'All', icon: 'list-outline' },
+  { value: 'PENDING_PAYMENT', label: 'Pending', icon: 'time-outline' },
+  { value: 'PAYMENT_UPLOADED', label: 'Uploaded', icon: 'cloud-upload-outline' },
+  { value: 'PAYMENT_VERIFIED', label: 'Verified', icon: 'checkmark-circle-outline' },
+  { value: 'SCHEDULED', label: 'Scheduled', icon: 'calendar-outline' },
+  { value: 'IN_PROGRESS', label: 'In Progress', icon: 'construct-outline' },
+  { value: 'COMPLETED', label: 'Completed', icon: 'checkmark-done-outline' },
+  { value: 'CANCELLED', label: 'Cancelled', icon: 'close-circle-outline' },
 ];
+
+const STATUS_CONFIG = {
+  all: { bg: '#F3F4F6', color: C.ink, icon: 'list-outline' },
+  PENDING_PAYMENT: { bg: '#FEF3C7', color: '#D97706', icon: 'time-outline' },
+  PAYMENT_UPLOADED: { bg: '#DBEAFE', color: '#2563EB', icon: 'cloud-upload-outline' },
+  PAYMENT_VERIFIED: { bg: '#D1FAE5', color: '#059669', icon: 'checkmark-circle-outline' },
+  SCHEDULED: { bg: '#E0E7FF', color: '#4F46E5', icon: 'calendar-outline' },
+  IN_PROGRESS: { bg: '#FEF3C7', color: '#D97706', icon: 'construct-outline' },
+  COMPLETED: { bg: '#D1FAE5', color: '#059669', icon: 'checkmark-done-outline' },
+  CANCELLED: { bg: '#FEE2E2', color: '#DC2626', icon: 'close-circle-outline' },
+};
 
 const SORT_OPTIONS = [
   { value: 'date-desc', label: 'Newest First' },
@@ -105,6 +118,17 @@ export default function MyBookingsScreen({ navigation }) {
   const [showFilterSheet, setShowFilterSheet] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [activeStatusTab, setActiveStatusTab] = useState('all');
+
+  // Calculate status counts for summary cards
+  const statusCounts = useMemo(() => {
+    const counts = { all: bookings.length };
+    bookings.forEach((b) => {
+      const status = b.status || 'PENDING_PAYMENT';
+      counts[status] = (counts[status] || 0) + 1;
+    });
+    return counts;
+  }, [bookings]);
 
   useFocusEffect(
     useCallback(() => {
@@ -138,14 +162,21 @@ export default function MyBookingsScreen({ navigation }) {
 
   // Apply filters and sorting using useMemo
   const filteredBookings = useMemo(() => {
-    return applyFilters(bookings, filters, {
+    // First filter by status tab
+    let filtered = bookings;
+    if (activeStatusTab !== 'all') {
+      filtered = bookings.filter(b => b.status === activeStatusTab);
+    }
+
+    // Then apply other filters
+    return applyFilters(filtered, filters, {
       searchFields: ['id', 'serviceType', 'status'],
       statusField: 'status',
       dateField: 'createdAt',
       amountField: 'totalAmount',
       sortFields: { date: 'createdAt', amount: 'totalAmount' },
     });
-  }, [bookings, filters]);
+  }, [bookings, filters, activeStatusTab]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -339,6 +370,33 @@ export default function MyBookingsScreen({ navigation }) {
         />
       )}
 
+      {/* Status Summary Cards - Stylish Horizontal Tabs */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.summaryContainer}
+      >
+        {STATUS_OPTIONS.map((status) => {
+          const config = STATUS_CONFIG[status.value] || STATUS_CONFIG.all;
+          const isActive = activeStatusTab === status.value;
+          const count = statusCounts[status.value] || 0;
+
+          return (
+            <TouchableOpacity
+              key={status.value}
+              style={[styles.summaryCard, isActive && styles.summaryCardActive]}
+              onPress={() => setActiveStatusTab(status.value)}
+            >
+              <View style={[styles.summaryIcon, isActive && { backgroundColor: `${config.color}20` }]}>
+                <Icon name={config.icon} size={20} color={isActive ? config.color : C.muted} />
+              </View>
+              <Text style={[styles.summaryCount, isActive && { color: config.color }]}>{count}</Text>
+              <Text style={[styles.summaryLabel, isActive && { color: config.color }]}>{status.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
       {/* Restaurant Selector - Global */}
       <RestaurantSelectorBar />
 
@@ -400,34 +458,79 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(12),
     backgroundColor: C.card,
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
-  menuBtn: { width: 40 },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  headerBtn: { padding: 4 },
+  menuBtn: { width: scale(40) },
+  headerTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: scale(8) },
+  headerBtn: { padding: scale(4) },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: C.ink, marginTop: 16 },
-  emptyText: { fontSize: 14, color: C.muted, textAlign: 'center', marginTop: 8 },
+  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: scale(32) },
+  emptyTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink, marginTop: scale(16) },
+  emptyText: { fontSize: moderateScale(14), color: C.muted, textAlign: 'center', marginTop: scale(8) },
+
+  // Summary Cards - Stylish Status Tabs
+  summaryContainer: {
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(12),
+  },
+  summaryCard: {
+    backgroundColor: C.card,
+    borderRadius: scale(12),
+    padding: scale(12),
+    marginRight: scale(10),
+    borderWidth: 1,
+    borderColor: C.border,
+    alignItems: 'center',
+    minWidth: scale(80),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  summaryCardActive: {
+    borderColor: C.primary,
+    backgroundColor: '#FEF2F2',
+  },
+  summaryIcon: {
+    width: scale(36),
+    height: scale(36),
+    borderRadius: scale(10),
+    backgroundColor: C.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: scale(6),
+  },
+  summaryCount: {
+    fontSize: moderateScale(18),
+    fontWeight: '700',
+    color: C.ink,
+  },
+  summaryLabel: {
+    fontSize: moderateScale(10),
+    color: C.muted,
+    marginTop: scale(2),
+    textAlign: 'center',
+  },
 
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 8,
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(12),
+    gap: scale(8),
     backgroundColor: C.card,
   },
   searchContainer: { flex: 1 },
   filterBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: scale(44),
+    height: scale(44),
+    borderRadius: scale(12),
     backgroundColor: C.bg,
     borderWidth: 1,
     borderColor: C.border,
@@ -436,50 +539,50 @@ const styles = StyleSheet.create({
   },
   filterBadge: {
     position: 'absolute',
-    top: 4,
-    right: 4,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    top: scale(4),
+    right: scale(4),
+    width: scale(16),
+    height: scale(16),
+    borderRadius: scale(8),
     backgroundColor: C.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   filterBadgeText: {
-    fontSize: 10,
+    fontSize: moderateScale(10),
     fontWeight: '700',
     color: '#fff',
   },
 
   resultsRow: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(8),
   },
   resultsText: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     color: C.muted,
   },
 
-  restaurantRow: { paddingHorizontal: 16, marginBottom: 8 },
+  restaurantRow: { paddingHorizontal: scale(16), marginBottom: scale(8) },
   restaurantChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(8),
+    borderRadius: scale(20),
     backgroundColor: C.card,
     borderWidth: 1,
     borderColor: C.border,
-    marginRight: 8,
+    marginRight: scale(8),
   },
   restaurantChipActive: { backgroundColor: C.primary, borderColor: C.primary },
-  restaurantText: { fontSize: 13, fontWeight: '600', color: C.ink },
+  restaurantText: { fontSize: moderateScale(13), fontWeight: '600', color: C.ink },
   restaurantTextActive: { color: '#fff' },
 
-  list: { padding: 16 },
+  list: { padding: scale(16) },
   card: {
     backgroundColor: C.card,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: scale(16),
+    padding: scale(16),
+    marginBottom: scale(12),
     borderWidth: 1,
     borderColor: C.border,
   },
@@ -487,71 +590,71 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: scale(12),
   },
-  bookingNumber: { fontSize: 16, fontWeight: '700', color: C.ink },
-  bookingDate: { fontSize: 12, color: C.muted, marginTop: 2 },
+  bookingNumber: { fontSize: moderateScale(16), fontWeight: '700', color: C.ink },
+  bookingDate: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(2) },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
+    gap: scale(6),
+    paddingHorizontal: scale(12),
+    paddingVertical: scale(6),
+    borderRadius: scale(20),
   },
-  statusText: { fontSize: 11, fontWeight: '600' },
+  statusText: { fontSize: moderateScale(11), fontWeight: '600' },
 
   serviceRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
+    gap: scale(8),
+    marginBottom: scale(8),
   },
-  serviceText: { fontSize: 14, color: C.text, fontWeight: '600' },
+  serviceText: { fontSize: moderateScale(14), color: C.text, fontWeight: '600' },
 
   scheduleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
+    gap: scale(8),
+    marginBottom: scale(8),
   },
-  scheduleText: { fontSize: 13, color: C.info },
+  scheduleText: { fontSize: moderateScale(13), color: C.info },
 
   equipmentRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
+    gap: scale(8),
+    marginBottom: scale(12),
   },
-  equipmentText: { fontSize: 13, color: C.muted },
+  equipmentText: { fontSize: moderateScale(13), color: C.muted },
 
   cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 12,
+    paddingTop: scale(12),
     borderTopWidth: 1,
     borderTopColor: C.border,
   },
-  amountLabel: { fontSize: 12, color: C.muted },
-  amountValue: { fontSize: 18, fontWeight: '700', color: C.ink, marginTop: 2 },
+  amountLabel: { fontSize: moderateScale(12), color: C.muted },
+  amountValue: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink, marginTop: scale(2) },
   viewBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: scale(4),
   },
-  viewBtnText: { fontSize: 14, fontWeight: '600', color: C.primary },
+  viewBtnText: { fontSize: moderateScale(14), fontWeight: '600', color: C.primary },
 
-  emptyBox: { alignItems: 'center', paddingTop: 80 },
+  emptyBox: { alignItems: 'center', paddingTop: scale(80) },
   emptyBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginTop: 20,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
+    gap: scale(6),
+    marginTop: scale(20),
+    paddingHorizontal: scale(20),
+    paddingVertical: scale(12),
+    borderRadius: scale(12),
     backgroundColor: C.primary,
   },
-  emptyBtnText: { fontSize: 14, fontWeight: '700', color: '#fff' },
+  emptyBtnText: { fontSize: moderateScale(14), fontWeight: '700', color: '#fff' },
 });

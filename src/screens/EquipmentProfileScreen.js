@@ -238,7 +238,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
         duration: amcForm.duration,
         serviceLimit: parseInt(amcForm.serviceLimit),
         featuresJson: amcForm.featuresJson.length > 0 ? amcForm.featuresJson : undefined,
-        totalAmount: Math.round(parseFloat(amcForm.totalAmount || 0) * 100),
+        totalAmount: parseFloat(amcForm.totalAmount || 0),
         startDate: new Date(amcForm.startDate).toISOString(),
         autoRenew: amcForm.autoRenew,
       };
@@ -482,7 +482,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
                 <Icon name="cash-outline" size={20} color="#F97316" />
               </View>
               <Text style={st.statValue}>
-                {equipment.totalSpend > 0 ? `₹${(equipment.totalSpend / 100).toLocaleString()}` : '₹0'}
+                {equipment.totalSpend > 0 ? `₹${equipment.totalSpend.toLocaleString()}` : '₹0'}
               </Text>
               <Text style={st.statLabel}>Total Spend</Text>
             </View>
@@ -632,7 +632,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
                       </Text>
                       <View style={st.historyFooter}>
                         <Text style={st.historyCost}>
-                          ₹{((service.totalAmount || 0) / 100).toLocaleString()}
+                          ₹{(service.totalAmount || 0).toLocaleString()}
                         </Text>
                       </View>
                     </View>
@@ -693,7 +693,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
                   </View>
                   <View style={st.amcDetailItem}>
                     <Text style={st.amcDetailLabel}>Amount</Text>
-                    <Text style={st.amcDetailValue}>₹{(activeAmc.totalAmount / 100).toFixed(2)}</Text>
+                    <Text style={st.amcDetailValue}>₹{activeAmc.totalAmount.toLocaleString()}</Text>
                   </View>
                   <View style={st.amcDetailItem}>
                     <Text style={st.amcDetailLabel}>Period</Text>
@@ -1009,7 +1009,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
                       </View>
                       {service.estimatedPrice && (
                         <Text style={st.servicePrice}>
-                          ₹{(service.estimatedPrice / 100).toFixed(2)}
+                          ₹{service.estimatedPrice.toLocaleString()}
                         </Text>
                       )}
                     </TouchableOpacity>

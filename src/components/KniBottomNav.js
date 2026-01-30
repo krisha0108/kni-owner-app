@@ -1,25 +1,16 @@
 // components/KniBottomNav.js
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { scale, moderateScale, isTablet, getContainerMaxWidth, BREAKPOINTS } from '../utils/responsive';
 
 /* ---------- THEME ---------- */
 const C = {
   primary:'#EF3A3A', ink:'#1D2254', text:'#0F172A', muted:'#6B7280',
   card:'#FFFFFF', bg:'#F5F7FA', border:'#E5E7EB'
 };
-
-/* ---------- SIZING (tweak here if needed) ---------- */
-const BAR_HEIGHT   = 74;
-const BAR_RADIUS   = 22;
-const TAB_MIN_W    = 50;
-const PADDING_H    = 12;
-const FAB_W        = 56;
-const FAB_H        = 56;
-const FAB_RADIUS   = 18;
-const FAB_RAISE    = 16; // how much FAB floats above the bar
 
 export default function KniBottomNav({
   active = 'home',
@@ -29,6 +20,23 @@ export default function KniBottomNav({
 }) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+
+  // Responsive sizing
+  const isTabletDevice = isTablet(width);
+  const barHeight = isTabletDevice ? scale(80) : scale(74);
+  const barRadius = isTabletDevice ? scale(24) : scale(22);
+  const fabSize = isTabletDevice ? scale(60) : scale(56);
+  const fabRadius = isTabletDevice ? scale(20) : scale(18);
+  const fabRaise = isTabletDevice ? scale(18) : scale(16);
+  const tabMinWidth = isTabletDevice ? scale(60) : scale(50);
+  const horizontalPadding = isTabletDevice ? scale(20) : scale(12);
+  const iconSize = isTabletDevice ? scale(24) : scale(20);
+  const fabIconSize = isTabletDevice ? scale(28) : scale(26);
+  const labelSize = isTabletDevice ? moderateScale(11) : moderateScale(10);
+
+  // Calculate max width for centering on larger screens
+  const maxWidth = getContainerMaxWidth(width);
 
   const go = (key) => {
     if (!navigation?.navigate) return;
@@ -39,10 +47,23 @@ export default function KniBottomNav({
     if (key==='profile') navigation.navigate('Profile');
   };
 
+  const styles = createStyles({
+    barHeight,
+    barRadius,
+    fabSize,
+    fabRadius,
+    fabRaise,
+    tabMinWidth,
+    horizontalPadding,
+    maxWidth,
+    iconSize,
+    labelSize,
+  });
+
   return (
     <View pointerEvents="box-none" style={[StyleSheet.absoluteFill, { justifyContent:'flex-end' }]}>
-      <View style={[st.wrap, { paddingBottom: Math.max(12, insets.bottom) }]}>
-        <View style={st.bar}>
+      <View style={[styles.wrap, { paddingBottom: Math.max(scale(12), insets.bottom) }]}>
+        <View style={styles.bar}>
 
           {/* LEFT SIDE */}
           <TabItem
@@ -50,16 +71,22 @@ export default function KniBottomNav({
             icon="home"
             label="Home"
             onPress={()=>go('home')}
+            iconSize={iconSize}
+            labelSize={labelSize}
+            tabMinWidth={tabMinWidth}
           />
           <TabItem
             active={active==='equipment'}
             icon="hardware-chip"
             label="Equipment"
             onPress={()=>go('equipment')}
+            iconSize={iconSize}
+            labelSize={labelSize}
+            tabMinWidth={tabMinWidth}
           />
 
           {/* CENTER GHOST SLOT keeps symmetry */}
-          <View style={st.centerSlot} />
+          <View style={{ width: fabSize + scale(16) }} />
 
           {/* RIGHT SIDE */}
           <TabItem
@@ -67,22 +94,28 @@ export default function KniBottomNav({
             icon="wallet"
             label="Khatabook"
             onPress={()=>go('khatabook')}
+            iconSize={iconSize}
+            labelSize={labelSize}
+            tabMinWidth={tabMinWidth}
           />
           <TabItem
             active={active==='profile'}
             icon="person"
             label="Profile"
             onPress={()=>go('profile')}
+            iconSize={iconSize}
+            labelSize={labelSize}
+            tabMinWidth={tabMinWidth}
           />
 
           {/* FULL-WIDTH ABSOLUTE WRAPPER: perfectly centers FAB on any width */}
-          <View pointerEvents="box-none" style={st.fabWrap}>
+          <View pointerEvents="box-none" style={styles.fabWrap}>
             <TouchableOpacity
               activeOpacity={0.9}
               onPress={onFabPress || (()=>go('request'))}
-              style={st.fab}
+              style={styles.fab}
             >
-              <Icon name="add" size={26} color="#fff" />
+              <Icon name="add" size={fabIconSize} color="#fff" />
             </TouchableOpacity>
           </View>
 
@@ -92,13 +125,17 @@ export default function KniBottomNav({
   );
 }
 
-function TabItem({ icon, label, active, onPress, badge=0 }) {
+function TabItem({ icon, label, active, onPress, badge=0, iconSize, labelSize, tabMinWidth }) {
   return (
-    <TouchableOpacity style={st.tab} activeOpacity={0.9} onPress={onPress}>
+    <TouchableOpacity
+      style={[st.tab, { minWidth: tabMinWidth }]}
+      activeOpacity={0.9}
+      onPress={onPress}
+    >
       <View style={st.icWrap}>
         <Icon
           name={active ? icon : `${icon}-outline`}
-          size={20}
+          size={iconSize}
           color={active ? C.primary : C.muted}
         />
         {badge > 0 && (
@@ -107,72 +144,113 @@ function TabItem({ icon, label, active, onPress, badge=0 }) {
           </View>
         )}
       </View>
-      <Text style={[st.lbl, active && { color:C.primary, fontWeight:'900' }]} numberOfLines={1}>
+      <Text
+        style={[
+          st.lbl,
+          { fontSize: labelSize },
+          active && { color: C.primary, fontWeight: '900' }
+        ]}
+        numberOfLines={1}
+      >
         {label}
       </Text>
     </TouchableOpacity>
   );
 }
 
-const st = StyleSheet.create({
-  wrap:{ paddingHorizontal:12 },
+const createStyles = ({
+  barHeight,
+  barRadius,
+  fabSize,
+  fabRadius,
+  fabRaise,
+  horizontalPadding,
+  maxWidth
+}) => StyleSheet.create({
+  wrap: {
+    paddingHorizontal: horizontalPadding,
+    width: '100%',
+    alignItems: 'center',
+  },
 
-  bar:{
-    position:'relative',
-    backgroundColor:'#FFFFFFEE',
-    borderColor:'#EAECEF',
-    borderWidth:1,
-    height: BAR_HEIGHT,
-    borderRadius: BAR_RADIUS,
-    paddingHorizontal: PADDING_H,
-    flexDirection:'row',
-    alignItems:'center',
-    justifyContent:'space-between',
-    // keep centered on big screens without stretching too far
-    maxWidth: 720,
-    alignSelf: 'center',
+  bar: {
+    position: 'relative',
+    backgroundColor: '#FFFFFFEE',
+    borderColor: '#EAECEF',
+    borderWidth: 1,
+    height: barHeight,
+    borderRadius: barRadius,
+    paddingHorizontal: horizontalPadding,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    maxWidth: maxWidth,
     ...Platform.select({
-      ios:{ shadowColor:'#000', shadowOpacity:0.08, shadowRadius:18, shadowOffset:{width:0,height:8} },
-      android:{ elevation:16 }
+      ios: { shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 18, shadowOffset: { width: 0, height: 8 } },
+      android: { elevation: 16 }
     }),
   },
 
-  tab:{
-    flex:1,
-    minWidth: TAB_MIN_W,
-    alignItems:'center',
-    justifyContent:'center'
-  },
-
-  centerSlot:{ width: FAB_W + 16 },
-
-  icWrap:{ width:28, height:28, alignItems:'center', justifyContent:'center' },
-  lbl:{ fontSize:10, color:C.ink, marginTop:3, fontWeight:'700' },
-
-  /* ---- PERFECT CENTERING ---- */
-  fabWrap:{
-    position:'absolute',
-    top: -FAB_RAISE,
+  fabWrap: {
+    position: 'absolute',
+    top: -fabRaise,
     left: 0,
     right: 0,
-    alignItems:'center', // <- centers the FAB to the bar width
+    alignItems: 'center',
   },
 
-  fab:{
-    width: FAB_W, height: FAB_H, borderRadius: FAB_RADIUS,
-    backgroundColor:C.primary,
-    alignItems:'center', justifyContent:'center',
+  fab: {
+    width: fabSize,
+    height: fabSize,
+    borderRadius: fabRadius,
+    backgroundColor: C.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
     ...Platform.select({
-      ios:{ shadowColor:'#EF3A3A', shadowOpacity:0.25, shadowRadius:14, shadowOffset:{width:0,height:8} },
-      android:{ elevation:18 }
+      ios: { shadowColor: '#EF3A3A', shadowOpacity: 0.25, shadowRadius: 14, shadowOffset: { width: 0, height: 8 } },
+      android: { elevation: 18 }
     }),
   },
+});
 
-  badge:{
-    position:'absolute', right:-6, top:-6,
-    minWidth:16, height:16, borderRadius:8,
-    backgroundColor:C.primary, alignItems:'center', justifyContent:'center',
-    paddingHorizontal:3, borderWidth:2, borderColor:'#fff'
+const st = StyleSheet.create({
+  tab: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center'
   },
-  badgeTxt:{ color:'#fff', fontSize:9, fontWeight:'900' },
+
+  icWrap: {
+    width: scale(28),
+    height: scale(28),
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+
+  lbl: {
+    color: C.ink,
+    marginTop: scale(3),
+    fontWeight: '700'
+  },
+
+  badge: {
+    position: 'absolute',
+    right: scale(-6),
+    top: scale(-6),
+    minWidth: scale(16),
+    height: scale(16),
+    borderRadius: scale(8),
+    backgroundColor: C.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: scale(3),
+    borderWidth: 2,
+    borderColor: '#fff'
+  },
+  badgeTxt: {
+    color: '#fff',
+    fontSize: moderateScale(9),
+    fontWeight: '900'
+  },
 });
