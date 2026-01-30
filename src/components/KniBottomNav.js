@@ -14,11 +14,11 @@ const C = {
 /* ---------- SIZING (tweak here if needed) ---------- */
 const BAR_HEIGHT   = 74;
 const BAR_RADIUS   = 22;
-const TAB_MIN_W    = 64;
-const PADDING_H    = 18;
-const FAB_W        = 62;
-const FAB_H        = 62;
-const FAB_RADIUS   = 20;
+const TAB_MIN_W    = 50;
+const PADDING_H    = 12;
+const FAB_W        = 56;
+const FAB_H        = 56;
+const FAB_RADIUS   = 18;
 const FAB_RAISE    = 16; // how much FAB floats above the bar
 
 export default function KniBottomNav({
@@ -33,8 +33,9 @@ export default function KniBottomNav({
   const go = (key) => {
     if (!navigation?.navigate) return;
     if (key==='home') navigation.navigate('Home');
+    if (key==='equipment') navigation.navigate('MyEquipment');
     if (key==='request') navigation.navigate('Request');
-    // if (key==='cart') navigation.navigate('RequestNow');
+    if (key==='khatabook') navigation.navigate('Khatabook');
     if (key==='profile') navigation.navigate('Profile');
   };
 
@@ -43,36 +44,34 @@ export default function KniBottomNav({
       <View style={[st.wrap, { paddingBottom: Math.max(12, insets.bottom) }]}>
         <View style={st.bar}>
 
-          {/* LEFT */}
+          {/* LEFT SIDE */}
           <TabItem
             active={active==='home'}
             icon="home"
             label="Home"
             onPress={()=>go('home')}
           />
-          {/* <TabItem
-            active={active==='request'}
-            icon="construct"
-            label="Request"
-            onPress={()=>go('request')}
-          /> */}
+          <TabItem
+            active={active==='equipment'}
+            icon="hardware-chip"
+            label="Equipment"
+            onPress={()=>go('equipment')}
+          />
 
           {/* CENTER GHOST SLOT keeps symmetry */}
           <View style={st.centerSlot} />
 
-          {/* RIGHT */}
-          {/* <TabItem
-            active={active==='cart'}
-            icon="bag-handle"
-            label="Cart"
-            badge={cartCount}
-            onPress={()=>go('cart')}
-          /> */}
+          {/* RIGHT SIDE */}
+          <TabItem
+            active={active==='khatabook'}
+            icon="wallet"
+            label="Khatabook"
+            onPress={()=>go('khatabook')}
+          />
           <TabItem
             active={active==='profile'}
             icon="person"
             label="Profile"
-            // badge={notifCount}
             onPress={()=>go('profile')}
           />
 
@@ -99,7 +98,7 @@ function TabItem({ icon, label, active, onPress, badge=0 }) {
       <View style={st.icWrap}>
         <Icon
           name={active ? icon : `${icon}-outline`}
-          size={22}
+          size={20}
           color={active ? C.primary : C.muted}
         />
         {badge > 0 && (
@@ -116,7 +115,7 @@ function TabItem({ icon, label, active, onPress, badge=0 }) {
 }
 
 const st = StyleSheet.create({
-  wrap:{ paddingHorizontal:16 },
+  wrap:{ paddingHorizontal:12 },
 
   bar:{
     position:'relative',
@@ -145,10 +144,10 @@ const st = StyleSheet.create({
     justifyContent:'center'
   },
 
-  centerSlot:{ flex:1, minWidth: TAB_MIN_W },
+  centerSlot:{ width: FAB_W + 16 },
 
-  icWrap:{ width:30, height:30, alignItems:'center', justifyContent:'center' },
-  lbl:{ fontSize:11, color:C.ink, marginTop:4, fontWeight:'800' },
+  icWrap:{ width:28, height:28, alignItems:'center', justifyContent:'center' },
+  lbl:{ fontSize:10, color:C.ink, marginTop:3, fontWeight:'700' },
 
   /* ---- PERFECT CENTERING ---- */
   fabWrap:{

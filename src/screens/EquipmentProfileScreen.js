@@ -6,6 +6,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { api, getImageUrl } from '../api/client';
+import KniBottomNav from '../components/KniBottomNav';
+import NavigationMenu from '../components/NavigationMenu';
 
 const C = {
   primary: '#EF3A3A',
@@ -140,6 +142,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
   });
   const [featureInput, setFeatureInput] = useState('');
   const [durationPickerVisible, setDurationPickerVisible] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   // Service booking state
   const [showServiceModal, setShowServiceModal] = useState(false);
@@ -398,8 +401,30 @@ export default function EquipmentProfileScreen({ navigation, route }) {
           <Icon name="arrow-back" size={22} color={C.ink} />
         </TouchableOpacity>
         <Text style={st.headerTitle} numberOfLines={1}>{equipment.name}</Text>
-        <TouchableOpacity onPress={() => setShowServiceModal(true)} style={st.serviceBtn}>
+        <TouchableOpacity
+          onPress={() => {
+            // Navigate to ServiceRequest screen (same flow as owner web /owner/request-service)
+            const categoryObj = typeof equipment.category === 'object' ? equipment.category : null;
+            const subCategoryObj = typeof equipment.subCategory === 'object' ? equipment.subCategory : null;
+            // Also check equipmentType for category/subCategory (nested structure)
+            const typeCategory = equipment.equipmentType?.category;
+            const typeSubCategory = equipment.equipmentType?.subCategory;
+
+            navigation.navigate('ServiceRequest', {
+              equipmentId: equipment.id,
+              equipmentName: equipment.name,
+              categoryId: categoryObj?.id || typeCategory?.id || equipment.categoryId || null,
+              categoryName: categoryObj?.name || typeCategory?.name || (typeof equipment.category === 'string' ? equipment.category : null),
+              subCategoryId: subCategoryObj?.id || typeSubCategory?.id || equipment.subCategoryId || null,
+              subCategoryName: subCategoryObj?.name || typeSubCategory?.name || (typeof equipment.subCategory === 'string' ? equipment.subCategory : null),
+            });
+          }}
+          style={st.serviceBtn}
+        >
           <Icon name="construct" size={20} color="#fff" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+          <Icon name="menu" size={22} color="#1D2254" />
         </TouchableOpacity>
       </View>
 
@@ -422,7 +447,8 @@ export default function EquipmentProfileScreen({ navigation, route }) {
             <View style={st.infoMain}>
               <Text style={st.equipName}>{equipment.name}</Text>
               <Text style={st.equipCategory}>
-                {equipment.equipmentType?.category?.name || equipment.category}
+                {equipment.equipmentType?.category?.name ||
+                 (typeof equipment.category === 'object' ? equipment.category?.name : equipment.category)}
               </Text>
               <View style={st.badgeRow}>
                 <View style={[st.badge, { backgroundColor: statusStyle.bg }]}>
@@ -619,7 +645,22 @@ export default function EquipmentProfileScreen({ navigation, route }) {
                 <Text style={st.emptySectionText}>No service history yet</Text>
                 <TouchableOpacity
                   style={st.emptyBtn}
-                  onPress={() => setShowServiceModal(true)}
+                  onPress={() => {
+                    // Navigate to ServiceRequest screen (same flow as owner web /owner/request-service)
+                    const categoryObj = typeof equipment.category === 'object' ? equipment.category : null;
+                    const subCategoryObj = typeof equipment.subCategory === 'object' ? equipment.subCategory : null;
+                    const typeCategory = equipment.equipmentType?.category;
+                    const typeSubCategory = equipment.equipmentType?.subCategory;
+
+                    navigation.navigate('ServiceRequest', {
+                      equipmentId: equipment.id,
+                      equipmentName: equipment.name,
+                      categoryId: categoryObj?.id || typeCategory?.id || equipment.categoryId || null,
+                      categoryName: categoryObj?.name || typeCategory?.name || (typeof equipment.category === 'string' ? equipment.category : null),
+                      subCategoryId: subCategoryObj?.id || typeSubCategory?.id || equipment.subCategoryId || null,
+                      subCategoryName: subCategoryObj?.name || typeSubCategory?.name || (typeof equipment.subCategory === 'string' ? equipment.subCategory : null),
+                    });
+                  }}
                 >
                   <Icon name="add" size={18} color="#fff" />
                   <Text style={st.emptyBtnText}>Request First Service</Text>
@@ -760,14 +801,6 @@ export default function EquipmentProfileScreen({ navigation, route }) {
           </View>
         )}
       </ScrollView>
-
-      {/* Footer Request Service Button */}
-      <View style={st.footer}>
-        <TouchableOpacity style={st.requestBtn} onPress={() => setShowServiceModal(true)}>
-          <Icon name="construct-outline" size={20} color="#fff" />
-          <Text style={st.requestBtnText}>Request Service</Text>
-        </TouchableOpacity>
-      </View>
 
       {/* Image Preview Modal */}
       <Modal visible={!!selectedImage} animationType="fade" transparent>
@@ -1075,6 +1108,9 @@ export default function EquipmentProfileScreen({ navigation, route }) {
           </View>
         </View>
       </Modal>
+
+      <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
+      <KniBottomNav navigation={navigation} />
     </SafeAreaView>
   );
 }
@@ -1094,7 +1130,7 @@ const st = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: '900', color: C.ink, flex: 1, textAlign: 'center' },
   serviceBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' },
 
-  scrollContent: { paddingBottom: 100 },
+  scrollContent: { paddingBottom: 20 },
 
   infoCard: {
     backgroundColor: C.card, margin: 16, borderRadius: 16,

@@ -9,6 +9,8 @@ import { api } from '../api/client';
 import BarChartCard from '../components/charts/BarChartCard';
 import PieChartCard from '../components/charts/PieChartCard';
 import { exportSpendingReportPDF, openPDF } from '../services/analyticsService';
+import KniBottomNav from '../components/KniBottomNav';
+import NavigationMenu from '../components/NavigationMenu';
 
 const { width } = Dimensions.get('window');
 
@@ -52,6 +54,7 @@ export default function SpendingReportsScreen({ navigation }) {
   const [selectedMonth, setSelectedMonth] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
   const [exporting, setExporting] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   const years = [2024, 2025, 2026];
 
@@ -146,17 +149,22 @@ export default function SpendingReportsScreen({ navigation }) {
           <Icon name="arrow-back" size={22} color={C.ink} />
         </TouchableOpacity>
         <Text style={st.headerTitle}>Spending Reports</Text>
-        <TouchableOpacity
-          onPress={handleExportPDF}
-          disabled={exporting}
-          style={st.exportBtn}
-        >
-          {exporting ? (
-            <ActivityIndicator size="small" color={C.primary} />
-          ) : (
-            <Icon name="download-outline" size={22} color={C.primary} />
-          )}
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity
+            onPress={handleExportPDF}
+            disabled={exporting}
+            style={st.exportBtn}
+          >
+            {exporting ? (
+              <ActivityIndicator size="small" color={C.primary} />
+            ) : (
+              <Icon name="download-outline" size={22} color={C.primary} />
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+            <Icon name="menu" size={22} color="#1D2254" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -341,6 +349,8 @@ export default function SpendingReportsScreen({ navigation }) {
           </View>
         )}
       </ScrollView>
+      <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
+      <KniBottomNav navigation={navigation} />
     </SafeAreaView>
   );
 }

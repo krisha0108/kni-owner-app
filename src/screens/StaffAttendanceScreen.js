@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { api } from '../api/client';
-import { useFocusEffect } from '@react-navigation/native';
+import { useRestaurant } from '../context/RestaurantContext';
+import { RestaurantSelectorBar } from '../components/RestaurantSelector';
+import KniBottomNav from '../components/KniBottomNav';
+import NavigationMenu from '../components/NavigationMenu';
 
 const C = {
   primary: '#EF3A3A',
@@ -52,14 +55,19 @@ const getStatusStyle = (status) => {
 };
 
 export default function StaffAttendanceScreen({ navigation }) {
+  // Global restaurant context
+  const {
+    selectedRestaurantId,
+    loading: restaurantsLoading,
+    loadRestaurants,
+  } = useRestaurant();
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [staff, setStaff] = useState([]);
   const [attendance, setAttendance] = useState({});
   const [attendanceData, setAttendanceData] = useState({}); // Full attendance data with times
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
-  const [restaurants, setRestaurants] = useState([]);
   const [saving, setSaving] = useState(false);
 
   // Time tracking modal
@@ -69,60 +77,43 @@ export default function StaffAttendanceScreen({ navigation }) {
 
   // Status picker modal
   const [statusModal, setStatusModal] = useState(null);
+  const [menuVisible, setMenuVisible] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadData();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedRestaurant, selectedDate])
-  );
+  const loadData = useCallback(async () => {
+    if (!selectedRestaurantId) return;
 
-  const loadData = async () => {
     try {
       setLoading(true);
 
-      const restaurantsRes = await api.get('/owner/restaurants');
-      if (restaurantsRes.data.ok) {
-        const approvedRestaurants = restaurantsRes.data.data.filter(r => r.status === 'APPROVED');
-        setRestaurants(approvedRestaurants);
-
-        if (approvedRestaurants.length > 0 && !selectedRestaurant) {
-          setSelectedRestaurant(approvedRestaurants[0].id);
-          return;
-        }
+      // Fetch staff
+      const staffRes = await api.get(`/owner/staff?restaurantId=${selectedRestaurantId}&status=ACTIVE`);
+      if (staffRes.data.ok) {
+        setStaff(staffRes.data.data || []);
       }
 
-      if (selectedRestaurant) {
-        // Fetch staff
-        const staffRes = await api.get(`/owner/staff?restaurantId=${selectedRestaurant}&status=ACTIVE`);
-        if (staffRes.data.ok) {
-          setStaff(staffRes.data.data || []);
-        }
+      // Fetch attendance for the date
+      const attendanceRes = await api.get(
+        `/owner/staff-attendance?restaurantId=${selectedRestaurantId}&startDate=${selectedDate}&endDate=${selectedDate}`
+      );
 
-        // Fetch attendance for the date
-        const attendanceRes = await api.get(
-          `/owner/staff-attendance?restaurantId=${selectedRestaurant}&startDate=${selectedDate}&endDate=${selectedDate}`
-        );
+      if (attendanceRes.data.ok) {
+        const records = attendanceRes.data.data || [];
+        const attendanceMap = {};
+        const fullDataMap = {};
 
-        if (attendanceRes.data.ok) {
-          const records = attendanceRes.data.data || [];
-          const attendanceMap = {};
-          const fullDataMap = {};
+        records.forEach(a => {
+          attendanceMap[a.staffId] = a.status;
+          fullDataMap[a.staffId] = {
+            id: a.id,
+            status: a.status,
+            checkInTime: a.checkInTime,
+            checkOutTime: a.checkOutTime,
+            workHours: a.workHours,
+          };
+        });
 
-          records.forEach(a => {
-            attendanceMap[a.staffId] = a.status;
-            fullDataMap[a.staffId] = {
-              id: a.id,
-              status: a.status,
-              checkInTime: a.checkInTime,
-              checkOutTime: a.checkOutTime,
-              workHours: a.workHours,
-            };
-          });
-
-          setAttendance(attendanceMap);
-          setAttendanceData(fullDataMap);
-        }
+        setAttendance(attendanceMap);
+        setAttendanceData(fullDataMap);
       }
     } catch (error) {
       console.error('Error loading attendance:', error);
@@ -130,11 +121,19 @@ export default function StaffAttendanceScreen({ navigation }) {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [selectedRestaurantId, selectedDate]);
 
-  const onRefresh = () => {
+  // Load data when restaurant or date changes
+  useEffect(() => {
+    if (selectedRestaurantId) {
+      loadData();
+    }
+  }, [selectedRestaurantId, selectedDate, loadData]);
+
+  const onRefresh = async () => {
     setRefreshing(true);
-    loadData();
+    await loadRestaurants();
+    await loadData();
   };
 
   const openStatusPicker = (member) => {
@@ -177,7 +176,7 @@ export default function StaffAttendanceScreen({ navigation }) {
 
       const response = await api.post('/owner/staff-attendance', {
         staffId,
-        restaurantId: selectedRestaurant,
+        restaurantId: selectedRestaurantId,
         attendanceDate: selectedDate,
         status,
         checkInTime: checkInDateTime,
@@ -232,7 +231,7 @@ export default function StaffAttendanceScreen({ navigation }) {
 
               // Single bulk API call instead of loop
               const response = await api.post('/owner/staff-attendance/bulk', {
-                restaurantId: selectedRestaurant,
+                restaurantId: selectedRestaurantId,
                 attendanceDate: selectedDate,
                 records,
               });
@@ -287,25 +286,6 @@ export default function StaffAttendanceScreen({ navigation }) {
     );
   }
 
-  if (restaurants.length === 0) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.menuBtn}>
-            <Icon name="arrow-back" size={24} color={C.ink} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Staff Attendance</Text>
-          <View style={{ width: 40 }} />
-        </View>
-        <View style={styles.emptyContainer}>
-          <Icon name="restaurant-outline" size={80} color={C.muted} />
-          <Text style={styles.emptyTitle}>No Restaurant Found</Text>
-          <Text style={styles.emptyText}>Please add a restaurant first</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   const presentCount = Object.values(attendance).filter(s => s === 'PRESENT').length;
   const absentCount = Object.values(attendance).filter(s => s === 'ABSENT').length;
   const halfDayCount = Object.values(attendance).filter(s => s === 'HALF_DAY').length;
@@ -318,8 +298,13 @@ export default function StaffAttendanceScreen({ navigation }) {
           <Icon name="arrow-back" size={24} color={C.ink} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Staff Attendance</Text>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+          <Icon name="menu" size={22} color="#1D2254" />
+        </TouchableOpacity>
       </View>
+
+      {/* Global Restaurant Selector */}
+      <RestaurantSelectorBar />
 
       <ScrollView
         style={styles.content}
@@ -401,23 +386,6 @@ export default function StaffAttendanceScreen({ navigation }) {
               </TouchableOpacity>
             </View>
           </>
-        )}
-
-        {/* Restaurant Selector */}
-        {restaurants.length > 1 && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow}>
-            {restaurants.map(r => (
-              <TouchableOpacity
-                key={r.id}
-                style={[styles.filterChip, selectedRestaurant === r.id && styles.filterChipActive]}
-                onPress={() => setSelectedRestaurant(r.id)}
-              >
-                <Text style={[styles.filterText, selectedRestaurant === r.id && styles.filterTextActive]}>
-                  {r.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
         )}
 
         {/* Staff List */}
@@ -605,6 +573,9 @@ export default function StaffAttendanceScreen({ navigation }) {
           </View>
         </View>
       </Modal>
+
+      <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
+      <KniBottomNav navigation={navigation} />
     </SafeAreaView>
   );
 }

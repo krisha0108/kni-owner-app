@@ -8,18 +8,111 @@ import {
   TextInput,
   StyleSheet,
   Dimensions,
+  Animated,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import DateRangePicker from './DateRangePicker';
 
-const { height } = Dimensions.get('window');
+const { height, width } = Dimensions.get('window');
+
+const C = {
+  primary: '#EF3A3A',
+  primaryLight: '#FEF2F2',
+  primaryDark: '#DC2626',
+  ink: '#1D2254',
+  text: '#0F172A',
+  muted: '#6B7280',
+  bg: '#F5F7FA',
+  card: '#FFFFFF',
+  border: '#E5E7EB',
+  ok: '#10B981',
+  okLight: '#ECFDF5',
+  warn: '#F59E0B',
+  warnLight: '#FFFBEB',
+  info: '#3B82F6',
+  infoLight: '#EFF6FF',
+  danger: '#EF4444',
+  dangerLight: '#FEF2F2',
+};
+
+// Status icons mapping
+const STATUS_ICONS = {
+  all: 'apps',
+  PENDING: 'time',
+  PENDING_PAYMENT: 'card',
+  PAYMENT_UPLOADED: 'cloud-upload',
+  PAYMENT_VERIFIED: 'checkmark-done',
+  SCHEDULED: 'calendar',
+  IN_PROGRESS: 'construct',
+  COMPLETED: 'checkmark-circle',
+  CANCELLED: 'close-circle',
+  AVAILABLE: 'checkmark-circle',
+  IN_USE: 'play-circle',
+  MAINTENANCE: 'build',
+  RETIRED: 'archive',
+};
+
+const getStatusColor = (value) => {
+  switch (value) {
+    case 'COMPLETED':
+    case 'PAYMENT_VERIFIED':
+    case 'AVAILABLE':
+      return { bg: C.okLight, color: C.ok };
+    case 'PENDING':
+    case 'PENDING_PAYMENT':
+    case 'MAINTENANCE':
+      return { bg: C.warnLight, color: C.warn };
+    case 'CANCELLED':
+    case 'RETIRED':
+      return { bg: C.dangerLight, color: C.danger };
+    case 'SCHEDULED':
+    case 'IN_PROGRESS':
+    case 'IN_USE':
+      return { bg: C.infoLight, color: C.info };
+    default:
+      return { bg: C.bg, color: C.muted };
+  }
+};
 
 export default function FilterBottomSheet({ visible, onClose, filters, onApply, config }) {
   const [localFilters, setLocalFilters] = useState(filters);
+  const slideAnim = useState(new Animated.Value(height))[0];
+  const backdropAnim = useState(new Animated.Value(0))[0];
 
   useEffect(() => {
     setLocalFilters(filters);
   }, [filters]);
+
+  useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          useNativeDriver: true,
+          tension: 65,
+          friction: 11,
+        }),
+        Animated.timing(backdropAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(slideAnim, {
+          toValue: height,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+        Animated.timing(backdropAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [visible]);
 
   const handleApply = () => {
     onApply(localFilters);
@@ -39,43 +132,110 @@ export default function FilterBottomSheet({ visible, onClose, filters, onApply, 
     setLocalFilters(resetFilters);
   };
 
+  const countActiveFilters = () => {
+    let count = 0;
+    if (localFilters.status && localFilters.status !== 'all') count++;
+    if (localFilters.dateFrom) count++;
+    if (localFilters.dateTo) count++;
+    if (localFilters.minAmount) count++;
+    if (localFilters.maxAmount) count++;
+    return count;
+  };
+
   return (
-    <Modal visible={visible} animationType="slide" transparent>
-      <View style={styles.overlay}>
-        <View style={styles.bottomSheet}>
+    <Modal visible={visible} animationType="none" transparent>
+      <View style={styles.container}>
+        <Animated.View
+          style={[styles.backdrop, { opacity: backdropAnim }]}
+        >
+          <TouchableOpacity style={styles.backdropTouch} onPress={onClose} />
+        </Animated.View>
+
+        <Animated.View
+          style={[
+            styles.bottomSheet,
+            { transform: [{ translateY: slideAnim }] },
+          ]}
+        >
+          {/* Handle */}
+          <View style={styles.handleContainer}>
+            <View style={styles.handle} />
+          </View>
+
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.title}>Filter {config?.title || 'Results'}</Text>
-            <TouchableOpacity onPress={onClose}>
-              <Icon name="close" size={24} color="#1F2937" />
+            <View style={styles.headerLeft}>
+              <View style={styles.headerIcon}>
+                <Icon name="options" size={20} color={C.primary} />
+              </View>
+              <View>
+                <Text style={styles.title}>Filters</Text>
+                <Text style={styles.subtitle}>
+                  {countActiveFilters()} active filters
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+              <Icon name="close" size={22} color={C.muted} />
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            style={styles.content}
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+          >
             {/* Status Filter */}
             {config?.showStatus && (
               <View style={styles.filterSection}>
-                <Text style={styles.label}>Status</Text>
-                <View style={styles.chipRow}>
-                  {config.statusOptions.map((status) => (
-                    <TouchableOpacity
-                      key={status.value}
-                      style={[
-                        styles.chip,
-                        localFilters.status === status.value && styles.chipActive,
-                      ]}
-                      onPress={() => setLocalFilters({ ...localFilters, status: status.value })}
-                    >
-                      <Text
+                <View style={styles.sectionHeader}>
+                  <Icon name="flag" size={18} color={C.ink} />
+                  <Text style={styles.label}>Status</Text>
+                </View>
+                <View style={styles.statusGrid}>
+                  {config.statusOptions.map((status) => {
+                    const isActive = localFilters.status === status.value;
+                    const statusColor = getStatusColor(status.value);
+                    const iconName = STATUS_ICONS[status.value] || 'ellipse';
+
+                    return (
+                      <TouchableOpacity
+                        key={status.value}
                         style={[
-                          styles.chipText,
-                          localFilters.status === status.value && styles.chipTextActive,
+                          styles.statusChip,
+                          isActive && styles.statusChipActive,
+                          isActive && { backgroundColor: C.primary, borderColor: C.primary },
                         ]}
+                        onPress={() => setLocalFilters({ ...localFilters, status: status.value })}
+                        activeOpacity={0.7}
                       >
-                        {status.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                        <View
+                          style={[
+                            styles.statusIconBox,
+                            { backgroundColor: isActive ? 'rgba(255,255,255,0.2)' : statusColor.bg },
+                          ]}
+                        >
+                          <Icon
+                            name={iconName}
+                            size={14}
+                            color={isActive ? '#fff' : statusColor.color}
+                          />
+                        </View>
+                        <Text
+                          style={[
+                            styles.statusChipText,
+                            isActive && styles.statusChipTextActive,
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {status.label}
+                        </Text>
+                        {isActive && (
+                          <Icon name="checkmark" size={14} color="#fff" />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               </View>
             )}
@@ -83,7 +243,10 @@ export default function FilterBottomSheet({ visible, onClose, filters, onApply, 
             {/* Date Range */}
             {config?.showDateRange && (
               <View style={styles.filterSection}>
-                <Text style={styles.label}>Date Range</Text>
+                <View style={styles.sectionHeader}>
+                  <Icon name="calendar" size={18} color={C.ink} />
+                  <Text style={styles.label}>Date Range</Text>
+                </View>
                 <DateRangePicker
                   from={localFilters.dateFrom}
                   to={localFilters.dateTo}
@@ -96,28 +259,40 @@ export default function FilterBottomSheet({ visible, onClose, filters, onApply, 
             {/* Amount Range */}
             {config?.showAmountRange && (
               <View style={styles.filterSection}>
-                <Text style={styles.label}>Amount Range</Text>
-                <View style={styles.row}>
-                  <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Min Amount</Text>
+                <View style={styles.sectionHeader}>
+                  <Icon name="cash" size={18} color={C.ink} />
+                  <Text style={styles.label}>Amount Range</Text>
+                </View>
+                <View style={styles.amountRow}>
+                  <View style={styles.amountInput}>
+                    <View style={styles.amountIconBox}>
+                      <Text style={styles.amountIcon}>₹</Text>
+                    </View>
                     <TextInput
-                      style={styles.input}
-                      placeholder="₹0"
+                      style={styles.amountField}
+                      placeholder="Min"
                       value={localFilters.minAmount}
                       onChangeText={(v) => setLocalFilters({ ...localFilters, minAmount: v })}
                       keyboardType="numeric"
-                      placeholderTextColor="#9CA3AF"
+                      placeholderTextColor={C.muted}
                     />
                   </View>
-                  <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Max Amount</Text>
+                  <View style={styles.amountDivider}>
+                    <View style={styles.amountDividerLine} />
+                    <Text style={styles.amountDividerText}>to</Text>
+                    <View style={styles.amountDividerLine} />
+                  </View>
+                  <View style={styles.amountInput}>
+                    <View style={styles.amountIconBox}>
+                      <Text style={styles.amountIcon}>₹</Text>
+                    </View>
                     <TextInput
-                      style={styles.input}
-                      placeholder="₹0"
+                      style={styles.amountField}
+                      placeholder="Max"
                       value={localFilters.maxAmount}
                       onChangeText={(v) => setLocalFilters({ ...localFilters, maxAmount: v })}
                       keyboardType="numeric"
-                      placeholderTextColor="#9CA3AF"
+                      placeholderTextColor={C.muted}
                     />
                   </View>
                 </View>
@@ -127,63 +302,98 @@ export default function FilterBottomSheet({ visible, onClose, filters, onApply, 
             {/* Category Filter */}
             {config?.showCategory && config?.categoryOptions && (
               <View style={styles.filterSection}>
-                <Text style={styles.label}>Category</Text>
-                <View style={styles.chipRow}>
-                  {config.categoryOptions.map((category) => (
-                    <TouchableOpacity
-                      key={category.value}
-                      style={[
-                        styles.chip,
-                        localFilters.category === category.value && styles.chipActive,
-                      ]}
-                      onPress={() => setLocalFilters({ ...localFilters, category: category.value })}
-                    >
-                      <Text
+                <View style={styles.sectionHeader}>
+                  <Icon name="pricetag" size={18} color={C.ink} />
+                  <Text style={styles.label}>Category</Text>
+                </View>
+                <View style={styles.statusGrid}>
+                  {config.categoryOptions.map((category) => {
+                    const isActive = localFilters.category === category.value;
+                    return (
+                      <TouchableOpacity
+                        key={category.value}
                         style={[
-                          styles.chipText,
-                          localFilters.category === category.value && styles.chipTextActive,
+                          styles.statusChip,
+                          isActive && styles.statusChipActive,
+                          isActive && { backgroundColor: C.primary, borderColor: C.primary },
                         ]}
+                        onPress={() => setLocalFilters({ ...localFilters, category: category.value })}
+                        activeOpacity={0.7}
                       >
-                        {category.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                        <Text
+                          style={[
+                            styles.statusChipText,
+                            isActive && styles.statusChipTextActive,
+                          ]}
+                        >
+                          {category.label}
+                        </Text>
+                        {isActive && (
+                          <Icon name="checkmark" size={14} color="#fff" />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               </View>
             )}
+
+            <View style={{ height: 20 }} />
           </ScrollView>
 
           {/* Footer */}
           <View style={styles.footer}>
             <TouchableOpacity style={styles.resetButton} onPress={handleReset}>
-              <Text style={styles.resetButtonText}>Reset</Text>
+              <Icon name="refresh" size={18} color={C.muted} />
+              <Text style={styles.resetButtonText}>Reset All</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.applyButton} onPress={handleApply}>
+              <Icon name="checkmark-circle" size={20} color="#fff" />
               <Text style={styles.applyButtonText}>Apply Filters</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
+  container: {
     flex: 1,
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+  },
+  backdropTouch: {
+    flex: 1,
   },
   bottomSheet: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: C.card,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     maxHeight: height * 0.85,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 20,
+  },
+  handleContainer: {
+    alignItems: 'center',
+    paddingTop: 12,
+    paddingBottom: 4,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: C.border,
   },
   header: {
     flexDirection: 'row',
@@ -192,104 +402,189 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: C.border,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  headerIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: C.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#1F2937',
+    fontWeight: '800',
+    color: C.ink,
+  },
+  subtitle: {
+    fontSize: 13,
+    color: C.muted,
+    marginTop: 2,
+  },
+  closeBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: C.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   content: {
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingTop: 20,
   },
   filterSection: {
-    marginBottom: 24,
+    marginBottom: 28,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 14,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 12,
+    fontSize: 15,
+    fontWeight: '700',
+    color: C.ink,
   },
-  chipRow: {
+  statusGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 10,
   },
-  chip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#F3F4F6',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  chipActive: {
-    backgroundColor: '#EF3A3A',
-    borderColor: '#EF3A3A',
-  },
-  chipText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#6B7280',
-  },
-  chipTextActive: {
-    color: '#FFFFFF',
-  },
-  row: {
+  statusChip: {
     flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: C.bg,
+    borderWidth: 1.5,
+    borderColor: C.border,
+  },
+  statusChipActive: {
+    borderWidth: 1.5,
+  },
+  statusIconBox: {
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: C.text,
+  },
+  statusChipTextActive: {
+    color: '#fff',
+  },
+  amountRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 12,
   },
-  inputContainer: {
+  amountInput: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: C.bg,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: C.border,
+    overflow: 'hidden',
   },
-  inputLabel: {
+  amountIconBox: {
+    width: 44,
+    height: 48,
+    backgroundColor: C.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRightWidth: 1,
+    borderRightColor: C.border,
+  },
+  amountIcon: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: C.muted,
+  },
+  amountField: {
+    flex: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    fontWeight: '600',
+    color: C.text,
+  },
+  amountDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  amountDividerLine: {
+    width: 8,
+    height: 2,
+    backgroundColor: C.border,
+    borderRadius: 1,
+  },
+  amountDividerText: {
     fontSize: 12,
-    fontWeight: '500',
-    color: '#6B7280',
-    marginBottom: 6,
-  },
-  input: {
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: '#1F2937',
+    fontWeight: '600',
+    color: C.muted,
   },
   footer: {
     flexDirection: 'row',
     gap: 12,
     paddingHorizontal: 20,
     paddingVertical: 16,
+    paddingBottom: 32,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    borderTopColor: C.border,
+    backgroundColor: C.card,
   },
   resetButton: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: '#F3F4F6',
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 16,
+    borderRadius: 14,
+    backgroundColor: C.bg,
+    borderWidth: 1.5,
+    borderColor: C.border,
   },
   resetButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#6B7280',
+    fontSize: 15,
+    fontWeight: '700',
+    color: C.muted,
   },
   applyButton: {
     flex: 2,
-    paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: '#EF3A3A',
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 16,
+    borderRadius: 14,
+    backgroundColor: C.primary,
+    shadowColor: C.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   applyButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#fff',
   },
 });

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { api } from '../api/client';
-import { useFocusEffect } from '@react-navigation/native';
+import { useRestaurant } from '../context/RestaurantContext';
+import { RestaurantSelectorBar } from '../components/RestaurantSelector';
+import KniBottomNav from '../components/KniBottomNav';
+import NavigationMenu from '../components/NavigationMenu';
 
 const C = {
   primary: '#EF3A3A',
@@ -62,6 +65,13 @@ const formatDate = (dateStr) => {
 };
 
 export default function VendorLedgerScreen({ navigation }) {
+  // Global restaurant context
+  const {
+    selectedRestaurantId,
+    loading: restaurantsLoading,
+    loadRestaurants,
+  } = useRestaurant();
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [vendors, setVendors] = useState([]);
@@ -73,8 +83,6 @@ export default function VendorLedgerScreen({ navigation }) {
     netBalance: 0,
   });
   const [activeTab, setActiveTab] = useState('summary'); // 'summary' or 'transactions'
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
-  const [restaurants, setRestaurants] = useState([]);
 
   // Entry modal state
   const [entryModal, setEntryModal] = useState(false);
@@ -96,42 +104,25 @@ export default function VendorLedgerScreen({ navigation }) {
   // Entry type picker modal
   const [entryTypePicker, setEntryTypePicker] = useState(false);
   const [paymentModePicker, setPaymentModePicker] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadData();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedRestaurant])
-  );
+  const loadData = useCallback(async () => {
+    if (!selectedRestaurantId) return;
 
-  const loadData = async () => {
     try {
       setLoading(true);
 
-      const restaurantsRes = await api.get('/owner/restaurants');
-      if (restaurantsRes.data.ok) {
-        const approvedRestaurants = restaurantsRes.data.data.filter(r => r.status === 'APPROVED');
-        setRestaurants(approvedRestaurants);
-
-        if (approvedRestaurants.length > 0 && !selectedRestaurant) {
-          setSelectedRestaurant(approvedRestaurants[0].id);
-          return;
-        }
-      }
-
-      if (selectedRestaurant) {
-        // Fetch vendor summary
-        const summaryRes = await api.get(`/owner/vendor-ledger/summary?restaurantId=${selectedRestaurant}`);
+      // Fetch vendor summary
+      const summaryRes = await api.get(`/owner/vendor-ledger/summary?restaurantId=${selectedRestaurantId}`);
         if (summaryRes.data.ok) {
           setVendors(summaryRes.data.data.vendors || []);
           setSummary(summaryRes.data.data.summary || { totalVendors: 0, totalDue: 0, totalAdvance: 0, netBalance: 0 });
         }
 
-        // Fetch entries
-        const entriesRes = await api.get(`/owner/vendor-ledger?restaurantId=${selectedRestaurant}`);
-        if (entriesRes.data.ok) {
-          setEntries(entriesRes.data.data || []);
-        }
+      // Fetch entries
+      const entriesRes = await api.get(`/owner/vendor-ledger?restaurantId=${selectedRestaurantId}`);
+      if (entriesRes.data.ok) {
+        setEntries(entriesRes.data.data || []);
       }
     } catch (error) {
       console.error('Error loading vendor ledger:', error);
@@ -139,11 +130,19 @@ export default function VendorLedgerScreen({ navigation }) {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [selectedRestaurantId]);
 
-  const onRefresh = () => {
+  // Load data when restaurant changes
+  useEffect(() => {
+    if (selectedRestaurantId) {
+      loadData();
+    }
+  }, [selectedRestaurantId, loadData]);
+
+  const onRefresh = async () => {
     setRefreshing(true);
-    loadData();
+    await loadRestaurants();
+    await loadData();
   };
 
   const openEntryModal = (type = 'PURCHASE') => {
@@ -182,7 +181,7 @@ export default function VendorLedgerScreen({ navigation }) {
     setSaving(true);
     try {
       const response = await api.post('/owner/vendor-ledger', {
-        restaurantId: selectedRestaurant,
+        restaurantId: selectedRestaurantId,
         vendorName: form.vendorName.trim(),
         vendorPhone: form.vendorPhone.trim() || undefined,
         vendorGST: form.vendorGST.trim() || undefined,
@@ -340,29 +339,12 @@ export default function VendorLedgerScreen({ navigation }) {
             <Icon name="arrow-back" size={24} color={C.ink} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Vendor Ledger</Text>
-          <View style={{ width: 40 }} />
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+            <Icon name="menu" size={22} color="#1D2254" />
+          </TouchableOpacity>
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={C.primary} />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (restaurants.length === 0) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.menuBtn}>
-            <Icon name="arrow-back" size={24} color={C.ink} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Vendor Ledger</Text>
-          <View style={{ width: 40 }} />
-        </View>
-        <View style={styles.emptyContainer}>
-          <Icon name="restaurant-outline" size={80} color={C.muted} />
-          <Text style={styles.emptyTitle}>No Restaurant Found</Text>
-          <Text style={styles.emptyText}>Please add a restaurant first</Text>
         </View>
       </SafeAreaView>
     );
@@ -375,10 +357,18 @@ export default function VendorLedgerScreen({ navigation }) {
           <Icon name="arrow-back" size={24} color={C.ink} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Vendor Ledger</Text>
-        <TouchableOpacity onPress={() => openEntryModal()}>
-          <Icon name="add-circle" size={28} color={C.primary} />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity onPress={() => openEntryModal()}>
+            <Icon name="add-circle" size={28} color={C.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+            <Icon name="menu" size={22} color="#1D2254" />
+          </TouchableOpacity>
+        </View>
       </View>
+
+      {/* Global Restaurant Selector */}
+      <RestaurantSelectorBar />
 
       {/* Summary Cards - Same as Web */}
       <View style={styles.summaryGrid}>
@@ -451,23 +441,6 @@ export default function VendorLedgerScreen({ navigation }) {
           </Text>
         </TouchableOpacity>
       </View>
-
-      {/* Restaurant Selector */}
-      {restaurants.length > 1 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow}>
-          {restaurants.map(r => (
-            <TouchableOpacity
-              key={r.id}
-              style={[styles.filterChip, selectedRestaurant === r.id && styles.filterChipActive]}
-              onPress={() => setSelectedRestaurant(r.id)}
-            >
-              <Text style={[styles.filterText, selectedRestaurant === r.id && styles.filterTextActive]}>
-                {r.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      )}
 
       {/* Content based on tab */}
       {activeTab === 'summary' ? (
@@ -735,6 +708,9 @@ export default function VendorLedgerScreen({ navigation }) {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
+      <KniBottomNav navigation={navigation} />
     </SafeAreaView>
   );
 }

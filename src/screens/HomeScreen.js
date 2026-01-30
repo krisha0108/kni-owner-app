@@ -9,6 +9,8 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import Icon from 'react-native-vector-icons/Ionicons';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
+import { RestaurantSelectorCompact, RestaurantSelectorChips } from '../components/RestaurantSelector';
+import { useRestaurant } from '../context/RestaurantContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { api, IMAGE_BASE_URL } from '../api/client';
@@ -59,6 +61,15 @@ export default function HomeScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
 
+  // Global restaurant context
+  const {
+    restaurants,
+    selectedRestaurantId: restaurantId,
+    loading: restaurantsLoading,
+    loadRestaurants,
+    hasMultipleRestaurants,
+  } = useRestaurant();
+
   /* State for Home content */
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -73,8 +84,6 @@ export default function HomeScreen({ navigation }) {
   /* State for Analytics/Dashboard */
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState(30);
-  const [restaurantId, setRestaurantId] = useState(null);
-  const [restaurants, setRestaurants] = useState([]);
   const [analyticsData, setAnalyticsData] = useState(null);
   const [showAnalytics, setShowAnalytics] = useState(true);
   const [showCharts, setShowCharts] = useState(false);
@@ -165,6 +174,26 @@ export default function HomeScreen({ navigation }) {
 
   const calculateCartCount = useCallback(async () => {
     try {
+      // ONE-TIME CLEANUP: Clear all old cart data
+      const cleanupDone = await AsyncStorage.getItem('cart_cleanup_v2_done');
+      if (!cleanupDone) {
+        console.log('[Home] Running one-time cart cleanup...');
+        const allKeysForCleanup = await AsyncStorage.getAllKeys();
+        const cartKeys = allKeysForCleanup.filter(k =>
+          k.startsWith('rdraft:') ||
+          k.startsWith('pmeta:') ||
+          k.startsWith('rservices:') ||
+          k.startsWith('rparts:')
+        );
+        if (cartKeys.length > 0) {
+          await AsyncStorage.multiRemove(cartKeys);
+          console.log('[Home] Cleaned up', cartKeys.length, 'old cart keys');
+        }
+        await AsyncStorage.setItem('cart_cleanup_v2_done', 'true');
+        setCartCount(0);
+        return;
+      }
+
       const a = await AsyncStorage.getItem('owner_id');
       const b = await AsyncStorage.getItem('restaurant_owner_id');
       const c = await AsyncStorage.getItem('ownerId');
@@ -173,15 +202,47 @@ export default function HomeScreen({ navigation }) {
       const allKeys = await AsyncStorage.getAllKeys();
       const myPrefix = `rdraft:${ownerKey}:`;
       const rdraftKeys = allKeys.filter(k => k.startsWith(myPrefix));
+
+      // Clean up legacy 'global' cart data and related keys
+      const globalKey = `${myPrefix}global`;
+      if (rdraftKeys.includes(globalKey)) {
+        await AsyncStorage.multiRemove([
+          globalKey,
+          `pmeta:${ownerKey}:global`,
+          `rservices:${ownerKey}:global`,
+          `rparts:${ownerKey}:global`,
+        ]).catch(() => {});
+      }
+
       let totalCount = 0;
+      const keysToRemove = [];
+      console.log('[Home] calculateCartCount - ownerKey:', ownerKey, 'rdraftKeys:', rdraftKeys);
       for (const key of rdraftKeys) {
+        // Skip 'global' keys - they are legacy data
+        const pid = key.slice(myPrefix.length);
+        if (pid === 'global') continue;
+
         const raw = await AsyncStorage.getItem(key);
         if (raw) {
           const cartObj = JSON.parse(raw);
           const itemCount = Object.values(cartObj || {}).reduce((sum, qty) => sum + Number(qty || 0), 0);
-          totalCount += itemCount;
+          console.log('[Home] Cart for pid:', pid, 'items:', itemCount, 'cart:', cartObj);
+          if (itemCount > 0) {
+            totalCount += itemCount;
+          } else {
+            // Mark empty carts for cleanup
+            keysToRemove.push(key);
+            keysToRemove.push(`pmeta:${ownerKey}:${pid}`);
+            keysToRemove.push(`rservices:${ownerKey}:${pid}`);
+            keysToRemove.push(`rparts:${ownerKey}:${pid}`);
+          }
         }
       }
+      // Clean up empty cart entries
+      if (keysToRemove.length > 0) {
+        await AsyncStorage.multiRemove(keysToRemove).catch(() => {});
+      }
+      console.log('[Home] Total cart count:', totalCount);
       setCartCount(totalCount);
     } catch (e) {
       setCartCount(0);
@@ -190,28 +251,19 @@ export default function HomeScreen({ navigation }) {
 
   /* =========== ANALYTICS DATA FETCHING =========== */
   const loadAnalytics = useCallback(async () => {
+    if (!restaurantId) {
+      setAnalyticsLoading(false);
+      return;
+    }
+
     try {
       setAnalyticsLoading(true);
 
-      // Get restaurants
-      const restaurantsRes = await api.get('/owner/restaurants');
-      if (restaurantsRes.data.ok) {
-        const approvedRestaurants = restaurantsRes.data.data.filter(r => r.status === 'APPROVED');
-        setRestaurants(approvedRestaurants);
-
-        if (approvedRestaurants.length > 0 && !restaurantId) {
-          setRestaurantId(approvedRestaurants[0].id);
-          return;
-        }
-      }
-
-      if (restaurantId) {
-        const response = await api.get(
-          `/owner/analytics?restaurantId=${restaurantId}&period=${selectedPeriod}`
-        );
-        if (response.data.ok) {
-          setAnalyticsData(response.data.data);
-        }
+      const response = await api.get(
+        `/owner/analytics?restaurantId=${restaurantId}&period=${selectedPeriod}`
+      );
+      if (response.data.ok) {
+        setAnalyticsData(response.data.data);
       }
     } catch (error) {
       console.error('Analytics error:', error);
@@ -293,11 +345,12 @@ export default function HomeScreen({ navigation }) {
         fetchFeed(),
         fetchSponsored(),
         fetchGuides(),
+        loadRestaurants(), // Reload restaurants from context
         loadAnalytics(),
       ]);
       setTimeout(() => setRefreshing(false), 300);
     })();
-  }, [fetchBanners, fetchFeed, fetchSponsored, fetchGuides, loadAnalytics]);
+  }, [fetchBanners, fetchFeed, fetchSponsored, fetchGuides, loadRestaurants, loadAnalytics]);
 
   /* =========== EXPORT PDF =========== */
   const handleExportPDF = async () => {
@@ -322,7 +375,7 @@ export default function HomeScreen({ navigation }) {
   /* =========== QUICK NAVIGATION =========== */
   const goSupport = () => navigation.navigate?.('SupportCenter');
   const goRestaurants = () => navigation.navigate?.('MyRestaurants');
-  const goOrders = () => navigation.navigate?.('OrdersList');
+  const goBookings = () => navigation.navigate?.('MyBookings');
   const goGuide = () => open(guides?.[0]?.link);
 
   /* =========== ANALYTICS DATA =========== */
@@ -341,7 +394,7 @@ export default function HomeScreen({ navigation }) {
           <TouchableOpacity onPress={() => setMenuVisible(true)} style={st.hBtn}>
             <Icon name="menu" size={20} color={C.ink} />
           </TouchableOpacity>
-          <Image source={require('../assets/images/logo.png')} resizeMode='contain' style={{ width: 100, height: 36, marginLeft: 8 }} />
+          <RestaurantSelectorCompact style={{ marginLeft: 10 }} />
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
           <TouchableOpacity
@@ -358,7 +411,7 @@ export default function HomeScreen({ navigation }) {
           <TouchableOpacity onPress={() => navigation.navigate?.('Notifications')} style={st.hBtn}>
             <Icon name="notifications-outline" size={18} color={C.ink} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate?.('RequestNow')} style={st.hBtn}>
+          <TouchableOpacity onPress={() => navigation.navigate?.('Cart')} style={st.hBtn}>
             <Icon name="cart-outline" size={18} color={C.ink} />
             {cartCount > 0 && (
               <View style={st.cartBadge}>
@@ -408,21 +461,9 @@ export default function HomeScreen({ navigation }) {
                     ))}
                   </View>
 
-                  {/* Restaurant Selector */}
-                  {restaurants.length > 1 && (
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
-                      {restaurants.map(r => (
-                        <TouchableOpacity
-                          key={r.id}
-                          style={[st.filterChip, restaurantId === r.id && st.filterChipActive]}
-                          onPress={() => setRestaurantId(r.id)}
-                        >
-                          <Text style={[st.filterText, restaurantId === r.id && st.filterTextActive]}>
-                            {r.name}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
+                  {/* Restaurant Selector - Uses Global Context */}
+                  {hasMultipleRestaurants && (
+                    <RestaurantSelectorChips style={{ marginBottom: 12 }} />
                   )}
 
                   {analyticsLoading ? (
@@ -578,7 +619,7 @@ export default function HomeScreen({ navigation }) {
 
             {/* Quick navigation */}
             <View style={st.quickRow}>
-              <QuickNav icon="clipboard-outline" label="My Orders" onPress={goOrders} />
+              <QuickNav icon="calendar-outline" label="My Bookings" onPress={goBookings} />
               <QuickNav icon="storefront-outline" label="My Restaurants" onPress={goRestaurants} />
               <QuickNav icon="headset-outline" label="Support" onPress={goSupport} />
             </View>

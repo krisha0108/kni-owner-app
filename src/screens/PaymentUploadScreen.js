@@ -14,6 +14,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { api } from '../api/client';
+import KniBottomNav from '../components/KniBottomNav';
+import NavigationMenu from '../components/NavigationMenu';
 
 const C = {
   primary: '#EF3A3A',
@@ -30,6 +32,7 @@ export default function PaymentUploadScreen({ route, navigation }) {
   const [imageUri, setImageUri] = useState(null);
   const [paymentUrl, setPaymentUrl] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   const handleSelectImage = async () => {
     const result = await launchImageLibrary({
@@ -96,7 +99,9 @@ export default function PaymentUploadScreen({ route, navigation }) {
           <Icon name="arrow-back" size={24} color={C.ink} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Upload Payment Proof</Text>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+          <Icon name="menu" size={22} color="#1D2254" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content}>
@@ -172,6 +177,8 @@ export default function PaymentUploadScreen({ route, navigation }) {
           )}
         </TouchableOpacity>
       </ScrollView>
+      <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
+      <KniBottomNav navigation={navigation} />
     </SafeAreaView>
   );
 }

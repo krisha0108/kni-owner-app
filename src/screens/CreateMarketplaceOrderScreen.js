@@ -14,6 +14,9 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
+import { useRestaurant } from '../context/RestaurantContext';
+import KniBottomNav from '../components/KniBottomNav';
+import NavigationMenu from '../components/NavigationMenu';
 
 const CART_STORAGE_KEY = '@marketplace_cart';
 
@@ -33,37 +36,41 @@ const C = {
 
 export default function CreateMarketplaceOrderScreen({ navigation, route }) {
   const { cartItems = [] } = route.params || {};
-  const [loading, setLoading] = useState(true);
+
+  // Global restaurant context
+  const {
+    restaurants: allRestaurants,
+    selectedRestaurant: globalSelectedRestaurant,
+    selectedRestaurantId,
+    loading: restaurantsLoading,
+    loadRestaurants,
+  } = useRestaurant();
+
   const [submitting, setSubmitting] = useState(false);
-  const [restaurants, setRestaurants] = useState([]);
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
   const [deliveryNotes, setDeliveryNotes] = useState('');
   const [step, setStep] = useState(1); // 1: Select Restaurant, 2: Review & Confirm
+  const [menuVisible, setMenuVisible] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadRestaurants();
-    }, [])
-  );
+  // Filter to approved restaurants only
+  const restaurants = allRestaurants.filter(r => r.status === 'APPROVED');
 
-  const loadRestaurants = async () => {
-    try {
-      setLoading(true);
-      const response = await api.get('/owner/restaurants');
-      if (response.data.ok && response.data.data) {
-        const approved = response.data.data.filter(r => r.status === 'APPROVED');
-        setRestaurants(approved);
-        if (approved.length === 1) {
-          setSelectedRestaurant(approved[0]);
-        }
+  // Pre-select global restaurant on mount
+  useEffect(() => {
+    if (globalSelectedRestaurant && !selectedRestaurant) {
+      const approved = restaurants.find(r => r.id === selectedRestaurantId);
+      if (approved) {
+        setSelectedRestaurant(approved);
       }
-    } catch (error) {
-      console.log('Error loading restaurants:', error);
-      Alert.alert('Error', 'Failed to load restaurants');
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [globalSelectedRestaurant, selectedRestaurantId, restaurants]);
+
+  // Auto-select if only one restaurant
+  useEffect(() => {
+    if (restaurants.length === 1 && !selectedRestaurant) {
+      setSelectedRestaurant(restaurants[0]);
+    }
+  }, [restaurants]);
 
   const totalAmount = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
@@ -164,7 +171,7 @@ export default function CreateMarketplaceOrderScreen({ navigation, route }) {
     }
   };
 
-  if (loading) {
+  if (restaurantsLoading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
@@ -172,11 +179,14 @@ export default function CreateMarketplaceOrderScreen({ navigation, route }) {
             <Icon name="arrow-back" size={22} color={C.ink} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Place Order</Text>
-          <View style={{ width: 40 }} />
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+            <Icon name="menu" size={22} color="#1D2254" />
+          </TouchableOpacity>
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={C.primary} />
         </View>
+        <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
       </SafeAreaView>
     );
   }
@@ -189,7 +199,9 @@ export default function CreateMarketplaceOrderScreen({ navigation, route }) {
             <Icon name="arrow-back" size={22} color={C.ink} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Place Order</Text>
-          <View style={{ width: 40 }} />
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+            <Icon name="menu" size={22} color="#1D2254" />
+          </TouchableOpacity>
         </View>
         <View style={styles.emptyContainer}>
           <Icon name="cart-outline" size={64} color={C.muted} />
@@ -197,11 +209,12 @@ export default function CreateMarketplaceOrderScreen({ navigation, route }) {
           <Text style={styles.emptyText}>Your cart is empty</Text>
           <TouchableOpacity
             style={styles.browseBtn}
-            onPress={() => navigation.navigate('Marketplace')}
+            onPress={() => navigation.navigate('Request')}
           >
             <Text style={styles.browseBtnText}>Browse Marketplace</Text>
           </TouchableOpacity>
         </View>
+        <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
       </SafeAreaView>
     );
   }
@@ -213,7 +226,9 @@ export default function CreateMarketplaceOrderScreen({ navigation, route }) {
           <Icon name="arrow-back" size={22} color={C.ink} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Place Order</Text>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+          <Icon name="menu" size={22} color="#1D2254" />
+        </TouchableOpacity>
       </View>
 
       {/* Progress Steps */}
@@ -382,6 +397,8 @@ export default function CreateMarketplaceOrderScreen({ navigation, route }) {
           )}
         </TouchableOpacity>
       </View>
+      <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
+      <KniBottomNav navigation={navigation} />
     </SafeAreaView>
   );
 }

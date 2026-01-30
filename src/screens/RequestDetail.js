@@ -845,7 +845,7 @@
 //           )}
 //           <TouchableOpacity
 //             style={st.outlineBtn}
-//             onPress={() => navigation.navigate('OwnerReviews', { productId: productId || null })}
+//             onPress={() => navigation.navigate('OwnerReviews', { productId: effectiveProductId || null })}
 //           >
 //             <Text style={st.outlineTxt}>View all reviews</Text>
 //           </TouchableOpacity>
@@ -1355,6 +1355,8 @@ export default function RequestDetail({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const categoryId = route?.params?.categoryId ?? route?.params?.id ?? null;
   const productId = route?.params?.productId ?? null; // Legacy support
+  // Use categoryId as the primary identifier, fallback to productId for legacy
+  const effectiveProductId = categoryId || productId;
 
   // --- READ OWNER ID FROM ANY KEY ---
   const [ownerId, setOwnerId] = useState(null);
@@ -1396,7 +1398,7 @@ export default function RequestDetail({ navigation, route }) {
     })();
   }, [ownerId]);
 
-  const headerItem = route?.params?.item ?? {
+  const headerItem = useMemo(() => route?.params?.item ?? {
     title: 'Commercial Fridge Service',
     category: 'Fridge',
     price: null,
@@ -1404,7 +1406,7 @@ export default function RequestDetail({ navigation, route }) {
     requests: 1225,
     desc: 'Cooling issues, gas refill, thermostat faults & preventive maintenance.',
     image: null,
-  };
+  }, [route?.params?.item]);
 
   const [prod, setProd] = useState({
     title: headerItem.title,
@@ -1482,7 +1484,7 @@ const handleEnquirySubmit = async (formData, product) => {
     
     // Prepare enquiry data according to your backend validation
     const enquiryData = {
-      product_id: product.id || productId, // Use product.id or fallback to productId
+      product_id: product.id || effectiveProductId, // Use product.id or fallback to effectiveProductId
       name: formData.name,
       email: formData.email,
       phone: formData.phone,
@@ -1523,7 +1525,7 @@ const handleEnquirySubmit = async (formData, product) => {
     setLoading(true);
 
     try {
-      const idToFetch = categoryId || productId;
+      const idToFetch = effectiveProductId;
       if (idToFetch) {
         console.log(`🔄 Fetching category ${idToFetch} details...`);
 
@@ -1580,7 +1582,7 @@ const handleEnquirySubmit = async (formData, product) => {
     } finally {
       setLoading(false);
     }
-  }, [headerItem, ownerId, categoryId, productId, safeGet]);
+  }, [headerItem, effectiveProductId, safeGet]);
 
   useEffect(() => { 
     fetchAll(); 
@@ -1614,7 +1616,7 @@ const handleEnquirySubmit = async (formData, product) => {
     if (loading) { bar.stopAnimation(); return; }
     run();
     return () => bar.stopAnimation();
-  }, [idx, loading, run]);
+  }, [idx, loading, run, bar]);
 
   /* ---------- CART ---------- */
   const [cart, setCart] = useState({});
@@ -1635,30 +1637,30 @@ const handleEnquirySubmit = async (formData, product) => {
   }, []);
 
   const persistKey = useMemo(
-    () => `rdraft:${ownerKey}:${productId || 'global'}`,
-    [ownerKey, productId]
+    () => `rdraft:${ownerKey}:${effectiveProductId || 'global'}`,
+    [ownerKey, effectiveProductId]
   );
 
   // Keys for storing product metadata and services for RequestNow screen
   const pmetaKey = useMemo(
-    () => `pmeta:${ownerKey}:${productId || 'global'}`,
-    [ownerKey, productId]
+    () => `pmeta:${ownerKey}:${effectiveProductId || 'global'}`,
+    [ownerKey, effectiveProductId]
   );
   const rservicesKey = useMemo(
-    () => `rservices:${ownerKey}:${productId || 'global'}`,
-    [ownerKey, productId]
+    () => `rservices:${ownerKey}:${effectiveProductId || 'global'}`,
+    [ownerKey, effectiveProductId]
   );
 
   // Save product metadata and services to AsyncStorage when they change
   // This ensures RequestNow screen can access product info when opened from cart
   useEffect(() => {
-    if (!productId || productId === 'global' || !ownerKey) return;
+    if (!effectiveProductId || effectiveProductId === 'global' || !ownerKey) return;
     (async () => {
       try {
         // Save product metadata
         const meta = {
-          productId: String(productId),
-          productTitle: prod?.title || `Equipment #${productId}`,
+          productId: String(effectiveProductId),
+          productTitle: prod?.title || `Equipment #${effectiveProductId}`,
           category: headerItem?.category || 'General',
           subtitle: prod?.description || '',
           heroImage: (prod?.storyImages?.[0]) || (prod?.image) || '',
@@ -1670,7 +1672,7 @@ const handleEnquirySubmit = async (formData, product) => {
           await AsyncStorage.setItem(rservicesKey, JSON.stringify(prod.services));
         }
         // Save parts
-        const rpartsKey = `rparts:${ownerKey}:${productId}`;
+        const rpartsKey = `rparts:${ownerKey}:${effectiveProductId}`;
         if (Array.isArray(prod?.parts) && prod.parts.length > 0) {
           await AsyncStorage.setItem(rpartsKey, JSON.stringify(prod.parts));
         }
@@ -1678,7 +1680,7 @@ const handleEnquirySubmit = async (formData, product) => {
         console.log('[RequestDetail] Failed to save product meta/services:', e?.message);
       }
     })();
-  }, [productId, ownerKey, prod?.title, prod?.description, prod?.storyImages, prod?.services, prod?.parts, prod?.image, headerItem?.category, pmetaKey, rservicesKey]);
+  }, [effectiveProductId, ownerKey, prod?.title, prod?.description, prod?.storyImages, prod?.services, prod?.parts, prod?.image, headerItem?.category, pmetaKey, rservicesKey]);
 
   // reverse map product->service for server items (now uses string IDs)
   const prod2svc = useMemo(() => {
@@ -1725,6 +1727,9 @@ const handleEnquirySubmit = async (formData, product) => {
     })();
   }, [persistKey, ownerKey]);
 
+  // Flag to prevent auto-save right after loading from storage
+  const skipNextAutoSave = useRef(false);
+
   // Reload cart from AsyncStorage when screen comes into focus
   // This ensures cart is reset after order is placed
   useFocusEffect(
@@ -1732,6 +1737,9 @@ const handleEnquirySubmit = async (formData, product) => {
       if (!persistKey) return;
       (async () => {
         try {
+          // Set flag to skip auto-save after loading
+          skipNextAutoSave.current = true;
+
           const raw = await AsyncStorage.getItem(persistKey);
           if (raw) {
             const saved = JSON.parse(raw);
@@ -1758,6 +1766,11 @@ const handleEnquirySubmit = async (formData, product) => {
   // local autosave (debounced)
   const saveCartToStorage = useCallback(async () => {
     if (!persistKey) return;
+    // Skip save if we just loaded from storage
+    if (skipNextAutoSave.current) {
+      skipNextAutoSave.current = false;
+      return;
+    }
     try {
       await AsyncStorage.setItem(persistKey, JSON.stringify(cartRef.current || {}));
     } catch {}
@@ -1782,8 +1795,50 @@ const handleEnquirySubmit = async (formData, product) => {
   }, [persistKey]);
 
   /* ---------- CART OPERATIONS ---------- */
-  // Cart is stored locally (AsyncStorage) and passed to RequestNow when proceeding
-  // Server sync happens when the booking is created
+  // Cart is stored locally (AsyncStorage) AND synced to database cart
+  // This allows viewing all items from all categories in CartScreen
+
+  // Sync to database cart
+  const syncToDbCart = useCallback(async (itemType, itemId, qty) => {
+    try {
+      if (qty > 0) {
+        await api.post('/owner/cart', {
+          itemType,
+          serviceItemId: itemType === 'SERVICE' ? itemId : undefined,
+          partItemId: itemType === 'PART' ? itemId : undefined,
+          qty: 1, // Add 1 at a time
+        });
+      }
+    } catch (e) {
+      console.log('Sync to DB cart failed:', e?.message);
+    }
+  }, []);
+
+  // Remove from database cart
+  const removeFromDbCart = useCallback(async (itemType, itemId) => {
+    try {
+      // First get the cart to find the item
+      const cartResponse = await api.get('/owner/cart');
+      if (cartResponse.data?.ok) {
+        const cartItems = cartResponse.data.data?.items || [];
+        // Find the item in cart
+        const cartItem = cartItems.find(item => {
+          if (itemType === 'SERVICE') {
+            return item.serviceItemId === itemId;
+          } else {
+            return item.partItemId === itemId;
+          }
+        });
+        if (cartItem) {
+          // Delete the item
+          await api.delete(`/owner/cart/items/${cartItem.id}`);
+          console.log('[RequestDetail] Removed item from DB cart:', itemId);
+        }
+      }
+    } catch (e) {
+      console.log('Remove from DB cart failed:', e?.message);
+    }
+  }, []);
 
   const add = useCallback((sid) => {
     const strSid = String(sid);
@@ -1791,17 +1846,32 @@ const handleEnquirySubmit = async (formData, product) => {
       const nextQty = (prev[strSid] || 0) + 1;
       return { ...prev, [strSid]: nextQty };
     });
-  }, []);
+    // Sync to database cart
+    syncToDbCart('SERVICE', strSid, 1);
+  }, [syncToDbCart]);
 
   const sub = useCallback((sid) => {
     const strSid = String(sid);
+    // Check current quantity from ref before updating
+    const currentQty = cartRef.current[strSid] || 0;
+    const willBeRemoved = currentQty <= 1;
+
     setCart(prev => {
       const nextQty = Math.max(0, (prev[strSid] || 0) - 1);
       const next = { ...prev };
-      if (nextQty === 0) delete next[strSid]; else next[strSid] = nextQty;
+      if (nextQty === 0) {
+        delete next[strSid];
+      } else {
+        next[strSid] = nextQty;
+      }
       return next;
     });
-  }, []);
+
+    // Remove from database cart if item will be removed
+    if (willBeRemoved) {
+      removeFromDbCart('SERVICE', strSid);
+    }
+  }, [removeFromDbCart]);
 
   // Parts cart operations (using 'part:' prefix to distinguish from services)
   const addPart = useCallback((partId) => {
@@ -1810,17 +1880,32 @@ const handleEnquirySubmit = async (formData, product) => {
       const nextQty = (prev[key] || 0) + 1;
       return { ...prev, [key]: nextQty };
     });
-  }, []);
+    // Sync to database cart
+    syncToDbCart('PART', partId, 1);
+  }, [syncToDbCart]);
 
   const subPart = useCallback((partId) => {
     const key = `part:${partId}`;
+    // Check current quantity from ref before updating
+    const currentQty = cartRef.current[key] || 0;
+    const willBeRemoved = currentQty <= 1;
+
     setCart(prev => {
       const nextQty = Math.max(0, (prev[key] || 0) - 1);
       const next = { ...prev };
-      if (nextQty === 0) delete next[key]; else next[key] = nextQty;
+      if (nextQty === 0) {
+        delete next[key];
+      } else {
+        next[key] = nextQty;
+      }
       return next;
     });
-  }, []);
+
+    // Remove from database cart if item will be removed
+    if (willBeRemoved) {
+      removeFromDbCart('PART', partId);
+    }
+  }, [removeFromDbCart]);
 
   /* ---------- TOTALS ---------- */
   const totals = useMemo(() => {
@@ -1854,7 +1939,7 @@ const handleEnquirySubmit = async (formData, product) => {
   // --- params we pass to RequestNow ---
   const requestNowParams = useMemo(() => {
     return {
-      productId: String(productId ?? 'global'),
+      productId: String(effectiveProductId ?? 'global'),
       productTitle: prod?.title || 'Commercial Fridge',
       category: headerItem?.category || 'Commercial',
       subtitle: route?.params?.description || '',
@@ -1864,7 +1949,7 @@ const handleEnquirySubmit = async (formData, product) => {
       cart,
       ownerId,
     };
-  }, [productId, prod?.title, prod?.storyImages, prod?.services, prod?.parts, headerItem?.category, route?.params?.subtitle, cart, ownerId]);
+  }, [effectiveProductId, prod?.title, prod?.storyImages, prod?.services, prod?.parts, headerItem?.category, route?.params?.description, cart, ownerId]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -1875,9 +1960,8 @@ const handleEnquirySubmit = async (formData, product) => {
 
   /* ---------- CONFIRM ---------- */
   const onConfirm = () => {
-    // Navigate directly to RequestNow with cart items
-    // The cart data is already in requestNowParams
-    navigation.navigate('RequestNow', { ...requestNowParams, cartId: null });
+    // Navigate to Cart to proceed with booking
+    navigation.navigate('Cart');
   };
 
   /* ---------- EARLY RETURNS ---------- */
@@ -2166,7 +2250,7 @@ const handleEnquirySubmit = async (formData, product) => {
           {/* TODO: Uncomment when OwnerReviews screen is implemented
           <TouchableOpacity
             style={st.outlineBtn}
-            onPress={() => navigation.navigate('OwnerReviews', { productId: productId || null })}
+            onPress={() => navigation.navigate('OwnerReviews', { productId: effectiveProductId || null })}
           >
             <Text style={st.outlineTxt}>View all reviews</Text>
           </TouchableOpacity>

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { api } from '../api/client';
-import { useFocusEffect } from '@react-navigation/native';
+import { useRestaurant } from '../context/RestaurantContext';
+import { RestaurantSelectorBar } from '../components/RestaurantSelector';
+import KniBottomNav from '../components/KniBottomNav';
+import NavigationMenu from '../components/NavigationMenu';
 
 const C = {
   primary: '#EF3A3A',
@@ -31,12 +34,18 @@ const C = {
 const { width } = Dimensions.get('window');
 
 export default function KhatabookScreen({ navigation }) {
+  // Global restaurant context
+  const {
+    selectedRestaurantId,
+    loading: restaurantsLoading,
+    loadRestaurants,
+  } = useRestaurant();
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [data, setData] = useState(null);
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
-  const [restaurants, setRestaurants] = useState([]);
   const [selectedPeriod, setSelectedPeriod] = useState(30);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   const PERIOD_OPTIONS = [
     { label: '7 Days', value: 7 },
@@ -45,37 +54,17 @@ export default function KhatabookScreen({ navigation }) {
     { label: '1 Year', value: 365 },
   ];
 
-  useFocusEffect(
-    useCallback(() => {
-      loadData();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedRestaurant, selectedPeriod])
-  );
+  const loadData = useCallback(async () => {
+    if (!selectedRestaurantId) return;
 
-  const loadData = async () => {
     try {
       setLoading(true);
+      const response = await api.get(
+        `/owner/finance-reports?restaurantId=${selectedRestaurantId}&period=${selectedPeriod}`
+      );
 
-      // Load restaurants first
-      const restaurantsRes = await api.get('/owner/restaurants');
-      if (restaurantsRes.data.ok) {
-        const approvedRestaurants = restaurantsRes.data.data.filter(r => r.status === 'APPROVED');
-        setRestaurants(approvedRestaurants);
-
-        if (approvedRestaurants.length > 0 && !selectedRestaurant) {
-          setSelectedRestaurant(approvedRestaurants[0].id);
-          return; // Will reload
-        }
-      }
-
-      if (selectedRestaurant) {
-        const response = await api.get(
-          `/owner/finance-reports?restaurantId=${selectedRestaurant}&period=${selectedPeriod}`
-        );
-
-        if (response.data.ok) {
-          setData(response.data.data);
-        }
+      if (response.data.ok) {
+        setData(response.data.data);
       }
     } catch (error) {
       console.error('Error loading khatabook:', error);
@@ -83,11 +72,19 @@ export default function KhatabookScreen({ navigation }) {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [selectedRestaurantId, selectedPeriod]);
 
-  const onRefresh = () => {
+  // Load data when restaurant or period changes
+  useEffect(() => {
+    if (selectedRestaurantId) {
+      loadData();
+    }
+  }, [selectedRestaurantId, selectedPeriod, loadData]);
+
+  const onRefresh = async () => {
     setRefreshing(true);
-    loadData();
+    await loadRestaurants();
+    await loadData();
   };
 
   if (loading && !refreshing) {
@@ -98,7 +95,9 @@ export default function KhatabookScreen({ navigation }) {
             <Icon name="arrow-back" size={24} color={C.ink} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Khatabook</Text>
-          <View style={{ width: 40 }} />
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+            <Icon name="menu" size={22} color="#1D2254" />
+          </TouchableOpacity>
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={C.primary} />
@@ -107,24 +106,6 @@ export default function KhatabookScreen({ navigation }) {
     );
   }
 
-  if (restaurants.length === 0) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.menuBtn}>
-            <Icon name="arrow-back" size={24} color={C.ink} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Khatabook</Text>
-          <View style={{ width: 40 }} />
-        </View>
-        <View style={styles.emptyContainer}>
-          <Icon name="restaurant-outline" size={80} color={C.muted} />
-          <Text style={styles.emptyTitle}>No Restaurant Found</Text>
-          <Text style={styles.emptyText}>Please add a restaurant first</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
 
   const netRevenue = (data?.totalRevenue || 0) - (data?.totalExpenses || 0);
   const isProfit = netRevenue >= 0;
@@ -136,8 +117,13 @@ export default function KhatabookScreen({ navigation }) {
           <Icon name="arrow-back" size={24} color={C.ink} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Khatabook</Text>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+          <Icon name="menu" size={22} color="#1D2254" />
+        </TouchableOpacity>
       </View>
+
+      {/* Global Restaurant Selector */}
+      <RestaurantSelectorBar />
 
       <ScrollView
         style={styles.content}
@@ -158,22 +144,6 @@ export default function KhatabookScreen({ navigation }) {
           ))}
         </View>
 
-        {/* Restaurant Selector */}
-        {restaurants.length > 1 && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow}>
-            {restaurants.map(r => (
-              <TouchableOpacity
-                key={r.id}
-                style={[styles.filterChip, selectedRestaurant === r.id && styles.filterChipActive]}
-                onPress={() => setSelectedRestaurant(r.id)}
-              >
-                <Text style={[styles.filterText, selectedRestaurant === r.id && styles.filterTextActive]}>
-                  {r.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        )}
 
         {/* Net Revenue Card */}
         <View style={[styles.netRevenueCard, isProfit ? styles.profit : styles.loss]}>
@@ -305,6 +275,8 @@ export default function KhatabookScreen({ navigation }) {
 
         <View style={{ height: 100 }} />
       </ScrollView>
+      <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
+      <KniBottomNav navigation={navigation} active="khatabook" />
     </SafeAreaView>
   );
 }

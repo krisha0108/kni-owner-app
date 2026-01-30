@@ -7,7 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // NOTE: Update LOCAL_IP with your computer's local IP address
 // To find your IP: Windows (ipconfig) | Mac/Linux (ifconfig)
-const LOCAL_IP = '192.168.29.54';
+const LOCAL_IP = '192.168.1.8';
 
 // API URLs
 const DEV_API_BASE_URL = `http://${LOCAL_IP}:3000/api`;

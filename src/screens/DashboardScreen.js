@@ -14,6 +14,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
 import NavigationMenu from '../components/NavigationMenu';
+import { useRestaurant } from '../context/RestaurantContext';
+import { RestaurantSelectorBar } from '../components/RestaurantSelector';
+import KniBottomNav from '../components/KniBottomNav';
 
 const C = {
   primary: '#EF3A3A',
@@ -31,39 +34,28 @@ const C = {
 const { width } = Dimensions.get('window');
 
 export default function DashboardScreen({ navigation }) {
+  // Global restaurant context
+  const {
+    selectedRestaurantId: restaurantId,
+    loading: restaurantsLoading,
+    loadRestaurants,
+    hasRestaurants,
+  } = useRestaurant();
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState(30);
-  const [restaurantId, setRestaurantId] = useState(null);
   const [data, setData] = useState(null);
   const [menuVisible, setMenuVisible] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadData();
-    }, [restaurantId, selectedPeriod])
-  );
+  const loadData = useCallback(async () => {
+    if (!restaurantId) {
+      setLoading(false);
+      return;
+    }
 
-  const loadData = async () => {
     try {
       setLoading(true);
-
-      // Get first restaurant ID
-      if (!restaurantId) {
-        const restaurantsRes = await api.get('/owner/restaurants');
-        if (restaurantsRes.data.ok && restaurantsRes.data.data.length > 0) {
-          const firstRestaurant = restaurantsRes.data.data.find(r => r.status === 'APPROVED');
-          if (firstRestaurant) {
-            setRestaurantId(firstRestaurant.id);
-            return; // Will reload with restaurantId
-          }
-        }
-      }
-
-      if (!restaurantId) {
-        setLoading(false);
-        return;
-      }
 
       const response = await api.get(`/owner/analytics?restaurantId=${restaurantId}&period=${selectedPeriod}`);
 
@@ -76,11 +68,18 @@ export default function DashboardScreen({ navigation }) {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [restaurantId, selectedPeriod]);
 
-  const onRefresh = () => {
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData])
+  );
+
+  const onRefresh = async () => {
     setRefreshing(true);
-    loadData();
+    await loadRestaurants();
+    await loadData();
   };
 
   const PERIOD_OPTIONS = [
@@ -90,7 +89,7 @@ export default function DashboardScreen({ navigation }) {
     { label: '1 Year', value: 365 },
   ];
 
-  if (loading && !data) {
+  if ((loading || restaurantsLoading) && !data) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
@@ -107,7 +106,7 @@ export default function DashboardScreen({ navigation }) {
     );
   }
 
-  if (!restaurantId) {
+  if (!hasRestaurants) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
@@ -146,6 +145,9 @@ export default function DashboardScreen({ navigation }) {
           <Icon name="notifications-outline" size={24} color={C.ink} />
         </TouchableOpacity>
       </View>
+
+      {/* Restaurant Selector - Global */}
+      <RestaurantSelectorBar />
 
       <ScrollView
         style={styles.content}
@@ -270,6 +272,7 @@ export default function DashboardScreen({ navigation }) {
         onClose={() => setMenuVisible(false)}
         navigation={navigation}
       />
+      <KniBottomNav navigation={navigation} active="home" />
     </SafeAreaView>
   );
 }

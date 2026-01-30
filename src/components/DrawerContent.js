@@ -44,18 +44,15 @@ const MENU_ITEMS = [
 
   // Services
   { name: 'Category Request', screen: 'CategoryRequest', icon: 'folder-outline', section: 'services' },
-  { name: 'Service Feed', screen: 'Feed', icon: 'layers-outline', section: 'services' },
+  { name: 'Request Services', screen: 'Request', icon: 'layers-outline', section: 'services' },
   { name: 'My Cart', screen: 'Cart', icon: 'cart-outline', section: 'services' },
-  { name: 'New Service Request', screen: 'ServiceRequest', icon: 'add-circle-outline', section: 'services' },
 
   // Bookings
-  { name: 'Slot Booking', screen: 'SlotBooking', icon: 'time-outline', section: 'bookings' },
   { name: 'My Bookings', screen: 'MyBookings', icon: 'calendar-outline', section: 'bookings' },
   { name: 'Pending Approvals', screen: 'PendingApproval', icon: 'hourglass-outline', section: 'bookings' },
-  { name: 'Service History', screen: 'ServiceHistory', icon: 'time-outline', section: 'bookings' },
 
   // Marketplace
-  { name: 'Marketplace', screen: 'Marketplace', icon: 'storefront-outline', section: 'marketplace' },
+  { name: 'Marketplace', screen: 'Request', icon: 'storefront-outline', section: 'marketplace' },
   { name: 'My Orders', screen: 'MarketplaceOrders', icon: 'bag-check-outline', section: 'marketplace' },
   { name: 'Order Tracking', screen: 'OrderTracking', icon: 'locate-outline', section: 'marketplace' },
 

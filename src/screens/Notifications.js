@@ -1,5 +1,5 @@
 // screens/Notifications.js
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, SectionList, TouchableOpacity, Animated,
   RefreshControl, useWindowDimensions, ScrollView
@@ -8,6 +8,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import Icon from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api } from '../api/client';
+import notificationService from '../services/notificationService';
 
 /* ---------- THEME ---------- */
 const C = {
@@ -89,48 +90,8 @@ export default function Notifications({ navigation }) {
   // skeleton pulse
   const pulse = useRef(new Animated.Value(0.5)).current;
 
-  useEffect(()=>{
-    const loop = Animated.loop(Animated.sequence([
-      Animated.timing(pulse,{toValue:1,duration:800,useNativeDriver:false}),
-      Animated.timing(pulse,{toValue:0.5,duration:800,useNativeDriver:false}),
-    ]));
-    loop.start();
-
-    initializeUserData(); // Get user data first
-
-    return ()=>{ loop.stop(); };
-  },[]);
-
-  // Get user data from AsyncStorage
-  const initializeUserData = async () => {
-    try {
-      const userData = await AsyncStorage.getItem('user');
-      const authToken = await AsyncStorage.getItem('userToken');
-
-      
-      console.log('AsyncStorage userData:', userData);
-      console.log('AsyncStorage authToken:', authToken);
-      
-      if (userData && authToken) {
-        const user = JSON.parse(userData);
-        console.log('Parsed user:', user);
-        setOwnerId(user.id);
-        setToken(authToken);
-        
-        // Now fetch notifications with the user data
-        fetchNotifications(user.id, authToken);
-      } else {
-        console.log('No user data found in AsyncStorage');
-        setLoading(false);
-      }
-    } catch (error) {
-      console.log('Error getting user data:', error);
-      setLoading(false);
-    }
-  };
-
   /* ---------- API CALL ---------- */
-  const fetchNotifications = async (userOwnerId = null, userToken = null) => {
+  const fetchNotifications = useCallback(async (userOwnerId = null, userToken = null) => {
     try {
       setLoading(true);
       
@@ -198,7 +159,45 @@ const res = await api.get('/owner/notifications', {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [ownerId, token]);
+
+  const initializeUserData = useCallback(async () => {
+    try {
+      const userData = await AsyncStorage.getItem('user');
+      const authToken = await AsyncStorage.getItem('userToken');
+
+      console.log('AsyncStorage userData:', userData);
+      console.log('AsyncStorage authToken:', authToken);
+
+      if (userData && authToken) {
+        const user = JSON.parse(userData);
+        console.log('Parsed user:', user);
+        setOwnerId(user.id);
+        setToken(authToken);
+
+        // Now fetch notifications with the user data
+        fetchNotifications(user.id, authToken);
+      } else {
+        console.log('No user data found in AsyncStorage');
+        setLoading(false);
+      }
+    } catch (error) {
+      console.log('Error getting user data:', error);
+      setLoading(false);
+    }
+  }, [fetchNotifications]);
+
+  useEffect(()=>{
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse,{toValue:1,duration:800,useNativeDriver:false}),
+      Animated.timing(pulse,{toValue:0.5,duration:800,useNativeDriver:false}),
+    ]));
+    loop.start();
+
+    initializeUserData(); // Get user data first
+
+    return ()=>{ loop.stop(); };
+  },[pulse, initializeUserData]);
 
   const filtered = useMemo(()=>{
     if(filter === 'all') return items;
@@ -241,6 +240,52 @@ await api.post('/notifications/mark-all-read', { restaurant_owner_id: ownerId },
   headers: { Authorization: `Bearer ${token}` }
 });  } catch (e) {
     console.log('Error marking all read:', e);
+  }
+};
+
+// Send test notification
+const [testingSend, setTestingSend] = useState(false);
+const [resetting, setResetting] = useState(false);
+
+const resetAndTest = async () => {
+  if (!token) {
+    console.log('No token available');
+    return;
+  }
+  setResetting(true);
+  try {
+    console.log('🔄 Resetting tokens before test...');
+    await notificationService.resetAndReregister();
+    console.log('✅ Tokens reset, now sending test notification...');
+    // Wait a moment for token to register
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    await sendTestNotification();
+  } catch (e) {
+    console.log('Error in reset and test:', e);
+  } finally {
+    setResetting(false);
+  }
+};
+
+const sendTestNotification = async () => {
+  if (!token) {
+    console.log('No token available for test notification');
+    return;
+  }
+  setTestingSend(true);
+  try {
+    const res = await api.post('/owner/notifications/test', {}, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    console.log('Test notification response:', res.data);
+    if (res.data?.ok) {
+      // Refresh notifications after a short delay
+      setTimeout(() => fetchNotifications(), 2000);
+    }
+  } catch (e) {
+    console.log('Error sending test notification:', e);
+  } finally {
+    setTestingSend(false);
   }
 };
 
@@ -297,9 +342,17 @@ const markAllRead = () => {
           <Icon name="chevron-back" size={20} color={C.ink}/>
         </TouchableOpacity>
         <Text style={st.hTitle}>Notifications</Text>
-        <TouchableOpacity onPress={markAllRead} style={st.hBtn}>
-          <Icon name="checkmark-done-outline" size={18} color={C.ink}/>
-        </TouchableOpacity>
+        <View style={{flexDirection:'row', gap:8}}>
+          <TouchableOpacity onPress={resetAndTest} style={[st.hBtn, (resetting || testingSend) && {opacity:0.5}]} disabled={resetting || testingSend}>
+            <Icon name="refresh-outline" size={18} color={resetting ? C.muted : C.primary}/>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={sendTestNotification} style={[st.hBtn, testingSend && {opacity:0.5}]} disabled={testingSend}>
+            <Icon name="paper-plane-outline" size={18} color={C.primary}/>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={markAllRead} style={st.hBtn}>
+            <Icon name="checkmark-done-outline" size={18} color={C.ink}/>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Filter chips */}

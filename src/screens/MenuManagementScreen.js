@@ -15,6 +15,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { api } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
+import KniBottomNav from '../components/KniBottomNav';
+import NavigationMenu from '../components/NavigationMenu';
 
 const C = {
   primary: '#EF3A3A',
@@ -40,6 +42,7 @@ export default function MenuManagementScreen({ navigation }) {
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [activeTab, setActiveTab] = useState('services'); // 'services' or 'parts'
+  const [menuVisible, setMenuVisible] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -193,11 +196,8 @@ export default function MenuManagementScreen({ navigation }) {
           <Icon name="arrow-back" size={22} color={C.ink} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Service Menu</Text>
-        <TouchableOpacity
-          style={styles.cartBtn}
-          onPress={() => navigation.navigate('Cart')}
-        >
-          <Icon name="cart-outline" size={22} color={C.ink} />
+        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+          <Icon name="menu" size={22} color="#1D2254" />
         </TouchableOpacity>
       </View>
 
@@ -305,6 +305,8 @@ export default function MenuManagementScreen({ navigation }) {
         <Icon name="add-circle" size={20} color="#fff" />
         <Text style={styles.requestBtnText}>Request New Category</Text>
       </TouchableOpacity>
+      <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
+      <KniBottomNav navigation={navigation} />
     </SafeAreaView>
   );
 }

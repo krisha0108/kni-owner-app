@@ -18,6 +18,10 @@ import LineChartCard from '../components/charts/LineChartCard';
 import PieChartCard from '../components/charts/PieChartCard';
 import BarChartCard from '../components/charts/BarChartCard';
 import { exportAnalyticsPDF, openPDF } from '../services/analyticsService';
+import { useRestaurant } from '../context/RestaurantContext';
+import { RestaurantSelectorBar } from '../components/RestaurantSelector';
+import KniBottomNav from '../components/KniBottomNav';
+import NavigationMenu from '../components/NavigationMenu';
 
 const C = {
   primary: '#EF3A3A',
@@ -36,13 +40,20 @@ const C = {
 const { width } = Dimensions.get('window');
 
 export default function AnalyticsScreen({ navigation }) {
+  // Global restaurant context
+  const {
+    selectedRestaurantId: selectedRestaurant,
+    loading: restaurantsLoading,
+    loadRestaurants,
+    hasRestaurants,
+  } = useRestaurant();
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [analytics, setAnalytics] = useState(null);
   const [selectedPeriod, setSelectedPeriod] = useState(30);
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
-  const [restaurants, setRestaurants] = useState([]);
   const [exporting, setExporting] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   const PERIOD_OPTIONS = [
     { label: '7 Days', value: 7 },
@@ -59,28 +70,20 @@ export default function AnalyticsScreen({ navigation }) {
   );
 
   const loadData = async () => {
+    if (!selectedRestaurant) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
 
-      const restaurantsRes = await api.get('/owner/restaurants');
-      if (restaurantsRes.data.ok) {
-        const approvedRestaurants = restaurantsRes.data.data.filter(r => r.status === 'APPROVED');
-        setRestaurants(approvedRestaurants);
+      const response = await api.get(
+        `/owner/analytics?restaurantId=${selectedRestaurant}&period=${selectedPeriod}`
+      );
 
-        if (approvedRestaurants.length > 0 && !selectedRestaurant) {
-          setSelectedRestaurant(approvedRestaurants[0].id);
-          return;
-        }
-      }
-
-      if (selectedRestaurant) {
-        const response = await api.get(
-          `/owner/analytics?restaurantId=${selectedRestaurant}&period=${selectedPeriod}`
-        );
-
-        if (response.data.ok) {
-          setAnalytics(response.data.data);
-        }
+      if (response.data.ok) {
+        setAnalytics(response.data.data);
       }
     } catch (error) {
       console.error('Error loading analytics:', error);
@@ -90,9 +93,10 @@ export default function AnalyticsScreen({ navigation }) {
     }
   };
 
-  const onRefresh = () => {
+  const onRefresh = async () => {
     setRefreshing(true);
-    loadData();
+    await loadRestaurants();
+    await loadData();
   };
 
   const handleExportPDF = async () => {
@@ -119,7 +123,7 @@ export default function AnalyticsScreen({ navigation }) {
     }
   };
 
-  if (loading && !refreshing) {
+  if ((loading || restaurantsLoading) && !refreshing) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
@@ -127,7 +131,9 @@ export default function AnalyticsScreen({ navigation }) {
             <Icon name="arrow-back" size={24} color={C.ink} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Analytics</Text>
-          <View style={{ width: 40 }} />
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+            <Icon name="menu" size={22} color="#1D2254" />
+          </TouchableOpacity>
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={C.primary} />
@@ -136,7 +142,7 @@ export default function AnalyticsScreen({ navigation }) {
     );
   }
 
-  if (restaurants.length === 0) {
+  if (!hasRestaurants) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
@@ -144,7 +150,9 @@ export default function AnalyticsScreen({ navigation }) {
             <Icon name="arrow-back" size={24} color={C.ink} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Analytics</Text>
-          <View style={{ width: 40 }} />
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+            <Icon name="menu" size={22} color="#1D2254" />
+          </TouchableOpacity>
         </View>
         <View style={styles.emptyContainer}>
           <Icon name="restaurant-outline" size={80} color={C.muted} />
@@ -178,6 +186,9 @@ export default function AnalyticsScreen({ navigation }) {
             <Icon name="download-outline" size={24} color={C.primary} />
           )}
         </TouchableOpacity>
+        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+          <Icon name="menu" size={22} color="#1D2254" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -199,22 +210,8 @@ export default function AnalyticsScreen({ navigation }) {
           ))}
         </View>
 
-        {/* Restaurant Selector */}
-        {restaurants.length > 1 && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow}>
-            {restaurants.map(r => (
-              <TouchableOpacity
-                key={r.id}
-                style={[styles.filterChip, selectedRestaurant === r.id && styles.filterChipActive]}
-                onPress={() => setSelectedRestaurant(r.id)}
-              >
-                <Text style={[styles.filterText, selectedRestaurant === r.id && styles.filterTextActive]}>
-                  {r.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        )}
+        {/* Restaurant Selector - Global */}
+        <RestaurantSelectorBar style={{ marginHorizontal: 0, marginTop: 0 }} />
 
         {/* Overview Cards */}
         <View style={styles.section}>
@@ -353,6 +350,8 @@ export default function AnalyticsScreen({ navigation }) {
 
         <View style={{ height: 100 }} />
       </ScrollView>
+      <KniBottomNav navigation={navigation} />
+      <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
     </SafeAreaView>
   );
 }

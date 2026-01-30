@@ -687,6 +687,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import KniBottomNav from '../components/KniBottomNav';
+import NavigationMenu from '../components/NavigationMenu';
 import auth from '@react-native-firebase/auth';
 import axios from 'axios';
 import { api, IMAGE_BASE_URL } from '../api/client';
@@ -1082,6 +1083,7 @@ export default function ProfileScreen({navigation}) {
   const [notificationModalVisible, setNotificationModalVisible] = useState(false);
   const [notificationSettings, setNotificationSettings] = useState({});
   const [cartCount, setCartCount] = useState(0);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   // Calculate cart count from AsyncStorage
   const calculateCartCount = useCallback(async () => {
@@ -1203,12 +1205,12 @@ export default function ProfileScreen({navigation}) {
   };
 
   /* ===== PROFILE DATA FETCHING ===== */
-  const fetchProfile = async ()=>{
+  const fetchProfile = useCallback(async ()=>{
     try {
       const res = await api.get('/restaurants/profile');
       const payload = res.data;
       const firstRestaurant = payload?.restaurants?.[0];
-      
+
       setUser({
         name: payload?.name ?? 'User',
         email: payload?.email ?? '-',
@@ -1248,14 +1250,14 @@ export default function ProfileScreen({navigation}) {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, []);
 
   useEffect(()=>{
     const t = setTimeout(()=>{
       fetchProfile();
     }, 650);
     return ()=> clearTimeout(t);
-  },[]);
+  },[fetchProfile]);
 
   const onRefresh = ()=>{
     setRefreshing(true);
@@ -1346,6 +1348,13 @@ export default function ProfileScreen({navigation}) {
 
   return (
     <SafeAreaView style={{flex:1, backgroundColor:C.bg}} edges={['top','left','right']}>
+      {/* Header */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border }}>
+        <Text style={{ fontSize: 18, fontWeight: '700', color: C.ink }}>Profile</Text>
+        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+          <Icon name="menu" size={22} color="#1D2254" />
+        </TouchableOpacity>
+      </View>
       <ScrollView
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} tintColor={C.primary}/>}
         contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
@@ -1535,7 +1544,7 @@ export default function ProfileScreen({navigation}) {
           <Text style={st.sectionTitle}>Quick Access</Text>
         </View>
         <View style={st.quickAccessContainer}>
-          <TouchableOpacity style={st.quickAccessButton} onPress={() => navigation.navigate('MyEquipment')}>
+          <TouchableOpacity style={[st.quickAccessButton, { borderBottomWidth: 0 }]} onPress={() => navigation.navigate('MyEquipment')}>
             <View style={st.quickAccessButtonContent}>
               <View style={[st.quickAccessIcon, { backgroundColor: '#EFF6FF' }]}>
                 <Icon name="construct-outline" size={20} color="#3B82F6" />
@@ -1543,19 +1552,6 @@ export default function ProfileScreen({navigation}) {
               <View style={st.quickAccessTextWrap}>
                 <Text style={st.quickAccessTitle}>My Equipment</Text>
                 <Text style={st.quickAccessSubtitle}>Manage your kitchen equipment</Text>
-              </View>
-            </View>
-            <Icon name="chevron-forward" size={20} color={C.muted} />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={[st.quickAccessButton, { borderBottomWidth: 0 }]} onPress={() => navigation.navigate('ServiceHistory')}>
-            <View style={st.quickAccessButtonContent}>
-              <View style={[st.quickAccessIcon, { backgroundColor: '#FEF3C7' }]}>
-                <Icon name="time-outline" size={20} color="#F59E0B" />
-              </View>
-              <View style={st.quickAccessTextWrap}>
-                <Text style={st.quickAccessTitle}>Service History</Text>
-                <Text style={st.quickAccessSubtitle}>View spending & service reports</Text>
               </View>
             </View>
             <Icon name="chevron-forward" size={20} color={C.muted} />
@@ -1650,6 +1646,7 @@ export default function ProfileScreen({navigation}) {
         onSave={setNotificationSettings}
       />
 
+      <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
       <KniBottomNav
         navigation={navigation}
         active="profile"
@@ -1673,7 +1670,7 @@ function SkeletonProfileView({ insetsBottom=0 }) {
     );
     loop.start();
     return () => loop.stop();
-  }, []);
+  }, [pulse]);
 
   return (
     <SafeAreaView style={{flex:1, backgroundColor:C.bg}} edges={['top','left','right']}>

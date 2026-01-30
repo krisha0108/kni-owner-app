@@ -12,6 +12,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { api } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
+import KniBottomNav from '../components/KniBottomNav';
+import NavigationMenu from '../components/NavigationMenu';
 
 const C = {
   primary: '#EF3A3A',
@@ -45,6 +47,7 @@ export default function MyRestaurantsScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [restaurants, setRestaurants] = useState([]);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -81,7 +84,9 @@ export default function MyRestaurantsScreen({ navigation }) {
             <Icon name="arrow-back" size={24} color={C.ink} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>My Restaurants</Text>
-          <View style={{ width: 40 }} />
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+            <Icon name="menu" size={22} color="#1D2254" />
+          </TouchableOpacity>
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={C.primary} />
@@ -100,6 +105,9 @@ export default function MyRestaurantsScreen({ navigation }) {
         <Text style={styles.headerTitle}>My Restaurants</Text>
         <TouchableOpacity onPress={() => navigation.navigate('RestaurantOnboarding', { isFirstRestaurant: false })}>
           <Icon name="add-circle" size={28} color={C.primary} />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+          <Icon name="menu" size={22} color="#1D2254" />
         </TouchableOpacity>
       </View>
 
@@ -195,6 +203,8 @@ export default function MyRestaurantsScreen({ navigation }) {
 
         <View style={{ height: 100 }} />
       </ScrollView>
+      <KniBottomNav navigation={navigation} />
+      <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
     </SafeAreaView>
   );
 }

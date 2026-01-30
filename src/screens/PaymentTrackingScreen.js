@@ -8,6 +8,8 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { api, getImageUrl } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
 import { launchImageLibrary } from 'react-native-image-picker';
+import KniBottomNav from '../components/KniBottomNav';
+import NavigationMenu from '../components/NavigationMenu';
 
 const C = {
   primary: '#EF3A3A',
@@ -76,6 +78,7 @@ export default function PaymentTrackingScreen({ navigation, route }) {
   const [refreshing, setRefreshing] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [booking, setBooking] = useState(null);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   const fetchBooking = useCallback(async () => {
     if (!bookingId) return;
@@ -159,7 +162,9 @@ export default function PaymentTrackingScreen({ navigation, route }) {
             <Icon name="arrow-back" size={22} color={C.ink} />
           </TouchableOpacity>
           <Text style={st.headerTitle}>Payment Status</Text>
-          <View style={{ width: 40 }} />
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+            <Icon name="menu" size={22} color="#1D2254" />
+          </TouchableOpacity>
         </View>
         <View style={st.loadingBox}>
           <ActivityIndicator size="large" color={C.primary} />
@@ -176,7 +181,9 @@ export default function PaymentTrackingScreen({ navigation, route }) {
             <Icon name="arrow-back" size={22} color={C.ink} />
           </TouchableOpacity>
           <Text style={st.headerTitle}>Payment Status</Text>
-          <View style={{ width: 40 }} />
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+            <Icon name="menu" size={22} color="#1D2254" />
+          </TouchableOpacity>
         </View>
         <View style={st.emptyBox}>
           <Icon name="receipt-outline" size={64} color={C.muted} />
@@ -196,7 +203,9 @@ export default function PaymentTrackingScreen({ navigation, route }) {
           <Icon name="arrow-back" size={22} color={C.ink} />
         </TouchableOpacity>
         <Text style={st.headerTitle}>Payment Status</Text>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+          <Icon name="menu" size={22} color="#1D2254" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -350,6 +359,8 @@ export default function PaymentTrackingScreen({ navigation, route }) {
           </TouchableOpacity>
         </View>
       </ScrollView>
+      <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
+      <KniBottomNav navigation={navigation} />
     </SafeAreaView>
   );
 }

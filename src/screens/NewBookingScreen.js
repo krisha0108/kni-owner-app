@@ -7,6 +7,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { api } from '../api/client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRestaurant } from '../context/RestaurantContext';
+import KniBottomNav from '../components/KniBottomNav';
+import NavigationMenu from '../components/NavigationMenu';
 
 const C = {
   primary: '#EF3A3A',
@@ -45,30 +48,48 @@ const formatDate = (dateString) => {
 };
 
 export default function NewBookingScreen({ navigation, route }) {
+  // Global restaurant context
+  const {
+    restaurants: allRestaurants,
+    selectedRestaurant: globalSelectedRestaurant,
+    selectedRestaurantId,
+    loading: restaurantsLoading,
+    loadRestaurants,
+  } = useRestaurant();
+
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [cartItems, setCartItems] = useState([]);
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
-  const [restaurants, setRestaurants] = useState([]);
   const [preferredDate, setPreferredDate] = useState('');
   const [preferredTimeSlot, setPreferredTimeSlot] = useState('');
   const [notes, setNotes] = useState('');
+  const [menuVisible, setMenuVisible] = useState(false);
 
-  const fetchData = useCallback(async () => {
+  // Filter to approved restaurants only
+  const restaurants = allRestaurants.filter(r => r.status === 'APPROVED');
+
+  // Pre-select global restaurant on mount
+  useEffect(() => {
+    if (globalSelectedRestaurant && !selectedRestaurant) {
+      const approved = restaurants.find(r => r.id === selectedRestaurantId);
+      if (approved) {
+        setSelectedRestaurant(approved);
+      }
+    }
+  }, [globalSelectedRestaurant, selectedRestaurantId, restaurants]);
+
+  // Auto-select if only one restaurant
+  useEffect(() => {
+    if (restaurants.length === 1 && !selectedRestaurant) {
+      setSelectedRestaurant(restaurants[0]);
+    }
+  }, [restaurants]);
+
+  const fetchCartItems = useCallback(async () => {
     try {
       setLoading(true);
-
-      // Fetch restaurants
-      const restRes = await api.get('/owner/restaurants');
-      if (restRes.data.ok && restRes.data.data.length > 0) {
-        const approvedRestaurants = restRes.data.data.filter(r => r.status === 'APPROVED');
-        setRestaurants(approvedRestaurants);
-        if (approvedRestaurants.length > 0 && !selectedRestaurant) {
-          setSelectedRestaurant(approvedRestaurants[0]);
-        }
-      }
-
       // Fetch cart items
       const cartRes = await api.get('/owner/cart');
       if (cartRes.data.ok && cartRes.data.data) {
@@ -81,25 +102,26 @@ export default function NewBookingScreen({ navigation, route }) {
         setCartItems(items);
       }
     } catch (error) {
-      console.log('Error fetching data:', error);
-      Alert.alert('Error', 'Failed to load booking data');
+      console.log('Error fetching cart:', error);
+      Alert.alert('Error', 'Failed to load cart data');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [selectedRestaurant]);
+  }, []);
 
   useEffect(() => {
-    fetchData();
+    fetchCartItems();
     // Set minimum date to tomorrow
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     setPreferredDate(tomorrow.toISOString().split('T')[0]);
-  }, []);
+  }, [fetchCartItems]);
 
-  const onRefresh = () => {
+  const onRefresh = async () => {
     setRefreshing(true);
-    fetchData();
+    await loadRestaurants();
+    fetchCartItems();
   };
 
   const calculateTotal = () => {
@@ -181,7 +203,9 @@ export default function NewBookingScreen({ navigation, route }) {
             <Icon name="arrow-back" size={22} color={C.ink} />
           </TouchableOpacity>
           <Text style={st.headerTitle}>Book Service</Text>
-          <View style={{ width: 40 }} />
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+            <Icon name="menu" size={22} color="#1D2254" />
+          </TouchableOpacity>
         </View>
         <View style={st.loadingBox}>
           <ActivityIndicator size="large" color={C.primary} />
@@ -198,7 +222,9 @@ export default function NewBookingScreen({ navigation, route }) {
             <Icon name="arrow-back" size={22} color={C.ink} />
           </TouchableOpacity>
           <Text style={st.headerTitle}>Book Service</Text>
-          <View style={{ width: 40 }} />
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+            <Icon name="menu" size={22} color="#1D2254" />
+          </TouchableOpacity>
         </View>
         <View style={st.emptyBox}>
           <Icon name="cart-outline" size={64} color={C.muted} />
@@ -220,7 +246,9 @@ export default function NewBookingScreen({ navigation, route }) {
           <Icon name="arrow-back" size={22} color={C.ink} />
         </TouchableOpacity>
         <Text style={st.headerTitle}>Book Service</Text>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+          <Icon name="menu" size={22} color="#1D2254" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -377,6 +405,8 @@ export default function NewBookingScreen({ navigation, route }) {
           )}
         </TouchableOpacity>
       </View>
+      <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
+      <KniBottomNav navigation={navigation} />
     </SafeAreaView>
   );
 }

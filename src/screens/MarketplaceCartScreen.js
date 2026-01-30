@@ -13,6 +13,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import KniBottomNav from '../components/KniBottomNav';
+import NavigationMenu from '../components/NavigationMenu';
 
 const C = {
   primary: '#EF3A3A',
@@ -31,6 +33,7 @@ const CART_STORAGE_KEY = '@marketplace_cart';
 export default function MarketplaceCartScreen({ navigation }) {
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -143,12 +146,17 @@ export default function MarketplaceCartScreen({ navigation }) {
           <Icon name="arrow-back" size={24} color={C.ink} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Marketplace Cart ({totalItems})</Text>
-        <TouchableOpacity
-          onPress={handleClearCart}
-          disabled={cart.length === 0}
-        >
-          <Icon name="trash-outline" size={20} color={cart.length > 0 ? C.danger : C.muted} />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity
+            onPress={handleClearCart}
+            disabled={cart.length === 0}
+          >
+            <Icon name="trash-outline" size={20} color={cart.length > 0 ? C.danger : C.muted} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+            <Icon name="menu" size={22} color="#1D2254" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Cart Items */}
@@ -220,7 +228,7 @@ export default function MarketplaceCartScreen({ navigation }) {
             <Text style={styles.emptyText}>Browse marketplace to add products</Text>
             <TouchableOpacity
               style={styles.browseButton}
-              onPress={() => navigation.navigate('Marketplace')}
+              onPress={() => navigation.navigate('Request')}
             >
               <Text style={styles.browseButtonText}>Browse Marketplace</Text>
             </TouchableOpacity>
@@ -246,6 +254,8 @@ export default function MarketplaceCartScreen({ navigation }) {
           </TouchableOpacity>
         </View>
       )}
+      <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
+      <KniBottomNav navigation={navigation} />
     </SafeAreaView>
   );
 }

@@ -16,6 +16,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { api } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
+import { useRestaurant } from '../context/RestaurantContext';
+import { RestaurantSelectorBar } from '../components/RestaurantSelector';
+import KniBottomNav from '../components/KniBottomNav';
+import NavigationMenu from '../components/NavigationMenu';
 
 const C = {
   primary: '#EF3A3A',
@@ -58,6 +62,15 @@ const getStatusLabel = (status) => {
 };
 
 export default function StaffScreen({ navigation }) {
+  // Global restaurant context
+  const {
+    restaurants,
+    selectedRestaurantId: selectedRestaurant,
+    loading: restaurantsLoading,
+    loadRestaurants,
+    hasRestaurants,
+  } = useRestaurant();
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [staff, setStaff] = useState([]);
@@ -66,8 +79,7 @@ export default function StaffScreen({ navigation }) {
   const [selectedStaff, setSelectedStaff] = useState(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
-  const [restaurants, setRestaurants] = useState([]);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   const [form, setForm] = useState({
     id: null,
@@ -87,34 +99,21 @@ export default function StaffScreen({ navigation }) {
     useCallback(() => {
       loadData();
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
+    }, [selectedRestaurant])
   );
 
   const loadData = async () => {
+    if (!selectedRestaurant) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
 
-      // Load restaurants first
-      const restaurantsRes = await api.get('/owner/restaurants');
-      let currentRestaurantId = selectedRestaurant;
-
-      if (restaurantsRes.data.ok) {
-        const approvedRestaurants = restaurantsRes.data.data.filter(r => r.status === 'APPROVED');
-        setRestaurants(approvedRestaurants);
-
-        // Use local variable to track which restaurant to load staff for
-        if (approvedRestaurants.length > 0 && !currentRestaurantId) {
-          currentRestaurantId = approvedRestaurants[0].id;
-          setSelectedRestaurant(currentRestaurantId);
-        }
-      }
-
-      // Load staff using local variable (not state which may not be updated yet)
-      if (currentRestaurantId) {
-        const response = await api.get(`/owner/staff?restaurantId=${currentRestaurantId}`);
-        if (response.data.ok) {
-          setStaff(response.data.data);
-        }
+      const response = await api.get(`/owner/staff?restaurantId=${selectedRestaurant}`);
+      if (response.data.ok) {
+        setStaff(response.data.data);
       }
     } catch (error) {
       console.error('Error loading staff:', error);
@@ -124,9 +123,10 @@ export default function StaffScreen({ navigation }) {
     }
   };
 
-  const onRefresh = () => {
+  const onRefresh = async () => {
     setRefreshing(true);
-    loadData();
+    await loadRestaurants();
+    await loadData();
   };
 
   const openForm = (item = null) => {
@@ -341,7 +341,7 @@ export default function StaffScreen({ navigation }) {
     </TouchableOpacity>
   );
 
-  if (loading && !refreshing) {
+  if ((loading || restaurantsLoading) && !refreshing) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
@@ -358,7 +358,7 @@ export default function StaffScreen({ navigation }) {
     );
   }
 
-  if (restaurants.length === 0) {
+  if (!hasRestaurants) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
@@ -387,28 +387,13 @@ export default function StaffScreen({ navigation }) {
         <TouchableOpacity onPress={() => openForm()}>
           <Icon name="add-circle" size={28} color={C.primary} />
         </TouchableOpacity>
+        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+          <Icon name="menu" size={22} color="#1D2254" />
+        </TouchableOpacity>
       </View>
 
-      {/* Restaurant Selector */}
-      {restaurants.length > 1 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow}>
-          {restaurants.map(r => (
-            <TouchableOpacity
-              key={r.id}
-              style={[styles.filterChip, selectedRestaurant === r.id && styles.filterChipActive]}
-              onPress={() => {
-                setSelectedRestaurant(r.id);
-                setLoading(true);
-                loadData();
-              }}
-            >
-              <Text style={[styles.filterText, selectedRestaurant === r.id && styles.filterTextActive]}>
-                {r.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      )}
+      {/* Restaurant Selector - Global */}
+      <RestaurantSelectorBar />
 
       <FlatList
         data={staff}
@@ -622,6 +607,9 @@ export default function StaffScreen({ navigation }) {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
+      <KniBottomNav navigation={navigation} />
     </SafeAreaView>
   );
 }

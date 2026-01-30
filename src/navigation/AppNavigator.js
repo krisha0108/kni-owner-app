@@ -51,12 +51,10 @@ import RestaurantCreateScreen from '../screens/RestaurantCreateScreen';
 
 // Phase 4: Feature Parity Screens
 import NewBookingScreen from '../screens/NewBookingScreen';
-import FeedScreen from '../screens/FeedScreen';
 import CategoryDetailScreen from '../screens/CategoryDetailScreen';
 import PaymentTrackingScreen from '../screens/PaymentTrackingScreen';
 
 // Marketplace
-import MarketplaceScreen from '../screens/MarketplaceScreen';
 import MarketplaceProductScreen from '../screens/MarketplaceProductScreen';
 import MarketplaceOrdersScreen from '../screens/MarketplaceOrdersScreen';
 import MarketplaceCartScreen from '../screens/MarketplaceCartScreen';
@@ -78,11 +76,10 @@ import CreateMarketplaceOrderScreen from '../screens/CreateMarketplaceOrderScree
 // Legacy Screens (keeping for compatibility)
 import RequestScreen from '../screens/RequestScreen';
 import RequestDetail from '../screens/RequestDetail';
-import RequestNow from '../screens/RequestNowScreen';
+// RequestNow screen removed - use Cart screen instead
 import RestaurantView from '../screens/RestaurantView';
 import RestaurantsScreen from '../screens/RestaurantsScreen';
-import ServiceHistoryScreen from '../screens/ServiceHistoryScreen';
-import SlotBookingScreen from '../screens/SlotBookingScreen';
+import BookingDetailScreen from '../screens/BookingDetailScreen';
 import Home from '../screens/HomeScreen';
 import OrdersListScreen from '../screens/OrdersListScreen';
 import SpendingReportsScreen from '../screens/SpendingReportsScreen';
@@ -152,7 +149,7 @@ export default function AppNavigator() {
         <Stack.Screen name="Staff" component={StaffScreen} />
         <Stack.Screen name="StaffAttendance" component={StaffAttendanceScreen} />
         <Stack.Screen name="StaffSalary" component={StaffSalaryScreen} />
-        <Stack.Screen name="Marketplace" component={MarketplaceScreen} />
+        <Stack.Screen name="Marketplace" component={RequestScreen} />
         <Stack.Screen name="MarketplaceProduct" component={MarketplaceProductScreen} />
         <Stack.Screen name="MarketplaceOrders" component={MarketplaceOrdersScreen} />
         <Stack.Screen name="MarketplaceCart" component={MarketplaceCartScreen} />
@@ -178,7 +175,6 @@ export default function AppNavigator() {
 
         {/* Phase 4: Feature Parity Screens */}
         <Stack.Screen name="NewBooking" component={NewBookingScreen} />
-        <Stack.Screen name="Feed" component={FeedScreen} />
         <Stack.Screen name="CategoryDetail" component={CategoryDetailScreen} />
         <Stack.Screen name="PaymentTracking" component={PaymentTrackingScreen} />
         <Stack.Screen name="OrderTracking" component={OrderTrackingScreen} />
@@ -186,11 +182,10 @@ export default function AppNavigator() {
         {/* Legacy screens kept for compatibility */}
         <Stack.Screen name="Request" component={RequestScreen} />
         <Stack.Screen name="RequestDetail" component={RequestDetail} />
-        <Stack.Screen name="RequestNow" component={RequestNow} />
+        {/* RequestNow screen removed - use Cart screen for cart flow */}
         <Stack.Screen name="Restaurants" component={RestaurantsScreen} />
         <Stack.Screen name="RestaurantView" component={RestaurantView} />
-        <Stack.Screen name="ServiceHistory" component={ServiceHistoryScreen} />
-        <Stack.Screen name="SlotBooking" component={SlotBookingScreen} />
+        <Stack.Screen name="BookingDetail" component={BookingDetailScreen} />
         <Stack.Screen name="OrdersList" component={OrdersListScreen} />
       </Stack.Navigator>
     </SafeAreaProvider>

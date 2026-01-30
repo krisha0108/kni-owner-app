@@ -1,6 +1,6 @@
 
 // screens/SupportTicketDetail.js
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput,
   RefreshControl, Animated, Modal, Dimensions, Linking
@@ -116,12 +116,39 @@ export default function SupportTicketDetail({ navigation, route }) {
       Animated.timing(pulse,{toValue:0.5,duration:800,useNativeDriver:false}),
     ]));
     loop.start(); return ()=>{ clearTimeout(t); loop.stop(); };
-  },[]);
+  },[pulse]);
+
+  const loadTicket = useCallback(async ()=>{
+    try{
+      const res = await api.get(`/support/tickets/${ticketId}`);
+      const t = res?.data;
+      const mapped = {
+        id: t.id,
+        title: t.equipment_name || 'Support ticket',
+        category: 'Equipment',
+        equipment: t.equipment_name || '—',
+        created: t.created_at,
+        status: t.status,
+      };
+      const thr = (t.threads || []).map(x => ({
+        id: x.id,
+        author: x.sender_owner_id ? 'owner' : 'support',
+        time: x.created_at,
+        text: x.message || undefined,
+        photos: x.photo_path ? [toStorageUrl(x.photo_path)] : [],
+      }));
+
+      setTicket(mapped);
+      setThread(thr);
+    }catch(e){
+      console.log('Load ticket failed', e?.response?.data || e?.message);
+    }
+  }, [ticketId]);
 
   useEffect(()=>{
     if (!ticketId) return;
     loadTicket();
-  },[ticketId]);
+  },[ticketId, loadTicket]);
 
   const onRefresh = async ()=>{ setRefreshing(true); await loadTicket(); setRefreshing(false); };
 
@@ -154,7 +181,7 @@ export default function SupportTicketDetail({ navigation, route }) {
     try{
       const form = new FormData();
       if (text.trim()) form.append('message', text.trim());
-      
+
       if (draftPhotos[0]?.uri) {
         form.append('photo', { uri: draftPhotos[0].uri, type: 'image/jpeg', name: `photo_${Date.now()}.jpg` });
       }
@@ -163,46 +190,6 @@ export default function SupportTicketDetail({ navigation, route }) {
       await loadTicket();
     }catch(e){
       console.log('Send message failed', e?.response?.data || e?.message);
-    }
-  };
-  const loadTicket = async ()=>{
-    try{
-      const res = await api.get(`/support/tickets/${ticketId}`);
-      const t = res?.data;
-      const mapped = {
-        id: t.id,
-        title: t.equipment_name || 'Support ticket',
-        category: 'Equipment',
-        equipment: t.equipment_name || '—',
-        created: t.created_at,
-        status: t.status,
-      };
-      // const thr = (t.threads || []).map(x=>({
-      //   id: x.id,
-      //   author: x.sender_owner_id ? 'owner' : 'support',
-      //   time: x.created_at,
-      //   text: x.message || undefined,
-      //   photos: x.photo_path
-      //   ? [x.photo_path.startsWith('http')
-      //       ? x.photo_path
-      //       : x.photo_path.startsWith('/storage/')
-      //         ? `${IMAGE_BASE_URL.replace(/\/storage\/$/, '')}${x.photo_path}`
-      //         : `${IMAGE_BASE_URL.replace(/\/$/, '')}/${x.photo_path.replace(/^\/+/, '')}`
-      //     ]
-      //   : [],
-      // }));
-      const thr = (t.threads || []).map(x => ({
-  id: x.id,
-  author: x.sender_owner_id ? 'owner' : 'support',
-  time: x.created_at,
-  text: x.message || undefined,
-  photos: x.photo_path ? [toStorageUrl(x.photo_path)] : [],
-}));
-
-      setTicket(mapped);
-      setThread(thr);
-    }catch(e){
-      console.log('Load ticket failed', e?.response?.data || e?.message);
     }
   };
 

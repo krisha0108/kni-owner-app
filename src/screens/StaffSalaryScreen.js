@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { api } from '../api/client';
-import { useFocusEffect } from '@react-navigation/native';
+import { useRestaurant } from '../context/RestaurantContext';
+import { RestaurantSelectorBar } from '../components/RestaurantSelector';
+import KniBottomNav from '../components/KniBottomNav';
+import NavigationMenu from '../components/NavigationMenu';
 
 const C = {
   primary: '#EF3A3A',
@@ -53,13 +56,18 @@ const formatPrice = (amount) => {
 };
 
 export default function StaffSalaryScreen({ navigation }) {
+  // Global restaurant context
+  const {
+    selectedRestaurantIdId,
+    loading: restaurantsLoading,
+    loadRestaurants,
+  } = useRestaurant();
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [salaries, setSalaries] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
-  const [restaurants, setRestaurants] = useState([]);
   const [detailModal, setDetailModal] = useState(null);
   const [generating, setGenerating] = useState(false);
 
@@ -67,37 +75,19 @@ export default function StaffSalaryScreen({ navigation }) {
   const [paymentModal, setPaymentModal] = useState(null);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [isRecordingPayment, setIsRecordingPayment] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadData();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedRestaurant, selectedMonth, selectedYear])
-  );
+  const loadData = useCallback(async () => {
+    if (!selectedRestaurantIdId) return;
 
-  const loadData = async () => {
     try {
       setLoading(true);
+      const response = await api.get(
+        `/owner/staff-salary?restaurantId=${selectedRestaurantIdId}&month=${selectedMonth}&year=${selectedYear}`
+      );
 
-      const restaurantsRes = await api.get('/owner/restaurants');
-      if (restaurantsRes.data.ok) {
-        const approvedRestaurants = restaurantsRes.data.data.filter(r => r.status === 'APPROVED');
-        setRestaurants(approvedRestaurants);
-
-        if (approvedRestaurants.length > 0 && !selectedRestaurant) {
-          setSelectedRestaurant(approvedRestaurants[0].id);
-          return;
-        }
-      }
-
-      if (selectedRestaurant) {
-        const response = await api.get(
-          `/owner/staff-salary?restaurantId=${selectedRestaurant}&month=${selectedMonth}&year=${selectedYear}`
-        );
-
-        if (response.data.ok) {
-          setSalaries(response.data.data || []);
-        }
+      if (response.data.ok) {
+        setSalaries(response.data.data || []);
       }
     } catch (error) {
       console.error('Error loading salaries:', error);
@@ -105,11 +95,19 @@ export default function StaffSalaryScreen({ navigation }) {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [selectedRestaurantIdId, selectedMonth, selectedYear]);
 
-  const onRefresh = () => {
+  // Load data when restaurant or date changes
+  useEffect(() => {
+    if (selectedRestaurantIdId) {
+      loadData();
+    }
+  }, [selectedRestaurantIdId, selectedMonth, selectedYear, loadData]);
+
+  const onRefresh = async () => {
     setRefreshing(true);
-    loadData();
+    await loadRestaurants();
+    await loadData();
   };
 
   const generateSalaries = async () => {
@@ -125,7 +123,7 @@ export default function StaffSalaryScreen({ navigation }) {
             setGenerating(true);
             try {
               const response = await api.post('/owner/staff-salary/generate', {
-                restaurantId: selectedRestaurant,
+                restaurantId: selectedRestaurantIdId,
                 month: selectedMonth,
                 year: selectedYear,
               });
@@ -350,25 +348,6 @@ export default function StaffSalaryScreen({ navigation }) {
     );
   }
 
-  if (restaurants.length === 0) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.menuBtn}>
-            <Icon name="arrow-back" size={24} color={C.ink} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Staff Salary</Text>
-          <View style={{ width: 40 }} />
-        </View>
-        <View style={styles.emptyContainer}>
-          <Icon name="restaurant-outline" size={80} color={C.muted} />
-          <Text style={styles.emptyTitle}>No Restaurant Found</Text>
-          <Text style={styles.emptyText}>Please add a restaurant first</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -376,8 +355,13 @@ export default function StaffSalaryScreen({ navigation }) {
           <Icon name="arrow-back" size={24} color={C.ink} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Staff Salary</Text>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+          <Icon name="menu" size={22} color="#1D2254" />
+        </TouchableOpacity>
       </View>
+
+      {/* Global Restaurant Selector */}
+      <RestaurantSelectorBar />
 
       {/* Month Selector */}
       <View style={styles.monthSelector}>
@@ -427,23 +411,6 @@ export default function StaffSalaryScreen({ navigation }) {
             <Text style={[styles.summaryValue, { color: C.warn }]}>{formatPrice(summary.totalPending)}</Text>
           </View>
         </View>
-      )}
-
-      {/* Restaurant Selector */}
-      {restaurants.length > 1 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow}>
-          {restaurants.map(r => (
-            <TouchableOpacity
-              key={r.id}
-              style={[styles.filterChip, selectedRestaurant === r.id && styles.filterChipActive]}
-              onPress={() => setSelectedRestaurant(r.id)}
-            >
-              <Text style={[styles.filterText, selectedRestaurant === r.id && styles.filterTextActive]}>
-                {r.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
       )}
 
       <FlatList
@@ -648,6 +615,9 @@ export default function StaffSalaryScreen({ navigation }) {
           </View>
         </View>
       </Modal>
+
+      <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
+      <KniBottomNav navigation={navigation} />
     </SafeAreaView>
   );
 }

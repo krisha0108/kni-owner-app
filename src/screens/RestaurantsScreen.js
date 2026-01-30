@@ -1,5 +1,5 @@
 // screens/RestaurantsScreen.js
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Image, TouchableOpacity,
   TextInput, RefreshControl, Animated, Dimensions, Modal, Linking, Platform
@@ -11,6 +11,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { pick, types, isCancel } from '@react-native-documents/picker';
 
 import { api, IMAGE_BASE_URL } from '../api/client';
+import KniBottomNav from '../components/KniBottomNav';
+import NavigationMenu from '../components/NavigationMenu';
 
 const C = { primary:'#EF3A3A', ink:'#1D2254', bg:'#F5F7FA', card:'#FFFFFF',
   text:'#0F172A', muted:'#6B7280', border:'#E5E7EB', ok:'#10B981', warn:'#F59E0B', danger:'#EF4444' };
@@ -81,6 +83,7 @@ export default function RestaurantsScreen({ navigation }) {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
   const [items, setItems] = useState([]);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   // modals
   const [formOpen, setFormOpen] = useState(false);
@@ -95,12 +98,8 @@ export default function RestaurantsScreen({ navigation }) {
     })();
   }, []);
 
-  useEffect(() => {
-    fetchRestaurants();
-  }, []);
-
   // Restaurant list
-  const fetchRestaurants = async () => {
+  const fetchRestaurants = useCallback(async () => {
     try {
       setLoading(true);
       const res = await api.get('/restaurants');
@@ -129,7 +128,11 @@ export default function RestaurantsScreen({ navigation }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [show]);
+
+  useEffect(() => {
+    fetchRestaurants();
+  }, [fetchRestaurants]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -154,7 +157,7 @@ export default function RestaurantsScreen({ navigation }) {
       Animated.timing(pulse,{toValue:0.5,duration:900,useNativeDriver:false}),
     ]));
     loop.start(); return ()=>{ clearTimeout(t); loop.stop(); };
-  },[]);
+  },[pulse]);
 
   const [debouncedQuery, setDebouncedQuery] = useState('');
   useEffect(() => {
@@ -407,8 +410,8 @@ export default function RestaurantsScreen({ navigation }) {
           <Icon name="chevron-back" size={20} color={C.ink}/>
         </TouchableOpacity>
         <Text style={st.hTitle}>Restaurants</Text>
-        <TouchableOpacity onPress={()=>startEdit(null)} style={st.hBtn}>
-          <Icon name="add" size={20} color={C.ink}/>
+        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+          <Icon name="menu" size={22} color="#1D2254" />
         </TouchableOpacity>
       </View>
 
@@ -637,6 +640,8 @@ export default function RestaurantsScreen({ navigation }) {
 
       {/* Toast */}
       {ToastView}
+      <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
+      <KniBottomNav navigation={navigation} />
     </SafeAreaView>
   );
 }
@@ -653,7 +658,7 @@ function SkeletonRestaurantCard() {
     );
     loop.start();
     return () => loop.stop();
-  }, []);
+  }, [pulse]);
 
   return (
     <View style={st.card}>

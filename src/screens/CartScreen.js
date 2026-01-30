@@ -2,17 +2,19 @@ import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
-  FlatList,
+  ScrollView,
   TouchableOpacity,
-  Image,
   StyleSheet,
   Alert,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { api } from '../api/client';
+import KniBottomNav from '../components/KniBottomNav';
+import NavigationMenu from '../components/NavigationMenu';
 
 const C = {
   primary: '#EF3A3A',
@@ -24,12 +26,15 @@ const C = {
   border: '#E5E7EB',
   ok: '#10B981',
   danger: '#EF4444',
+  serviceColor: '#3B82F6',
+  partColor: '#10B981',
 };
 
 export default function CartScreen({ navigation }) {
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(null);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -40,13 +45,16 @@ export default function CartScreen({ navigation }) {
   const loadCart = async () => {
     try {
       setLoading(true);
+      console.log('[CartScreen] Loading cart...');
       const response = await api.get('/owner/cart');
+      console.log('[CartScreen] Cart response:', response.data?.ok, 'items:', response.data?.data?.items?.length || 0);
       if (response.data?.ok) {
-        // Cart API returns { data: { items: [...] } }
         const cartData = response.data.data;
         const items = Array.isArray(cartData?.items) ? cartData.items : [];
+        console.log('[CartScreen] Setting cart with', items.length, 'items');
         setCart(items);
       } else {
+        console.log('[CartScreen] Cart response not ok, clearing');
         setCart([]);
       }
     } catch (error) {
@@ -79,6 +87,25 @@ export default function CartScreen({ navigation }) {
     }
   };
 
+  // Helper function to clear AsyncStorage cart data
+  const clearAsyncStorageCart = async () => {
+    try {
+      const allKeys = await AsyncStorage.getAllKeys();
+      const cartKeys = allKeys.filter(k =>
+        k.startsWith('rdraft:') ||
+        k.startsWith('rservices:') ||
+        k.startsWith('rparts:') ||
+        k.startsWith('pmeta:')
+      );
+      if (cartKeys.length > 0) {
+        await AsyncStorage.multiRemove(cartKeys);
+        console.log('[CartScreen] Cleared AsyncStorage cart data');
+      }
+    } catch (error) {
+      console.log('[CartScreen] Error clearing AsyncStorage:', error);
+    }
+  };
+
   const handleRemove = async (itemId) => {
     Alert.alert(
       'Remove Item',
@@ -90,8 +117,15 @@ export default function CartScreen({ navigation }) {
           style: 'destructive',
           onPress: async () => {
             try {
+              console.log('[CartScreen] Removing item:', itemId);
               const response = await api.delete(`/owner/cart/items/${itemId}`);
+              console.log('[CartScreen] Delete response:', response.data);
               if (response.data?.ok) {
+                // Also clear AsyncStorage cart to prevent sync issues
+                await clearAsyncStorageCart();
+                // Immediately remove from local state for instant UI update
+                setCart(prev => prev.filter(item => item.id !== itemId));
+                // Then reload from server to confirm
                 loadCart();
               } else {
                 throw new Error(response.data?.error || 'Failed to remove item');
@@ -111,27 +145,162 @@ export default function CartScreen({ navigation }) {
       return Alert.alert('Empty Cart', 'Please add items to cart before proceeding');
     }
 
-    // Navigate to booking creation (service bookings, not marketplace)
     navigation.navigate('SlotBooking', { cartItems: cart });
   };
 
-  // Helper to get item details (works for both services and parts)
+  // Helper to get item details
   const getItemDetails = (item) => {
     const itemData = item.serviceItem || item.partItem || {};
+    const category = itemData.category || {};
+    const subCategory = itemData.subCategory || {};
     return {
       id: item.id,
       name: itemData.name || 'Unknown Item',
       price: item.priceSnapshot || itemData.price || 0,
       qty: item.qty || 1,
       type: item.itemType || (item.serviceItem ? 'SERVICE' : 'PART'),
+      categoryId: itemData.categoryId || category.id || 'uncategorized',
+      categoryName: category.name || 'Uncategorized',
+      subCategoryName: subCategory.name || null,
     };
   };
 
+  // Group items by category
+  const groupedByCategory = cart.reduce((acc, item) => {
+    const details = getItemDetails(item);
+    const categoryId = details.categoryId;
+
+    if (!acc[categoryId]) {
+      acc[categoryId] = {
+        categoryId,
+        categoryName: details.categoryName,
+        services: [],
+        parts: [],
+      };
+    }
+
+    if (details.type === 'SERVICE') {
+      acc[categoryId].services.push({ ...item, details });
+    } else {
+      acc[categoryId].parts.push({ ...item, details });
+    }
+
+    return acc;
+  }, {});
+
+  const categories = Object.values(groupedByCategory);
+
+  // Calculate totals
   const totalPrice = cart.reduce((sum, item) => {
     const details = getItemDetails(item);
     return sum + details.price * details.qty;
   }, 0);
   const totalItems = cart.reduce((sum, item) => sum + (item.qty || 1), 0);
+
+  // Render individual item row
+  const renderItemRow = (item, isService) => {
+    const { details } = item;
+    const color = isService ? C.serviceColor : C.partColor;
+
+    return (
+      <View key={details.id} style={styles.itemRow}>
+        <View style={[styles.itemIcon, { backgroundColor: color + '15' }]}>
+          <Icon
+            name={isService ? 'construct-outline' : 'hardware-chip-outline'}
+            size={20}
+            color={color}
+          />
+        </View>
+
+        <View style={styles.itemInfo}>
+          <Text style={styles.itemName} numberOfLines={1}>{details.name}</Text>
+          {details.subCategoryName && (
+            <Text style={styles.itemSubCategory}>{details.subCategoryName}</Text>
+          )}
+          <Text style={[styles.itemPrice, { color }]}>₹{details.price.toFixed(2)}</Text>
+        </View>
+
+        <View style={styles.itemActions}>
+          <View style={styles.quantityRow}>
+            <TouchableOpacity
+              onPress={() => handleUpdateQuantity(details.id, details.qty - 1)}
+              disabled={updating === details.id || details.qty <= 1}
+              style={styles.quantityBtn}
+            >
+              <Icon
+                name="remove-circle-outline"
+                size={24}
+                color={details.qty <= 1 ? C.muted : C.primary}
+              />
+            </TouchableOpacity>
+            <Text style={styles.quantity}>{details.qty}</Text>
+            <TouchableOpacity
+              onPress={() => handleUpdateQuantity(details.id, details.qty + 1)}
+              disabled={updating === details.id}
+              style={styles.quantityBtn}
+            >
+              <Icon name="add-circle-outline" size={24} color={C.ok} />
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity onPress={() => handleRemove(details.id)} style={styles.removeBtn}>
+            <Icon name="trash-outline" size={18} color={C.danger} />
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
+  // Render category card
+  const renderCategoryCard = (categoryData) => {
+    const { categoryId, categoryName, services, parts } = categoryData;
+    const categoryTotal = [...services, ...parts].reduce((sum, item) => {
+      return sum + item.details.price * item.details.qty;
+    }, 0);
+    const categoryItemCount = services.length + parts.length;
+
+    return (
+      <View key={categoryId} style={styles.categoryCard}>
+        {/* Category Header */}
+        <View style={styles.categoryHeader}>
+          <View style={styles.categoryTitleRow}>
+            <Icon name="grid-outline" size={20} color={C.ink} />
+            <Text style={styles.categoryName}>{categoryName}</Text>
+          </View>
+          <View style={styles.categoryMeta}>
+            <Text style={styles.categoryItemCount}>{categoryItemCount} items</Text>
+            <Text style={styles.categoryTotal}>₹{categoryTotal.toFixed(2)}</Text>
+          </View>
+        </View>
+
+        {/* Services Section */}
+        {services.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Icon name="construct" size={16} color={C.serviceColor} />
+              <Text style={[styles.sectionTitle, { color: C.serviceColor }]}>
+                Services ({services.length})
+              </Text>
+            </View>
+            {services.map((item) => renderItemRow(item, true))}
+          </View>
+        )}
+
+        {/* Parts Section */}
+        {parts.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Icon name="hardware-chip" size={16} color={C.partColor} />
+              <Text style={[styles.sectionTitle, { color: C.partColor }]}>
+                Parts ({parts.length})
+              </Text>
+            </View>
+            {parts.map((item) => renderItemRow(item, false))}
+          </View>
+        )}
+      </View>
+    );
+  };
 
   if (loading) {
     return (
@@ -141,11 +310,14 @@ export default function CartScreen({ navigation }) {
             <Icon name="arrow-back" size={24} color={C.ink} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Cart</Text>
-          <View style={{ width: 40 }} />
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+            <Icon name="menu" size={22} color="#1D2254" />
+          </TouchableOpacity>
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={C.primary} />
         </View>
+        <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
       </SafeAreaView>
     );
   }
@@ -158,95 +330,44 @@ export default function CartScreen({ navigation }) {
           <Icon name="arrow-back" size={24} color={C.ink} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Cart ({totalItems})</Text>
-        <TouchableOpacity
-          onPress={() => {
-            Alert.alert('Clear Cart', 'Remove all items from cart?', [
-              { text: 'Cancel', style: 'cancel' },
-              {
-                text: 'Clear',
-                style: 'destructive',
-                onPress: async () => {
-                  for (const item of cart) {
-                    await api.delete(`/owner/cart/items/${item.id}`);
-                  }
-                  loadCart();
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity
+            onPress={() => {
+              Alert.alert('Clear Cart', 'Remove all items from cart?', [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Clear',
+                  style: 'destructive',
+                  onPress: async () => {
+                    try {
+                      // Clear database cart
+                      await api.delete('/owner/cart?clearAll=true');
+                      // Clear AsyncStorage cart data
+                      await clearAsyncStorageCart();
+                      loadCart();
+                    } catch (error) {
+                      console.error('Clear cart error:', error);
+                      Alert.alert('Error', 'Could not clear cart');
+                    }
+                  },
                 },
-              },
-            ]);
-          }}
-          disabled={cart.length === 0}
-        >
-          <Icon name="trash-outline" size={20} color={cart.length > 0 ? C.danger : C.muted} />
-        </TouchableOpacity>
+              ]);
+            }}
+            disabled={cart.length === 0}
+          >
+            <Icon name="trash-outline" size={20} color={cart.length > 0 ? C.danger : C.muted} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+            <Icon name="menu" size={22} color="#1D2254" />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Cart Items */}
-      <FlatList
-        data={cart}
-        keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={styles.listContent}
-        renderItem={({ item }) => {
-          const details = getItemDetails(item);
-          return (
-            <View style={styles.cartItem}>
-              {/* Item Type Icon */}
-              <View style={[styles.itemImage, styles.placeholderImage]}>
-                <Icon
-                  name={details.type === 'SERVICE' ? 'construct-outline' : 'hardware-chip-outline'}
-                  size={32}
-                  color={details.type === 'SERVICE' ? C.primary : C.ok}
-                />
-              </View>
-
-              {/* Item Details */}
-              <View style={styles.itemDetails}>
-                <View style={styles.itemTypeRow}>
-                  <Text style={[styles.itemType, { color: details.type === 'SERVICE' ? C.primary : C.ok }]}>
-                    {details.type}
-                  </Text>
-                </View>
-                <Text style={styles.itemName} numberOfLines={2}>
-                  {details.name}
-                </Text>
-                <Text style={styles.itemPrice}>₹{details.price.toFixed(2)}</Text>
-              </View>
-
-              {/* Quantity Controls */}
-              <View style={styles.quantityControls}>
-                <View style={styles.quantityRow}>
-                  <TouchableOpacity
-                    onPress={() => handleUpdateQuantity(item.id, details.qty - 1)}
-                    disabled={updating === item.id || details.qty <= 1}
-                    style={styles.quantityBtn}
-                  >
-                    <Icon
-                      name="remove-circle-outline"
-                      size={28}
-                      color={details.qty <= 1 ? C.muted : C.primary}
-                    />
-                  </TouchableOpacity>
-                  <Text style={styles.quantity}>{details.qty}</Text>
-                  <TouchableOpacity
-                    onPress={() => handleUpdateQuantity(item.id, details.qty + 1)}
-                    disabled={updating === item.id}
-                    style={styles.quantityBtn}
-                  >
-                    <Icon name="add-circle-outline" size={28} color={C.ok} />
-                  </TouchableOpacity>
-                </View>
-
-                {/* Remove Button */}
-                <TouchableOpacity
-                  onPress={() => handleRemove(item.id)}
-                  style={styles.removeBtn}
-                >
-                  <Icon name="trash-outline" size={20} color={C.danger} />
-                </TouchableOpacity>
-              </View>
-            </View>
-          );
-        }}
-        ListEmptyComponent={
+      {/* Cart Items by Category */}
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {categories.length > 0 ? (
+          categories.map(renderCategoryCard)
+        ) : (
           <View style={styles.emptyBox}>
             <Icon name="cart-outline" size={80} color={C.muted} />
             <Text style={styles.emptyTitle}>Your cart is empty</Text>
@@ -258,8 +379,8 @@ export default function CartScreen({ navigation }) {
               <Text style={styles.browseButtonText}>Browse Items</Text>
             </TouchableOpacity>
           </View>
-        }
-      />
+        )}
+      </ScrollView>
 
       {/* Footer */}
       {cart.length > 0 && (
@@ -269,6 +390,7 @@ export default function CartScreen({ navigation }) {
               <Text style={styles.totalLabel}>Subtotal ({totalItems} items)</Text>
               <Text style={styles.totalValue}>₹{totalPrice.toFixed(2)}</Text>
             </View>
+            <Text style={styles.categoryCount}>{categories.length} categories</Text>
           </View>
           <TouchableOpacity
             style={styles.checkoutButton}
@@ -279,6 +401,8 @@ export default function CartScreen({ navigation }) {
           </TouchableOpacity>
         </View>
       )}
+      <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
+      <KniBottomNav navigation={navigation} />
     </SafeAreaView>
   );
 }
@@ -316,81 +440,123 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  listContent: {
+  scrollContent: {
     padding: 16,
     flexGrow: 1,
   },
-  cartItem: {
-    flexDirection: 'row',
+  categoryCard: {
     backgroundColor: C.card,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
+    borderRadius: 16,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: C.border,
+    overflow: 'hidden',
   },
-  itemImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-    resizeMode: 'cover',
-  },
-  placeholderImage: {
-    backgroundColor: C.bg,
+  categoryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
+    padding: 16,
+    backgroundColor: C.bg,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
   },
-  itemDetails: {
-    flex: 1,
-    marginLeft: 12,
-    justifyContent: 'center',
+  categoryTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
-  itemTypeRow: {
-    marginBottom: 4,
-  },
-  itemType: {
-    fontSize: 10,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
-  itemName: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: C.text,
-    marginBottom: 4,
-  },
-  itemPrice: {
+  categoryName: {
     fontSize: 16,
     fontWeight: '700',
-    color: C.primary,
-    marginBottom: 4,
+    color: C.ink,
   },
-  itemDescription: {
+  categoryMeta: {
+    alignItems: 'flex-end',
+  },
+  categoryItemCount: {
     fontSize: 12,
     color: C.muted,
   },
-  quantityControls: {
-    marginLeft: 8,
+  categoryTotal: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: C.primary,
+  },
+  section: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 6,
+    marginBottom: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+  },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+  },
+  itemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+  },
+  itemIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  itemInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  itemName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: C.text,
+  },
+  itemSubCategory: {
+    fontSize: 11,
+    color: C.muted,
+    marginTop: 2,
+  },
+  itemPrice: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginTop: 4,
+  },
+  itemActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   quantityRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 4,
   },
   quantityBtn: {
     padding: 2,
   },
   quantity: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
     color: C.text,
     minWidth: 24,
     textAlign: 'center',
   },
   removeBtn: {
-    padding: 8,
+    padding: 6,
   },
   emptyBox: {
     flex: 1,
@@ -444,6 +610,10 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: C.text,
+  },
+  categoryCount: {
+    fontSize: 12,
+    color: C.muted,
   },
   checkoutButton: {
     flexDirection: 'row',

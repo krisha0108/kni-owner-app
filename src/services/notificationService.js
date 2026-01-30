@@ -2,6 +2,7 @@ import { getMessaging, requestPermission, getToken, onTokenRefresh, onMessage, s
 import notifee from '@notifee/react-native';
 import { api } from '../api/client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
 /**
  * Notification Service for KNI Owner App
@@ -18,15 +19,30 @@ class NotificationService {
   async initialize() {
     try {
       console.log('🔔 Initializing notification service');
+
+      // Force re-registration after Firebase project change
+      // Remove this line after first successful registration
+      await AsyncStorage.removeItem('fcmTokenRegistered');
+
       await this.setupFCM();
       await this.setupNotificationListeners();
 
       // If user is already logged in, register the FCM token
       const userToken = await AsyncStorage.getItem('userToken');
       const fcmTokenRegistered = await AsyncStorage.getItem('fcmTokenRegistered');
+      const fcmToken = await AsyncStorage.getItem('fcmToken');
+
+      console.log('🔍 Auth check - userToken exists:', !!userToken);
+      console.log('🔍 Auth check - fcmTokenRegistered:', fcmTokenRegistered);
+      console.log('🔍 Auth check - fcmToken exists:', !!fcmToken);
+
       if (userToken && !fcmTokenRegistered) {
         console.log('📤 User already logged in, registering FCM token');
         await this.registerTokenAfterLogin();
+      } else if (!userToken) {
+        console.log('⚠️ User not logged in, skipping token registration');
+      } else if (fcmTokenRegistered) {
+        console.log('ℹ️ FCM token already registered');
       }
 
       console.log('✅ Notification service initialized');
@@ -49,29 +65,43 @@ class NotificationService {
    */
   async setupFCM() {
     try {
+      console.log('🔧 Setting up FCM...');
+
       // Request permission
+      console.log('📋 Requesting notification permission...');
       const authStatus = await requestPermission(getMessaging());
+      console.log('📋 Permission status:', authStatus);
+
       const enabled =
         authStatus === AuthorizationStatus.AUTHORIZED ||
         authStatus === AuthorizationStatus.PROVISIONAL;
 
       if (!enabled) {
-        console.log('🚫 Push notification permission denied');
+        console.log('🚫 Push notification permission denied, status:', authStatus);
         return;
       }
 
       console.log('✅ Push notification permission granted');
 
       // Get FCM token and store locally (don't register with backend yet)
+      console.log('🔑 Getting FCM token...');
       const token = await getToken(getMessaging());
-      console.log('📱 FCM Token:', token);
+
+      if (!token) {
+        console.error('❌ FCM token is null/undefined!');
+        return;
+      }
+
+      console.log('📱 FCM Token obtained:', token.substring(0, 30) + '...');
+      console.log('📱 FCM Token length:', token.length);
 
       // Store token locally for later registration after login
       await AsyncStorage.setItem('fcmToken', token);
+      console.log('💾 FCM token saved to AsyncStorage');
 
       // Listen for token refresh - only register if user is authenticated
       onTokenRefresh(getMessaging(), async (newToken) => {
-        console.log('🔄 FCM token refreshed:', newToken);
+        console.log('🔄 FCM token refreshed:', newToken.substring(0, 30) + '...');
         await AsyncStorage.setItem('fcmToken', newToken);
 
         // Only register with backend if user is authenticated
@@ -83,6 +113,7 @@ class NotificationService {
 
     } catch (error) {
       console.error('❌ FCM setup error:', error);
+      console.error('❌ FCM setup error details:', error.message, error.code);
     }
   }
 
@@ -93,9 +124,12 @@ class NotificationService {
   async registerToken(token) {
     try {
       console.log('📤 Registering FCM token with backend');
+      const platform = Platform.OS === 'ios' ? 'ios' : 'android';
+      console.log('📱 Registering with platform:', platform);
 
       const response = await api.post('/notifications/register-token', {
         token: token,
+        platform: platform,
       });
 
       if (response.data.ok) {
@@ -287,6 +321,46 @@ class NotificationService {
       );
     } catch (error) {
       console.error('❌ Check permissions error:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Reset all tokens and re-register
+   * Call this to fix token issues after Firebase project change
+   */
+  async resetAndReregister() {
+    try {
+      console.log('🔄 Resetting all tokens and re-registering...');
+
+      // Delete all tokens from backend
+      try {
+        await api.delete('/owner/notifications/reset-tokens');
+        console.log('✅ Backend tokens cleared');
+      } catch (error) {
+        console.log('⚠️ Could not clear backend tokens:', error.message);
+      }
+
+      // Clear local storage flags
+      await AsyncStorage.removeItem('fcmTokenRegistered');
+      console.log('✅ Local flags cleared');
+
+      // Get fresh FCM token
+      const token = await getToken(getMessaging());
+      if (token) {
+        console.log('🔑 Got fresh FCM token:', token.substring(0, 30) + '...');
+        await AsyncStorage.setItem('fcmToken', token);
+
+        // Register with correct platform
+        await this.registerToken(token);
+        console.log('✅ Token re-registered successfully');
+        return true;
+      } else {
+        console.error('❌ Could not get FCM token');
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Reset and re-register error:', error);
       return false;
     }
   }

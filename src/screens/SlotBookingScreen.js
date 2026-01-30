@@ -5,8 +5,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
+import { useRestaurant } from '../context/RestaurantContext';
 
 const C = {
   primary: '#EF3A3A',
@@ -31,8 +33,16 @@ const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); retur
 const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
 
 export default function SlotBookingScreen({ navigation, route }) {
-  const [loading, setLoading] = useState(true);
-  const [restaurants, setRestaurants] = useState([]);
+  // Global restaurant context
+  const {
+    restaurants: allRestaurants,
+    selectedRestaurant: globalSelectedRestaurant,
+    selectedRestaurantId,
+    loading: restaurantsLoading,
+    loadRestaurants,
+  } = useRestaurant();
+
+  const [loading, setLoading] = useState(false);
   const [equipment, setEquipment] = useState([]);
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
   const [selectedEquipment, setSelectedEquipment] = useState(route?.params?.equipment || null);
@@ -45,38 +55,27 @@ export default function SlotBookingScreen({ navigation, route }) {
   const today = startOfDay(new Date());
   const next14Days = Array.from({ length: 14 }).map((_, i) => startOfDay(addDays(today, i)));
 
-  useFocusEffect(
-    useCallback(() => {
-      loadRestaurants();
-    }, [])
-  );
+  // Filter to approved restaurants only
+  const restaurants = allRestaurants.filter(r => r.status === 'APPROVED');
 
+  // Pre-select global restaurant on mount
   useEffect(() => {
-    if (selectedRestaurant) {
-      loadEquipment();
-    }
-  }, [selectedRestaurant]);
-
-  const loadRestaurants = async () => {
-    try {
-      setLoading(true);
-      const { data } = await api.get('/owner/restaurants');
-      if (data.ok && data.data) {
-        const approved = data.data.filter(r => r.status === 'APPROVED');
-        setRestaurants(approved);
-        if (approved.length === 1) {
-          setSelectedRestaurant(approved[0]);
-        }
+    if (globalSelectedRestaurant && !selectedRestaurant) {
+      const approved = restaurants.find(r => r.id === selectedRestaurantId);
+      if (approved) {
+        setSelectedRestaurant(approved);
       }
-    } catch (error) {
-      console.log('Error loading restaurants:', error);
-      Alert.alert('Error', 'Failed to load restaurants');
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [globalSelectedRestaurant, selectedRestaurantId, restaurants]);
 
-  const loadEquipment = async () => {
+  // Auto-select if only one restaurant
+  useEffect(() => {
+    if (restaurants.length === 1 && !selectedRestaurant) {
+      setSelectedRestaurant(restaurants[0]);
+    }
+  }, [restaurants]);
+
+  const loadEquipment = useCallback(async () => {
     if (!selectedRestaurant) return;
     try {
       const { data } = await api.get(`/owner/equipment?restaurantId=${selectedRestaurant.id}`);
@@ -86,7 +85,13 @@ export default function SlotBookingScreen({ navigation, route }) {
     } catch (error) {
       console.log('Error loading equipment:', error);
     }
-  };
+  }, [selectedRestaurant]);
+
+  useEffect(() => {
+    if (selectedRestaurant) {
+      loadEquipment();
+    }
+  }, [selectedRestaurant, loadEquipment]);
 
   const canProceed = () => {
     switch (step) {
@@ -134,6 +139,23 @@ export default function SlotBookingScreen({ navigation, route }) {
       const response = await api.post('/owner/bookings', payload);
 
       if (response.data.ok) {
+        // Clear all AsyncStorage cart data after successful booking
+        try {
+          const allKeys = await AsyncStorage.getAllKeys();
+          const cartKeys = allKeys.filter(k =>
+            k.startsWith('rdraft:') ||
+            k.startsWith('rservices:') ||
+            k.startsWith('rparts:') ||
+            k.startsWith('pmeta:')
+          );
+          if (cartKeys.length > 0) {
+            await AsyncStorage.multiRemove(cartKeys);
+            console.log('[SlotBooking] Cleared cart data:', cartKeys.length, 'keys');
+          }
+        } catch (clearError) {
+          console.log('[SlotBooking] Error clearing cart:', clearError);
+        }
+
         Alert.alert(
           'Booking Created',
           'Your service slot has been booked successfully. You will receive a confirmation shortly.',
@@ -179,7 +201,7 @@ export default function SlotBookingScreen({ navigation, route }) {
            date.getFullYear() === t.getFullYear();
   };
 
-  if (loading) {
+  if (restaurantsLoading) {
     return (
       <SafeAreaView style={st.container}>
         <View style={st.header}>

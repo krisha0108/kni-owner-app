@@ -44,7 +44,7 @@ const timer = setTimeout(async () => {
     }    }, 3000);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [logoAnim, scaleAnim, rotateAnim, navigation]);
 
   const rotateInterpolate = rotateAnim.interpolate({
     inputRange: [0, 1],

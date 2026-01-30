@@ -20,6 +20,10 @@ import SortDropdown from '../components/filters/SortDropdown';
 import ActiveFilterBadges from '../components/filters/ActiveFilterBadges';
 import { applyFilters, getDefaultFilters, countActiveFilters } from '../utils/filterHelpers';
 import { exportAndShare, BOOKING_COLUMNS, formatBookingsForExport } from '../services/exportService';
+import { useRestaurant } from '../context/RestaurantContext';
+import { RestaurantSelectorBar } from '../components/RestaurantSelector';
+import KniBottomNav from '../components/KniBottomNav';
+import NavigationMenu from '../components/NavigationMenu';
 
 const C = {
   primary: '#EF3A3A',
@@ -83,16 +87,24 @@ const FILTER_CONFIG = {
 };
 
 export default function MyBookingsScreen({ navigation }) {
+  // Global restaurant context
+  const {
+    restaurants,
+    selectedRestaurantId: selectedRestaurant,
+    loading: restaurantsLoading,
+    loadRestaurants,
+    hasRestaurants,
+  } = useRestaurant();
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [bookings, setBookings] = useState([]);
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
-  const [restaurants, setRestaurants] = useState([]);
 
   // Filter states
   const [filters, setFilters] = useState(getDefaultFilters());
   const [showFilterSheet, setShowFilterSheet] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -102,27 +114,19 @@ export default function MyBookingsScreen({ navigation }) {
   );
 
   const loadData = async () => {
+    if (!selectedRestaurant) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
 
-      const restaurantsRes = await api.get('/owner/restaurants');
-      if (restaurantsRes.data.ok) {
-        const approvedRestaurants = restaurantsRes.data.data.filter(r => r.status === 'APPROVED');
-        setRestaurants(approvedRestaurants);
+      const params = new URLSearchParams({ restaurantId: selectedRestaurant });
+      const response = await api.get(`/owner/bookings?${params}`);
 
-        if (approvedRestaurants.length > 0 && !selectedRestaurant) {
-          setSelectedRestaurant(approvedRestaurants[0].id);
-          return;
-        }
-      }
-
-      if (selectedRestaurant) {
-        const params = new URLSearchParams({ restaurantId: selectedRestaurant });
-        const response = await api.get(`/owner/bookings?${params}`);
-
-        if (response.data.ok) {
-          setBookings(response.data.data || []);
-        }
+      if (response.data.ok) {
+        setBookings(response.data.data || []);
       }
     } catch (error) {
       console.error('Error loading bookings:', error);
@@ -143,9 +147,10 @@ export default function MyBookingsScreen({ navigation }) {
     });
   }, [bookings, filters]);
 
-  const onRefresh = () => {
+  const onRefresh = async () => {
     setRefreshing(true);
-    loadData();
+    await loadRestaurants();
+    await loadData();
   };
 
   const handleApplyFilters = (newFilters) => {
@@ -182,7 +187,7 @@ export default function MyBookingsScreen({ navigation }) {
     return (
       <TouchableOpacity
         style={styles.card}
-        onPress={() => navigation.navigate('RequestDetail', { requestId: item.id })}
+        onPress={() => navigation.navigate('BookingDetail', { bookingId: item.id })}
       >
         <View style={styles.cardHeader}>
           <View>
@@ -234,7 +239,7 @@ export default function MyBookingsScreen({ navigation }) {
     );
   };
 
-  if (loading && !refreshing) {
+  if ((loading || restaurantsLoading) && !refreshing) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
@@ -242,7 +247,9 @@ export default function MyBookingsScreen({ navigation }) {
             <Icon name="arrow-back" size={24} color={C.ink} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>My Bookings</Text>
-          <View style={{ width: 40 }} />
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+            <Icon name="menu" size={22} color="#1D2254" />
+          </TouchableOpacity>
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={C.primary} />
@@ -251,7 +258,7 @@ export default function MyBookingsScreen({ navigation }) {
     );
   }
 
-  if (restaurants.length === 0) {
+  if (!hasRestaurants) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
@@ -259,7 +266,9 @@ export default function MyBookingsScreen({ navigation }) {
             <Icon name="arrow-back" size={24} color={C.ink} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>My Bookings</Text>
-          <View style={{ width: 40 }} />
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+            <Icon name="menu" size={22} color="#1D2254" />
+          </TouchableOpacity>
         </View>
         <View style={styles.emptyContainer}>
           <Icon name="restaurant-outline" size={80} color={C.muted} />
@@ -285,8 +294,11 @@ export default function MyBookingsScreen({ navigation }) {
               <Icon name="download-outline" size={22} color={C.ink} />
             )}
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('RequestNow')} style={styles.headerBtn}>
+          <TouchableOpacity onPress={() => navigation.navigate('NewBooking')} style={styles.headerBtn}>
             <Icon name="add-circle" size={26} color={C.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+            <Icon name="menu" size={22} color="#1D2254" />
           </TouchableOpacity>
         </View>
       </View>
@@ -327,22 +339,8 @@ export default function MyBookingsScreen({ navigation }) {
         />
       )}
 
-      {/* Restaurant Selector */}
-      {restaurants.length > 1 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.restaurantRow}>
-          {restaurants.map(r => (
-            <TouchableOpacity
-              key={r.id}
-              style={[styles.restaurantChip, selectedRestaurant === r.id && styles.restaurantChipActive]}
-              onPress={() => setSelectedRestaurant(r.id)}
-            >
-              <Text style={[styles.restaurantText, selectedRestaurant === r.id && styles.restaurantTextActive]}>
-                {r.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      )}
+      {/* Restaurant Selector - Global */}
+      <RestaurantSelectorBar />
 
       {/* Results Count */}
       <View style={styles.resultsRow}>
@@ -372,7 +370,7 @@ export default function MyBookingsScreen({ navigation }) {
             {activeFilterCount === 0 && (
               <TouchableOpacity
                 style={styles.emptyBtn}
-                onPress={() => navigation.navigate('RequestNow')}
+                onPress={() => navigation.navigate('NewBooking')}
               >
                 <Icon name="add" size={18} color="#fff" />
                 <Text style={styles.emptyBtnText}>Request Service</Text>
@@ -390,6 +388,8 @@ export default function MyBookingsScreen({ navigation }) {
         onApply={handleApplyFilters}
         config={FILTER_CONFIG}
       />
+      <KniBottomNav navigation={navigation} />
+      <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
     </SafeAreaView>
   );
 }

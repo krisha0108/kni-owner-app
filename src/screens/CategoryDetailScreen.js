@@ -7,6 +7,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { api, getImageUrl } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
+import KniBottomNav from '../components/KniBottomNav';
+import NavigationMenu from '../components/NavigationMenu';
 
 const C = {
   primary: '#EF3A3A',
@@ -36,6 +38,7 @@ export default function CategoryDetailScreen({ navigation, route }) {
   const [activeTab, setActiveTab] = useState('services');
   const [cart, setCart] = useState({});
   const [addingToCart, setAddingToCart] = useState({});
+  const [menuVisible, setMenuVisible] = useState(false);
 
   const fetchCategoryItems = useCallback(async () => {
     if (!categoryId) return;
@@ -88,6 +91,7 @@ export default function CategoryDetailScreen({ navigation, route }) {
 
     try {
       const response = await api.post('/owner/cart', {
+        itemType: type === 'service' ? 'SERVICE' : 'PART',
         [type === 'service' ? 'serviceItemId' : 'partItemId']: itemId,
         qty: 1,
       });
@@ -201,7 +205,9 @@ export default function CategoryDetailScreen({ navigation, route }) {
             <Icon name="arrow-back" size={22} color={C.ink} />
           </TouchableOpacity>
           <Text style={st.headerTitle} numberOfLines={1}>{categoryName || 'Category'}</Text>
-          <View style={{ width: 40 }} />
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+            <Icon name="menu" size={22} color="#1D2254" />
+          </TouchableOpacity>
         </View>
         <View style={st.loadingBox}>
           <ActivityIndicator size="large" color={C.primary} />
@@ -217,8 +223,8 @@ export default function CategoryDetailScreen({ navigation, route }) {
           <Icon name="arrow-back" size={22} color={C.ink} />
         </TouchableOpacity>
         <Text style={st.headerTitle} numberOfLines={1}>{category?.name || categoryName || 'Category'}</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('Cart')} style={st.cartBtn}>
-          <Icon name="cart-outline" size={22} color={C.ink} />
+        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+          <Icon name="menu" size={22} color="#1D2254" />
         </TouchableOpacity>
       </View>
 
@@ -290,6 +296,8 @@ export default function CategoryDetailScreen({ navigation, route }) {
           <Icon name="arrow-forward" size={18} color="#fff" />
         </TouchableOpacity>
       </View>
+      <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
+      <KniBottomNav navigation={navigation} />
     </SafeAreaView>
   );
 }

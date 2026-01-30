@@ -1,34 +1,96 @@
-import React, { useMemo } from 'react';
-import { View, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { View, TextInput, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { debounce } from 'lodash';
 
+const C = {
+  primary: '#EF3A3A',
+  primaryLight: '#FEF2F2',
+  ink: '#1D2254',
+  text: '#0F172A',
+  muted: '#6B7280',
+  bg: '#F5F7FA',
+  card: '#FFFFFF',
+  border: '#E5E7EB',
+};
+
 export default function SearchBar({ value, onChangeText, placeholder = 'Search...' }) {
+  const [isFocused, setIsFocused] = useState(false);
+  const focusAnim = useState(new Animated.Value(0))[0];
+
   const debouncedSearch = useMemo(
-    () => debounce(onChangeText, 500),
+    () => debounce(onChangeText, 300),
     [onChangeText]
   );
+
+  const handleFocus = () => {
+    setIsFocused(true);
+    Animated.spring(focusAnim, {
+      toValue: 1,
+      useNativeDriver: false,
+      tension: 50,
+      friction: 7,
+    }).start();
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+    Animated.spring(focusAnim, {
+      toValue: 0,
+      useNativeDriver: false,
+      tension: 50,
+      friction: 7,
+    }).start();
+  };
 
   const handleClear = () => {
     onChangeText('');
   };
 
+  const borderColor = focusAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [C.border, C.primary],
+  });
+
+  const shadowOpacity = focusAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.03, 0.12],
+  });
+
   return (
-    <View style={styles.searchBox}>
-      <Icon name="search-outline" size={18} color="#6B7280" style={styles.searchIcon} />
+    <Animated.View
+      style={[
+        styles.searchBox,
+        {
+          borderColor,
+          shadowOpacity,
+        },
+      ]}
+    >
+      <View style={[styles.iconContainer, isFocused && styles.iconContainerActive]}>
+        <Icon
+          name="search"
+          size={18}
+          color={isFocused ? C.primary : C.muted}
+        />
+      </View>
       <TextInput
         style={styles.searchInput}
         placeholder={placeholder}
         defaultValue={value}
         onChangeText={debouncedSearch}
         placeholderTextColor="#9CA3AF"
+        onFocus={handleFocus}
+        onBlur={handleBlur}
       />
-      {value && (
+      {value ? (
         <TouchableOpacity onPress={handleClear} style={styles.clearBtn}>
-          <Icon name="close-circle" size={18} color="#6B7280" />
+          <View style={styles.clearBtnInner}>
+            <Icon name="close" size={14} color="#fff" />
+          </View>
         </TouchableOpacity>
-      )}
-    </View>
+      ) : null}
+    </Animated.View>
   );
 }
 
@@ -36,30 +98,44 @@ const styles = StyleSheet.create({
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginHorizontal: 16,
-    marginVertical: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    backgroundColor: C.card,
+    borderRadius: 16,
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+    borderWidth: 2,
+    shadowColor: C.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 12,
+    elevation: 3,
   },
-  searchIcon: {
-    marginRight: 8,
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: C.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconContainerActive: {
+    backgroundColor: C.primaryLight,
   },
   searchInput: {
     flex: 1,
     fontSize: 15,
-    color: '#1F2937',
-    padding: 0,
+    fontWeight: '500',
+    color: C.text,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   clearBtn: {
-    padding: 4,
+    padding: 8,
+  },
+  clearBtnInner: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: C.muted,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

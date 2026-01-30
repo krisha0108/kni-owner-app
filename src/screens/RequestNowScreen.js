@@ -12,6 +12,8 @@ import { api } from '../api/client';
 import { Clipboard } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { useFocusEffect } from '@react-navigation/native';
+import KniBottomNav from '../components/KniBottomNav';
+import NavigationMenu from '../components/NavigationMenu';
 
 /* ---------- MONEY & UPI HELPERS ---------- */
 const toAmount = (n) => Math.round(Number(n || 0) * 100) / 100;
@@ -54,8 +56,7 @@ const Rs = (n)=>`₹ ${Number(Math.round(n || 0)).toLocaleString('en-IN')}`;
 const FIXED_FEE = 49;
 const GST_RATE  = 0.18;
 
-const UPI_ID = 'vyapar.173506862114@hdfcbank';
-const PAYEE_NAME = 'KNI';
+// UPI_ID and PAYEE_NAME are now fetched from admin payment settings
 
 /* ---------- DATE HELPERS ---------- */
 const startOfDay = (d)=>{ const x=new Date(d); x.setHours(0,0,0,0); return x; };
@@ -67,9 +68,18 @@ export default function RequestNow({ navigation, route }) {
   const insets = useSafeAreaInsets();
 
   /* ---------- INCOMING ---------- */
-  const passedServices = Array.isArray(route?.params?.services) ? route.params.services : [];
-  const passedParts    = Array.isArray(route?.params?.parts) ? route.params.parts : [];
-  const passedCartRaw  = route?.params?.cart || {};
+  const passedServices = useMemo(() =>
+    Array.isArray(route?.params?.services) ? route.params.services : [],
+    [route?.params?.services]
+  );
+  const passedParts = useMemo(() =>
+    Array.isArray(route?.params?.parts) ? route.params.parts : [],
+    [route?.params?.parts]
+  );
+  const passedCartRaw = useMemo(() =>
+    route?.params?.cart || {},
+    [route?.params?.cart]
+  );
   const productId      = String(route?.params?.productId ?? route?.params?.id ?? 'global');
   const productTitle   = route?.params?.productTitle || 'Commercial Fridge';
   const category       = route?.params?.category || 'Commercial';
@@ -80,7 +90,13 @@ export default function RequestNow({ navigation, route }) {
   /* ---------- STATE VARIABLES ---------- */
   const [ownerKey, setOwnerKey] = useState('global');
   const [cards, setCards] = useState([]);
+  const cardsRef = useRef(cards);
   const [loadingInit, setLoadingInit] = useState(true);
+
+  // Equipment-specific services/parts state
+  const [equipmentServices, setEquipmentServices] = useState([]);
+  const [equipmentParts, setEquipmentParts] = useState([]);
+  const [loadingEquipmentServices, setLoadingEquipmentServices] = useState(false);
   const isLoadingRef = useRef(false); // Guard to prevent concurrent/infinite loads
   const hasLoadedRef = useRef(false); // Track if data has been loaded for this session
   const [selectedMap, setSelectedMap] = useState({});
@@ -103,6 +119,8 @@ export default function RequestNow({ navigation, route }) {
   const [savingReq, setSavingReq] = useState(false);
   const [successModal, setSuccessModal] = useState(false);
   const [problemDescription, setProblemDescription] = useState('');
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [paymentSettings, setPaymentSettings] = useState(null);
 
   /* ---------- OWNER / PERSIST KEYS ---------- */
   useEffect(() => {
@@ -119,6 +137,26 @@ export default function RequestNow({ navigation, route }) {
       }
     })();
   }, [route?.params?.ownerId]);
+
+  // Keep cardsRef in sync with cards state
+  useEffect(() => {
+    cardsRef.current = cards;
+  }, [cards]);
+
+  // Fetch payment settings from admin
+  useEffect(() => {
+    const fetchPaymentSettings = async () => {
+      try {
+        const response = await api.get('/public/payment-settings');
+        if (response.data?.ok && response.data?.data) {
+          setPaymentSettings(response.data.data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch payment settings:', error);
+      }
+    };
+    fetchPaymentSettings();
+  }, []);
 
   const rdraftKeyOf = useCallback(
     (pid) => `rdraft:${ownerKey}:${pid || 'global'}`,
@@ -224,6 +262,170 @@ export default function RequestNow({ navigation, route }) {
     }
   }, []);
 
+  /* ---------- FETCH SERVICES/PARTS BY EQUIPMENT CATEGORY ---------- */
+  const fetchServicesByCategory = useCallback(async (categoryId, subCategoryId) => {
+    if (!categoryId) return { services: [], parts: [] };
+
+    try {
+      setLoadingEquipmentServices(true);
+
+      // Build query params
+      const params = { category_id: categoryId };
+      if (subCategoryId) {
+        params.subcategory_id = subCategoryId;
+      }
+
+      // Fetch services and parts in parallel
+      const [servicesRes, partsRes] = await Promise.all([
+        api.get('/app/services', { params }),
+        api.get('/app/parts', { params }),
+      ]);
+
+      const services = Array.isArray(servicesRes?.data?.data) ? servicesRes.data.data : [];
+      const parts = Array.isArray(partsRes?.data?.data) ? partsRes.data.data : [];
+
+      console.log('[RequestNow] Fetched services by category:', services.length);
+      console.log('[RequestNow] Fetched parts by category:', parts.length);
+
+      setEquipmentServices(services);
+      setEquipmentParts(parts);
+
+      return { services, parts };
+    } catch (e) {
+      console.log('[RequestNow] Failed to fetch services by category:', e?.message);
+      return { services: [], parts: [] };
+    } finally {
+      setLoadingEquipmentServices(false);
+    }
+  }, []);
+
+  /* ---------- LOAD EQUIPMENT SERVICES ON MOUNT ---------- */
+  useEffect(() => {
+    if (selectedEquipment?.categoryId) {
+      console.log('[RequestNow] Loading services for equipment category:', selectedEquipment.categoryId);
+      fetchServicesByCategory(selectedEquipment.categoryId, selectedEquipment.subCategoryId);
+    }
+  }, [selectedEquipment?.categoryId, selectedEquipment?.subCategoryId, fetchServicesByCategory]);
+
+  /* ---------- ADD SERVICE/PART TO CART FOR EQUIPMENT ---------- */
+  const addEquipmentServiceToCart = useCallback((service) => {
+    const equipmentId = selectedEquipment?.id || 'equipment';
+    const serviceId = String(service.id);
+
+    console.log('[RequestNow] addEquipmentServiceToCart:', { equipmentId, serviceId });
+
+    // Create or update equipment card
+    setCards(prev => {
+      const existingCard = prev.find(c => c.pid === equipmentId);
+
+      if (existingCard) {
+        // Update existing card
+        const newCart = { ...(existingCard.cart || {}), [serviceId]: (existingCard.cart?.[serviceId] || 0) + 1 };
+        const storageKey = rdraftKeyOf(equipmentId);
+        console.log('[RequestNow] Saving equipment cart to AsyncStorage:', { key: storageKey, cart: newCart });
+        AsyncStorage.setItem(storageKey, JSON.stringify(newCart)).catch(() => {});
+
+        // Also save updated services list to AsyncStorage
+        const updatedServices = [...new Set([...(existingCard.services || []), service])];
+        AsyncStorage.setItem(rservicesKeyOf(equipmentId), JSON.stringify(updatedServices)).catch(() => {});
+
+        return prev.map(card =>
+          card.pid === equipmentId
+            ? { ...card, cart: newCart, services: updatedServices }
+            : card
+        );
+      } else {
+        // Create new card for equipment
+        const newCart = { [serviceId]: 1 };
+        const storageKey = rdraftKeyOf(equipmentId);
+        console.log('[RequestNow] Saving new equipment cart to AsyncStorage:', { key: storageKey, cart: newCart });
+        AsyncStorage.setItem(storageKey, JSON.stringify(newCart)).catch(() => {});
+
+        // Save meta
+        const meta = {
+          productId: equipmentId,
+          productTitle: selectedEquipment?.name || 'Equipment Service',
+          category: selectedEquipment?.categoryName || 'Equipment',
+          subtitle: selectedEquipment?.subCategoryName || '',
+          heroImage: heroImage,
+        };
+        AsyncStorage.setItem(pmetaKeyOf(equipmentId), JSON.stringify(meta)).catch(() => {});
+
+        // Save services list to AsyncStorage
+        AsyncStorage.setItem(rservicesKeyOf(equipmentId), JSON.stringify([service])).catch(() => {});
+
+        return [...prev, {
+          pid: equipmentId,
+          meta,
+          services: [service],
+          parts: [],
+          cart: newCart,
+        }];
+      }
+    });
+    // Sync to database cart
+    syncToDbCart('SERVICE', serviceId);
+  }, [selectedEquipment, rdraftKeyOf, pmetaKeyOf, rservicesKeyOf, heroImage, syncToDbCart]);
+
+  const addEquipmentPartToCart = useCallback((part) => {
+    const equipmentId = selectedEquipment?.id || 'equipment';
+    const partKey = `part:${part.id}`;
+
+    console.log('[RequestNow] addEquipmentPartToCart:', { equipmentId, partKey });
+
+    // Create or update equipment card
+    setCards(prev => {
+      const existingCard = prev.find(c => c.pid === equipmentId);
+
+      if (existingCard) {
+        // Update existing card
+        const newCart = { ...(existingCard.cart || {}), [partKey]: (existingCard.cart?.[partKey] || 0) + 1 };
+        const storageKey = rdraftKeyOf(equipmentId);
+        console.log('[RequestNow] Saving equipment part cart to AsyncStorage:', { key: storageKey, cart: newCart });
+        AsyncStorage.setItem(storageKey, JSON.stringify(newCart)).catch(() => {});
+
+        // Also save updated parts list to AsyncStorage
+        const updatedParts = [...new Set([...(existingCard.parts || []), part])];
+        AsyncStorage.setItem(rpartsKeyOf(equipmentId), JSON.stringify(updatedParts)).catch(() => {});
+
+        return prev.map(card =>
+          card.pid === equipmentId
+            ? { ...card, cart: newCart, parts: updatedParts }
+            : card
+        );
+      } else {
+        // Create new card for equipment
+        const newCart = { [partKey]: 1 };
+        const storageKey = rdraftKeyOf(equipmentId);
+        console.log('[RequestNow] Saving new equipment part cart to AsyncStorage:', { key: storageKey, cart: newCart });
+        AsyncStorage.setItem(storageKey, JSON.stringify(newCart)).catch(() => {});
+
+        // Save meta
+        const meta = {
+          productId: equipmentId,
+          productTitle: selectedEquipment?.name || 'Equipment Service',
+          category: selectedEquipment?.categoryName || 'Equipment',
+          subtitle: selectedEquipment?.subCategoryName || '',
+          heroImage: heroImage,
+        };
+        AsyncStorage.setItem(pmetaKeyOf(equipmentId), JSON.stringify(meta)).catch(() => {});
+
+        // Save parts list to AsyncStorage
+        AsyncStorage.setItem(rpartsKeyOf(equipmentId), JSON.stringify([part])).catch(() => {});
+
+        return [...prev, {
+          pid: equipmentId,
+          meta,
+          services: [],
+          parts: [part],
+          cart: newCart,
+        }];
+      }
+    });
+    // Sync to database cart
+    syncToDbCart('PART', String(part.id));
+  }, [selectedEquipment, rdraftKeyOf, pmetaKeyOf, rpartsKeyOf, heroImage, syncToDbCart]);
+
   /* ---------- LOAD ALL CARDS ---------- */
   const loadCartData = useCallback(async () => {
     // Prevent concurrent/infinite loads
@@ -235,6 +437,24 @@ export default function RequestNow({ navigation, route }) {
 
     try {
       setLoadingInit(true);
+
+      // ONE-TIME CLEANUP: Clear all old cart data (remove this block after testing)
+      const cleanupDone = await AsyncStorage.getItem('cart_cleanup_v2_done');
+      if (!cleanupDone) {
+        console.log('[RequestNow] Running one-time cart cleanup...');
+        const allKeys = await AsyncStorage.getAllKeys();
+        const cartKeys = allKeys.filter(k =>
+          k.startsWith('rdraft:') ||
+          k.startsWith('pmeta:') ||
+          k.startsWith('rservices:') ||
+          k.startsWith('rparts:')
+        );
+        if (cartKeys.length > 0) {
+          await AsyncStorage.multiRemove(cartKeys);
+          console.log('[RequestNow] Cleaned up', cartKeys.length, 'old cart keys');
+        }
+        await AsyncStorage.setItem('cart_cleanup_v2_done', 'true');
+      }
 
       let initialCart = {};
       try {
@@ -259,25 +479,52 @@ export default function RequestNow({ navigation, route }) {
       const myPrefix = `rdraft:${ownerKey}:`;
       const otherKeys = allKeys.filter(k => k.startsWith(myPrefix));
 
+      // Clean up legacy 'global' cart data and related keys
+      const globalKey = `${myPrefix}global`;
+      if (otherKeys.includes(globalKey)) {
+        await AsyncStorage.multiRemove([
+          globalKey,
+          `pmeta:${ownerKey}:global`,
+          `rservices:${ownerKey}:global`,
+          `rparts:${ownerKey}:global`,
+        ]).catch(() => {});
+        console.log('[RequestNow] Cleaned up legacy global cart data');
+      }
+
       const products = new Map();
+      const keysToRemove = [];
       for (const key of otherKeys) {
         const pid = key.slice(myPrefix.length);
+        // Skip 'global' entries - they are legacy data
+        if (pid === 'global') continue;
         const raw = await AsyncStorage.getItem(key);
         const cartObj = raw ? JSON.parse(raw) : {};
         const filtered = Object.fromEntries(Object.entries(cartObj || {}).filter(([_, q]) => Number(q) > 0));
         if (Object.keys(filtered).length) {
           products.set(pid, { pid, cart: filtered });
+        } else {
+          // Mark empty carts for cleanup
+          keysToRemove.push(key);
+          keysToRemove.push(`pmeta:${ownerKey}:${pid}`);
+          keysToRemove.push(`rservices:${ownerKey}:${pid}`);
+          keysToRemove.push(`rparts:${ownerKey}:${pid}`);
         }
       }
+      // Clean up empty cart entries
+      if (keysToRemove.length > 0) {
+        await AsyncStorage.multiRemove(keysToRemove).catch(() => {});
+        console.log('[RequestNow] Cleaned up empty carts:', keysToRemove.length / 4);
+      }
 
-      // Only add current product if it has items or valid productId
-      if (Object.keys(initialCart).length > 0 || (productId !== 'global' && !isNaN(Number(productId)))) {
+      // Only add current product if it has items AND valid productId (not 'global')
+      if (productId !== 'global' && Object.keys(initialCart).length > 0) {
         products.set(productId, { pid: productId, cart: initialCart });
       }
 
       // Process all products in PARALLEL for faster loading
+      // Skip 'global' entries entirely - they are legacy data from before category-based storage
       const productEntries = Array.from(products.values()).filter(
-        ({ pid, cart }) => !(pid === 'global' && Object.keys(cart).length === 0)
+        ({ pid }) => pid !== 'global'
       );
 
       // If no products with items, set empty cards
@@ -291,7 +538,7 @@ export default function RequestNow({ navigation, route }) {
           let meta = null;
           try { meta = JSON.parse(await AsyncStorage.getItem(pmetaKeyOf(pid)) || 'null') } catch {}
 
-          // If no meta found in AsyncStorage, try to fetch from API
+          // If no meta found in AsyncStorage, try to fetch from API (only for numeric product IDs)
           if (!meta && pid !== 'global' && !isNaN(Number(pid))) {
             meta = await fetchProductFromApi(pid);
             if (meta) {
@@ -300,10 +547,11 @@ export default function RequestNow({ navigation, route }) {
           }
 
           if (!meta) {
-            if (pid !== 'global' && !isNaN(Number(pid))) {
-              meta = { productId: pid, productTitle: `Equipment #${pid}`, category: '—', subtitle: '', heroImage: heroImage };
+            if (pid !== 'global') {
+              // For equipment (UUID pids) or products without meta, create a placeholder
+              meta = { productId: pid, productTitle: `Equipment #${pid.slice(0, 8)}...`, category: 'Equipment', subtitle: '', heroImage: heroImage };
             } else {
-              return null; // Skip this product
+              return null; // Skip global entries
             }
           }
 
@@ -345,34 +593,167 @@ export default function RequestNow({ navigation, route }) {
       hydrated.sort((a,b)=> (a.pid===productId?-1: b.pid===productId?1: (String(a.meta.productTitle||'').localeCompare(String(b.meta.productTitle||'')))));
 
       setCards(hydrated);
+
+      // Clear AsyncStorage for items that are not in the database
+      // This ensures removed items don't come back
+      try {
+        const dbCartResponse = await api.get('/owner/cart');
+        const dbCartItems = dbCartResponse.data?.ok ? (dbCartResponse.data.data?.items || []) : [];
+        console.log('[RequestNow] DB cart has', dbCartItems.length, 'items');
+
+        // Build a set of item IDs that exist in DB
+        const dbServiceIds = new Set(dbCartItems.filter(i => i.serviceItemId).map(i => String(i.serviceItemId)));
+        const dbPartIds = new Set(dbCartItems.filter(i => i.partItemId).map(i => String(i.partItemId)));
+
+        // Clean up AsyncStorage to match DB state
+        for (const card of hydrated) {
+          if (card.cart && Object.keys(card.cart).length > 0) {
+            let needsUpdate = false;
+            const cleanedCart = { ...card.cart };
+
+            for (const [sid, qty] of Object.entries(card.cart)) {
+              const isPart = String(sid).startsWith('part:');
+              const itemId = isPart ? sid.replace('part:', '') : sid;
+
+              // If item is NOT in DB, remove it from AsyncStorage cart
+              const existsInDb = isPart ? dbPartIds.has(itemId) : dbServiceIds.has(itemId);
+              if (!existsInDb) {
+                console.log('[RequestNow] Removing orphaned item from AsyncStorage:', itemId);
+                delete cleanedCart[sid];
+                needsUpdate = true;
+              }
+            }
+
+            if (needsUpdate) {
+              await AsyncStorage.setItem(rdraftKeyOf(card.pid), JSON.stringify(cleanedCart));
+              // Also update the card in state
+              card.cart = cleanedCart;
+            }
+          }
+        }
+
+        // Update cards with cleaned data
+        setCards([...hydrated]);
+      } catch (e) {
+        console.log('[RequestNow] Failed to clean cart:', e?.message);
+      }
     } finally {
       setLoadingInit(false);
       isLoadingRef.current = false;
     }
   }, [ownerKey, productId, passedCartRaw, passedServices, passedParts, rdraftKeyOf, pmetaKeyOf, rservicesKeyOf, rpartsKeyOf, heroImage, fetchProductFromApi, fetchServicesFromApi, fetchPartsFromApi]);
 
-  // Load cart data when screen comes into focus (stable - no deps to prevent re-triggers)
+  // Load cart data when screen comes into focus and ownerKey is ready
   useFocusEffect(
     useCallback(() => {
-      // Only load once when screen focuses
-      if (!hasLoadedRef.current && !isLoadingRef.current) {
-        hasLoadedRef.current = true;
-        loadCartData();
-      }
+      // Only load once when screen focuses AND ownerKey is set (not 'global' default)
+      // Wait for ownerKey to be initialized from AsyncStorage
+      const loadIfReady = async () => {
+        // Give ownerKey time to be set from AsyncStorage
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        if (!hasLoadedRef.current && !isLoadingRef.current) {
+          hasLoadedRef.current = true;
+          console.log('[RequestNow] Loading cart data with ownerKey:', ownerKey);
+          loadCartData();
+        }
+      };
+      loadIfReady();
+
       // Reset on blur so we reload on next focus
       return () => {
         hasLoadedRef.current = false;
       };
-    }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    }, [ownerKey, loadCartData])
   );
 
   /* ---------- CART MANAGEMENT ---------- */
+  // Remove item from all AsyncStorage cart entries
+  const removeFromAsyncStorageCart = useCallback(async (itemType, itemId) => {
+    try {
+      const sid = itemType === 'PART' ? `part:${itemId}` : itemId;
+      const allKeys = await AsyncStorage.getAllKeys();
+      const rdraftKeys = allKeys.filter(k => k.startsWith(`rdraft:${ownerKey}:`));
+
+      for (const key of rdraftKeys) {
+        const raw = await AsyncStorage.getItem(key);
+        if (raw) {
+          const cart = JSON.parse(raw);
+          if (cart[sid] !== undefined) {
+            delete cart[sid];
+            await AsyncStorage.setItem(key, JSON.stringify(cart));
+            console.log('[RequestNow] Removed from AsyncStorage:', { key, sid });
+          }
+        }
+      }
+    } catch (e) {
+      console.log('[RequestNow] Failed to remove from AsyncStorage:', e?.message);
+    }
+  }, [ownerKey]);
+
+  // Remove from database cart
+  const removeFromDbCart = useCallback(async (itemType, itemId) => {
+    console.log('[RequestNow] removeFromDbCart called:', { itemType, itemId });
+    try {
+      const cartResponse = await api.get('/owner/cart');
+      console.log('[RequestNow] Cart response:', cartResponse.data?.ok, 'items:', cartResponse.data?.data?.items?.length || 0);
+      if (cartResponse.data?.ok) {
+        const cartItems = cartResponse.data.data?.items || [];
+        console.log('[RequestNow] Looking for item in cart. ItemType:', itemType, 'ItemId:', itemId, 'Type:', typeof itemId);
+        console.log('[RequestNow] Cart items:', cartItems.map(i => ({ id: i.id, serviceItemId: i.serviceItemId, partItemId: i.partItemId })));
+        const cartItem = cartItems.find(item => {
+          if (itemType === 'SERVICE') {
+            const match = String(item.serviceItemId) === String(itemId);
+            console.log('[RequestNow] Comparing SERVICE:', item.serviceItemId, '===', itemId, ':', match);
+            return match;
+          } else {
+            const match = String(item.partItemId) === String(itemId);
+            console.log('[RequestNow] Comparing PART:', item.partItemId, '===', itemId, ':', match);
+            return match;
+          }
+        });
+        if (cartItem) {
+          console.log('[RequestNow] Found cart item to delete:', cartItem.id);
+          await api.delete(`/owner/cart/items/${cartItem.id}`);
+          console.log('[RequestNow] Successfully removed item from DB cart:', itemId);
+        } else {
+          console.log('[RequestNow] No matching cart item found for:', itemId);
+        }
+      }
+
+      // Always remove from AsyncStorage as well
+      await removeFromAsyncStorageCart(itemType, itemId);
+    } catch (e) {
+      console.log('[RequestNow] Remove from DB cart failed:', e?.message);
+    }
+  }, [removeFromAsyncStorageCart]);
+
+  // Sync item to database cart when adding
+  const syncToDbCart = useCallback(async (itemType, itemId) => {
+    try {
+      console.log('[RequestNow] syncToDbCart called:', { itemType, itemId });
+      await api.post('/owner/cart', {
+        itemType,
+        serviceItemId: itemType === 'SERVICE' ? itemId : undefined,
+        partItemId: itemType === 'PART' ? itemId : undefined,
+        qty: 1,
+      });
+      console.log('[RequestNow] Successfully synced to DB cart:', itemId);
+    } catch (e) {
+      console.log('[RequestNow] Sync to DB cart failed:', e?.message);
+    }
+  }, []);
+
   const updateCartFor = useCallback(async (pid, updater) => {
     setCards(prev => {
       const next = prev.map(card => {
         if (card.pid !== pid) return card;
         const newCart = updater(card.cart || {});
-        AsyncStorage.setItem(rdraftKeyOf(pid), JSON.stringify(newCart || {})).catch(()=>{});
+        const storageKey = rdraftKeyOf(pid);
+        console.log('[RequestNow] Saving to AsyncStorage:', { key: storageKey, cart: newCart });
+        AsyncStorage.setItem(storageKey, JSON.stringify(newCart || {})).catch((e) => {
+          console.log('[RequestNow] AsyncStorage save failed:', e?.message);
+        });
         return { ...card, cart: newCart };
       });
       return next;
@@ -438,7 +819,7 @@ export default function RequestNow({ navigation, route }) {
     const allSel = {};
     allKeys.forEach(k => { allSel[k] = true; });
     setSelectedMap(allSel);
-  }, [allKeys.length]);
+  }, [allKeys]);
 
   const toggleOne = useCallback((pid, itemType, itemId) => {
     const key = `${pid}:${itemType}:${itemId}`;
@@ -610,9 +991,11 @@ export default function RequestNow({ navigation, route }) {
   /* ---------- PAYMENT HANDLING ---------- */
   const [upiCopiedModal, setUpiCopiedModal] = useState(false);
   const copyUpiId = useCallback(() => {
-    Clipboard.setString(UPI_ID);
-    setUpiCopiedModal(true);
-  }, [UPI_ID]);
+    if (paymentSettings?.upiId) {
+      Clipboard.setString(paymentSettings.upiId);
+      setUpiCopiedModal(true);
+    }
+  }, [paymentSettings]);
 
   const pickScreenshot = useCallback(() => {
     const options = {
@@ -681,6 +1064,15 @@ export default function RequestNow({ navigation, route }) {
     const firstCard = cards.find(c => c.pid === selectedItems[0]?.__pid) || cards[0];
     const firstMeta = firstCard?.meta || {};
 
+    // Build items array for the API (with item IDs, types, quantities, prices)
+    const apiItems = selectedItems.map(it => ({
+      item_id: it.item_id,
+      item_type: it.item_type, // 'service' or 'part'
+      qty: it.qty,
+      price: it.unitPrice,
+      name: it.name,
+    }));
+
     // Build the payload with all products combined
     const payload = {
       product_id: productIdValue,
@@ -698,6 +1090,10 @@ export default function RequestNow({ navigation, route }) {
       assigned_to: '',
       assigned_to_id: null,
       owner_equipment_id: selectedEquipment?.id || null, // Link to owner's equipment
+      // Include items and totals for proper booking creation
+      items: apiItems,
+      total_amount: payable, // Total payable amount including tax
+      tip: tip, // Tip amount
     };
 
     console.log('[RequestNow] Equipment Request Payload (multi-product):', JSON.stringify(payload, null, 2));
@@ -786,13 +1182,19 @@ export default function RequestNow({ navigation, route }) {
       if (paymentResponse.data.ok) {
         console.log('Payment saved successfully with screenshot');
         
-        // Clear the cart after successful payment
+        // Clear all cart data after successful payment
         try {
           const allKeys = await AsyncStorage.getAllKeys();
-          const myPrefix = `rdraft:${ownerKey}:`;
-          const rdraftKeys = allKeys.filter(k => k.startsWith(myPrefix));
-          await AsyncStorage.multiRemove(rdraftKeys);
-          console.log('Cart cleared after payment');
+          const cartKeys = allKeys.filter(k =>
+            k.startsWith('rdraft:') ||
+            k.startsWith('rservices:') ||
+            k.startsWith('rparts:') ||
+            k.startsWith('pmeta:')
+          );
+          if (cartKeys.length > 0) {
+            await AsyncStorage.multiRemove(cartKeys);
+            console.log('[RequestNow] Cart cleared after payment:', cartKeys.length, 'keys');
+          }
         } catch (clearError) {
           console.log('Error clearing cart:', clearError);
         }
@@ -890,16 +1292,40 @@ export default function RequestNow({ navigation, route }) {
   /* ---------- CARD CONTROLS ---------- */
   const incQty = useCallback((pid, sid) => {
     updateCartFor(pid, prev => ({ ...(prev || {}), [sid]: (prev?.[sid] || 0) + 1 }));
-  }, [updateCartFor]);
+    // Sync to database cart
+    const isPart = String(sid).startsWith('part:');
+    const itemId = isPart ? sid.replace('part:', '') : sid;
+    syncToDbCart(isPart ? 'PART' : 'SERVICE', itemId);
+  }, [updateCartFor, syncToDbCart]);
 
   const decQty = useCallback((pid, sid) => {
+    // Check current quantity from ref before updating
+    const card = cardsRef.current.find(c => c.pid === pid);
+    const currentQty = card?.cart?.[sid] || 0;
+    const willBeRemoved = currentQty <= 1;
+
+    console.log('[RequestNow] decQty called:', { pid, sid, currentQty, willBeRemoved });
+
     updateCartFor(pid, prev => {
       const q = (prev?.[sid] || 0) - 1;
       const n = { ...(prev || {}) };
-      if (q <= 0) delete n[sid]; else n[sid] = q;
+      if (q <= 0) {
+        delete n[sid];
+        console.log('[RequestNow] Item deleted from local cart:', sid);
+      } else {
+        n[sid] = q;
+      }
       return n;
     });
-  }, [updateCartFor]);
+
+    // Remove from database cart if item will be removed (called outside callback)
+    if (willBeRemoved) {
+      const isPart = String(sid).startsWith('part:');
+      const itemId = isPart ? sid.replace('part:', '') : sid;
+      console.log('[RequestNow] Calling removeFromDbCart:', { itemType: isPart ? 'PART' : 'SERVICE', itemId });
+      removeFromDbCart(isPart ? 'PART' : 'SERVICE', itemId);
+    }
+  }, [updateCartFor, removeFromDbCart]);
 
   const removeLine = useCallback((pid, sid) => {
     updateCartFor(pid, prev => {
@@ -907,7 +1333,12 @@ export default function RequestNow({ navigation, route }) {
       delete n[sid];
       return n;
     });
-  }, [updateCartFor]);
+
+    // Remove from database cart (called outside callback)
+    const isPart = String(sid).startsWith('part:');
+    const itemId = isPart ? sid.replace('part:', '') : sid;
+    removeFromDbCart(isPart ? 'PART' : 'SERVICE', itemId);
+  }, [updateCartFor, removeFromDbCart]);
 
   const scrollRef = useRef(null);
 
@@ -1028,7 +1459,9 @@ export default function RequestNow({ navigation, route }) {
           <Icon name="chevron-back" size={22} color={C.ink} />
         </TouchableOpacity>
         <Text style={st.hTitle}>Your cart</Text>
-        <View style={st.hBtn} />
+        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+          <Icon name="menu" size={22} color="#1D2254" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 180 }}>
@@ -1059,6 +1492,151 @@ export default function RequestNow({ navigation, route }) {
             </ScrollView>
           )}
         </View>
+
+        {/* Equipment Services/Parts Selection */}
+        {selectedEquipment && (
+          <View style={[st.card, { marginHorizontal: 16, marginTop: 16 }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+              <Icon name="construct-outline" size={20} color={C.primary} />
+              <Text style={[st.cardTitle, { marginBottom: 0, marginLeft: 8 }]}>
+                Services for {selectedEquipment.categoryName || selectedEquipment.name}
+              </Text>
+            </View>
+
+            {loadingEquipmentServices ? (
+              <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+                <ActivityIndicator color={C.primary} />
+                <Text style={{ color: C.muted, marginTop: 8 }}>Loading services...</Text>
+              </View>
+            ) : equipmentServices.length === 0 && equipmentParts.length === 0 ? (
+              <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+                <Icon name="alert-circle-outline" size={32} color={C.muted} />
+                <Text style={{ color: C.muted, marginTop: 8, textAlign: 'center' }}>
+                  No services or parts available for this equipment category.
+                </Text>
+              </View>
+            ) : (
+              <>
+                {/* Services List */}
+                {equipmentServices.length > 0 && (
+                  <View style={{ marginBottom: 16 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: C.ink, marginBottom: 8 }}>
+                      Available Services ({equipmentServices.length})
+                    </Text>
+                    {equipmentServices.map((service) => {
+                      const isInCart = cards.some(c =>
+                        c.pid === (selectedEquipment?.id || 'equipment') && c.cart?.[String(service.id)]
+                      );
+                      return (
+                        <TouchableOpacity
+                          key={service.id}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            paddingVertical: 12,
+                            paddingHorizontal: 12,
+                            backgroundColor: isInCart ? '#FEF2F2' : C.bg,
+                            borderRadius: 10,
+                            marginBottom: 8,
+                            borderWidth: 1,
+                            borderColor: isInCart ? C.primary : C.border,
+                          }}
+                          onPress={() => addEquipmentServiceToCart(service)}
+                        >
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ fontSize: 14, fontWeight: '600', color: C.ink }}>{service.name || service.title}</Text>
+                            {service.description && (
+                              <Text style={{ fontSize: 12, color: C.muted, marginTop: 2 }} numberOfLines={2}>
+                                {service.description}
+                              </Text>
+                            )}
+                          </View>
+                          <View style={{ alignItems: 'flex-end', marginLeft: 12 }}>
+                            <Text style={{ fontSize: 14, fontWeight: '700', color: C.primary }}>
+                              {Rs(service.price || 0)}
+                            </Text>
+                            {isInCart ? (
+                              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                                <Icon name="checkmark-circle" size={14} color={C.ok} />
+                                <Text style={{ fontSize: 11, color: C.ok, marginLeft: 4 }}>Added</Text>
+                              </View>
+                            ) : (
+                              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                                <Icon name="add-circle-outline" size={14} color={C.primary} />
+                                <Text style={{ fontSize: 11, color: C.primary, marginLeft: 4 }}>Add</Text>
+                              </View>
+                            )}
+                          </View>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                )}
+
+                {/* Parts List */}
+                {equipmentParts.length > 0 && (
+                  <View>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: C.ink, marginBottom: 8 }}>
+                      Available Parts ({equipmentParts.length})
+                    </Text>
+                    {equipmentParts.map((part) => {
+                      const isInCart = cards.some(c =>
+                        c.pid === (selectedEquipment?.id || 'equipment') && c.cart?.[`part:${part.id}`]
+                      );
+                      return (
+                        <TouchableOpacity
+                          key={part.id}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            paddingVertical: 12,
+                            paddingHorizontal: 12,
+                            backgroundColor: isInCart ? '#FFF7ED' : C.bg,
+                            borderRadius: 10,
+                            marginBottom: 8,
+                            borderWidth: 1,
+                            borderColor: isInCart ? '#EA580C' : C.border,
+                          }}
+                          onPress={() => addEquipmentPartToCart(part)}
+                        >
+                          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#EA580C', marginRight: 8 }} />
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ fontSize: 14, fontWeight: '600', color: C.ink }}>{part.name || part.title}</Text>
+                              {part.description && (
+                                <Text style={{ fontSize: 12, color: C.muted, marginTop: 2 }} numberOfLines={2}>
+                                  {part.description}
+                                </Text>
+                              )}
+                            </View>
+                          </View>
+                          <View style={{ alignItems: 'flex-end', marginLeft: 12 }}>
+                            <Text style={{ fontSize: 14, fontWeight: '700', color: '#EA580C' }}>
+                              {Rs(part.price || 0)}
+                            </Text>
+                            {isInCart ? (
+                              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                                <Icon name="checkmark-circle" size={14} color={C.ok} />
+                                <Text style={{ fontSize: 11, color: C.ok, marginLeft: 4 }}>Added</Text>
+                              </View>
+                            ) : (
+                              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                                <Icon name="add-circle-outline" size={14} color={'#EA580C'} />
+                                <Text style={{ fontSize: 11, color: '#EA580C', marginLeft: 4 }}>Add</Text>
+                              </View>
+                            )}
+                          </View>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                )}
+              </>
+            )}
+          </View>
+        )}
 
         {/* Payment summary */}
         <View style={[st.card, { marginHorizontal: 16 }]}>
@@ -1340,18 +1918,42 @@ export default function RequestNow({ navigation, route }) {
 
                   {/* QR section */}
                   <View style={{ alignItems: 'center', marginVertical: 16 }}>
-                    <Image
-                      source={require('../assets/images/kni.jpg')}
-                      style={{
+                    {paymentSettings?.qrCodeImageUrl ? (
+                      <Image
+                        source={{ uri: paymentSettings.qrCodeImageUrl.startsWith('http')
+                          ? paymentSettings.qrCodeImageUrl
+                          : `${api.defaults.baseURL?.replace('/api', '')}${paymentSettings.qrCodeImageUrl}` }}
+                        style={{
+                          width: Dimensions.get('window').width * 0.5,
+                          height: Dimensions.get('window').width * 0.5,
+                          borderRadius: 10,
+                          backgroundColor: '#fff',
+                        }}
+                        resizeMode="contain"
+                      />
+                    ) : (
+                      <View style={{
                         width: Dimensions.get('window').width * 0.5,
                         height: Dimensions.get('window').width * 0.5,
                         borderRadius: 10,
-                      }}
-                      resizeMode="contain"
-                    />
+                        backgroundColor: '#F5F7FA',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}>
+                        <Icon name="qr-code-outline" size={48} color={C.muted} />
+                        <Text style={{ marginTop: 8, color: C.muted, fontSize: 12 }}>
+                          QR not configured
+                        </Text>
+                      </View>
+                    )}
                     <Text style={{ marginTop: 6, color: C.ink, fontWeight: '800' }}>
                       Amount: ₹ {payable.toFixed(2)}
                     </Text>
+                    {paymentSettings?.accountHolderName && (
+                      <Text style={{ marginTop: 4, color: C.muted }}>
+                        Pay to: {paymentSettings.accountHolderName}
+                      </Text>
+                    )}
                     <Text style={{ marginTop: 12, color: C.muted, textAlign: 'center' }}>
                       Scan the QR code using your preferred UPI app
                     </Text>
@@ -1359,41 +1961,52 @@ export default function RequestNow({ navigation, route }) {
 
                   {/* Copyable UPI ID */}
                   <View style={{ marginVertical: 16 }}>
-                    <Text style={[st.inputLbl, { marginBottom: 8 }]}>
-                      Or send payment to UPI ID:
-                    </Text>
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        backgroundColor: '#F8FAFC',
-                        borderWidth: 1,
-                        borderColor: '#E5E7EB',
-                        borderRadius: 10,
-                        padding: 12,
-                        marginBottom: 8,
-                      }}
-                    >
-                      <Text style={{ flex: 1, color: C.ink, fontWeight: '600', fontSize: 16 }}>
-                        {UPI_ID}
-                      </Text>
-                      <TouchableOpacity
-                        onPress={copyUpiId}
-                        style={{
-                          paddingHorizontal: 12,
-                          paddingVertical: 6,
-                          backgroundColor: C.primary,
-                          borderRadius: 6,
-                        }}
-                      >
-                        <Text style={{ color: '#fff', fontWeight: '600', fontSize: 14 }}>
-                          Copy
+                    {paymentSettings ? (
+                      <>
+                        <Text style={[st.inputLbl, { marginBottom: 8 }]}>
+                          Or send payment to UPI ID:
                         </Text>
-                      </TouchableOpacity>
-                    </View>
-                    <Text style={{ fontSize: 12, color: C.muted, textAlign: 'center' }}>
-                      Tap "Copy" and paste in your UPI app to pay ₹{payable.toFixed(2)}
-                    </Text>
+                        <View
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            backgroundColor: '#F8FAFC',
+                            borderWidth: 1,
+                            borderColor: '#E5E7EB',
+                            borderRadius: 10,
+                            padding: 12,
+                            marginBottom: 8,
+                          }}
+                        >
+                          <Text style={{ flex: 1, color: C.ink, fontWeight: '600', fontSize: 16 }}>
+                            {paymentSettings.upiId}
+                          </Text>
+                          <TouchableOpacity
+                            onPress={copyUpiId}
+                            style={{
+                              paddingHorizontal: 12,
+                              paddingVertical: 6,
+                              backgroundColor: C.primary,
+                              borderRadius: 6,
+                            }}
+                          >
+                            <Text style={{ color: '#fff', fontWeight: '600', fontSize: 14 }}>
+                              Copy
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                        <Text style={{ fontSize: 12, color: C.muted, marginBottom: 4 }}>
+                          Account: {paymentSettings.accountHolderName}
+                        </Text>
+                        <Text style={{ fontSize: 12, color: C.muted, textAlign: 'center' }}>
+                          Tap "Copy" and paste in your UPI app to pay ₹{payable.toFixed(2)}
+                        </Text>
+                      </>
+                    ) : (
+                      <Text style={{ fontSize: 12, color: C.warn, textAlign: 'center' }}>
+                        Payment settings not configured. Please contact admin.
+                      </Text>
+                    )}
                   </View>
 
                   {/* Screenshot warning */}
@@ -1592,7 +2205,7 @@ export default function RequestNow({ navigation, route }) {
             </View>
             
             <View style={st.upiIdBox}>
-              <Text style={st.upiIdText}>{UPI_ID}</Text>
+              <Text style={st.upiIdText}>{paymentSettings?.upiId || 'Not configured'}</Text>
             </View>
             
             <Text style={st.upiCopiedSubtitle}>
@@ -1635,6 +2248,8 @@ export default function RequestNow({ navigation, route }) {
           </View>
         </View>
       </Modal>
+      <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
+      <KniBottomNav navigation={navigation} />
     </SafeAreaView>
   );
 }

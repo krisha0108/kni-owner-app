@@ -14,6 +14,10 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { api } from '../api/client';
 import LineChartCard from '../components/charts/LineChartCard';
 import PieChartCard from '../components/charts/PieChartCard';
+import { useRestaurant } from '../context/RestaurantContext';
+import { RestaurantSelectorBar } from '../components/RestaurantSelector';
+import KniBottomNav from '../components/KniBottomNav';
+import NavigationMenu from '../components/NavigationMenu';
 
 const C = {
   primary: '#EF3A3A',
@@ -64,52 +68,31 @@ const MONTH_NAMES = [
 const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export default function ExpenseReportsScreen({ navigation }) {
+  // Global restaurant context
+  const {
+    selectedRestaurantId,
+    loading: restaurantsLoading,
+    loadRestaurants,
+  } = useRestaurant();
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [report, setReport] = useState(null);
   const [trendData, setTrendData] = useState([]);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
-  const [restaurants, setRestaurants] = useState([]);
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+  const [menuVisible, setMenuVisible] = useState(false);
 
-  useEffect(() => {
-    loadRestaurants();
-  }, []);
+  const fetchReport = useCallback(async () => {
+    if (!selectedRestaurantId) return;
 
-  useEffect(() => {
-    if (selectedRestaurant !== null) {
-      fetchReport();
-      fetchTrendData();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedYear, selectedMonth, selectedRestaurant]);
-
-  const loadRestaurants = async () => {
-    try {
-      const res = await api.get('/owner/restaurants');
-      if (res.data.ok) {
-        const approved = res.data.data.filter(r => r.status === 'APPROVED');
-        setRestaurants(approved);
-        if (approved.length > 0) {
-          setSelectedRestaurant(approved[0].id);
-        }
-      }
-    } catch (error) {
-      console.error('Load restaurants error:', error);
-    }
-  };
-
-  const fetchReport = async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams({
         year: selectedYear.toString(),
         month: selectedMonth.toString(),
+        restaurantId: selectedRestaurantId,
       });
-      if (selectedRestaurant) {
-        params.append('restaurantId', selectedRestaurant);
-      }
 
       const res = await api.get(`/owner/expenses/reports/monthly?${params}`);
       if (res.data.ok) {
@@ -124,14 +107,14 @@ export default function ExpenseReportsScreen({ navigation }) {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [selectedRestaurantId, selectedYear, selectedMonth]);
 
-  const fetchTrendData = async () => {
+  const fetchTrendData = useCallback(async () => {
+    if (!selectedRestaurantId) return;
+
     try {
       const params = new URLSearchParams();
-      if (selectedRestaurant) {
-        params.append('restaurantId', selectedRestaurant);
-      }
+      params.append('restaurantId', selectedRestaurantId);
 
       const res = await api.get(`/owner/expenses?${params}`);
       if (res.data.ok) {
@@ -166,10 +149,19 @@ export default function ExpenseReportsScreen({ navigation }) {
     } catch (error) {
       console.error('Fetch trend error:', error);
     }
-  };
+  }, [selectedRestaurantId]);
 
-  const onRefresh = () => {
+  // Load data when restaurant or date changes
+  useEffect(() => {
+    if (selectedRestaurantId) {
+      fetchReport();
+      fetchTrendData();
+    }
+  }, [selectedRestaurantId, selectedYear, selectedMonth, fetchReport, fetchTrendData]);
+
+  const onRefresh = async () => {
     setRefreshing(true);
+    await loadRestaurants();
     fetchReport();
     fetchTrendData();
   };
@@ -226,7 +218,9 @@ export default function ExpenseReportsScreen({ navigation }) {
             <Icon name="arrow-back" size={22} color={C.ink} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Expense Reports</Text>
-          <View style={{ width: 40 }} />
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+            <Icon name="menu" size={22} color="#1D2254" />
+          </TouchableOpacity>
         </View>
         <View style={styles.loadingBox}>
           <ActivityIndicator size="large" color={C.primary} />
@@ -244,13 +238,21 @@ export default function ExpenseReportsScreen({ navigation }) {
           <Icon name="arrow-back" size={22} color={C.ink} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Expense Reports</Text>
-        <TouchableOpacity
-          onPress={() => navigation.navigate('Expenses')}
-          style={styles.backBtn}
-        >
-          <Icon name="list-outline" size={22} color={C.primary} />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Expenses')}
+            style={styles.backBtn}
+          >
+            <Icon name="list-outline" size={22} color={C.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+            <Icon name="menu" size={22} color="#1D2254" />
+          </TouchableOpacity>
+        </View>
       </View>
+
+      {/* Global Restaurant Selector */}
+      <RestaurantSelectorBar />
 
       <ScrollView
         refreshControl={
@@ -258,31 +260,6 @@ export default function ExpenseReportsScreen({ navigation }) {
         }
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Restaurant Selector */}
-        {restaurants.length > 1 && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.restaurantScroll}
-            contentContainerStyle={styles.restaurantScrollContent}
-          >
-            {restaurants.map(r => (
-              <TouchableOpacity
-                key={r.id}
-                style={[styles.restaurantChip, selectedRestaurant === r.id && styles.restaurantChipActive]}
-                onPress={() => setSelectedRestaurant(r.id)}
-              >
-                <Text style={[
-                  styles.restaurantChipText,
-                  selectedRestaurant === r.id && styles.restaurantChipTextActive
-                ]}>
-                  {r.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        )}
-
         {/* Month Navigator */}
         <View style={styles.monthNav}>
           <TouchableOpacity style={styles.navBtn} onPress={() => changeMonth(-1)}>
@@ -451,6 +428,8 @@ export default function ExpenseReportsScreen({ navigation }) {
 
         <View style={{ height: 100 }} />
       </ScrollView>
+      <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
+      <KniBottomNav navigation={navigation} />
     </SafeAreaView>
   );
 }

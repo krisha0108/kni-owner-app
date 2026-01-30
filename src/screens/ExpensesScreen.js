@@ -19,6 +19,10 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import RNFS from 'react-native-fs';
 import { api } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
+import { useRestaurant } from '../context/RestaurantContext';
+import { RestaurantSelectorBar } from '../components/RestaurantSelector';
+import KniBottomNav from '../components/KniBottomNav';
+import NavigationMenu from '../components/NavigationMenu';
 
 const C = {
   primary: '#EF3A3A',
@@ -62,14 +66,21 @@ const getCategoryIcon = (category) => {
 };
 
 export default function ExpensesScreen({ navigation }) {
+  // Global restaurant context
+  const {
+    restaurants,
+    selectedRestaurantId: selectedRestaurant,
+    loading: restaurantsLoading,
+    loadRestaurants,
+    hasRestaurants,
+  } = useRestaurant();
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [expenses, setExpenses] = useState([]);
   const [summary, setSummary] = useState({});
   const [modalVisible, setModalVisible] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
-  const [restaurants, setRestaurants] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('all');
 
   const [form, setForm] = useState({
@@ -83,6 +94,7 @@ export default function ExpensesScreen({ navigation }) {
   });
   const [receiptImage, setReceiptImage] = useState(null);
   const [uploadingReceipt, setUploadingReceipt] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -92,32 +104,23 @@ export default function ExpensesScreen({ navigation }) {
   );
 
   const loadData = async () => {
+    if (!selectedRestaurant) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
 
-      // Load restaurants first
-      const restaurantsRes = await api.get('/owner/restaurants');
-      if (restaurantsRes.data.ok) {
-        const approvedRestaurants = restaurantsRes.data.data.filter(r => r.status === 'APPROVED');
-        setRestaurants(approvedRestaurants);
-
-        if (approvedRestaurants.length > 0 && !selectedRestaurant) {
-          setSelectedRestaurant(approvedRestaurants[0].id);
-          return; // Will reload
-        }
+      const params = new URLSearchParams({ restaurantId: selectedRestaurant });
+      if (selectedCategory && selectedCategory !== 'all') {
+        params.append('category', selectedCategory);
       }
 
-      if (selectedRestaurant) {
-        const params = new URLSearchParams({ restaurantId: selectedRestaurant });
-        if (selectedCategory && selectedCategory !== 'all') {
-          params.append('category', selectedCategory);
-        }
-
-        const response = await api.get(`/owner/expenses?${params}`);
-        if (response.data.ok) {
-          setExpenses(response.data.data.expenses || []);
-          setSummary(response.data.data.summary || {});
-        }
+      const response = await api.get(`/owner/expenses?${params}`);
+      if (response.data.ok) {
+        setExpenses(response.data.data.expenses || []);
+        setSummary(response.data.data.summary || {});
       }
     } catch (error) {
       console.error('Error loading expenses:', error);
@@ -127,9 +130,10 @@ export default function ExpensesScreen({ navigation }) {
     }
   };
 
-  const onRefresh = () => {
+  const onRefresh = async () => {
     setRefreshing(true);
-    loadData();
+    await loadRestaurants();
+    await loadData();
   };
 
   const openForm = (item = null) => {
@@ -284,7 +288,7 @@ export default function ExpensesScreen({ navigation }) {
     </View>
   );
 
-  if (loading && !refreshing) {
+  if ((loading || restaurantsLoading) && !refreshing) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
@@ -292,7 +296,9 @@ export default function ExpensesScreen({ navigation }) {
             <Icon name="arrow-back" size={24} color={C.ink} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Expenses</Text>
-          <View style={{ width: 40 }} />
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+            <Icon name="menu" size={22} color="#1D2254" />
+          </TouchableOpacity>
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={C.primary} />
@@ -301,7 +307,7 @@ export default function ExpensesScreen({ navigation }) {
     );
   }
 
-  if (restaurants.length === 0) {
+  if (!hasRestaurants) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
@@ -309,7 +315,9 @@ export default function ExpensesScreen({ navigation }) {
             <Icon name="arrow-back" size={24} color={C.ink} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Expenses</Text>
-          <View style={{ width: 40 }} />
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+            <Icon name="menu" size={22} color="#1D2254" />
+          </TouchableOpacity>
         </View>
         <View style={styles.emptyContainer}>
           <Icon name="restaurant-outline" size={80} color={C.muted} />
@@ -337,6 +345,9 @@ export default function ExpensesScreen({ navigation }) {
           <TouchableOpacity onPress={() => openForm()} style={styles.headerBtn}>
             <Icon name="add-circle" size={28} color={C.primary} />
           </TouchableOpacity>
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+            <Icon name="menu" size={22} color="#1D2254" />
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -352,53 +363,72 @@ export default function ExpensesScreen({ navigation }) {
         </View>
       )}
 
-      {/* Restaurant Selector */}
-      {restaurants.length > 1 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow}>
-          {restaurants.map(r => (
-            <TouchableOpacity
-              key={r.id}
-              style={[styles.filterChip, selectedRestaurant === r.id && styles.filterChipActive]}
-              onPress={() => {
-                setSelectedRestaurant(r.id);
-                setLoading(true);
-              }}
-            >
-              <Text style={[styles.filterText, selectedRestaurant === r.id && styles.filterTextActive]}>
-                {r.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      )}
+      {/* Restaurant Selector - Global */}
+      <RestaurantSelectorBar />
 
       {/* Category Filter */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryRow}>
-        <TouchableOpacity
-          style={[styles.categoryChip, selectedCategory === 'all' && styles.categoryChipActive]}
-          onPress={() => setSelectedCategory('all')}
+      <View style={styles.filterSection}>
+        <View style={styles.filterHeader}>
+          <Icon name="pricetag" size={14} color={C.warn} />
+          <Text style={styles.filterLabel}>Category</Text>
+          {selectedCategory !== 'all' && (
+            <TouchableOpacity
+              style={styles.clearFilterBtn}
+              onPress={() => setSelectedCategory('all')}
+            >
+              <Icon name="close-circle" size={16} color={C.muted} />
+            </TouchableOpacity>
+          )}
+        </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.categoryScrollContent}
         >
-          <Text style={[styles.categoryText, selectedCategory === 'all' && styles.categoryTextActive]}>
-            All
-          </Text>
-        </TouchableOpacity>
-        {CATEGORIES.map(cat => (
           <TouchableOpacity
-            key={cat}
-            style={[styles.categoryChip, selectedCategory === cat && styles.categoryChipActive]}
-            onPress={() => setSelectedCategory(cat)}
+            style={[styles.categoryChip, selectedCategory === 'all' && styles.categoryChipActive]}
+            onPress={() => setSelectedCategory('all')}
           >
-            <Icon
-              name={getCategoryIcon(cat)}
-              size={14}
-              color={selectedCategory === cat ? '#fff' : C.ink}
-            />
-            <Text style={[styles.categoryText, selectedCategory === cat && styles.categoryTextActive]}>
-              {cat}
+            <View style={[styles.categoryIconBox, selectedCategory === 'all' && styles.categoryIconBoxActive]}>
+              <Icon name="grid" size={14} color={selectedCategory === 'all' ? '#fff' : C.warn} />
+            </View>
+            <Text style={[styles.categoryText, selectedCategory === 'all' && styles.categoryTextActive]}>
+              All
             </Text>
+            {selectedCategory === 'all' && (
+              <View style={styles.categoryCheckIcon}>
+                <Icon name="checkmark" size={10} color={C.warn} />
+              </View>
+            )}
           </TouchableOpacity>
-        ))}
-      </ScrollView>
+          {CATEGORIES.map((cat, index) => {
+            const isActive = selectedCategory === cat;
+            return (
+              <TouchableOpacity
+                key={cat}
+                style={[styles.categoryChip, isActive && styles.categoryChipActive]}
+                onPress={() => setSelectedCategory(cat)}
+              >
+                <View style={[styles.categoryIconBox, isActive && styles.categoryIconBoxActive]}>
+                  <Icon
+                    name={getCategoryIcon(cat)}
+                    size={14}
+                    color={isActive ? '#fff' : C.warn}
+                  />
+                </View>
+                <Text style={[styles.categoryText, isActive && styles.categoryTextActive]}>
+                  {cat}
+                </Text>
+                {isActive && (
+                  <View style={styles.categoryCheckIcon}>
+                    <Icon name="checkmark" size={10} color={C.warn} />
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
 
       <FlatList
         data={expenses}
@@ -525,6 +555,8 @@ export default function ExpensesScreen({ navigation }) {
           </View>
         </View>
       </Modal>
+      <KniBottomNav navigation={navigation} active="khatabook" />
+      <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
     </SafeAreaView>
   );
 }
@@ -562,36 +594,63 @@ const styles = StyleSheet.create({
   summaryValue: { fontSize: 32, fontWeight: '700', color: C.card },
   summarySubtext: { fontSize: 13, color: C.card, opacity: 0.9, marginTop: 4 },
 
-  filterRow: { paddingHorizontal: 16, paddingVertical: 12 },
-  filterChip: {
+  filterSection: { marginBottom: 12 },
+  filterHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: C.card,
-    borderWidth: 1,
-    borderColor: C.border,
-    marginRight: 8,
+    marginBottom: 10,
   },
-  filterChipActive: { backgroundColor: C.primary, borderColor: C.primary },
-  filterText: { fontSize: 13, fontWeight: '600', color: C.ink },
-  filterTextActive: { color: '#fff' },
-
-  categoryRow: { paddingHorizontal: 16, paddingBottom: 12 },
+  filterLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: C.muted,
+    marginLeft: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    flex: 1,
+  },
+  clearFilterBtn: { padding: 4 },
+  categoryScrollContent: { paddingHorizontal: 16 },
   categoryChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingLeft: 4,
+    paddingRight: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
     backgroundColor: C.card,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: C.border,
-    marginRight: 8,
+    marginRight: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
   },
   categoryChipActive: { backgroundColor: C.warn, borderColor: C.warn },
-  categoryText: { fontSize: 12, fontWeight: '600', color: C.ink },
+  categoryIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: '#FFFBEB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  categoryIconBoxActive: { backgroundColor: 'rgba(255,255,255,0.25)' },
+  categoryText: { fontSize: 13, fontWeight: '600', color: C.ink },
   categoryTextActive: { color: '#fff' },
+  categoryCheckIcon: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 6,
+  },
 
   list: { padding: 16 },
   card: {

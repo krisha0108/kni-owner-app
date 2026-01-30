@@ -13,6 +13,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api } from '../api/client';
+import KniBottomNav from '../components/KniBottomNav';
+import NavigationMenu from '../components/NavigationMenu';
 
 const CART_STORAGE_KEY = '@marketplace_cart';
 
@@ -35,13 +37,14 @@ export default function MarketplaceProductScreen({ navigation, route }) {
   const [product, setProduct] = useState(productParam || null);
   const [quantity, setQuantity] = useState(1);
   const [addingToCart, setAddingToCart] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   useEffect(() => {
     if (!productParam) {
       Alert.alert('Error', 'Product not found');
       navigation.goBack();
     }
-  }, [productParam]);
+  }, [productParam, navigation]);
 
   const addToCart = async () => {
     if (!product) return;
@@ -118,13 +121,16 @@ export default function MarketplaceProductScreen({ navigation, route }) {
             <Icon name="arrow-back" size={22} color={C.ink} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Product Details</Text>
-          <View style={{ width: 40 }} />
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+            <Icon name="menu" size={22} color="#1D2254" />
+          </TouchableOpacity>
         </View>
         <View style={styles.emptyContainer}>
           <Icon name="cube-outline" size={64} color={C.muted} />
           <Text style={styles.emptyTitle}>Product Not Found</Text>
           <Text style={styles.emptyText}>This product may no longer be available</Text>
         </View>
+        <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
       </SafeAreaView>
     );
   }
@@ -136,9 +142,14 @@ export default function MarketplaceProductScreen({ navigation, route }) {
           <Icon name="arrow-back" size={22} color={C.ink} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Product Details</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('Cart')} style={styles.cartBtn}>
-          <Icon name="cart-outline" size={22} color={C.ink} />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity onPress={() => navigation.navigate('Cart')} style={styles.cartBtn}>
+            <Icon name="cart-outline" size={22} color={C.ink} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+            <Icon name="menu" size={22} color="#1D2254" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -234,6 +245,8 @@ export default function MarketplaceProductScreen({ navigation, route }) {
           </TouchableOpacity>
         </View>
       )}
+      <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
+      <KniBottomNav navigation={navigation} />
     </SafeAreaView>
   );
 }

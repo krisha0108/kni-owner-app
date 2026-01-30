@@ -3,14 +3,31 @@ import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Icon from 'react-native-vector-icons/Ionicons';
 
+const C = {
+  primary: '#EF3A3A',
+  primaryLight: '#FEF2F2',
+  ink: '#1D2254',
+  text: '#0F172A',
+  muted: '#6B7280',
+  bg: '#F5F7FA',
+  card: '#FFFFFF',
+  border: '#E5E7EB',
+  info: '#3B82F6',
+  infoLight: '#EFF6FF',
+};
+
 export default function DateRangePicker({ from, to, onChangeFrom, onChangeTo }) {
   const [showFromPicker, setShowFromPicker] = useState(false);
   const [showToPicker, setShowToPicker] = useState(false);
 
   const formatDate = (dateString) => {
-    if (!dateString) return 'Select Date';
+    if (!dateString) return null;
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return {
+      day: date.getDate(),
+      month: date.toLocaleDateString('en-US', { month: 'short' }),
+      year: date.getFullYear(),
+    };
   };
 
   const handleFromChange = (event, selectedDate) => {
@@ -27,35 +44,118 @@ export default function DateRangePicker({ from, to, onChangeFrom, onChangeTo }) 
     }
   };
 
+  const fromFormatted = formatDate(from);
+  const toFormatted = formatDate(to);
+
   return (
     <View style={styles.container}>
       <View style={styles.row}>
         {/* From Date */}
-        <View style={styles.dateContainer}>
-          <Text style={styles.label}>From</Text>
-          <TouchableOpacity
-            style={styles.dateButton}
-            onPress={() => setShowFromPicker(true)}
-          >
-            <Icon name="calendar-outline" size={18} color="#6B7280" />
-            <Text style={[styles.dateText, !from && styles.placeholderText]}>
-              {formatDate(from)}
-            </Text>
-          </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.dateCard, from && styles.dateCardActive]}
+          onPress={() => setShowFromPicker(true)}
+          activeOpacity={0.7}
+        >
+          <View style={[styles.iconBox, from && styles.iconBoxActive]}>
+            <Icon
+              name="calendar"
+              size={18}
+              color={from ? C.info : C.muted}
+            />
+          </View>
+          <View style={styles.dateInfo}>
+            <Text style={styles.dateLabel}>From</Text>
+            {fromFormatted ? (
+              <View style={styles.dateValueRow}>
+                <Text style={styles.dateDay}>{fromFormatted.day}</Text>
+                <View>
+                  <Text style={styles.dateMonth}>{fromFormatted.month}</Text>
+                  <Text style={styles.dateYear}>{fromFormatted.year}</Text>
+                </View>
+              </View>
+            ) : (
+              <Text style={styles.datePlaceholder}>Select date</Text>
+            )}
+          </View>
+          {from && (
+            <TouchableOpacity
+              style={styles.clearBtn}
+              onPress={() => onChangeFrom('')}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Icon name="close-circle" size={18} color={C.muted} />
+            </TouchableOpacity>
+          )}
+        </TouchableOpacity>
+
+        {/* Arrow */}
+        <View style={styles.arrowBox}>
+          <Icon name="arrow-forward" size={16} color={C.muted} />
         </View>
 
         {/* To Date */}
-        <View style={styles.dateContainer}>
-          <Text style={styles.label}>To</Text>
-          <TouchableOpacity
-            style={styles.dateButton}
-            onPress={() => setShowToPicker(true)}
-          >
-            <Icon name="calendar-outline" size={18} color="#6B7280" />
-            <Text style={[styles.dateText, !to && styles.placeholderText]}>
-              {formatDate(to)}
-            </Text>
-          </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.dateCard, to && styles.dateCardActive]}
+          onPress={() => setShowToPicker(true)}
+          activeOpacity={0.7}
+        >
+          <View style={[styles.iconBox, to && styles.iconBoxActive]}>
+            <Icon
+              name="calendar"
+              size={18}
+              color={to ? C.info : C.muted}
+            />
+          </View>
+          <View style={styles.dateInfo}>
+            <Text style={styles.dateLabel}>To</Text>
+            {toFormatted ? (
+              <View style={styles.dateValueRow}>
+                <Text style={styles.dateDay}>{toFormatted.day}</Text>
+                <View>
+                  <Text style={styles.dateMonth}>{toFormatted.month}</Text>
+                  <Text style={styles.dateYear}>{toFormatted.year}</Text>
+                </View>
+              </View>
+            ) : (
+              <Text style={styles.datePlaceholder}>Select date</Text>
+            )}
+          </View>
+          {to && (
+            <TouchableOpacity
+              style={styles.clearBtn}
+              onPress={() => onChangeTo('')}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Icon name="close-circle" size={18} color={C.muted} />
+            </TouchableOpacity>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {/* Quick Select */}
+      <View style={styles.quickSelect}>
+        <Text style={styles.quickLabel}>Quick Select:</Text>
+        <View style={styles.quickOptions}>
+          {[
+            { label: 'Today', days: 0 },
+            { label: '7 Days', days: 7 },
+            { label: '30 Days', days: 30 },
+            { label: '90 Days', days: 90 },
+          ].map((opt) => (
+            <TouchableOpacity
+              key={opt.label}
+              style={styles.quickChip}
+              onPress={() => {
+                const today = new Date();
+                const pastDate = new Date();
+                pastDate.setDate(today.getDate() - opt.days);
+                onChangeFrom(pastDate.toISOString().split('T')[0]);
+                onChangeTo(today.toISOString().split('T')[0]);
+              }}
+            >
+              <Text style={styles.quickChipText}>{opt.label}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
       </View>
 
@@ -84,38 +184,110 @@ export default function DateRangePicker({ from, to, onChangeFrom, onChangeTo }) 
 }
 
 const styles = StyleSheet.create({
-  container: {
-    marginBottom: 8,
-  },
+  container: {},
   row: {
     flexDirection: 'row',
-    gap: 12,
-  },
-  dateContainer: {
-    flex: 1,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#6B7280',
-    marginBottom: 6,
-  },
-  dateButton: {
-    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
     gap: 8,
   },
-  dateText: {
-    fontSize: 14,
-    color: '#1F2937',
+  dateCard: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: C.bg,
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1.5,
+    borderColor: C.border,
+    gap: 10,
   },
-  placeholderText: {
-    color: '#9CA3AF',
+  dateCardActive: {
+    backgroundColor: C.infoLight,
+    borderColor: C.info,
+  },
+  iconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: C.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconBoxActive: {
+    backgroundColor: '#fff',
+  },
+  dateInfo: {
+    flex: 1,
+  },
+  dateLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: C.muted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  dateValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 2,
+  },
+  dateDay: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: C.ink,
+  },
+  dateMonth: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: C.text,
+  },
+  dateYear: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: C.muted,
+  },
+  datePlaceholder: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: C.muted,
+    marginTop: 4,
+  },
+  clearBtn: {
+    padding: 4,
+  },
+  arrowBox: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: C.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickSelect: {
+    marginTop: 14,
+  },
+  quickLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: C.muted,
+    marginBottom: 8,
+  },
+  quickOptions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  quickChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: C.card,
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  quickChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: C.text,
   },
 });

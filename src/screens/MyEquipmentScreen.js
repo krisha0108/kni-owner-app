@@ -7,6 +7,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { api, getImageUrl } from '../api/client';
+import { useRestaurant } from '../context/RestaurantContext';
+import { RestaurantSelectorBar } from '../components/RestaurantSelector';
+import KniBottomNav from '../components/KniBottomNav';
+import NavigationMenu from '../components/NavigationMenu';
 
 const C = {
   primary: '#EF3A3A',
@@ -84,6 +88,17 @@ const getStatusStyle = (status) => {
 };
 
 export default function MyEquipmentScreen({ navigation }) {
+  // Global restaurant context
+  const {
+    restaurants,
+    selectedRestaurant,
+    selectedRestaurantId,
+    loading: restaurantsLoading,
+    loadRestaurants,
+    selectRestaurant,
+    hasRestaurants,
+  } = useRestaurant();
+
   const [equipments, setEquipments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -92,14 +107,11 @@ export default function MyEquipmentScreen({ navigation }) {
   const [warrantyFilter, setWarrantyFilter] = useState('all');
   const [modalVisible, setModalVisible] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [restaurants, setRestaurants] = useState([]);
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
   const [categories, setCategories] = useState([]);
   const [uploading, setUploading] = useState(false);
 
   const [form, setForm] = useState({
     id: null,
-    name: '',
     category: '',
     serialNumber: '',
     purchaseDate: '',
@@ -109,22 +121,6 @@ export default function MyEquipmentScreen({ navigation }) {
     warrantyCardUrl: '',
     photoUrls: [],
   });
-
-  // Fetch restaurants
-  const fetchRestaurants = useCallback(async () => {
-    try {
-      const { data } = await api.get('/owner/restaurants');
-      if (data.ok && data.data) {
-        setRestaurants(data.data);
-        if (data.data.length > 0 && !selectedRestaurant) {
-          const approved = data.data.find(r => r.status === 'APPROVED');
-          setSelectedRestaurant(approved || data.data[0]);
-        }
-      }
-    } catch (error) {
-      console.log('Error fetching restaurants:', error);
-    }
-  }, [selectedRestaurant]);
 
   // Fetch categories
   const fetchCategories = useCallback(async () => {
@@ -140,9 +136,9 @@ export default function MyEquipmentScreen({ navigation }) {
 
   // Fetch equipment
   const fetchEquipments = useCallback(async () => {
-    if (!selectedRestaurant) return;
+    if (!selectedRestaurantId) return;
     try {
-      const { data } = await api.get(`/owner/equipment?restaurantId=${selectedRestaurant.id}`);
+      const { data } = await api.get(`/owner/equipment?restaurantId=${selectedRestaurantId}`);
       if (data.ok && data.data) {
         setEquipments(data.data.items || []);
       }
@@ -153,32 +149,32 @@ export default function MyEquipmentScreen({ navigation }) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [selectedRestaurant]);
+  }, [selectedRestaurantId]);
 
   useEffect(() => {
-    fetchRestaurants();
     fetchCategories();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchCategories]);
 
   useEffect(() => {
-    if (selectedRestaurant) {
+    if (selectedRestaurantId) {
       setLoading(true);
       fetchEquipments();
     }
-  }, [selectedRestaurant, fetchEquipments]);
+  }, [selectedRestaurantId, fetchEquipments]);
 
-  const onRefresh = () => {
+  const onRefresh = async () => {
     setRefreshing(true);
-    fetchEquipments();
+    await loadRestaurants();
+    await fetchEquipments();
   };
 
   // Filter equipment
   const filtered = equipments.filter(e => {
     const q = search.toLowerCase();
+    const categoryName = typeof e.category === 'object' ? e.category?.name : e.category;
     const okQ = !q ||
       e.name?.toLowerCase().includes(q) ||
-      e.category?.toLowerCase().includes(q) ||
+      categoryName?.toLowerCase().includes(q) ||
       e.serialNumber?.toLowerCase().includes(q);
 
     // Status filter
@@ -199,10 +195,11 @@ export default function MyEquipmentScreen({ navigation }) {
 
   const openForm = (equipment = null) => {
     if (equipment) {
+      // Handle both object and string category formats
+      const categoryName = typeof equipment.category === 'object' ? equipment.category?.name : equipment.category;
       setForm({
         id: equipment.id,
-        name: equipment.name || '',
-        category: equipment.category || '',
+        category: categoryName || '',
         serialNumber: equipment.serialNumber || '',
         purchaseDate: equipment.purchaseDate ? equipment.purchaseDate.split('T')[0] : '',
         warrantyEndDate: equipment.warrantyEndDate ? equipment.warrantyEndDate.split('T')[0] : '',
@@ -214,7 +211,6 @@ export default function MyEquipmentScreen({ navigation }) {
     } else {
       setForm({
         id: null,
-        name: '',
         category: '',
         serialNumber: '',
         purchaseDate: '',
@@ -286,10 +282,6 @@ export default function MyEquipmentScreen({ navigation }) {
   };
 
   const saveEquipment = async () => {
-    if (!form.name.trim()) {
-      Alert.alert('Error', 'Please enter equipment name');
-      return;
-    }
     if (!form.category) {
       Alert.alert('Error', 'Please select a category');
       return;
@@ -301,9 +293,10 @@ export default function MyEquipmentScreen({ navigation }) {
 
     setSaving(true);
     try {
+      // Use category name as equipment name
       const payload = {
-        restaurantId: selectedRestaurant.id,
-        name: form.name,
+        restaurantId: selectedRestaurantId,
+        name: form.category,
         category: form.category,
         serialNumber: form.serialNumber || undefined,
         purchaseDate: new Date(form.purchaseDate).toISOString(),
@@ -377,7 +370,9 @@ export default function MyEquipmentScreen({ navigation }) {
           <View style={st.cardInfo}>
             <Text style={st.cardTitle} numberOfLines={1}>{item.name}</Text>
             {item.category && (
-              <Text style={st.cardSub} numberOfLines={1}>{item.category}</Text>
+              <Text style={st.cardSub} numberOfLines={1}>
+                {typeof item.category === 'object' ? item.category.name : item.category}
+              </Text>
             )}
             {item.serialNumber && (
               <Text style={st.serialText}>SN: {item.serialNumber}</Text>
@@ -430,9 +425,21 @@ export default function MyEquipmentScreen({ navigation }) {
         <View style={st.cardActions}>
           <TouchableOpacity
             style={[st.actionBtn, st.requestServiceBtn]}
-            onPress={() => navigation.navigate('RequestNow', {
-              selectedEquipment: { id: item.id, name: item.name }
-            })}
+            onPress={() => {
+              // Navigate to ServiceRequest screen (same flow as owner web /owner/request-service)
+              // Pass all equipment details including category/subcategory IDs for fetching services/parts
+              const categoryObj = typeof item.category === 'object' ? item.category : null;
+              const subCategoryObj = typeof item.subCategory === 'object' ? item.subCategory : null;
+
+              navigation.navigate('ServiceRequest', {
+                equipmentId: item.id,
+                equipmentName: item.name,
+                categoryId: categoryObj?.id || item.categoryId || null,
+                categoryName: categoryObj?.name || (typeof item.category === 'string' ? item.category : null),
+                subCategoryId: subCategoryObj?.id || item.subCategoryId || null,
+                subCategoryName: subCategoryObj?.name || (typeof item.subCategory === 'string' ? item.subCategory : null),
+              });
+            }}
           >
             <Icon name="construct" size={16} color="#fff" />
             <Text style={[st.actionText, { color: '#fff' }]}>Request Service</Text>
@@ -455,6 +462,7 @@ export default function MyEquipmentScreen({ navigation }) {
   // Restaurant picker modal
   const [restaurantPickerVisible, setRestaurantPickerVisible] = useState(false);
   const [categoryPickerVisible, setCategoryPickerVisible] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   return (
     <SafeAreaView style={st.container} edges={['top']}>
@@ -467,26 +475,20 @@ export default function MyEquipmentScreen({ navigation }) {
         <TouchableOpacity onPress={() => openForm()} style={st.addBtn}>
           <Icon name="add" size={22} color="#fff" />
         </TouchableOpacity>
+        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+          <Icon name="menu" size={22} color="#1D2254" />
+        </TouchableOpacity>
       </View>
 
-      {/* Restaurant Selector */}
-      {restaurants.length > 1 && (
-        <TouchableOpacity
-          style={st.restaurantSelector}
-          onPress={() => setRestaurantPickerVisible(true)}
-        >
-          <Icon name="business-outline" size={18} color={C.ink} />
-          <Text style={st.restaurantName} numberOfLines={1}>
-            {selectedRestaurant?.name || 'Select Restaurant'}
-          </Text>
-          <Icon name="chevron-down" size={18} color={C.muted} />
-        </TouchableOpacity>
-      )}
+      {/* Restaurant Selector - Global */}
+      <RestaurantSelectorBar />
 
       {/* Search */}
       <View style={st.searchContainer}>
         <View style={st.searchBox}>
-          <Icon name="search-outline" size={18} color={C.muted} />
+          <View style={st.searchIconBox}>
+            <Icon name="search" size={18} color={C.primary} />
+          </View>
           <TextInput
             style={st.searchInput}
             placeholder="Search by name, category, serial..."
@@ -495,61 +497,119 @@ export default function MyEquipmentScreen({ navigation }) {
             onChangeText={setSearch}
           />
           {search.length > 0 && (
-            <TouchableOpacity onPress={() => setSearch('')}>
-              <Icon name="close-circle" size={18} color={C.muted} />
+            <TouchableOpacity onPress={() => setSearch('')} style={st.clearSearchBtn}>
+              <View style={st.clearSearchIcon}>
+                <Icon name="close" size={14} color="#fff" />
+              </View>
             </TouchableOpacity>
           )}
         </View>
       </View>
 
       {/* Status Filter */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={st.filterRow}
-      >
-        {statusFilters.map(filter => (
-          <TouchableOpacity
-            key={filter.key}
-            style={[st.filterChip, statusFilter === filter.key && st.filterChipActive]}
-            onPress={() => setStatusFilter(filter.key)}
-          >
-            <Icon
-              name={filter.icon}
-              size={14}
-              color={statusFilter === filter.key ? '#fff' : C.ink}
-            />
-            <Text style={[st.filterText, statusFilter === filter.key && st.filterTextActive]}>
-              {filter.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      <View style={st.filterSection}>
+        <View style={st.filterHeader}>
+          <Icon name="flag" size={14} color={C.primary} />
+          <Text style={st.filterLabel}>Status</Text>
+        </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={st.filterScrollContent}
+        >
+          {statusFilters.map((filter, index) => {
+            const isActive = statusFilter === filter.key;
+            return (
+              <TouchableOpacity
+                key={filter.key}
+                style={[
+                  st.filterChip,
+                  isActive && st.filterChipActive,
+                  index === 0 && { marginLeft: 0 }
+                ]}
+                onPress={() => setStatusFilter(filter.key)}
+                activeOpacity={0.7}
+              >
+                <View style={[st.filterIconBox, isActive && st.filterIconBoxActive]}>
+                  <Icon
+                    name={filter.icon}
+                    size={14}
+                    color={isActive ? '#fff' : C.primary}
+                  />
+                </View>
+                <Text style={[st.filterText, isActive && st.filterTextActive]}>
+                  {filter.label}
+                </Text>
+                {isActive && (
+                  <View style={st.filterCheckBox}>
+                    <Icon name="checkmark" size={10} color={C.primary} />
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
 
       {/* Warranty Filter */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={[st.filterRow, { paddingTop: 0 }]}
-      >
-        {warrantyFilters.map(filter => (
-          <TouchableOpacity
-            key={filter.key}
-            style={[st.warrantyChip, warrantyFilter === filter.key && st.warrantyChipActive]}
-            onPress={() => setWarrantyFilter(filter.key)}
-          >
-            <Text style={[st.warrantyText, warrantyFilter === filter.key && st.warrantyTextActive]}>
-              {filter.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      <View style={st.filterSection}>
+        <View style={st.filterHeader}>
+          <Icon name="shield-checkmark" size={14} color={C.info} />
+          <Text style={st.filterLabel}>Warranty</Text>
+        </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={st.filterScrollContent}
+        >
+          {warrantyFilters.map((filter, index) => {
+            const isActive = warrantyFilter === filter.key;
+            return (
+              <TouchableOpacity
+                key={filter.key}
+                style={[
+                  st.warrantyChip,
+                  isActive && st.warrantyChipActive,
+                  index === 0 && { marginLeft: 0 }
+                ]}
+                onPress={() => setWarrantyFilter(filter.key)}
+                activeOpacity={0.7}
+              >
+                {isActive && (
+                  <View style={st.warrantyCheckIcon}>
+                    <Icon name="checkmark" size={10} color="#fff" />
+                  </View>
+                )}
+                <Text style={[st.warrantyText, isActive && st.warrantyTextActive]}>
+                  {filter.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
 
       {/* Results count */}
       <View style={st.resultsRow}>
-        <Text style={st.resultsText}>
-          Showing {filtered.length} of {equipments.length} equipment
-        </Text>
+        <View style={st.resultsLeft}>
+          <View style={st.resultsDot} />
+          <Text style={st.resultsText}>
+            {filtered.length} of {equipments.length} equipment
+          </Text>
+        </View>
+        {(statusFilter !== 'all' || warrantyFilter !== 'all' || search.length > 0) && (
+          <TouchableOpacity
+            style={st.resultsBadge}
+            onPress={() => {
+              setStatusFilter('all');
+              setWarrantyFilter('all');
+              setSearch('');
+            }}
+          >
+            <Icon name="close-circle" size={14} color={C.primary} />
+            <Text style={st.resultsBadgeText}>Clear All</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* List */}
@@ -598,15 +658,6 @@ export default function MyEquipmentScreen({ navigation }) {
             </View>
 
             <ScrollView style={st.modalBody}>
-              <Text style={st.label}>Equipment Name *</Text>
-              <TextInput
-                style={st.input}
-                placeholder="e.g., Commercial Oven"
-                placeholderTextColor={C.muted}
-                value={form.name}
-                onChangeText={v => setForm(f => ({ ...f, name: v }))}
-              />
-
               <Text style={st.label}>Category *</Text>
               <TouchableOpacity
                 style={st.pickerBtn}
@@ -781,7 +832,7 @@ export default function MyEquipmentScreen({ navigation }) {
                   key={r.id}
                   style={[st.pickerItem, selectedRestaurant?.id === r.id && st.pickerItemActive]}
                   onPress={() => {
-                    setSelectedRestaurant(r);
+                    selectRestaurant(r.id);
                     setRestaurantPickerVisible(false);
                   }}
                 >
@@ -834,6 +885,9 @@ export default function MyEquipmentScreen({ navigation }) {
           </View>
         </View>
       </Modal>
+
+      <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
+      <KniBottomNav navigation={navigation} active="equipment" />
     </SafeAreaView>
   );
 }
@@ -856,33 +910,77 @@ const st = StyleSheet.create({
   },
   restaurantName: { flex: 1, fontSize: 14, fontWeight: '600', color: C.ink },
 
-  searchContainer: { paddingHorizontal: 16, paddingTop: 12 },
+  searchContainer: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
   searchBox: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: C.card,
-    borderRadius: 12, paddingHorizontal: 12, height: 44, borderWidth: 1, borderColor: C.border
+    borderRadius: 16, paddingHorizontal: 6, paddingVertical: 6, borderWidth: 2, borderColor: C.border,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 4
   },
-  searchInput: { flex: 1, marginLeft: 8, fontSize: 14, color: C.text },
+  searchIconBox: {
+    width: 42, height: 42, borderRadius: 12, backgroundColor: '#FEF2F2',
+    alignItems: 'center', justifyContent: 'center'
+  },
+  searchInput: { flex: 1, marginLeft: 12, fontSize: 15, fontWeight: '500', color: C.text },
+  clearSearchBtn: { padding: 8 },
+  clearSearchIcon: {
+    width: 24, height: 24, borderRadius: 12, backgroundColor: C.muted,
+    alignItems: 'center', justifyContent: 'center'
+  },
 
-  filterRow: { paddingHorizontal: 16, paddingVertical: 10, gap: 8 },
+  filterSection: { marginBottom: 8 },
+  filterHeader: {
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginBottom: 8
+  },
+  filterLabel: { fontSize: 12, fontWeight: '700', color: C.muted, marginLeft: 6, textTransform: 'uppercase', letterSpacing: 0.5 },
+  filterScrollContent: { paddingHorizontal: 16 },
   filterChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20,
-    backgroundColor: C.card, borderWidth: 1, borderColor: C.border, marginRight: 8
+    flexDirection: 'row', alignItems: 'center',
+    paddingLeft: 4, paddingRight: 12, paddingVertical: 4, borderRadius: 12,
+    backgroundColor: C.card, borderWidth: 2, borderColor: C.border, marginLeft: 8,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2
   },
   filterChipActive: { backgroundColor: C.primary, borderColor: C.primary },
-  filterText: { fontSize: 12, fontWeight: '600', color: C.ink },
+  filterIconBox: {
+    width: 32, height: 32, borderRadius: 10, backgroundColor: '#FEF2F2',
+    alignItems: 'center', justifyContent: 'center', marginRight: 8
+  },
+  filterIconBoxActive: { backgroundColor: 'rgba(255,255,255,0.25)' },
+  filterText: { fontSize: 13, fontWeight: '600', color: C.ink },
   filterTextActive: { color: '#fff' },
+  filterCheckBox: {
+    width: 18, height: 18, borderRadius: 9, backgroundColor: '#fff',
+    alignItems: 'center', justifyContent: 'center', marginLeft: 6
+  },
 
   warrantyChip: {
-    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16,
-    backgroundColor: C.card, borderWidth: 1, borderColor: C.border, marginRight: 8
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20,
+    backgroundColor: C.card, borderWidth: 2, borderColor: C.border, marginLeft: 8,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2
   },
   warrantyChipActive: { backgroundColor: C.info, borderColor: C.info },
-  warrantyText: { fontSize: 11, fontWeight: '600', color: C.muted },
+  warrantyText: { fontSize: 12, fontWeight: '700', color: C.muted },
   warrantyTextActive: { color: '#fff' },
+  warrantyCheckIcon: {
+    width: 16, height: 16, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.3)',
+    alignItems: 'center', justifyContent: 'center', marginRight: 6
+  },
 
-  resultsRow: { paddingHorizontal: 16, paddingBottom: 8 },
-  resultsText: { fontSize: 12, color: C.muted },
+  resultsRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingBottom: 8, paddingTop: 8,
+    marginHorizontal: 16, marginBottom: 8, backgroundColor: C.card, borderRadius: 12,
+    borderWidth: 1, borderColor: C.border
+  },
+  resultsLeft: { flexDirection: 'row', alignItems: 'center' },
+  resultsDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: C.ok, marginRight: 8 },
+  resultsText: { fontSize: 13, fontWeight: '600', color: C.ink },
+  resultsBadge: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8,
+    backgroundColor: '#FEF2F2'
+  },
+  resultsBadgeText: { fontSize: 12, fontWeight: '700', color: C.primary, marginLeft: 4 },
 
   list: { padding: 16, paddingBottom: 100 },
   card: {

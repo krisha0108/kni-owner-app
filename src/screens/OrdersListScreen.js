@@ -7,6 +7,8 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { api, IMAGE_BASE_URL } from '../api/client';
+import KniBottomNav from '../components/KniBottomNav';
+import NavigationMenu from '../components/NavigationMenu';
 
 /* ---------- THEME ---------- */
 const C = {
@@ -145,6 +147,7 @@ export default function OrdersListScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [counts, setCounts] = useState({ active: 0, past: 0 });
+  const [menuVisible, setMenuVisible] = useState(false);
 
   // Fetch orders
   const fetchOrders = useCallback(async (isRefresh = false) => {
@@ -215,7 +218,9 @@ export default function OrdersListScreen({ navigation }) {
           <Icon name="chevron-back" size={20} color={C.ink} />
         </TouchableOpacity>
         <Text style={st.hTitle}>My Orders</Text>
-        <View style={st.hBtn} />
+        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+          <Icon name="menu" size={22} color="#1D2254" />
+        </TouchableOpacity>
       </View>
 
       {/* Tabs */}
@@ -263,6 +268,8 @@ export default function OrdersListScreen({ navigation }) {
           showsVerticalScrollIndicator={false}
         />
       )}
+      <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
+      <KniBottomNav navigation={navigation} />
     </SafeAreaView>
   );
 }

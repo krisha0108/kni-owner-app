@@ -1,585 +1,843 @@
-import React, { useMemo, useRef, useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TextInput, FlatList, ImageBackground,
-  TouchableOpacity, Animated, RefreshControl, useWindowDimensions
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  RefreshControl,
+  ActivityIndicator,
+  Image,
+  TextInput,
+  Modal,
+  ScrollView,
+  Alert,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
-import KniBottomNav from '../components/KniBottomNav';
-import { api, IMAGE_BASE_URL } from '../api/client';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { api } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
+import { useRestaurant } from '../context/RestaurantContext';
+import { RestaurantSelectorBar } from '../components/RestaurantSelector';
+import KniBottomNav from '../components/KniBottomNav';
+import NavigationMenu from '../components/NavigationMenu';
 
-const INDEX_PATH = '/public/categories';
-
-const makeAbsolute = (u) => {
-  if (!u) return null;
-  const s = String(u).trim();
-  if (/^https?:\/\//i.test(s)) return s;
-  const rel = s.replace(/^\/?/, '');
-  return `${IMAGE_BASE_URL}/${rel}`;
-};
-
-const COLORS = {
+const C = {
   primary: '#EF3A3A',
-  primary2: '#FF6A6A',
   ink: '#1D2254',
-  bg: '#F5F7FA',
-  card: '#FFFFFF',
   text: '#0F172A',
   muted: '#6B7280',
+  bg: '#F5F7FA',
+  card: '#FFFFFF',
   border: '#E5E7EB',
+  ok: '#10B981',
+  warn: '#F59E0B',
+  danger: '#EF4444',
+  info: '#3B82F6',
 };
-
-const H_MARGIN = 16;
-const GAP = 12;
-const MIN_W = 170;
-
-const SERVICE_ICONS = {
-  installation: { icon: 'construct', label: 'Installation' },
-  install: { icon: 'construct', label: 'Installation' },
-  repair: { icon: 'hammer', label: 'Repair' },
-  fixing: { icon: 'hammer', label: 'Repair' },
-  maintenance: { icon: 'settings-outline', label: 'Maintenance' },
-  service: { icon: 'settings-outline', label: 'Maintenance' },
-  amc: { icon: 'settings-outline', label: 'Maintenance' },
-  cleaning: { icon: 'water', label: 'Cleaning' },
-  wash: { icon: 'water', label: 'Cleaning' },
-  sanitize: { icon: 'water', label: 'Cleaning' },
-  inspection: { icon: 'search-outline', label: 'Inspection' },
-  uninstallation: { icon: 'remove-circle-outline', label: 'Uninstallation' },
-};
-
-const norm = (s = '') => String(s).trim().toLowerCase();
-const toTitle = (s = '') => String(s).toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
-
-// Format price function
-const formatPrice = (price) => {
-  if (price === null || price === undefined) return 'Price on request';
-  const num = parseFloat(price);
-  if (isNaN(num)) return 'Price on request';
-  return `₹${num.toLocaleString('en-IN')}`;
-};
-
-const SkeletonCard = ({ width }) => {
-  const pulse = useRef(new Animated.Value(0.6)).current;
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 900, useNativeDriver: false }),
-        Animated.timing(pulse, { toValue: 0.6, duration: 900, useNativeDriver: false }),
-      ])
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [pulse]);
-
-  return (
-    <View style={[styles.card, { width }]}>
-      <Animated.View style={[styles.skelImage, { opacity: pulse }]}>
-        <View style={styles.skelBadge} />
-        <View style={styles.skelOverlay} />
-      </Animated.View>
-      <View style={styles.skelBody}>
-        <Animated.View style={[styles.skelLineTitle, { opacity: pulse }]} />
-        <Animated.View style={[styles.skelLineTitleShort, { opacity: pulse }]} />
-        <Animated.View style={[styles.skelLineDesc, { opacity: pulse }]} />
-        <Animated.View style={[styles.skelLineDescShort, { opacity: pulse }]} />
-        
-        {/* Price skeleton */}
-        <Animated.View style={[styles.skelPrice, { opacity: pulse }]} />
-        
-        <View style={styles.metaRow}>
-          <View style={styles.metaLeft}>
-            <View style={styles.skelMetaIcon} />
-            <Animated.View style={[styles.skelMetaText, { opacity: pulse }]} />
-          </View>
-          <View style={styles.metaRight}>
-            <View style={styles.skelMetaIconSmall} />
-            <Animated.View style={[styles.skelMetaTextSmall, { opacity: pulse }]} />
-          </View>
-        </View>
-        <View style={styles.ctaRow}>
-          <View style={styles.skelPill}>
-            <View style={styles.skelPillIcon} />
-            <Animated.View style={[styles.skelPillText, { opacity: pulse }]} />
-          </View>
-          <View style={{ width: 20, height: 20 }} />
-        </View>
-      </View>
-    </View>
-  );
-};
-
-function computeGrid(width) {
-  const numColumns = Math.max(2, Math.floor((width - H_MARGIN * 2 + GAP) / (MIN_W + GAP)));
-  const cardW = (width - H_MARGIN * 2 - GAP * (numColumns - 1)) / numColumns;
-  return { numColumns, cardW };
-}
 
 export default function RequestScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
 
-  const [{ numColumns, cardW, listKey }, setGrid] = useState(() => {
-    const g = computeGrid(width);
-    return { ...g, listKey: `grid-${g.numColumns}` };
-  });
+  // Global restaurant context
+  const {
+    selectedRestaurant: currentRestaurant,
+    selectedRestaurantId,
+    loading: restaurantsLoading,
+    loadRestaurants,
+  } = useRestaurant();
 
-  useEffect(() => {
-    const g = computeGrid(width);
-    setGrid(prev =>
-      g.numColumns !== prev.numColumns
-        ? { ...g, listKey: `grid-${g.numColumns}` }
-        : { ...g, listKey: prev.listKey }
-    );
-  }, [width]);
-
-  const [items, setItems] = useState([]);
-  const [query, setQuery] = useState('');
-  const [activeServiceKey, setActiveServiceKey] = useState('all');
-  const [activeCategory, setActiveCategory] = useState('all');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [cartCount, setCartCount] = useState(0);
+  const [products, setProducts] = useState([]);
+  const [search, setSearch] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [categories, setCategories] = useState([]);
 
-  // Calculate cart count from AsyncStorage
-  const calculateCartCount = useCallback(async () => {
-    try {
-      const a = await AsyncStorage.getItem('owner_id');
-      const b = await AsyncStorage.getItem('restaurant_owner_id');
-      const c = await AsyncStorage.getItem('ownerId');
-      const ownerId = String(a || b || c || '').trim();
-      const ownerKey = ownerId ? `owner:${ownerId}` : 'global';
+  // Cart state
+  const [cart, setCart] = useState([]);
+  const [orderModalVisible, setOrderModalVisible] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [deliveryNotes, setDeliveryNotes] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-      const allKeys = await AsyncStorage.getAllKeys();
-      const myPrefix = `rdraft:${ownerKey}:`;
-      const rdraftKeys = allKeys.filter(k => k.startsWith(myPrefix));
+  const loadData = useCallback(async () => {
+    if (!selectedRestaurantId) return;
 
-      let totalCount = 0;
-      for (const key of rdraftKeys) {
-        const raw = await AsyncStorage.getItem(key);
-        if (raw) {
-          const cartObj = JSON.parse(raw);
-          const itemCount = Object.values(cartObj || {}).reduce((sum, qty) => sum + Number(qty || 0), 0);
-          totalCount += itemCount;
-        }
-      }
-      setCartCount(totalCount);
-    } catch (e) {
-      console.log('Error calculating cart count:', e);
-      setCartCount(0);
-    }
-  }, []);
-
-  // Refresh cart count when screen comes into focus
-  useFocusEffect(
-    useCallback(() => {
-      calculateCartCount();
-    }, [calculateCartCount])
-  );
-
-  const fetchFeed = async () => {
     try {
       setLoading(true);
-      const res = await api.get(INDEX_PATH, { timeout: 10000 });
-      // API returns { ok: true, data: [...] } with categories
-      const categories = res.data?.data || res.data || [];
-      const mapped = (Array.isArray(categories) ? categories : []).map(cat => {
-        const servicesCount = cat._count?.serviceItems || 0;
-        const partsCount = cat._count?.partItems || 0;
-        const totalItems = servicesCount + partsCount;
 
-        return {
-          id: String(cat.id),
-          title: cat.name || "",
-          catLabel: cat.name || "",
-          desc: `${servicesCount} services, ${partsCount} parts available`,
-          image: cat.imageUrl ? makeAbsolute(cat.imageUrl) : null,
-          price: null, // Categories don't have price
-          rating: 4.8,
-          requests: totalItems,
-          servicesCount,
-          partsCount,
-          subCategories: cat.subCategories || [],
-          tags: [],
-          serviceKey: null,
-          serviceLabel: null,
-          serviceIcon: null,
-        };
-      });
-      setItems(mapped);
-    } catch (e) {
-      console.error(e?.message || e);
-      setItems([]);
+      const params = new URLSearchParams();
+      params.append('restaurantId', selectedRestaurantId);
+      if (selectedCategory && selectedCategory !== 'all') {
+        params.append('categoryId', selectedCategory);
+      }
+
+      const response = await api.get(`/owner/marketplace/products?${params}`);
+      if (response.data.ok) {
+        setProducts(response.data.data || []);
+      }
+
+      // Fetch marketplace categories
+      try {
+        const catRes = await api.get('/public/marketplace-categories');
+        if (catRes.data.ok) {
+          setCategories(catRes.data.data || []);
+        }
+      } catch (e) {
+        // Ignore category fetch errors
+      }
+    } catch (error) {
+      console.error('Error loading marketplace:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  };
+  }, [selectedRestaurantId, selectedCategory]);
 
-  useEffect(() => { fetchFeed(); }, []);
-
-  // --- Compute service chips ---
-  const SERVICES = useMemo(() => {
-    const set = new Map();
-    items.forEach(it => {
-      if (it.serviceKey) {
-        set.set(it.serviceKey, {
-          key: it.serviceKey,
-          label: it.serviceLabel,
-          icon: it.serviceIcon || 'grid-outline'
-        });
-      }
-    });
-    const base = [{ key: 'all', label: 'All', icon: 'grid-outline' }];
-    const rest = [...set.values()].sort((a, b) => (a.label || '').localeCompare(b.label || ''));
-    return base.concat(rest);
-  }, [items]);
-
+  // Load data when restaurant or category changes
   useEffect(() => {
-    if (activeServiceKey !== 'all' && !SERVICES.find(s => s.key === activeServiceKey)) {
-      setActiveServiceKey('all');
+    if (selectedRestaurantId) {
+      // Clear cart when restaurant changes
+      setCart([]);
+      loadData();
     }
-  }, [SERVICES, activeServiceKey]);
+  }, [selectedRestaurantId, selectedCategory, loadData]);
 
-  // --- Compute category chips ---
-  const CATEGORIES = useMemo(() => {
-    const set = new Map();
-    items.forEach(it => { if (it.catLabel) set.set(it.catLabel, it.catLabel); });
-    const base = ['all'];
-    const rest = [...set.values()].sort();
-    return base.concat(rest);
-  }, [items]);
-
-  // --- Dynamic category icons (match SERVICE_ICONS if possible) ---
-  const CATEGORY_ICONS = useMemo(() => {
-    const map = { all: 'grid-outline' };
-    items.forEach(it => {
-      if (it.catLabel && !map[it.catLabel]) {
-        const normCat = norm(it.catLabel);
-        let icon = 'layers-outline'; // default fallback
-
-        for (const key in SERVICE_ICONS) {
-          if (norm(SERVICE_ICONS[key].label) === normCat) {
-            icon = SERVICE_ICONS[key].icon;
-            break;
-          }
-        }
-
-        // fallback keyword matching
-        if (icon === 'layers-outline') {
-          if (normCat.includes('install') || normCat.includes('equipment')) icon = 'construct-outline';
-          else if (normCat.includes('maintenance') || normCat.includes('amc')) icon = 'settings-outline';
-          else if (normCat.includes('clean') || normCat.includes('wash') || normCat.includes('sanitize')) icon = 'water-outline';
-          else if (normCat.includes('inspection') || normCat.includes('check')) icon = 'search-outline';
-        }
-
-        map[it.catLabel] = icon;
+  // Reload on focus
+  useFocusEffect(
+    useCallback(() => {
+      if (selectedRestaurantId) {
+        loadData();
       }
-    });
-    return map;
-  }, [items]);
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return items.filter(it => {
-      const byService = activeServiceKey === 'all' || (it.serviceKey ? it.serviceKey === activeServiceKey : false);
-      const byCategory = activeCategory === 'all' || (it.catLabel ? it.catLabel === activeCategory : false);
-      const byQuery = !q
-        || (it.title || '').toLowerCase().includes(q)
-        || (it.catLabel || '').toLowerCase().includes(q)
-        || (it.desc || '').toLowerCase().includes(q)
-        || (it.serviceLabel || '').toLowerCase().includes(q);
-      return byService && byCategory && byQuery;
-    });
-  }, [items, query, activeServiceKey, activeCategory]);
+    }, [selectedRestaurantId, loadData])
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchFeed();
-    setRefreshing(false);
+    await loadRestaurants();
+    loadData();
   };
 
-  const renderServiceChip = ({ item }) => {
-    const active = item.key === activeServiceKey;
-    return (
-      <TouchableOpacity
-        onPress={() => setActiveServiceKey(item.key)}
-        style={[styles.chip, active && { backgroundColor: '#FFF1F1', borderColor: COLORS.primary }]}
-      >
-        <Icon name={item.icon || 'grid-outline'} size={16} color={active ? COLORS.primary : COLORS.muted} style={{ marginRight: 6 }} />
-        <Text style={[styles.chipText, active && { color: COLORS.primary, fontWeight: '700' }]}>{item.label}</Text>
-      </TouchableOpacity>
-    );
+  // Cart functions
+  const addToCart = (product) => {
+    setCart(prev => {
+      const existing = prev.find(item => item.product.id === product.id);
+      if (existing) {
+        return prev.map(item =>
+          item.product.id === product.id
+            ? { ...item, quantity: Math.min(item.quantity + 1, product.stockQuantity || 999) }
+            : item
+        );
+      }
+      return [...prev, { product, quantity: 1 }];
+    });
   };
 
-  const renderCategoryChip = ({ item: cat }) => {
-    const active = cat === activeCategory;
-    const iconName = CATEGORY_ICONS[cat] || 'grid-outline';
-
-    return (
-      <TouchableOpacity
-        onPress={() => setActiveCategory(cat)}
-        style={[styles.chip, active && { backgroundColor: '#FFF1F1', borderColor: COLORS.primary }]}
-      >
-        <Icon name={iconName} size={16} color={active ? COLORS.primary : COLORS.muted} style={{ marginRight: 6 }} />
-        <Text style={[styles.chipText, active && { color: COLORS.primary, fontWeight: '700' }]}>
-          {cat === 'all' ? 'All' : cat}
-        </Text>
-      </TouchableOpacity>
-    );
+  const updateCartQuantity = (productId, delta) => {
+    setCart(prev => {
+      return prev
+        .map(item => {
+          if (item.product.id === productId) {
+            const newQty = item.quantity + delta;
+            if (newQty <= 0) return null;
+            return { ...item, quantity: Math.min(newQty, item.product.stockQuantity || 999) };
+          }
+          return item;
+        })
+        .filter(Boolean);
+    });
   };
 
-  const Header = useMemo(() => (
-    <View style={styles.stickyHeader}>
-      <View style={styles.topbar}>
-        <Text style={styles.title}>Request</Text>
-        <TouchableOpacity
-          style={styles.helpBtn}
-          hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
-          onPress={() => navigation.navigate('SupportCenter')}
-        >
-          <Icon name="chatbubbles-outline" size={18} color={COLORS.primary} />
-          <Text style={styles.helpTxt}>Help</Text>
-        </TouchableOpacity>
-      </View>
+  const getCartTotal = () => {
+    return cart.reduce((total, item) => total + item.product.price * item.quantity, 0);
+  };
 
-      <View style={styles.searchWrap}>
-        <Icon name="search" size={18} color={COLORS.muted} />
-        <TextInput
-          placeholder="Search equipment or service…"
-          placeholderTextColor="#94A3B8"
-          value={query}
-          onChangeText={setQuery}
-          style={styles.searchInput}
-          returnKeyType="search"
-        />
-        <TouchableOpacity style={styles.filterBtn}>
-          <Icon name="options-outline" size={18} color="#fff" />
-        </TouchableOpacity>
-      </View>
+  const getCartItemQuantity = (productId) => {
+    const item = cart.find(i => i.product.id === productId);
+    return item?.quantity || 0;
+  };
 
-      {/* Category chips */}
-      {CATEGORIES.length > 1 && (
-        <FlatList
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 12 }}
-          data={CATEGORIES}
-          keyExtractor={(i) => `cat-${i}`}
-          renderItem={renderCategoryChip}
-        />
-      )}
+  const handlePlaceOrder = async () => {
+    if (!selectedRestaurantId) {
+      Alert.alert('Error', 'Please select a restaurant');
+      return;
+    }
+    if (cart.length === 0) {
+      Alert.alert('Error', 'Cart is empty');
+      return;
+    }
+    if (!deliveryAddress.trim()) {
+      Alert.alert('Error', 'Please enter delivery address');
+      return;
+    }
 
-      {/* Service chips */}
-      {SERVICES.length > 1 && (
-        <FlatList
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 12 }}
-          data={SERVICES}
-          keyExtractor={(i) => `svc-${i.key}`}
-          renderItem={renderServiceChip}
-        />
-      )}
-    </View>
-  ), [query, activeServiceKey, activeCategory, navigation, SERVICES, CATEGORIES, CATEGORY_ICONS]);
+    // Group cart items by vendor
+    const vendorGroups = cart.reduce((groups, item) => {
+      const vendorId = item.product.vendor?.id || item.product.vendorId || 'unknown';
+      if (!groups[vendorId]) {
+        groups[vendorId] = [];
+      }
+      groups[vendorId].push(item);
+      return groups;
+    }, {});
 
-  const listData = loading ? Array.from({ length: numColumns * 2 }, (_, i) => ({ __sk: i })) : filtered;
+    setIsSubmitting(true);
+    try {
+      const orderPromises = Object.entries(vendorGroups).map(([vendorId, items]) =>
+        api.post('/owner/marketplace/orders', {
+          restaurantId: selectedRestaurantId,
+          vendorId,
+          items: items.map(item => ({
+            productId: item.product.id,
+            qty: item.quantity,
+          })),
+          deliveryAddress: deliveryAddress.trim(),
+          notes: deliveryNotes.trim() || undefined,
+        })
+      );
 
-  const renderItem = ({ item }) => {
-    if (loading) return <SkeletonCard width={cardW} />;
+      const responses = await Promise.all(orderPromises);
+      const allSuccess = responses.every(res => res.data.ok);
+
+      if (allSuccess) {
+        Alert.alert('Success', `${responses.length} order(s) placed successfully`);
+        setCart([]);
+        setOrderModalVisible(false);
+        setDeliveryAddress('');
+        setDeliveryNotes('');
+      } else {
+        const failedCount = responses.filter(r => !r.data.ok).length;
+        Alert.alert('Error', `${failedCount} order(s) failed to place`);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to place order');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const filteredProducts = products.filter(p =>
+    !search || p.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const renderProductCard = ({ item }) => {
+    const cartQty = getCartItemQuantity(item.id);
+    const stockQty = item.stockQuantity || 0;
+    const inStock = stockQty > 0;
+    const vendorName = typeof item.vendor === 'object' ? item.vendor?.name : item.vendor;
+    const categoryName = typeof item.category === 'object' ? item.category?.name : item.category;
 
     return (
-      <TouchableOpacity
-        activeOpacity={0.9}
-        style={[styles.card, { width: cardW }]}
-        onPress={() => navigation.navigate('RequestDetail', {
-          id: item.id,
-          categoryId: item.id,
-          item: {
-            title: item.title,
-            category: item.catLabel,
-            servicesCount: item.servicesCount,
-            partsCount: item.partsCount,
-            desc: item.desc,
-            image: item.image,
-          },
-        })}
-      >
-        <ImageBackground
-          source={item.image ? { uri: item.image } : null}
-          style={styles.cardImage}
-          imageStyle={styles.cardImageR}
-        >
-          {!item.image && (
-            <View style={[styles.cardImage, { backgroundColor: COLORS.border, justifyContent: 'center', alignItems: 'center' }]}>
-              <Icon name="grid-outline" size={40} color={COLORS.muted} />
+      <View style={styles.card}>
+        {item.imageUrl || item.image ? (
+          <Image source={{ uri: item.imageUrl || item.image }} style={styles.productImage} />
+        ) : (
+          <View style={[styles.productImage, styles.noImage]}>
+            <Icon name="cube-outline" size={32} color={C.muted} />
+          </View>
+        )}
+        <View style={styles.cardContent}>
+          <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
+
+          {categoryName && (
+            <View style={styles.categoryBadge}>
+              <Text style={styles.categoryBadgeText}>{categoryName}</Text>
             </View>
           )}
-          <View style={styles.badge}>
-            <Icon name="construct" size={12} color="#fff" />
-            <Text style={styles.badgeText}>{item.servicesCount || 0}</Text>
-          </View>
-          <View style={styles.overlay} />
-        </ImageBackground>
 
-        <View style={{ paddingHorizontal: 12, paddingBottom: 12 }}>
-          <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
-          <Text style={styles.cardDesc} numberOfLines={2}>{item.desc}</Text>
+          {item.description && (
+            <Text style={styles.productDesc} numberOfLines={2}>{item.description}</Text>
+          )}
 
-          <View style={styles.metaRow}>
-            <View style={styles.metaLeft}>
-              <Icon name="construct-outline" size={14} color={COLORS.muted} />
-              <Text style={styles.metaText} numberOfLines={1} ellipsizeMode="tail">
-                {item.servicesCount || 0} Services
-              </Text>
+          {vendorName && (
+            <View style={styles.vendorRow}>
+              <Icon name="storefront-outline" size={12} color={C.muted} />
+              <Text style={styles.vendorText}>{vendorName}</Text>
             </View>
-            <View style={styles.metaRight}>
-              <Icon name="hardware-chip-outline" size={14} color={COLORS.primary} />
-              <Text style={[styles.metaText, { color: COLORS.primary }]}>{item.partsCount || 0} Parts</Text>
-            </View>
-          </View>
+          )}
 
-          <View style={styles.ctaRow}>
-            <View style={styles.pill}>
-              <Icon name="shield-checkmark" size={14} color="#fff" />
-              <Text style={styles.pillText}>KNI Verified</Text>
-            </View>
-            <Icon name="chevron-forward" size={20} color={COLORS.ink} />
+          <Text style={styles.stockText}>Stock: {stockQty}</Text>
+
+          <View style={styles.priceRow}>
+            <Text style={styles.productPrice}>₹{item.price}</Text>
+
+            {cartQty > 0 ? (
+              <View style={styles.qtyControls}>
+                <TouchableOpacity
+                  style={styles.qtyBtn}
+                  onPress={() => updateCartQuantity(item.id, -1)}
+                >
+                  <Icon name="remove" size={16} color={C.primary} />
+                </TouchableOpacity>
+                <Text style={styles.qtyText}>{cartQty}</Text>
+                <TouchableOpacity
+                  style={[styles.qtyBtn, cartQty >= stockQty && styles.qtyBtnDisabled]}
+                  onPress={() => updateCartQuantity(item.id, 1)}
+                  disabled={cartQty >= stockQty}
+                >
+                  <Icon name="add" size={16} color={cartQty >= stockQty ? C.muted : C.primary} />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={[styles.addBtn, !inStock && styles.addBtnDisabled]}
+                onPress={() => addToCart(item)}
+                disabled={!inStock}
+              >
+                <Text style={[styles.addBtnText, !inStock && styles.addBtnTextDisabled]}>
+                  {inStock ? 'Add' : 'Out of Stock'}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
-      </TouchableOpacity>
+      </View>
     );
   };
 
+  if ((loading || restaurantsLoading) && !refreshing) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Marketplace</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TouchableOpacity
+              style={styles.cartBtn}
+              onPress={() => navigation.navigate('MarketplaceOrders')}
+            >
+              <Icon name="receipt-outline" size={24} color={C.ink} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+              <Icon name="menu" size={22} color="#1D2254" />
+            </TouchableOpacity>
+          </View>
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={C.primary} />
+          <Text style={styles.loadingText}>Loading products...</Text>
+        </View>
+        <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
+        <KniBottomNav navigation={navigation} active="request" cartCount={cart.length} notifCount={0} />
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.bg }} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Marketplace</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity
+            style={styles.cartBtn}
+            onPress={() => cart.length > 0 ? setOrderModalVisible(true) : navigation.navigate('MarketplaceOrders')}
+          >
+            <Icon name={cart.length > 0 ? "cart-outline" : "receipt-outline"} size={24} color={C.ink} />
+            {cart.length > 0 && (
+              <View style={styles.cartBadge}>
+                <Text style={styles.cartBadgeText}>{cart.length}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+            <Icon name="menu" size={22} color="#1D2254" />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Global Restaurant Selector */}
+      <RestaurantSelectorBar />
+
+      {/* Cart Summary Bar */}
+      {cart.length > 0 && (
+        <TouchableOpacity style={styles.cartBar} onPress={() => setOrderModalVisible(true)}>
+          <View style={styles.cartBarLeft}>
+            <Icon name="cart" size={20} color="#fff" />
+            <Text style={styles.cartBarItems}>{cart.length} item(s)</Text>
+          </View>
+          <View style={styles.cartBarRight}>
+            <Text style={styles.cartBarTotal}>₹{getCartTotal()}</Text>
+            <Icon name="chevron-forward" size={18} color="#fff" />
+          </View>
+        </TouchableOpacity>
+      )}
+
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <View style={styles.searchBox}>
+          <View style={styles.searchIconBox}>
+            <Icon name="search" size={18} color={C.primary} />
+          </View>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search products..."
+            placeholderTextColor={C.muted}
+            value={search}
+            onChangeText={setSearch}
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch('')} style={styles.clearSearchBtn}>
+              <View style={styles.clearSearchIcon}>
+                <Icon name="close" size={14} color="#fff" />
+              </View>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
+      {/* Category Filter */}
+      {categories.length > 0 && (
+        <View style={styles.filterSection}>
+          <View style={styles.filterHeader}>
+            <Icon name="grid" size={14} color={C.primary} />
+            <Text style={styles.filterLabel}>Categories</Text>
+            {selectedCategory !== 'all' && (
+              <TouchableOpacity
+                style={styles.clearFilterBtn}
+                onPress={() => setSelectedCategory('all')}
+              >
+                <Icon name="close-circle" size={16} color={C.muted} />
+              </TouchableOpacity>
+            )}
+          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoryScrollContent}
+          >
+            <TouchableOpacity
+              style={[styles.categoryChip, selectedCategory === 'all' && styles.categoryChipActive]}
+              onPress={() => setSelectedCategory('all')}
+            >
+              <View style={[styles.categoryIconBox, selectedCategory === 'all' && styles.categoryIconBoxActive]}>
+                <Icon name="apps" size={14} color={selectedCategory === 'all' ? '#fff' : C.primary} />
+              </View>
+              <Text style={[styles.categoryText, selectedCategory === 'all' && styles.categoryTextActive]}>
+                All
+              </Text>
+              {selectedCategory === 'all' && (
+                <View style={styles.categoryCheckIcon}>
+                  <Icon name="checkmark" size={10} color={C.primary} />
+                </View>
+              )}
+            </TouchableOpacity>
+            {categories.map((cat, index) => {
+              const isActive = selectedCategory === cat.id;
+              return (
+                <TouchableOpacity
+                  key={cat.id}
+                  style={[styles.categoryChip, isActive && styles.categoryChipActive]}
+                  onPress={() => setSelectedCategory(cat.id)}
+                >
+                  <View style={[styles.categoryIconBox, isActive && styles.categoryIconBoxActive]}>
+                    <Icon name="pricetag" size={14} color={isActive ? '#fff' : C.primary} />
+                  </View>
+                  <Text style={[styles.categoryText, isActive && styles.categoryTextActive]}>
+                    {cat.name}
+                  </Text>
+                  {isActive && (
+                    <View style={styles.categoryCheckIcon}>
+                      <Icon name="checkmark" size={10} color={C.primary} />
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
+
+      {/* Products Grid */}
       <FlatList
-        key={listKey}
-        data={listData}
-        keyExtractor={(it, idx) => (loading ? `sk-${idx}` : String(it.id))}
-        numColumns={numColumns}
-        columnWrapperStyle={{ paddingHorizontal: H_MARGIN, columnGap: GAP }}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
-        ListHeaderComponent={Header}
-        stickyHeaderIndices={[0]}
-        renderItem={renderItem}
+        data={filteredProducts}
+        keyExtractor={item => item.id.toString()}
+        renderItem={renderProductCard}
+        numColumns={2}
+        columnWrapperStyle={styles.row}
+        contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 100 }]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} />}
         ListEmptyComponent={
-          !loading && (
-            <View style={[styles.empty, { paddingTop: 32 }]}>
-              <Icon name="search-circle-outline" size={64} color="#CBD5E1" />
-              <Text style={styles.emptyTitle}>No results</Text>
-              <Text style={styles.emptySub}>Try a different keyword, category, or service.</Text>
-            </View>
-          )
-        }
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} tintColor={COLORS.primary} />
+          <View style={styles.emptyBox}>
+            <Icon name="storefront-outline" size={64} color={C.muted} />
+            <Text style={styles.emptyTitle}>No Products Found</Text>
+            <Text style={styles.emptyText}>
+              {search ? 'Try a different search' : 'Check back later for new products'}
+            </Text>
+          </View>
         }
       />
-      <KniBottomNav navigation={navigation} active="h" cartCount={cartCount} notifCount={0} />
+
+      {/* ========== ORDER MODAL ========== */}
+      <Modal visible={orderModalVisible} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Place Order</Text>
+              <TouchableOpacity onPress={() => setOrderModalVisible(false)}>
+                <Icon name="close" size={24} color={C.ink} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalBody}>
+              <Text style={styles.sectionLabel}>Cart Items</Text>
+              {cart.map(item => (
+                <View key={item.product.id} style={styles.cartItem}>
+                  <View style={styles.cartItemInfo}>
+                    <Text style={styles.cartItemName}>{item.product.name}</Text>
+                    <Text style={styles.cartItemQty}>x{item.quantity}</Text>
+                  </View>
+                  <Text style={styles.cartItemPrice}>₹{item.product.price * item.quantity}</Text>
+                </View>
+              ))}
+
+              <View style={styles.totalRow}>
+                <Text style={styles.totalLabel}>Total</Text>
+                <Text style={styles.totalValue}>₹{getCartTotal()}</Text>
+              </View>
+
+              <Text style={styles.sectionLabel}>Delivery Address *</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                placeholder="Enter complete delivery address"
+                placeholderTextColor={C.muted}
+                value={deliveryAddress}
+                onChangeText={setDeliveryAddress}
+                multiline
+                numberOfLines={3}
+              />
+
+              <Text style={styles.sectionLabel}>Delivery Notes</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Any special instructions"
+                placeholderTextColor={C.muted}
+                value={deliveryNotes}
+                onChangeText={setDeliveryNotes}
+              />
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={styles.cancelBtn}
+                onPress={() => setOrderModalVisible(false)}
+              >
+                <Text style={styles.cancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.submitBtn, isSubmitting && styles.submitBtnDisabled]}
+                onPress={handlePlaceOrder}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.submitBtnText}>Place Order</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
+      <KniBottomNav navigation={navigation} active="request" cartCount={cart.length} notifCount={0} />
     </SafeAreaView>
   );
 }
 
-/* ---------------- Styles ---------------- */
 const styles = StyleSheet.create({
-  stickyHeader: { backgroundColor: COLORS.bg, zIndex: 5 },
-  topbar: {
-    paddingHorizontal: 16, paddingBottom: 6,
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+  container: { flex: 1, backgroundColor: C.bg },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: C.card,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
   },
-  title: { fontSize: 28, fontWeight: '800', color: COLORS.ink },
-
-  helpBtn: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 10, paddingVertical: 6,
-    backgroundColor: '#FFE8E8', borderRadius: 12,
-  },
-  helpTxt: { marginLeft: 6, color: COLORS.primary, fontWeight: '700', fontSize: 12 },
-
-  searchWrap: {
-    marginHorizontal: 16, marginBottom: 8, marginTop: 6,
-    backgroundColor: COLORS.card, borderRadius: 16, borderWidth: 1, borderColor: COLORS.border,
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, height: 48,
-    shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
-  },
-  searchInput: { flex: 1, marginLeft: 8, color: COLORS.text, fontSize: 14 },
-  filterBtn: {
-    backgroundColor: COLORS.primary, width: 34, height: 34, borderRadius: 10,
-    alignItems: 'center', justifyContent: 'center', marginLeft: 8,
-  },
-
-  chip: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 12, height: 36, backgroundColor: '#FFFFFF',
-    borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, marginRight: 8,
+  headerTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
+  cartBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  cartBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: C.primary,
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    alignItems: 'center',
     justifyContent: 'center',
   },
-  chipText: { fontSize: 13, color: COLORS.muted },
+  cartBadgeText: { fontSize: 10, fontWeight: '700', color: '#fff' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingText: { marginTop: 12, fontSize: 14, color: C.muted },
 
+  // Cart Bar
+  cartBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: C.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  cartBarLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  cartBarItems: { fontSize: 14, fontWeight: '600', color: '#fff' },
+  cartBarRight: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  cartBarTotal: { fontSize: 16, fontWeight: '700', color: '#fff' },
+
+  // Search
+  searchContainer: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: C.card,
+    borderRadius: 16,
+    paddingHorizontal: 6,
+    paddingVertical: 6,
+    borderWidth: 2,
+    borderColor: C.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  searchIconBox: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: '#FEF2F2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchInput: { flex: 1, marginLeft: 12, fontSize: 15, fontWeight: '500', color: C.text },
+  clearSearchBtn: { padding: 8 },
+  clearSearchIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: C.muted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // Filter Section
+  filterSection: { marginBottom: 8 },
+  filterHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    marginBottom: 10,
+  },
+  filterLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: C.muted,
+    marginLeft: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    flex: 1,
+  },
+  clearFilterBtn: { padding: 4 },
+  categoryScrollContent: { paddingHorizontal: 16 },
+  categoryChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: 4,
+    paddingRight: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: C.card,
+    borderWidth: 2,
+    borderColor: C.border,
+    marginRight: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  categoryChipActive: { backgroundColor: C.primary, borderColor: C.primary },
+  categoryIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: '#FEF2F2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  categoryIconBoxActive: { backgroundColor: 'rgba(255,255,255,0.25)' },
+  categoryText: { fontSize: 13, fontWeight: '600', color: C.ink },
+  categoryTextActive: { color: '#fff' },
+  categoryCheckIcon: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 6,
+  },
+
+  // Product List
+  list: { padding: 16, paddingBottom: 100 },
+  row: { justifyContent: 'space-between', marginBottom: 16 },
   card: {
-    backgroundColor: COLORS.card, borderRadius: 18, overflow: 'hidden',
-    marginBottom: 14, borderWidth: 1, borderColor: '#EEF2F7', elevation: 2,
+    width: '48%',
+    backgroundColor: C.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: C.border,
+    overflow: 'hidden',
   },
-  cardImage: { width: '100%', height: 120, justifyContent: 'space-between' },
-  cardImageR: { borderTopLeftRadius: 18, borderTopRightRadius: 18 },
-  overlay: { ...StyleSheet.create({}).absoluteFillObject, backgroundColor: 'rgba(29,34,84,0.15)' },
-  badge: {
-    flexDirection: 'row', alignSelf: 'flex-start', backgroundColor: 'rgba(0,0,0,0.5)',
-    paddingHorizontal: 8, paddingVertical: 5, borderBottomRightRadius: 10, borderTopLeftRadius: 18,
-  },
-  badgeText: { color: '#fff', marginLeft: 4, fontSize: 12, fontWeight: '700' },
-
-  cardTitle: { color: COLORS.text, fontWeight: '700', fontSize: 14, marginTop: 10 },
-  cardDesc: { color: COLORS.muted, fontSize: 12, marginTop: 4 },
-  priceText: { 
-    color: COLORS.primary, 
-    fontSize: 15, 
-    fontWeight: '800', 
-    marginTop: 6,
-    marginBottom: 4,
-  },
-
-  metaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 },
-  metaLeft: { flexDirection: 'row', alignItems: 'center' },
-  metaRight: { flexDirection: 'row', alignItems: 'center' },
-  metaText: { marginLeft: 6, fontSize: 12, color: COLORS.muted, fontWeight: '600', maxWidth: 80, },
-
-  ctaRow: { marginTop: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  pill: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.primary, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
-  pillText: { marginLeft: 6, color: '#fff', fontSize: 11, fontWeight: '700' },
-
-  /* skeleton */
-  skelBody: { paddingHorizontal: 12, paddingBottom: 12 },
-  skelLineTitle: { height: 14, backgroundColor: '#E9EEF5', borderRadius: 6, marginTop: 10, width: '92%' },
-  skelLineTitleShort: { height: 14, backgroundColor: '#E9EEF5', borderRadius: 6, marginTop: 8, width: '70%' },
-  skelLineDesc: { height: 12, backgroundColor: '#E9EEF5', borderRadius: 6, marginTop: 8, width: '95%' },
-  skelLineDescShort: { height: 12, backgroundColor: '#E9EEF5', borderRadius: 6, marginTop: 6, width: '75%' },
-  skelPrice: { height: 16, backgroundColor: '#E9EEF5', borderRadius: 6, marginTop: 6, marginBottom: 4, width: '60%' },
-  skelMetaIcon: { width: 14, height: 14, borderRadius: 7, backgroundColor: '#E9EEF5' },
-  skelMetaText: { width: 60, height: 12, borderRadius: 6, marginLeft: 6, backgroundColor: '#E9EEF5' },
-  skelMetaIconSmall: { width: 14, height: 14, borderRadius: 7, backgroundColor: '#E9EEF5' },
-  skelMetaTextSmall: { width: 50, height: 12, borderRadius: 6, marginLeft: 6, backgroundColor: '#E9EEF5' },
-  skelPill: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: '#E9EEF5' },
-  skelPillIcon: { width: 14, height: 14, borderRadius: 7, backgroundColor: '#FFFFFF33' },
-  skelPillText: { width: 70, height: 12, borderRadius: 6, marginLeft: 6, backgroundColor: '#FFFFFF33' },
-  skelImage: {
-    width: '100%', height: 120, backgroundColor: '#E9EEF5',
-    borderTopLeftRadius: 18, borderTopRightRadius: 18, overflow: 'hidden',
-    justifyContent: 'flex-start',
-  },
-  skelBadge: {
+  productImage: { width: '100%', height: 100, backgroundColor: C.bg },
+  noImage: { alignItems: 'center', justifyContent: 'center' },
+  cardContent: { padding: 10 },
+  productName: { fontSize: 13, fontWeight: '700', color: C.ink, marginBottom: 4 },
+  categoryBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: '#00000033',
-    width: 64, height: 24,
-    borderBottomRightRadius: 10, borderTopLeftRadius: 18,
-    marginTop: 0,
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginBottom: 6,
   },
-  skelOverlay: { ...StyleSheet.create({}).absoluteFillObject, backgroundColor: 'rgba(29,34,84,0.10)' },
+  categoryBadgeText: { fontSize: 10, fontWeight: '600', color: C.muted },
+  productDesc: { fontSize: 11, color: C.muted, lineHeight: 14, marginBottom: 6 },
+  vendorRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 4 },
+  vendorText: { fontSize: 10, color: C.muted },
+  stockText: { fontSize: 10, color: C.muted, marginBottom: 8 },
+  priceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  productPrice: { fontSize: 15, fontWeight: '700', color: C.primary },
 
-  empty: { alignItems: 'center' },
-  emptyTitle: { marginTop: 8, fontSize: 18, color: COLORS.ink, fontWeight: '800' },
-  emptySub: { marginTop: 4, fontSize: 13, color: COLORS.muted },
+  // Qty Controls
+  qtyControls: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  qtyBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: C.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  qtyBtnDisabled: { borderColor: C.border },
+  qtyText: { fontSize: 14, fontWeight: '700', color: C.ink, minWidth: 20, textAlign: 'center' },
+  addBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: C.primary,
+    borderRadius: 8,
+  },
+  addBtnDisabled: { backgroundColor: C.border },
+  addBtnText: { fontSize: 12, fontWeight: '700', color: '#fff' },
+  addBtnTextDisabled: { color: C.muted },
+
+  // Empty State
+  emptyBox: { alignItems: 'center', paddingTop: 80 },
+  emptyTitle: { fontSize: 18, fontWeight: '700', color: C.ink, marginTop: 16 },
+  emptyText: { fontSize: 14, color: C.muted, textAlign: 'center', marginTop: 8, paddingHorizontal: 32 },
+
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: C.card,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '85%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+  },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
+  modalBody: { padding: 20 },
+  modalFooter: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: C.border,
+  },
+
+  sectionLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: C.muted,
+    marginBottom: 8,
+    marginTop: 16,
+  },
+  cartItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+  },
+  cartItemInfo: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  cartItemName: { fontSize: 14, fontWeight: '600', color: C.ink, flex: 1 },
+  cartItemQty: { fontSize: 13, color: C.muted },
+  cartItemPrice: { fontSize: 14, fontWeight: '600', color: C.ink },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 16,
+    borderTopWidth: 2,
+    borderTopColor: C.border,
+    marginTop: 8,
+  },
+  totalLabel: { fontSize: 16, fontWeight: '700', color: C.ink },
+  totalValue: { fontSize: 18, fontWeight: '700', color: C.primary },
+
+  input: {
+    backgroundColor: C.bg,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 15,
+    color: C.text,
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  textArea: { minHeight: 80, textAlignVertical: 'top' },
+
+  cancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: C.bg,
+    alignItems: 'center',
+  },
+  cancelBtnText: { fontSize: 15, fontWeight: '700', color: C.ink },
+  submitBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: C.primary,
+    alignItems: 'center',
+  },
+  submitBtnDisabled: { opacity: 0.7 },
+  submitBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
 });

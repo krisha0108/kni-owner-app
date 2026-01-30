@@ -62,24 +62,21 @@ const MENU_SECTIONS = [
     title: 'Services',
     items: [
       { icon: 'folder-outline', label: 'Category Request', screen: 'CategoryRequest' },
-      { icon: 'layers-outline', label: 'Service Feed', screen: 'Feed' },
+      { icon: 'layers-outline', label: 'Request Services', screen: 'Request' },
       { icon: 'cart-outline', label: 'My Cart', screen: 'Cart' },
-      { icon: 'add-circle-outline', label: 'New Service Request', screen: 'ServiceRequest' },
     ],
   },
   {
     title: 'Bookings',
     items: [
-      { icon: 'time-outline', label: 'Slot Booking', screen: 'SlotBooking' },
       { icon: 'calendar-outline', label: 'My Bookings', screen: 'MyBookings' },
       { icon: 'hourglass-outline', label: 'Pending Approvals', screen: 'PendingApproval' },
-      { icon: 'time-outline', label: 'Service History', screen: 'ServiceHistory' },
     ],
   },
   {
     title: 'Marketplace',
     items: [
-      { icon: 'storefront-outline', label: 'Marketplace', screen: 'Marketplace' },
+      { icon: 'storefront-outline', label: 'Marketplace', screen: 'Request' },
       { icon: 'bag-check-outline', label: 'My Orders', screen: 'MarketplaceOrders' },
       { icon: 'locate-outline', label: 'Order Tracking', screen: 'OrderTracking' },
     ],
