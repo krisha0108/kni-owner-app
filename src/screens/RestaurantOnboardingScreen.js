@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ScrollView, Platform, Alert,
-  ActivityIndicator, Image
+  ActivityIndicator, Image, Modal
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary } from 'react-native-image-picker';
@@ -33,6 +33,28 @@ const RestaurantOnboarding = ({ navigation, route }) => {
   const [fssaiFile, setFssaiFile] = useState(null);
   const [mainImage, setMainImage] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [states, setStates] = useState([]);
+  const [cities, setCities] = useState([]);
+  const [selectedStateId, setSelectedStateId] = useState(null);
+  const [selectedStateName, setSelectedStateName] = useState('');
+  const [showStatePicker, setShowStatePicker] = useState(false);
+  const [showCityPicker, setShowCityPicker] = useState(false);
+
+  useEffect(() => {
+    api.get('/public/locations?type=states').then(res => {
+      if (res.data.ok) setStates(res.data.data || []);
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (selectedStateId) {
+      api.get(`/public/locations?type=cities&stateId=${selectedStateId}`).then(res => {
+        if (res.data.ok) setCities(res.data.data || []);
+      }).catch(() => {});
+    } else {
+      setCities([]);
+    }
+  }, [selectedStateId]);
 
   const handleChange = (field, value) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -305,18 +327,32 @@ const RestaurantOnboarding = ({ navigation, route }) => {
             />
           </View>
 
+          {/* State */}
+          <TouchableOpacity style={styles.inputBox} onPress={() => setShowStatePicker(true)}>
+            <Icon name="map" size={18} color={C.primary} style={styles.inputIcon} />
+            <Text style={selectedStateName ? { flex: 1, color: C.text, fontSize: 15 } : { flex: 1, color: C.muted, fontSize: 15 }}>
+              {selectedStateName || 'Select State *'}
+            </Text>
+            <Icon name="chevron-down" size={18} color={C.muted} />
+          </TouchableOpacity>
+
           {/* City */}
-          <View style={styles.inputBox}>
+          <TouchableOpacity
+            style={styles.inputBox}
+            onPress={() => {
+              if (!selectedStateId) {
+                Alert.alert('', 'Please select state first');
+                return;
+              }
+              setShowCityPicker(true);
+            }}
+          >
             <Icon name="business" size={18} color={C.primary} style={styles.inputIcon} />
-            <TextInput
-              placeholder="City *"
-              style={styles.input}
-              value={form.city}
-              onChangeText={text => handleChange('city', text)}
-              placeholderTextColor={C.muted}
-              returnKeyType="next"
-            />
-          </View>
+            <Text style={form.city ? { flex: 1, color: C.text, fontSize: 15 } : { flex: 1, color: C.muted, fontSize: 15 }}>
+              {form.city || 'Select City *'}
+            </Text>
+            <Icon name="chevron-down" size={18} color={C.muted} />
+          </TouchableOpacity>
 
           {/* Pincode */}
           <View style={styles.inputBox}>
@@ -398,6 +434,74 @@ const RestaurantOnboarding = ({ navigation, route }) => {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* State Picker Modal */}
+      <Modal visible={showStatePicker} transparent animationType="slide">
+        <View style={styles.pickerOverlay}>
+          <View style={styles.pickerContainer}>
+            <View style={styles.pickerHeader}>
+              <Text style={styles.pickerTitle}>Select State</Text>
+              <TouchableOpacity onPress={() => setShowStatePicker(false)}>
+                <Icon name="close" size={24} color={C.ink} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.pickerList}>
+              {states.map(state => (
+                <TouchableOpacity
+                  key={state.id}
+                  style={[styles.pickerItem, selectedStateId === state.id && styles.pickerItemActive]}
+                  onPress={() => {
+                    setSelectedStateId(state.id);
+                    setSelectedStateName(state.name);
+                    handleChange('city', '');
+                    setCities([]);
+                    setShowStatePicker(false);
+                  }}
+                >
+                  <Text style={[styles.pickerItemText, selectedStateId === state.id && styles.pickerItemTextActive]}>
+                    {state.name}
+                  </Text>
+                  {selectedStateId === state.id && <Icon name="checkmark" size={20} color={C.primary} />}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* City Picker Modal */}
+      <Modal visible={showCityPicker} transparent animationType="slide">
+        <View style={styles.pickerOverlay}>
+          <View style={styles.pickerContainer}>
+            <View style={styles.pickerHeader}>
+              <Text style={styles.pickerTitle}>Select City</Text>
+              <TouchableOpacity onPress={() => setShowCityPicker(false)}>
+                <Icon name="close" size={24} color={C.ink} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.pickerList}>
+              {cities.map(city => (
+                <TouchableOpacity
+                  key={city.id}
+                  style={[styles.pickerItem, form.city === city.name && styles.pickerItemActive]}
+                  onPress={() => {
+                    handleChange('city', city.name);
+                    setShowCityPicker(false);
+                  }}
+                >
+                  <Text style={[styles.pickerItemText, form.city === city.name && styles.pickerItemTextActive]}>
+                    {city.name}
+                  </Text>
+                  {form.city === city.name && <Icon name="checkmark" size={20} color={C.primary} />}
+                </TouchableOpacity>
+              ))}
+              {cities.length === 0 && (
+                <Text style={styles.pickerEmptyText}>No cities available for this state</Text>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </LinearGradient>
   );
 };
@@ -551,6 +655,43 @@ const styles = StyleSheet.create({
   submitIcon: {
     marginLeft: 10,
   },
+
+  // Picker modal
+  pickerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  pickerContainer: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '50%',
+  },
+  pickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+  },
+  pickerTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
+  pickerList: { paddingHorizontal: 8 },
+  pickerItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+  },
+  pickerItemActive: { backgroundColor: '#FEE2E2' },
+  pickerItemText: { fontSize: 15, color: C.ink },
+  pickerItemTextActive: { color: C.primary, fontWeight: '600' },
+  pickerEmptyText: { fontSize: 14, color: C.muted, textAlign: 'center', paddingVertical: 20 },
 });
 
 export default RestaurantOnboarding;

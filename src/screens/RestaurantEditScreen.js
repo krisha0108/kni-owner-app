@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ScrollView, Platform, Alert,
-  ActivityIndicator, Image
+  ActivityIndicator, Image, Modal
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -37,9 +37,18 @@ export default function RestaurantEditScreen({ navigation, route }) {
   const [fssaiCertificateUrl, setFssaiCertificateUrl] = useState(null);
   const [newRestaurantImage, setNewRestaurantImage] = useState(null);
   const [newFssaiCertificate, setNewFssaiCertificate] = useState(null);
+  const [states, setStates] = useState([]);
+  const [cities, setCities] = useState([]);
+  const [selectedStateId, setSelectedStateId] = useState(null);
+  const [selectedStateName, setSelectedStateName] = useState('');
+  const [showStatePicker, setShowStatePicker] = useState(false);
+  const [showCityPicker, setShowCityPicker] = useState(false);
 
   useEffect(() => {
     loadRestaurant();
+    api.get('/public/locations?type=states').then(res => {
+      if (res.data.ok) setStates(res.data.data || []);
+    }).catch(() => {});
   }, []);
 
   const loadRestaurant = async () => {
@@ -69,6 +78,41 @@ export default function RestaurantEditScreen({ navigation, route }) {
       setLoading(false);
     }
   };
+
+  // Load cities when state changes
+  useEffect(() => {
+    if (selectedStateId) {
+      api.get(`/public/locations?type=cities&stateId=${selectedStateId}`).then(res => {
+        if (res.data.ok) setCities(res.data.data || []);
+      }).catch(() => {});
+    } else {
+      setCities([]);
+    }
+  }, [selectedStateId]);
+
+  // Try to find the matching state/city when restaurant data loads
+  useEffect(() => {
+    if (form.city && states.length > 0 && !selectedStateId) {
+      // Search through all states to find which one has this city
+      const findCity = async () => {
+        for (const state of states) {
+          try {
+            const res = await api.get(`/public/locations?type=cities&stateId=${state.id}`);
+            if (res.data.ok) {
+              const match = (res.data.data || []).find(c => c.name === form.city);
+              if (match) {
+                setSelectedStateId(state.id);
+                setSelectedStateName(state.name);
+                setCities(res.data.data);
+                return;
+              }
+            }
+          } catch {}
+        }
+      };
+      findCity();
+    }
+  }, [form.city, states]);
 
   const handleChange = (field, value) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -308,16 +352,37 @@ export default function RestaurantEditScreen({ navigation, route }) {
           />
         </View>
 
-        <View style={styles.inputBox}>
+        <Text style={styles.pickerLabel}>State *</Text>
+        <TouchableOpacity
+          style={styles.pickerBtn}
+          onPress={() => setShowStatePicker(true)}
+          disabled={saving}
+        >
+          <Icon name="map" size={18} color={C.primary} style={styles.inputIcon} />
+          <Text style={selectedStateName ? styles.pickerBtnText : styles.pickerBtnPlaceholder}>
+            {selectedStateName || 'Select State'}
+          </Text>
+          <Icon name="chevron-down" size={18} color={C.muted} />
+        </TouchableOpacity>
+
+        <Text style={styles.pickerLabel}>City *</Text>
+        <TouchableOpacity
+          style={styles.pickerBtn}
+          onPress={() => {
+            if (!selectedStateId) {
+              Alert.alert('', 'Please select state first');
+              return;
+            }
+            setShowCityPicker(true);
+          }}
+          disabled={saving}
+        >
           <Icon name="business" size={18} color={C.primary} style={styles.inputIcon} />
-          <TextInput
-            placeholder="City *"
-            style={styles.input}
-            value={form.city}
-            onChangeText={text => handleChange('city', text)}
-            placeholderTextColor={C.muted}
-          />
-        </View>
+          <Text style={form.city ? styles.pickerBtnText : styles.pickerBtnPlaceholder}>
+            {form.city || 'Select City'}
+          </Text>
+          <Icon name="chevron-down" size={18} color={C.muted} />
+        </TouchableOpacity>
 
         <View style={styles.inputBox}>
           <Icon name="location-outline" size={18} color={C.primary} style={styles.inputIcon} />
@@ -395,6 +460,74 @@ export default function RestaurantEditScreen({ navigation, route }) {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* State Picker Modal */}
+      <Modal visible={showStatePicker} transparent animationType="slide">
+        <View style={styles.pickerOverlay}>
+          <View style={styles.pickerContainer}>
+            <View style={styles.pickerHeader}>
+              <Text style={styles.pickerTitle}>Select State</Text>
+              <TouchableOpacity onPress={() => setShowStatePicker(false)}>
+                <Icon name="close" size={24} color={C.ink} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.pickerList}>
+              {states.map(state => (
+                <TouchableOpacity
+                  key={state.id}
+                  style={[styles.pickerItem, selectedStateId === state.id && styles.pickerItemActive]}
+                  onPress={() => {
+                    setSelectedStateId(state.id);
+                    setSelectedStateName(state.name);
+                    handleChange('city', '');
+                    setCities([]);
+                    setShowStatePicker(false);
+                  }}
+                >
+                  <Text style={[styles.pickerItemText, selectedStateId === state.id && styles.pickerItemTextActive]}>
+                    {state.name}
+                  </Text>
+                  {selectedStateId === state.id && <Icon name="checkmark" size={20} color={C.primary} />}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* City Picker Modal */}
+      <Modal visible={showCityPicker} transparent animationType="slide">
+        <View style={styles.pickerOverlay}>
+          <View style={styles.pickerContainer}>
+            <View style={styles.pickerHeader}>
+              <Text style={styles.pickerTitle}>Select City</Text>
+              <TouchableOpacity onPress={() => setShowCityPicker(false)}>
+                <Icon name="close" size={24} color={C.ink} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.pickerList}>
+              {cities.map(city => (
+                <TouchableOpacity
+                  key={city.id}
+                  style={[styles.pickerItem, form.city === city.name && styles.pickerItemActive]}
+                  onPress={() => {
+                    handleChange('city', city.name);
+                    setShowCityPicker(false);
+                  }}
+                >
+                  <Text style={[styles.pickerItemText, form.city === city.name && styles.pickerItemTextActive]}>
+                    {city.name}
+                  </Text>
+                  {form.city === city.name && <Icon name="checkmark" size={20} color={C.primary} />}
+                </TouchableOpacity>
+              ))}
+              {cities.length === 0 && (
+                <Text style={styles.pickerEmpty}>No cities available for this state</Text>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -562,4 +695,58 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
   },
+  pickerLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: C.ink,
+    marginBottom: 6,
+  },
+  pickerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: C.border,
+    backgroundColor: C.card,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: Platform.OS === 'ios' ? 14 : 12,
+    marginBottom: 12,
+  },
+  pickerBtnText: { flex: 1, fontSize: 15, color: C.text },
+  pickerBtnPlaceholder: { flex: 1, fontSize: 15, color: C.muted },
+  pickerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  pickerContainer: {
+    backgroundColor: C.card,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '50%',
+  },
+  pickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+  },
+  pickerTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
+  pickerList: { paddingHorizontal: 8 },
+  pickerItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+  },
+  pickerItemActive: { backgroundColor: '#FEE2E2' },
+  pickerItemText: { fontSize: 15, color: C.ink },
+  pickerItemTextActive: { color: C.primary, fontWeight: '600' },
+  pickerEmpty: { fontSize: 14, color: C.muted, textAlign: 'center', paddingVertical: 20 },
 });
