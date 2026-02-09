@@ -1,21 +1,20 @@
-import React, { useState, useCallback } from 'react';
+/**
+ * ============================================================================
+ * EXPENSES SCREEN - PREMIUM DESIGN (Urban Clap Inspired)
+ * ============================================================================
+ */
+
+import React, { useState, useCallback, useMemo } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  RefreshControl,
-  ActivityIndicator,
-  Modal,
-  TextInput,
-  ScrollView,
-  Alert,
-  Image,
+  View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl,
+  ActivityIndicator, Modal, TextInput, ScrollView, Alert, Image,
+  StatusBar, useWindowDimensions, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary } from 'react-native-image-picker';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import RNFS from 'react-native-fs';
 import { api } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
@@ -24,103 +23,113 @@ import { RestaurantSelectorBar } from '../components/RestaurantSelector';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
+// Premium Color Palette
 const C = {
   primary: '#EF3A3A',
+  primaryDark: '#DC2626',
+  primaryLight: '#FEE2E2',
+  gradient1: '#F59E0B',
+  gradient2: '#D97706',
   ink: '#1D2254',
-  text: '#0F172A',
-  muted: '#6B7280',
-  bg: '#F5F7FA',
+  text: '#334155',
+  muted: '#94A3B8',
+  bg: '#F8FAFC',
   card: '#FFFFFF',
-  border: '#E5E7EB',
-  ok: '#10B981',
-  warn: '#F59E0B',
+  border: '#E2E8F0',
+  success: '#10B981',
+  successLight: '#D1FAE5',
+  warning: '#F59E0B',
+  warningLight: '#FEF3C7',
   danger: '#EF4444',
+  dangerLight: '#FEE2E2',
   info: '#3B82F6',
+  infoLight: '#DBEAFE',
+  shadow: '#64748B',
 };
 
+// Categories with colors and icons
 const CATEGORIES = [
-  'Rent',
-  'Utilities',
-  'Groceries',
-  'Staff Salary',
-  'Equipment',
-  'Maintenance',
-  'Marketing',
-  'Transportation',
-  'Other',
+  { value: 'RENT', label: 'Rent', icon: 'home', color: '#EF4444', bg: '#FEE2E2' },
+  { value: 'UTILITIES', label: 'Utilities', icon: 'flash', color: '#3B82F6', bg: '#DBEAFE' },
+  { value: 'FOOD', label: 'Groceries', icon: 'cart', color: '#10B981', bg: '#D1FAE5' },
+  { value: 'SALARIES', label: 'Staff Salary', icon: 'people', color: '#8B5CF6', bg: '#EDE9FE' },
+  { value: 'SUPPLIES', label: 'Equipment', icon: 'cube', color: '#06B6D4', bg: '#CFFAFE' },
+  { value: 'MAINTENANCE', label: 'Maintenance', icon: 'construct', color: '#F59E0B', bg: '#FEF3C7' },
+  { value: 'MARKETING', label: 'Marketing', icon: 'megaphone', color: '#EC4899', bg: '#FCE7F3' },
+  { value: 'TRANSPORT', label: 'Transport', icon: 'car', color: '#6366F1', bg: '#E0E7FF' },
+  { value: 'OTHER', label: 'Other', icon: 'ellipsis-horizontal', color: '#6B7280', bg: '#F3F4F6' },
 ];
 
-const getCategoryIcon = (category) => {
-  const icons = {
-    'Rent': 'home-outline',
-    'Utilities': 'flash-outline',
-    'Groceries': 'cart-outline',
-    'Staff Salary': 'people-outline',
-    'Equipment': 'hardware-chip-outline',
-    'Maintenance': 'construct-outline',
-    'Marketing': 'megaphone-outline',
-    'Transportation': 'car-outline',
-    'Other': 'ellipsis-horizontal-outline',
-  };
-  return icons[category] || 'cash-outline';
+const getCategoryConfig = (value) => CATEGORIES.find(c => c.value === value) || CATEGORIES[8];
+
+const formatPrice = (amount) => {
+  if (!amount && amount !== 0) return '₹0';
+  return `₹${Number(amount).toLocaleString('en-IN')}`;
+};
+
+const formatDate = (dateStr) => {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
 export default function ExpensesScreen({ navigation }) {
-  // Global restaurant context
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
+  const gridColumns = isTablet ? 2 : 1;
+
   const {
-    restaurants,
-    selectedRestaurantId: selectedRestaurant,
-    loading: restaurantsLoading,
-    loadRestaurants,
-    hasRestaurants,
+    restaurants, selectedRestaurantId: selectedRestaurant,
+    loading: restaurantsLoading, loadRestaurants, hasRestaurants,
   } = useRestaurant();
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [expenses, setExpenses] = useState([]);
-  const [summary, setSummary] = useState({});
   const [modalVisible, setModalVisible] = useState(false);
   const [saving, setSaving] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [receiptImage, setReceiptImage] = useState(null);
 
   const [form, setForm] = useState({
-    id: null,
-    category: '',
-    amount: '',
-    description: '',
+    id: null, category: '', amount: '', description: '',
     expenseDate: new Date().toISOString().split('T')[0],
-    restaurantId: '',
-    receiptUrl: '',
+    restaurantId: '', receiptUrl: '',
   });
-  const [receiptImage, setReceiptImage] = useState(null);
-  const [uploadingReceipt, setUploadingReceipt] = useState(false);
-  const [menuVisible, setMenuVisible] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadData();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedRestaurant, selectedCategory])
-  );
+  // Calculate summary
+  const summary = useMemo(() => {
+    const total = expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+    return { total, count: expenses.length };
+  }, [expenses]);
+
+  // Category counts
+  const categoryCounts = useMemo(() => {
+    const counts = { all: expenses.length };
+    expenses.forEach(exp => {
+      counts[exp.category] = (counts[exp.category] || 0) + 1;
+    });
+    return counts;
+  }, [expenses]);
+
+  // Filter expenses
+  const filtered = useMemo(() => {
+    if (selectedCategory === 'all') return expenses;
+    return expenses.filter(exp => exp.category === selectedCategory);
+  }, [expenses, selectedCategory]);
+
+  useFocusEffect(useCallback(() => { loadData(); }, [selectedRestaurant]));
 
   const loadData = async () => {
-    if (!selectedRestaurant) {
-      setLoading(false);
-      return;
-    }
-
+    if (!selectedRestaurant) { setLoading(false); return; }
     try {
       setLoading(true);
-
       const params = new URLSearchParams({ restaurantId: selectedRestaurant });
-      if (selectedCategory && selectedCategory !== 'all') {
-        params.append('category', selectedCategory);
-      }
-
       const response = await api.get(`/owner/expenses?${params}`);
       if (response.data.ok) {
         setExpenses(response.data.data.expenses || []);
-        setSummary(response.data.data.summary || {});
       }
     } catch (error) {
       console.error('Error loading expenses:', error);
@@ -130,17 +139,20 @@ export default function ExpensesScreen({ navigation }) {
     }
   };
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadRestaurants();
-    await loadData();
+  const onRefresh = async () => { setRefreshing(true); await loadRestaurants(); await loadData(); };
+
+  const onDateChange = (event, selectedDate) => {
+    setShowDatePicker(Platform.OS === 'ios');
+    if (selectedDate) {
+      const dateStr = selectedDate.toISOString().split('T')[0];
+      setForm(f => ({ ...f, expenseDate: dateStr }));
+    }
   };
 
   const openForm = (item = null) => {
     if (item) {
       setForm({
-        id: item.id,
-        category: item.category || '',
+        id: item.id, category: item.category || '',
         amount: item.amount?.toString() || '',
         description: item.description || '',
         expenseDate: item.expenseDate?.split('T')[0] || new Date().toISOString().split('T')[0],
@@ -150,13 +162,9 @@ export default function ExpensesScreen({ navigation }) {
       setReceiptImage(item.receiptUrl ? { uri: item.receiptUrl } : null);
     } else {
       setForm({
-        id: null,
-        category: '',
-        amount: '',
-        description: '',
+        id: null, category: '', amount: '', description: '',
         expenseDate: new Date().toISOString().split('T')[0],
-        restaurantId: selectedRestaurant?.toString() || '',
-        receiptUrl: '',
+        restaurantId: selectedRestaurant?.toString() || '', receiptUrl: '',
       });
       setReceiptImage(null);
     }
@@ -164,31 +172,15 @@ export default function ExpensesScreen({ navigation }) {
   };
 
   const pickReceipt = () => {
-    launchImageLibrary(
-      {
-        mediaType: 'photo',
-        quality: 0.8,
-        maxWidth: 1024,
-        maxHeight: 1024,
-      },
-      (response) => {
-        if (response.didCancel) {
-          console.log('User cancelled receipt picker');
-        } else if (response.error) {
-          console.log('Receipt Picker Error:', response.error);
-          Alert.alert('Error', 'Failed to select receipt image');
-        } else if (response.assets && response.assets[0]) {
-          setReceiptImage(response.assets[0]);
-        }
-      }
-    );
+    launchImageLibrary({ mediaType: 'photo', quality: 0.8, maxWidth: 1024, maxHeight: 1024 }, (response) => {
+      if (response.assets && response.assets[0]) setReceiptImage(response.assets[0]);
+    });
   };
 
   const convertReceiptToBase64 = async () => {
     if (!receiptImage || !receiptImage.uri || receiptImage.uri.startsWith('http')) {
       return form.receiptUrl || null;
     }
-
     try {
       const fileUri = receiptImage.uri;
       const filePath = fileUri.startsWith('file://') ? fileUri.slice(7) : fileUri;
@@ -205,20 +197,18 @@ export default function ExpensesScreen({ navigation }) {
       Alert.alert('Error', 'Please fill in category and amount');
       return;
     }
-
     setSaving(true);
     try {
-      // Convert receipt to base64 if a new image was selected
       const receiptData = await convertReceiptToBase64();
-
+      const expenseDateISO = new Date(form.expenseDate).toISOString();
       const payload = {
         category: form.category,
         amount: parseFloat(form.amount),
-        description: form.description || null,
-        expenseDate: form.expenseDate,
-        restaurantId: parseInt(form.restaurantId),
-        receiptUrl: receiptData,
+        description: form.description || '',
+        expenseDate: expenseDateISO,
+        restaurantId: form.restaurantId,
       };
+      if (receiptData) payload.receiptUrl = receiptData;
 
       if (form.id) {
         await api.put(`/owner/expenses/${form.id}`, payload);
@@ -227,7 +217,6 @@ export default function ExpensesScreen({ navigation }) {
         await api.post('/owner/expenses', payload);
         Alert.alert('Success', 'Expense added successfully');
       }
-
       setModalVisible(false);
       setReceiptImage(null);
       loadData();
@@ -239,211 +228,238 @@ export default function ExpensesScreen({ navigation }) {
   };
 
   const deleteExpense = (item) => {
-    Alert.alert(
-      'Delete Expense',
-      'Are you sure you want to delete this expense?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await api.delete(`/owner/expenses/${item.id}`);
-              Alert.alert('Success', 'Expense deleted');
-              loadData();
-            } catch (error) {
-              Alert.alert('Error', 'Failed to delete expense');
-            }
+    Alert.alert('Delete Expense', 'Are you sure you want to delete this expense?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete', style: 'destructive',
+        onPress: async () => {
+          try {
+            await api.delete(`/owner/expenses/${item.id}`);
+            Alert.alert('Success', 'Expense deleted');
+            loadData();
+          } catch (error) {
+            Alert.alert('Error', 'Failed to delete expense');
           }
         }
-      ]
+      }
+    ]);
+  };
+
+  // ==================== RENDER EXPENSE CARD ====================
+  const renderExpenseCard = ({ item, index }) => {
+    const cat = getCategoryConfig(item.category);
+    return (
+      <View style={[st.card, isTablet && { marginHorizontal: 6 }]}>
+        <View style={st.cardRow}>
+          {/* Category Icon */}
+          <View style={[st.categoryIcon, { backgroundColor: cat.bg }]}>
+            <Icon name={cat.icon} size={24} color={cat.color} />
+          </View>
+
+          {/* Info */}
+          <View style={st.cardInfo}>
+            <Text style={st.cardTitle}>{cat.label}</Text>
+            {item.description && <Text style={st.cardDesc} numberOfLines={2}>{item.description}</Text>}
+            <View style={st.cardMeta}>
+              <Icon name="calendar-outline" size={12} color={C.muted} />
+              <Text style={st.cardDate}>{formatDate(item.expenseDate)}</Text>
+            </View>
+          </View>
+
+          {/* Amount */}
+          <View style={st.amountBox}>
+            <Text style={[st.amountText, { color: cat.color }]}>{formatPrice(item.amount)}</Text>
+          </View>
+        </View>
+
+        {/* Actions */}
+        <View style={st.cardActions}>
+          <TouchableOpacity style={[st.actionBtn, { backgroundColor: C.infoLight }]} onPress={() => openForm(item)}>
+            <Icon name="pencil" size={16} color={C.info} />
+            <Text style={[st.actionText, { color: C.info }]}>Edit</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[st.actionBtn, { backgroundColor: C.dangerLight }]} onPress={() => deleteExpense(item)}>
+            <Icon name="trash" size={16} color={C.danger} />
+            <Text style={[st.actionText, { color: C.danger }]}>Delete</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     );
   };
 
-  const renderExpenseCard = ({ item }) => (
-    <View style={styles.card}>
-      <View style={styles.cardHeader}>
-        <View style={styles.iconBox}>
-          <Icon name={getCategoryIcon(item.category)} size={24} color={C.warn} />
-        </View>
-        <View style={styles.cardInfo}>
-          <Text style={styles.cardTitle}>{item.category}</Text>
-          {item.description && <Text style={styles.cardSub} numberOfLines={2}>{item.description}</Text>}
-          <Text style={styles.dateText}>{new Date(item.expenseDate).toLocaleDateString()}</Text>
-        </View>
-        <Text style={styles.amountText}>₹{item.amount}</Text>
-      </View>
-
-      <View style={styles.cardActions}>
-        <TouchableOpacity style={styles.editBtn} onPress={() => openForm(item)}>
-          <Icon name="pencil-outline" size={16} color={C.info} />
-          <Text style={[styles.actionText, { color: C.info }]}>Edit</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.deleteBtn} onPress={() => deleteExpense(item)}>
-          <Icon name="trash-outline" size={16} color={C.danger} />
-          <Text style={[styles.actionText, { color: C.danger }]}>Delete</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
-  if ((loading || restaurantsLoading) && !refreshing) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.menuBtn}>
-            <Icon name="arrow-back" size={24} color={C.ink} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Expenses</Text>
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
-            <Icon name="menu" size={22} color="#1D2254" />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={C.primary} />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (!hasRestaurants) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.menuBtn}>
-            <Icon name="arrow-back" size={24} color={C.ink} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Expenses</Text>
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
-            <Icon name="menu" size={22} color="#1D2254" />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.emptyContainer}>
-          <Icon name="restaurant-outline" size={80} color={C.muted} />
-          <Text style={styles.emptyTitle}>No Restaurant Found</Text>
-          <Text style={styles.emptyText}>Please add a restaurant first</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.menuBtn}>
-          <Icon name="arrow-back" size={24} color={C.ink} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Expenses</Text>
-        <View style={styles.headerActions}>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('ExpenseReports')}
-            style={styles.headerBtn}
-          >
-            <Icon name="bar-chart-outline" size={22} color={C.info} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => openForm()} style={styles.headerBtn}>
-            <Icon name="add-circle" size={28} color={C.primary} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
-            <Icon name="menu" size={22} color="#1D2254" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
+  // ==================== HEADER COMPONENT ====================
+  const renderHeader = () => (
+    <>
       {/* Summary Card */}
       {summary.total > 0 && (
-        <View style={styles.summaryCard}>
-          <View style={styles.summaryHeader}>
-            <Icon name="cash" size={28} color={C.card} />
-            <Text style={styles.summaryLabel}>Total Expenses</Text>
+        <View style={st.summaryCard}>
+          <View style={st.summaryRow}>
+            <View style={st.summaryLeft}>
+              <Icon name="wallet" size={24} color="#fff" />
+              <Text style={st.summaryLabel}>Total Expenses</Text>
+            </View>
+            <TouchableOpacity
+              style={st.reportsBtn}
+              onPress={() => navigation.navigate('ExpenseReports')}
+            >
+              <Icon name="bar-chart" size={16} color={C.warning} />
+              <Text style={st.reportsBtnText}>Reports</Text>
+            </TouchableOpacity>
           </View>
-          <Text style={styles.summaryValue}>₹{summary.total}</Text>
-          <Text style={styles.summarySubtext}>{summary.count} expenses recorded</Text>
+          <Text style={st.summaryValue}>{formatPrice(summary.total)}</Text>
+          <Text style={st.summaryCount}>{summary.count} expense{summary.count !== 1 ? 's' : ''} recorded</Text>
         </View>
       )}
 
-      {/* Restaurant Selector - Global */}
+      {/* Restaurant Selector */}
       <RestaurantSelectorBar />
 
       {/* Category Filter */}
-      <View style={styles.filterSection}>
-        <View style={styles.filterHeader}>
-          <Icon name="pricetag" size={14} color={C.warn} />
-          <Text style={styles.filterLabel}>Category</Text>
-          {selectedCategory !== 'all' && (
-            <TouchableOpacity
-              style={styles.clearFilterBtn}
-              onPress={() => setSelectedCategory('all')}
-            >
-              <Icon name="close-circle" size={16} color={C.muted} />
-            </TouchableOpacity>
-          )}
-        </View>
-        <ScrollView
+      <View style={st.filterSection}>
+        <FlatList
           horizontal
+          data={[{ value: 'all', label: 'All', icon: 'grid', color: C.ink, bg: C.bg }, ...CATEGORIES]}
+          keyExtractor={(item) => item.value}
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categoryScrollContent}
-        >
-          <TouchableOpacity
-            style={[styles.categoryChip, selectedCategory === 'all' && styles.categoryChipActive]}
-            onPress={() => setSelectedCategory('all')}
-          >
-            <View style={[styles.categoryIconBox, selectedCategory === 'all' && styles.categoryIconBoxActive]}>
-              <Icon name="grid" size={14} color={selectedCategory === 'all' ? '#fff' : C.warn} />
-            </View>
-            <Text style={[styles.categoryText, selectedCategory === 'all' && styles.categoryTextActive]}>
-              All
-            </Text>
-            {selectedCategory === 'all' && (
-              <View style={styles.categoryCheckIcon}>
-                <Icon name="checkmark" size={10} color={C.warn} />
-              </View>
-            )}
-          </TouchableOpacity>
-          {CATEGORIES.map((cat, index) => {
-            const isActive = selectedCategory === cat;
+          contentContainerStyle={st.filterScroll}
+          renderItem={({ item: cat }) => {
+            const isActive = selectedCategory === cat.value;
+            const count = categoryCounts[cat.value] || 0;
             return (
               <TouchableOpacity
-                key={cat}
-                style={[styles.categoryChip, isActive && styles.categoryChipActive]}
-                onPress={() => setSelectedCategory(cat)}
+                style={[st.filterChip, isActive && { backgroundColor: cat.color, borderColor: cat.color }]}
+                onPress={() => setSelectedCategory(cat.value)}
               >
-                <View style={[styles.categoryIconBox, isActive && styles.categoryIconBoxActive]}>
-                  <Icon
-                    name={getCategoryIcon(cat)}
-                    size={14}
-                    color={isActive ? '#fff' : C.warn}
-                  />
-                </View>
-                <Text style={[styles.categoryText, isActive && styles.categoryTextActive]}>
-                  {cat}
+                <Icon name={cat.icon} size={16} color={isActive ? '#fff' : cat.color} />
+                <Text style={[st.filterChipText, isActive && { color: '#fff' }]}>
+                  {cat.label} ({count})
                 </Text>
-                {isActive && (
-                  <View style={styles.categoryCheckIcon}>
-                    <Icon name="checkmark" size={10} color={C.warn} />
-                  </View>
-                )}
               </TouchableOpacity>
             );
-          })}
-        </ScrollView>
+          }}
+        />
       </View>
 
+      {/* Results Header */}
+      <View style={st.resultsHeader}>
+        <Text style={st.resultsTitle}>{filtered.length} Expense{filtered.length !== 1 ? 's' : ''}</Text>
+        {selectedCategory !== 'all' && (
+          <TouchableOpacity style={st.clearBtn} onPress={() => setSelectedCategory('all')}>
+            <Icon name="close-circle" size={14} color={C.warning} />
+            <Text style={st.clearBtnText}>Clear</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </>
+  );
+
+  // ==================== LOADING STATE ====================
+  if ((loading || restaurantsLoading) && !refreshing) {
+    return (
+      <SafeAreaView style={st.container} edges={['top']}>
+        <StatusBar barStyle="dark-content" backgroundColor={C.card} />
+        <View style={st.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={st.headerBackBtn}>
+            <Icon name="arrow-back" size={22} color={C.ink} />
+          </TouchableOpacity>
+          <View style={st.headerCenter}>
+            <Text style={st.headerTitle}>Expenses</Text>
+            <Text style={st.headerSubtitle}>Track your spending</Text>
+          </View>
+          <View style={st.headerActions}>
+            <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
+              <Icon name="menu" size={20} color={C.ink} />
+            </TouchableOpacity>
+          </View>
+        </View>
+        <View style={st.loadingBox}>
+          <ActivityIndicator size="large" color={C.warning} />
+          <Text style={st.loadingText}>Loading expenses...</Text>
+        </View>
+        <KniBottomNav navigation={navigation} active="khatabook" />
+      </SafeAreaView>
+    );
+  }
+
+  // ==================== NO RESTAURANT STATE ====================
+  if (!hasRestaurants) {
+    return (
+      <SafeAreaView style={st.container} edges={['top']}>
+        <StatusBar barStyle="dark-content" backgroundColor={C.card} />
+        <View style={st.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={st.headerBackBtn}>
+            <Icon name="arrow-back" size={22} color={C.ink} />
+          </TouchableOpacity>
+          <View style={st.headerCenter}>
+            <Text style={st.headerTitle}>Expenses</Text>
+            <Text style={st.headerSubtitle}>Track your spending</Text>
+          </View>
+          <View style={st.headerActions}>
+            <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
+              <Icon name="menu" size={20} color={C.ink} />
+            </TouchableOpacity>
+          </View>
+        </View>
+        <View style={st.emptyState}>
+          <View style={st.emptyIcon}>
+            <Icon name="restaurant-outline" size={64} color={C.muted} />
+          </View>
+          <Text style={st.emptyTitle}>No Restaurant Found</Text>
+          <Text style={st.emptySubtitle}>Please add a restaurant first</Text>
+        </View>
+        <KniBottomNav navigation={navigation} active="khatabook" />
+      </SafeAreaView>
+    );
+  }
+
+  // ==================== MAIN RENDER ====================
+  return (
+    <SafeAreaView style={st.container} edges={['top']}>
+      <StatusBar barStyle="dark-content" backgroundColor={C.card} />
+
+      {/* White Header */}
+      <View style={st.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={st.headerBackBtn}>
+          <Icon name="arrow-back" size={22} color={C.ink} />
+        </TouchableOpacity>
+        <View style={st.headerCenter}>
+          <Text style={st.headerTitle}>Expenses</Text>
+          <Text style={st.headerSubtitle}>Track your spending</Text>
+        </View>
+        <View style={st.headerActions}>
+          <TouchableOpacity style={st.headerIconBtn} onPress={() => openForm()}>
+            <Icon name="add" size={20} color={C.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
+            <Icon name="menu" size={20} color={C.ink} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Fixed Summary, Restaurant Selector & Filters */}
+      {renderHeader()}
+
+      {/* Expense List - Only this scrolls */}
       <FlatList
-        data={expenses}
-        keyExtractor={item => item.id.toString()}
+        data={filtered}
+        keyExtractor={(item) => item.id.toString()}
         renderItem={renderExpenseCard}
-        contentContainerStyle={styles.list}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        numColumns={gridColumns}
+        key={`grid-${gridColumns}`}
+        contentContainerStyle={st.listContent}
+        columnWrapperStyle={gridColumns > 1 ? st.columnWrapper : undefined}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.warning]} />}
         ListEmptyComponent={
-          <View style={styles.emptyBox}>
-            <Icon name="receipt-outline" size={64} color={C.muted} />
-            <Text style={styles.emptyTitle}>No Expenses Yet</Text>
-            <Text style={styles.emptyText}>Track your expenses to manage finances</Text>
-            <TouchableOpacity style={styles.emptyBtn} onPress={() => openForm()}>
+          <View style={st.emptyState}>
+            <View style={st.emptyIcon}>
+              <Icon name="receipt-outline" size={64} color={C.muted} />
+            </View>
+            <Text style={st.emptyTitle}>No Expenses Yet</Text>
+            <Text style={st.emptySubtitle}>Track your expenses to manage finances</Text>
+            <TouchableOpacity style={st.emptyBtn} onPress={() => openForm()}>
               <Icon name="add" size={18} color="#fff" />
-              <Text style={styles.emptyBtnText}>Add Expense</Text>
+              <Text style={st.emptyBtnText}>Add Expense</Text>
             </TouchableOpacity>
           </View>
         }
@@ -451,389 +467,241 @@ export default function ExpensesScreen({ navigation }) {
 
       {/* Add/Edit Modal */}
       <Modal visible={modalVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{form.id ? 'Edit Expense' : 'Add Expense'}</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Icon name="close" size={24} color={C.ink} />
+        <View style={st.modalOverlay}>
+          <View style={st.modalContent}>
+            {/* Modal Header */}
+            <LinearGradient colors={[C.gradient1, C.gradient2]} style={st.modalHeader}>
+              <Text style={st.modalTitle}>{form.id ? 'Edit Expense' : 'Add Expense'}</Text>
+              <TouchableOpacity onPress={() => setModalVisible(false)} style={st.modalClose}>
+                <Icon name="close" size={24} color="#fff" />
               </TouchableOpacity>
-            </View>
+            </LinearGradient>
 
-            <ScrollView style={styles.modalBody}>
-              <Text style={styles.label}>Category *</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
-                {CATEGORIES.map(cat => (
-                  <TouchableOpacity
-                    key={cat}
-                    style={[styles.roleChip, form.category === cat && styles.roleChipActive]}
-                    onPress={() => setForm(f => ({ ...f, category: cat }))}
-                  >
-                    <Icon
-                      name={getCategoryIcon(cat)}
-                      size={14}
-                      color={form.category === cat ? '#fff' : C.ink}
-                    />
-                    <Text style={[styles.roleText, form.category === cat && styles.roleTextActive]}>
-                      {cat}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
+            <ScrollView style={st.modalBody} contentContainerStyle={{ paddingBottom: 30 }} showsVerticalScrollIndicator={true} keyboardShouldPersistTaps="handled">
+              {/* Category Selection */}
+              <Text style={st.label}>Category *</Text>
+              <View style={st.categoryGrid}>
+                {CATEGORIES.map(cat => {
+                  const isActive = form.category === cat.value;
+                  return (
+                    <TouchableOpacity
+                      key={cat.value}
+                      style={[st.categoryChip, isActive && { backgroundColor: cat.color, borderColor: cat.color }]}
+                      onPress={() => setForm(f => ({ ...f, category: cat.value }))}
+                    >
+                      <Icon name={cat.icon} size={18} color={isActive ? '#fff' : cat.color} />
+                      <Text style={[st.categoryChipText, isActive && { color: '#fff' }]}>{cat.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
 
-              <Text style={styles.label}>Amount (₹) *</Text>
+              {/* Amount */}
+              <Text style={st.label}>Amount (₹) *</Text>
+              <View style={st.inputRow}>
+                <View style={st.currencyBox}>
+                  <Text style={st.currencyText}>₹</Text>
+                </View>
+                <TextInput
+                  style={st.amountInput}
+                  placeholder="Enter amount"
+                  placeholderTextColor={C.muted}
+                  keyboardType="numeric"
+                  value={form.amount}
+                  onChangeText={v => setForm(f => ({ ...f, amount: v }))}
+                />
+              </View>
+
+              {/* Date */}
+              <Text style={st.label}>Date</Text>
+              <TouchableOpacity style={st.dateBtn} onPress={() => setShowDatePicker(true)}>
+                <Icon name="calendar" size={20} color={C.warning} />
+                <Text style={st.dateBtnText}>{form.expenseDate ? formatDate(form.expenseDate) : 'Select date'}</Text>
+                <Icon name="chevron-down" size={18} color={C.muted} />
+              </TouchableOpacity>
+              {showDatePicker && (
+                <DateTimePicker
+                  value={form.expenseDate ? new Date(form.expenseDate) : new Date()}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={onDateChange}
+                  maximumDate={new Date()}
+                />
+              )}
+
+              {/* Description */}
+              <Text style={st.label}>Description</Text>
               <TextInput
-                style={styles.input}
-                placeholder="Enter amount"
-                keyboardType="numeric"
-                value={form.amount}
-                onChangeText={v => setForm(f => ({ ...f, amount: v }))}
-              />
-
-              <Text style={styles.label}>Date (YYYY-MM-DD)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="2026-01-17"
-                value={form.expenseDate}
-                onChangeText={v => setForm(f => ({ ...f, expenseDate: v }))}
-              />
-
-              <Text style={styles.label}>Description</Text>
-              <TextInput
-                style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
+                style={st.textArea}
                 placeholder="Add notes about this expense"
+                placeholderTextColor={C.muted}
                 multiline
+                numberOfLines={3}
                 value={form.description}
                 onChangeText={v => setForm(f => ({ ...f, description: v }))}
               />
 
-              <Text style={styles.label}>Receipt (Optional)</Text>
+              {/* Receipt */}
+              <Text style={st.label}>Receipt (Optional)</Text>
               {receiptImage ? (
-                <View style={styles.receiptPreview}>
-                  <Image
-                    source={{ uri: receiptImage.uri }}
-                    style={styles.receiptImage}
-                    resizeMode="cover"
-                  />
-                  <TouchableOpacity
-                    style={styles.receiptRemoveBtn}
-                    onPress={() => setReceiptImage(null)}
-                  >
+                <View style={st.receiptPreview}>
+                  <Image source={{ uri: receiptImage.uri }} style={st.receiptImage} resizeMode="cover" />
+                  <TouchableOpacity style={st.receiptRemove} onPress={() => setReceiptImage(null)}>
                     <Icon name="close" size={16} color="#fff" />
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.receiptChangeBtn}
-                    onPress={pickReceipt}
-                  >
-                    <Icon name="camera" size={16} color={C.primary} />
-                    <Text style={styles.receiptChangeBtnText}>Change</Text>
+                  <TouchableOpacity style={st.receiptChange} onPress={pickReceipt}>
+                    <Icon name="camera" size={14} color={C.warning} />
+                    <Text style={st.receiptChangeText}>Change</Text>
                   </TouchableOpacity>
                 </View>
               ) : (
-                <TouchableOpacity style={styles.receiptUploadBtn} onPress={pickReceipt}>
-                  <View style={styles.receiptUploadIcon}>
-                    <Icon name="receipt-outline" size={28} color={C.muted} />
+                <TouchableOpacity style={st.receiptUpload} onPress={pickReceipt}>
+                  <View style={st.receiptUploadIcon}>
+                    <Icon name="cloud-upload" size={28} color={C.muted} />
                   </View>
-                  <Text style={styles.receiptUploadText}>Tap to upload receipt</Text>
-                  <Text style={styles.receiptUploadHint}>PNG, JPG up to 5MB</Text>
+                  <Text style={st.receiptUploadText}>Tap to upload receipt</Text>
+                  <Text style={st.receiptUploadHint}>PNG, JPG up to 5MB</Text>
                 </TouchableOpacity>
               )}
             </ScrollView>
 
-            <View style={styles.modalFooter}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={() => setModalVisible(false)}>
-                <Text style={styles.cancelText}>Cancel</Text>
+            {/* Modal Footer */}
+            <View style={st.modalFooter}>
+              <TouchableOpacity style={st.cancelBtn} onPress={() => setModalVisible(false)}>
+                <Text style={st.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.saveBtn} onPress={saveExpense} disabled={saving}>
+              <TouchableOpacity style={st.saveBtn} onPress={saveExpense} disabled={saving}>
                 {saving ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Text style={styles.saveText}>{form.id ? 'Save' : 'Add'}</Text>
+                  <>
+                    <Icon name={form.id ? 'checkmark' : 'add'} size={18} color="#fff" />
+                    <Text style={st.saveBtnText}>{form.id ? 'Update' : 'Add'}</Text>
+                  </>
                 )}
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
-      <KniBottomNav navigation={navigation} active="khatabook" />
+
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
+      <KniBottomNav navigation={navigation} active="khatabook" />
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+// ==================== STYLES ====================
+const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: C.card,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
-  },
-  menuBtn: { width: 40 },
+
+  // Header Section
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border },
+  headerBackBtn: { width: 40, height: 40, borderRadius: 10, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
+  headerCenter: { flex: 1, marginLeft: 12 },
   headerTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  headerBtn: { padding: 4 },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: C.ink, marginTop: 16 },
-  emptyText: { fontSize: 14, color: C.muted, textAlign: 'center', marginTop: 8 },
+  headerSubtitle: { fontSize: 12, color: C.muted, marginTop: 2 },
+  headerActions: { flexDirection: 'row' },
+  headerIconBtn: { width: 40, height: 40, borderRadius: 10, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', marginLeft: 8 },
 
-  summaryCard: {
-    backgroundColor: C.warn,
-    marginHorizontal: 16,
-    marginTop: 16,
-    padding: 20,
-    borderRadius: 16,
-  },
-  summaryHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  summaryLabel: { fontSize: 14, color: C.card, marginLeft: 8, fontWeight: '600' },
-  summaryValue: { fontSize: 32, fontWeight: '700', color: C.card },
-  summarySubtext: { fontSize: 13, color: C.card, opacity: 0.9, marginTop: 4 },
+  // Hero Section (kept for modal header)
+  heroSection: { paddingTop: 8, paddingBottom: 16, borderBottomLeftRadius: 20, borderBottomRightRadius: 20 },
+  heroContent: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 },
+  backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  heroTextContainer: { flex: 1 },
+  heroTitle: { fontSize: 24, fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
+  heroSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.8)', marginTop: 2 },
+  heroActions: { flexDirection: 'row' },
+  heroIconBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginLeft: 8 },
 
-  filterSection: { marginBottom: 12 },
-  filterHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 10,
-  },
-  filterLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: C.muted,
-    marginLeft: 6,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    flex: 1,
-  },
-  clearFilterBtn: { padding: 4 },
-  categoryScrollContent: { paddingHorizontal: 16 },
-  categoryChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingLeft: 4,
-    paddingRight: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-    backgroundColor: C.card,
-    borderWidth: 2,
-    borderColor: C.border,
-    marginRight: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  categoryChipActive: { backgroundColor: C.warn, borderColor: C.warn },
-  categoryIconBox: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    backgroundColor: '#FFFBEB',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 8,
-  },
-  categoryIconBoxActive: { backgroundColor: 'rgba(255,255,255,0.25)' },
-  categoryText: { fontSize: 13, fontWeight: '600', color: C.ink },
-  categoryTextActive: { color: '#fff' },
-  categoryCheckIcon: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 6,
-  },
+  // Summary Card
+  summaryCard: { backgroundColor: C.warning, marginHorizontal: 16, marginTop: 16, padding: 20, borderRadius: 16 },
+  summaryRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+  summaryLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  summaryLabel: { fontSize: 14, color: '#fff', fontWeight: '600' },
+  reportsBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: '#fff', borderRadius: 20 },
+  reportsBtnText: { fontSize: 12, fontWeight: '700', color: C.warning },
+  summaryValue: { fontSize: 32, fontWeight: '800', color: '#fff' },
+  summaryCount: { fontSize: 13, color: 'rgba(255,255,255,0.85)', marginTop: 4 },
 
-  list: { padding: 16 },
-  card: {
-    backgroundColor: C.card,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  cardHeader: { flexDirection: 'row', gap: 12, marginBottom: 12 },
-  iconBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: '#FFFBEB',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  // Filters
+  filterSection: { paddingVertical: 12, backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border, marginTop: 12 },
+  filterScroll: { paddingHorizontal: 16 },
+  filterChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 10, marginRight: 8, backgroundColor: C.card, borderRadius: 20, borderWidth: 1.5, borderColor: C.border },
+  filterChipText: { fontSize: 13, fontWeight: '600', color: C.ink },
+
+  // Results Header
+  resultsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
+  resultsTitle: { fontSize: 15, fontWeight: '700', color: C.ink },
+  clearBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: C.warningLight, borderRadius: 8 },
+  clearBtnText: { fontSize: 12, fontWeight: '600', color: C.warning },
+
+  // List
+  listContent: { paddingHorizontal: 16, paddingBottom: 120 },
+  columnWrapper: { justifyContent: 'space-between' },
+
+  // Card
+  card: { flex: 1, backgroundColor: C.card, borderRadius: 16, marginBottom: 12, shadowColor: C.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3, overflow: 'hidden', padding: 16 },
+  cardRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  categoryIcon: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   cardInfo: { flex: 1 },
   cardTitle: { fontSize: 16, fontWeight: '700', color: C.ink },
-  cardSub: { fontSize: 13, color: C.muted, marginTop: 2 },
-  dateText: { fontSize: 12, color: C.muted, marginTop: 4 },
-  amountText: { fontSize: 18, fontWeight: '700', color: C.warn },
-
-  cardActions: { flexDirection: 'row', gap: 8 },
-  editBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: '#EFF6FF',
-  },
-  deleteBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: '#FEF2F2',
-  },
+  cardDesc: { fontSize: 13, color: C.text, marginTop: 4 },
+  cardMeta: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 },
+  cardDate: { fontSize: 12, color: C.muted },
+  amountBox: { alignItems: 'flex-end' },
+  amountText: { fontSize: 18, fontWeight: '800' },
+  cardActions: { flexDirection: 'row', gap: 8, marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: C.border },
+  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 10 },
   actionText: { fontSize: 13, fontWeight: '600' },
 
-  emptyBox: { alignItems: 'center', paddingTop: 80 },
-  emptyBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 20,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: C.primary,
-  },
-  emptyBtnText: { fontSize: 14, fontWeight: '700', color: '#fff' },
+  // Loading & Empty
+  loadingHero: { paddingVertical: 24, paddingHorizontal: 20, borderBottomLeftRadius: 20, borderBottomRightRadius: 20 },
+  loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  loadingText: { marginTop: 16, fontSize: 15, color: C.muted },
+  emptyState: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 40 },
+  emptyIcon: { width: 120, height: 120, borderRadius: 60, backgroundColor: C.border, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
+  emptyTitle: { fontSize: 20, fontWeight: '700', color: C.ink, marginBottom: 8 },
+  emptySubtitle: { fontSize: 14, color: C.muted, textAlign: 'center' },
+  emptyBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 24, paddingHorizontal: 24, paddingVertical: 14, backgroundColor: C.warning, borderRadius: 14 },
+  emptyBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
 
+  // Modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: C.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '90%' },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
-  },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
-  modalBody: { padding: 16 },
-  modalFooter: { flexDirection: 'row', gap: 12, padding: 16, borderTopWidth: 1, borderTopColor: C.border },
+  modalContent: { backgroundColor: C.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '92%' },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, borderTopLeftRadius: 24, borderTopRightRadius: 24 },
+  modalTitle: { fontSize: 20, fontWeight: '800', color: '#fff' },
+  modalClose: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
+  modalBody: { padding: 20 },
+  modalFooter: { flexDirection: 'row', gap: 12, padding: 20, borderTopWidth: 1, borderTopColor: C.border },
 
-  label: { fontSize: 13, fontWeight: '600', color: C.muted, marginBottom: 8, marginTop: 12 },
-  input: {
-    backgroundColor: C.bg,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 14,
-    color: C.text,
-    borderWidth: 1,
-    borderColor: C.border,
-  },
+  // Form
+  label: { fontSize: 13, fontWeight: '700', color: C.text, marginBottom: 10, marginTop: 16 },
+  categoryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  categoryChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, backgroundColor: C.bg, borderWidth: 1.5, borderColor: C.border },
+  categoryChipText: { fontSize: 13, fontWeight: '600', color: C.ink },
+  inputRow: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, borderWidth: 1.5, borderColor: C.border, backgroundColor: C.bg, overflow: 'hidden' },
+  currencyBox: { width: 48, height: 48, backgroundColor: C.warningLight, alignItems: 'center', justifyContent: 'center' },
+  currencyText: { fontSize: 18, fontWeight: '700', color: C.warning },
+  amountInput: { flex: 1, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, fontWeight: '600', color: C.ink },
+  dateBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 14, borderRadius: 12, borderWidth: 1.5, borderColor: C.border, backgroundColor: C.bg },
+  dateBtnText: { flex: 1, fontSize: 14, fontWeight: '600', color: C.ink },
+  textArea: { backgroundColor: C.bg, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: C.text, borderWidth: 1.5, borderColor: C.border, minHeight: 80, textAlignVertical: 'top' },
 
-  roleChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: C.bg,
-    borderWidth: 1,
-    borderColor: C.border,
-    marginRight: 8,
-  },
-  roleChipActive: { backgroundColor: C.warn, borderColor: C.warn },
-  roleText: { fontSize: 13, fontWeight: '600', color: C.ink },
-  roleTextActive: { color: '#fff' },
+  // Receipt
+  receiptUpload: { alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.border, borderStyle: 'dashed', borderRadius: 14, paddingVertical: 28, backgroundColor: C.bg },
+  receiptUploadIcon: { width: 56, height: 56, borderRadius: 28, backgroundColor: C.card, alignItems: 'center', justifyContent: 'center', marginBottom: 10, shadowColor: C.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 },
+  receiptUploadText: { fontSize: 14, fontWeight: '600', color: C.ink },
+  receiptUploadHint: { fontSize: 12, color: C.muted, marginTop: 4 },
+  receiptPreview: { position: 'relative', borderRadius: 14, overflow: 'hidden' },
+  receiptImage: { width: '100%', height: 160, borderRadius: 14 },
+  receiptRemove: { position: 'absolute', top: 10, right: 10, width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' },
+  receiptChange: { position: 'absolute', bottom: 10, right: 10, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, backgroundColor: '#fff' },
+  receiptChangeText: { fontSize: 12, fontWeight: '600', color: C.warning },
 
+  // Buttons
   cancelBtn: { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: C.bg, alignItems: 'center' },
-  cancelText: { fontSize: 14, fontWeight: '700', color: C.ink },
-  saveBtn: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: C.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  saveText: { fontSize: 14, fontWeight: '700', color: '#fff' },
-
-  // Receipt upload styles
-  receiptUploadBtn: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: C.border,
-    borderStyle: 'dashed',
-    borderRadius: 12,
-    paddingVertical: 24,
-    backgroundColor: '#FAFAFA',
-    marginBottom: 16,
-  },
-  receiptUploadIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#F3F4F6',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  receiptUploadText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: C.ink,
-  },
-  receiptUploadHint: {
-    fontSize: 12,
-    color: C.muted,
-    marginTop: 4,
-  },
-  receiptPreview: {
-    position: 'relative',
-    borderRadius: 12,
-    overflow: 'hidden',
-    marginBottom: 16,
-  },
-  receiptImage: {
-    width: '100%',
-    height: 150,
-    borderRadius: 12,
-  },
-  receiptRemoveBtn: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  receiptChangeBtn: {
-    position: 'absolute',
-    bottom: 8,
-    right: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    backgroundColor: '#fff',
-  },
-  receiptChangeBtnText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: C.primary,
-  },
+  cancelBtnText: { fontSize: 15, fontWeight: '700', color: C.ink },
+  saveBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderRadius: 12, backgroundColor: C.warning },
+  saveBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
 });

@@ -1,27 +1,20 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  RefreshControl,
-  ActivityIndicator,
-  Modal,
-  ScrollView,
-  TextInput,
-  Image,
-  Alert,
-  Linking,
+  View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl,
+  ActivityIndicator, Modal, ScrollView, TextInput, Image, Alert, Linking, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
+import LinearGradient from 'react-native-linear-gradient';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { api, IMAGE_BASE_URL } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
 
+const { width: W } = Dimensions.get('window');
+
 const C = {
   primary: '#EF3A3A',
+  primaryDark: '#D42E2E',
   ink: '#1D2254',
   text: '#0F172A',
   muted: '#6B7280',
@@ -32,93 +25,91 @@ const C = {
   warn: '#F59E0B',
   danger: '#EF4444',
   info: '#3B82F6',
-  indigo: '#6366F1',
 };
 
-const STATUS_OPTIONS = [
-  { value: 'all', label: 'All Status' },
-  { value: 'PENDING', label: 'Pending' },
-  { value: 'SEEN', label: 'Seen' },
-  { value: 'ON_WORK', label: 'On Work' },
-  { value: 'COMPLETED', label: 'Completed' },
-  { value: 'REJECTED', label: 'Rejected' },
+const CATEGORY_CONFIG = {
+  General:   { icon: 'help-circle', gradient: ['#6366F1', '#4F46E5'], bg: '#EEF2FF', color: '#4F46E5', lightBg: '#E0E7FF' },
+  Equipment: { icon: 'hardware-chip', gradient: ['#F97316', '#EA580C'], bg: '#FFF7ED', color: '#EA580C', lightBg: '#FFEDD5' },
+  Billing:   { icon: 'card', gradient: ['#10B981', '#059669'], bg: '#ECFDF5', color: '#059669', lightBg: '#D1FAE5' },
+  Service:   { icon: 'construct', gradient: ['#3B82F6', '#1D4ED8'], bg: '#EFF6FF', color: '#2563EB', lightBg: '#DBEAFE' },
+  Account:   { icon: 'person', gradient: ['#8B5CF6', '#6D28D9'], bg: '#F5F3FF', color: '#7C3AED', lightBg: '#EDE9FE' },
+  Other:     { icon: 'ellipsis-horizontal', gradient: ['#94A3B8', '#64748B'], bg: '#F8FAFC', color: '#64748B', lightBg: '#E2E8F0' },
+};
+
+const STATUS_CONFIG = {
+  PENDING:    { gradient: ['#FBBF24', '#F59E0B'], icon: 'time', label: 'Pending', bg: '#FEF3C7', color: '#D97706' },
+  SEEN:       { gradient: ['#60A5FA', '#2563EB'], icon: 'eye', label: 'Seen', bg: '#DBEAFE', color: '#2563EB' },
+  ON_WORK:    { gradient: ['#818CF8', '#4F46E5'], icon: 'construct', label: 'On Work', bg: '#E0E7FF', color: '#4F46E5' },
+  COMPLETED:  { gradient: ['#34D399', '#059669'], icon: 'checkmark-circle', label: 'Completed', bg: '#D1FAE5', color: '#059669' },
+  REJECTED:   { gradient: ['#F87171', '#DC2626'], icon: 'close-circle', label: 'Rejected', bg: '#FEE2E2', color: '#DC2626' },
+  pending:    { gradient: ['#FBBF24', '#F59E0B'], icon: 'time', label: 'Pending', bg: '#FEF3C7', color: '#D97706' },
+  seen:       { gradient: ['#60A5FA', '#2563EB'], icon: 'eye', label: 'Seen', bg: '#DBEAFE', color: '#2563EB' },
+  onwork:     { gradient: ['#818CF8', '#4F46E5'], icon: 'construct', label: 'On Work', bg: '#E0E7FF', color: '#4F46E5' },
+  completed:  { gradient: ['#34D399', '#059669'], icon: 'checkmark-circle', label: 'Completed', bg: '#D1FAE5', color: '#059669' },
+  rejected:   { gradient: ['#F87171', '#DC2626'], icon: 'close-circle', label: 'Rejected', bg: '#FEE2E2', color: '#DC2626' },
+};
+
+const FILTER_TABS = [
+  { key: 'all', label: 'All', icon: 'apps' },
+  { key: 'PENDING', label: 'Pending', icon: 'time' },
+  { key: 'SEEN', label: 'Seen', icon: 'eye' },
+  { key: 'ON_WORK', label: 'On Work', icon: 'construct' },
+  { key: 'COMPLETED', label: 'Done', icon: 'checkmark-circle' },
+  { key: 'REJECTED', label: 'Rejected', icon: 'close-circle' },
 ];
 
 const CATEGORY_OPTIONS = ['General', 'Equipment', 'Billing', 'Service', 'Account', 'Other'];
 
-const STATUS_CONFIG = {
-  PENDING: { bg: '#FEF3C7', color: '#D97706', icon: 'time-outline', label: 'Pending' },
-  SEEN: { bg: '#DBEAFE', color: '#2563EB', icon: 'eye-outline', label: 'Seen' },
-  ON_WORK: { bg: '#E0E7FF', color: '#4F46E5', icon: 'construct-outline', label: 'On Work' },
-  COMPLETED: { bg: '#D1FAE5', color: '#059669', icon: 'checkmark-circle-outline', label: 'Completed' },
-  REJECTED: { bg: '#FEE2E2', color: '#DC2626', icon: 'close-circle-outline', label: 'Rejected' },
-  // Map lowercase versions
-  pending: { bg: '#FEF3C7', color: '#D97706', icon: 'time-outline', label: 'Pending' },
-  seen: { bg: '#DBEAFE', color: '#2563EB', icon: 'eye-outline', label: 'Seen' },
-  onwork: { bg: '#E0E7FF', color: '#4F46E5', icon: 'construct-outline', label: 'On Work' },
-  completed: { bg: '#D1FAE5', color: '#059669', icon: 'checkmark-circle-outline', label: 'Completed' },
-  rejected: { bg: '#FEE2E2', color: '#DC2626', icon: 'close-circle-outline', label: 'Rejected' },
+const formatDate = (d) => {
+  if (!d) return '-';
+  return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
-const formatDate = (dateString) => {
-  if (!dateString) return '-';
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+const formatDateTime = (d) => {
+  if (!d) return '-';
+  return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 };
 
-const formatDateTime = (dateString) => {
-  if (!dateString) return '-';
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+const formatTimeAgo = (d) => {
+  if (!d) return '';
+  const diff = Math.floor((Date.now() - new Date(d)) / 1000);
+  if (diff < 60) return 'Just now';
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  const days = Math.floor(diff / 86400);
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return `${days}d ago`;
+  if (days < 30) return `${Math.floor(days / 7)}w ago`;
+  return formatDate(d);
 };
 
 const toStorageUrl = (u) => {
   if (!u) return '';
   const s = String(u).trim();
   if (!s) return '';
-  if (/^https?:\/\//i.test(s) && !/https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i.test(s)) {
-    return s;
-  }
+  if (/^https?:\/\//i.test(s) && !/https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i.test(s)) return s;
   const m = s.match(/\/storage\/(.+)$/);
   const tail = m ? m[1] : s.replace(/^\/?storage\/?/, '');
   const base = IMAGE_BASE_URL.replace(/\/$/, '');
-  const cleanTail = tail.replace(/^\/+/, '');
-  return `${base}/${cleanTail}`;
+  return `${base}/${tail.replace(/^\/+/, '')}`;
 };
 
 export default function SupportCenter({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [tickets, setTickets] = useState([]);
-
-  // Restaurant
   const [restaurants, setRestaurants] = useState([]);
   const [currentRestaurant, setCurrentRestaurant] = useState(null);
   const [restaurantPickerVisible, setRestaurantPickerVisible] = useState(false);
-
-  // Search & Filters
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [statusPickerVisible, setStatusPickerVisible] = useState(false);
+  const [activeTab, setActiveTab] = useState('all');
 
-  // Create Ticket Modal
   const [createModalVisible, setCreateModalVisible] = useState(false);
-  const [formData, setFormData] = useState({
-    title: '',
-    equipmentName: '',
-    category: 'General',
-    description: '',
-  });
+  const [formData, setFormData] = useState({ title: '', equipmentName: '', category: 'General', description: '' });
   const [ticketImageUri, setTicketImageUri] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [categoryPickerVisible, setCategoryPickerVisible] = useState(false);
 
-  // Ticket Detail Modal
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [threads, setThreads] = useState([]);
@@ -129,126 +120,84 @@ export default function SupportCenter({ navigation }) {
   const loadData = useCallback(async (restaurantId = null) => {
     try {
       setLoading(true);
-
-      // Get all restaurants
       const restaurantsRes = await api.get('/owner/restaurants');
       if (restaurantsRes.data.ok && restaurantsRes.data.data.length > 0) {
-        const approvedRestaurants = restaurantsRes.data.data.filter(r => r.status === 'APPROVED');
-        setRestaurants(approvedRestaurants);
-
-        let targetRestaurant = null;
-        if (restaurantId) {
-          targetRestaurant = approvedRestaurants.find(r => r.id === restaurantId);
-        }
-        if (!targetRestaurant && approvedRestaurants.length > 0) {
-          targetRestaurant = approvedRestaurants[0];
-        }
-
-        if (targetRestaurant) {
-          setCurrentRestaurant(targetRestaurant);
-
-          // Fetch support tickets
-          const params = new URLSearchParams();
-          params.append('restaurantId', targetRestaurant.id);
-          if (statusFilter !== 'all') {
-            params.append('status', statusFilter);
-          }
-
-          const response = await api.get(`/owner/support?${params.toString()}`);
-          if (response.data.ok) {
-            setTickets(response.data.data || []);
-          }
+        const approved = restaurantsRes.data.data.filter(r => r.status === 'APPROVED');
+        setRestaurants(approved);
+        let target = null;
+        if (restaurantId) target = approved.find(r => r.id === restaurantId);
+        if (!target && approved.length > 0) target = approved[0];
+        if (target) {
+          setCurrentRestaurant(target);
+          const response = await api.get(`/owner/support?restaurantId=${target.id}`);
+          if (response.data.ok) setTickets(response.data.data || []);
         }
       }
-    } catch (error) {
-      console.error('Error loading support data:', error);
+    } catch (e) {
+      console.error('Error loading support data:', e);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [statusFilter]);
+  }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadData();
-    }, [loadData])
-  );
+  useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
 
-  const selectRestaurant = (restaurant) => {
+  const selectRestaurant = (r) => {
     setRestaurantPickerVisible(false);
-    if (restaurant.id !== currentRestaurant?.id) {
-      setCurrentRestaurant(restaurant);
+    if (r.id !== currentRestaurant?.id) {
+      setCurrentRestaurant(r);
       setTickets([]);
-      loadData(restaurant.id);
+      loadData(r.id);
     }
   };
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    loadData(currentRestaurant?.id);
-  };
+  const onRefresh = () => { setRefreshing(true); loadData(currentRestaurant?.id); };
 
-  // Filter tickets
   const filteredTickets = useMemo(() => {
-    if (!searchQuery) return tickets;
-    const query = searchQuery.toLowerCase();
-    return tickets.filter(
-      (t) =>
-        t.title?.toLowerCase().includes(query) ||
-        t.id?.toLowerCase().includes(query) ||
-        t.category?.toLowerCase().includes(query) ||
-        t.description?.toLowerCase().includes(query)
-    );
-  }, [tickets, searchQuery]);
+    let result = tickets;
+    if (activeTab !== 'all') {
+      result = result.filter(t => {
+        const s = t.status?.toUpperCase();
+        return s === activeTab;
+      });
+    }
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(t =>
+        t.title?.toLowerCase().includes(q) ||
+        t.id?.toLowerCase().includes(q) ||
+        t.category?.toLowerCase().includes(q) ||
+        t.description?.toLowerCase().includes(q)
+      );
+    }
+    return result;
+  }, [tickets, activeTab, searchQuery]);
 
-  // Status counts
   const statusCounts = useMemo(() => {
-    const counts = { all: tickets.length };
-    tickets.forEach((t) => {
-      const status = t.status?.toUpperCase() || 'PENDING';
-      counts[status] = (counts[status] || 0) + 1;
+    const c = { all: tickets.length };
+    tickets.forEach(t => {
+      const s = t.status?.toUpperCase() || 'PENDING';
+      c[s] = (c[s] || 0) + 1;
     });
-    return counts;
+    return c;
   }, [tickets]);
 
-  const getStatusStyle = (status) => {
-    return STATUS_CONFIG[status] || STATUS_CONFIG.PENDING;
-  };
+  const getStatus = (status) => STATUS_CONFIG[status] || STATUS_CONFIG.PENDING;
 
-  // Create Ticket
-  const resetForm = () => {
-    setFormData({ title: '', equipmentName: '', category: 'General', description: '' });
-    setTicketImageUri('');
-  };
+  const resetForm = () => { setFormData({ title: '', equipmentName: '', category: 'General', description: '' }); setTicketImageUri(''); };
 
   const pickTicketImage = async () => {
     try {
-      const result = await launchImageLibrary({ mediaType: 'photo', quality: 0.85 });
-      if (result?.assets?.[0]?.uri) {
-        setTicketImageUri(result.assets[0].uri);
-      }
-    } catch (error) {
-      console.error('Image pick error:', error);
-    }
+      const r = await launchImageLibrary({ mediaType: 'photo', quality: 0.85 });
+      if (r?.assets?.[0]?.uri) setTicketImageUri(r.assets[0].uri);
+    } catch (e) { console.error('Image pick error:', e); }
   };
 
   const handleCreate = async () => {
-    if (!formData.title || !formData.description) {
-      Alert.alert('Error', 'Please fill in title and description');
-      return;
-    }
-
+    if (!formData.title || !formData.description) { Alert.alert('Error', 'Please fill in title and description'); return; }
     setIsCreating(true);
     try {
-      const payload = {
-        restaurantId: currentRestaurant?.id,
-        title: formData.title,
-        equipmentName: formData.equipmentName || undefined,
-        category: formData.category,
-        description: formData.description,
-      };
-
-      // If we have an image, use FormData
       if (ticketImageUri) {
         const form = new FormData();
         form.append('restaurantId', currentRestaurant?.id);
@@ -256,626 +205,682 @@ export default function SupportCenter({ navigation }) {
         if (formData.equipmentName) form.append('equipmentName', formData.equipmentName);
         form.append('category', formData.category);
         form.append('description', formData.description);
-        form.append('photo', {
-          uri: ticketImageUri,
-          type: 'image/jpeg',
-          name: `ticket_${Date.now()}.jpg`,
-        });
-
-        await api.post('/owner/support', form, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
+        form.append('photo', { uri: ticketImageUri, type: 'image/jpeg', name: `ticket_${Date.now()}.jpg` });
+        await api.post('/owner/support', form, { headers: { 'Content-Type': 'multipart/form-data' } });
       } else {
-        await api.post('/owner/support', payload);
+        await api.post('/owner/support', {
+          restaurantId: currentRestaurant?.id,
+          title: formData.title,
+          equipmentName: formData.equipmentName || undefined,
+          category: formData.category,
+          description: formData.description,
+        });
       }
-
       Alert.alert('Success', 'Support ticket created successfully');
       setCreateModalVisible(false);
       resetForm();
       loadData(currentRestaurant?.id);
-    } catch (error) {
-      console.error('Create ticket error:', error);
-      Alert.alert('Error', error?.response?.data?.error || 'Failed to create ticket');
-    } finally {
-      setIsCreating(false);
-    }
+    } catch (e) {
+      console.error('Create ticket error:', e);
+      Alert.alert('Error', e?.response?.data?.error || 'Failed to create ticket');
+    } finally { setIsCreating(false); }
   };
 
-  // Ticket Detail
   const openTicketDetail = async (ticket) => {
     setSelectedTicket(ticket);
     setNewMessage('');
     setReplyImageUri('');
     setDetailModalVisible(true);
-
     try {
       const response = await api.get(`/owner/support/${ticket.id}`);
       if (response.data.ok) {
         setSelectedTicket(response.data.data);
         setThreads(response.data.data.threads || []);
       }
-    } catch (error) {
-      console.error('Fetch ticket detail error:', error);
-    }
+    } catch (e) { console.error('Fetch ticket detail error:', e); }
   };
 
   const pickReplyImage = async () => {
     try {
-      const result = await launchImageLibrary({ mediaType: 'photo', quality: 0.85 });
-      if (result?.assets?.[0]?.uri) {
-        setReplyImageUri(result.assets[0].uri);
-      }
-    } catch (error) {
-      console.error('Image pick error:', error);
-    }
+      const r = await launchImageLibrary({ mediaType: 'photo', quality: 0.85 });
+      if (r?.assets?.[0]?.uri) setReplyImageUri(r.assets[0].uri);
+    } catch (e) { console.error('Image pick error:', e); }
   };
 
   const handleSendMessage = async () => {
     if (!selectedTicket || (!newMessage.trim() && !replyImageUri)) return;
-
     setIsSending(true);
     try {
       if (replyImageUri) {
         const form = new FormData();
         form.append('message', newMessage || 'Image attached');
-        form.append('photo', {
-          uri: replyImageUri,
-          type: 'image/jpeg',
-          name: `reply_${Date.now()}.jpg`,
-        });
-
-        const response = await api.post(`/owner/support/${selectedTicket.id}/threads`, form, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
-
-        if (response.data.ok) {
-          setThreads([...threads, response.data.data]);
-          setNewMessage('');
-          setReplyImageUri('');
-        }
+        form.append('photo', { uri: replyImageUri, type: 'image/jpeg', name: `reply_${Date.now()}.jpg` });
+        const res = await api.post(`/owner/support/${selectedTicket.id}/threads`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
+        if (res.data.ok) { setThreads([...threads, res.data.data]); setNewMessage(''); setReplyImageUri(''); }
       } else {
-        const response = await api.post(`/owner/support/${selectedTicket.id}/threads`, {
-          message: newMessage,
-        });
-
-        if (response.data.ok) {
-          setThreads([...threads, response.data.data]);
-          setNewMessage('');
-        }
+        const res = await api.post(`/owner/support/${selectedTicket.id}/threads`, { message: newMessage });
+        if (res.data.ok) { setThreads([...threads, res.data.data]); setNewMessage(''); }
       }
-    } catch (error) {
-      console.error('Send message error:', error);
+    } catch (e) {
+      console.error('Send message error:', e);
       Alert.alert('Error', 'Failed to send message');
-    } finally {
-      setIsSending(false);
-    }
+    } finally { setIsSending(false); }
   };
 
-  const handleDeleteTicket = async (ticketId) => {
-    Alert.alert(
-      'Delete Ticket',
-      'Are you sure you want to delete this ticket?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await api.delete(`/owner/support/${ticketId}`);
-              Alert.alert('Success', 'Ticket deleted successfully');
-              loadData(currentRestaurant?.id);
-            } catch (error) {
-              Alert.alert('Error', error?.response?.data?.error || 'Failed to delete ticket');
-            }
-          },
+  const handleDeleteTicket = (ticketId) => {
+    Alert.alert('Delete Ticket', 'Are you sure you want to delete this ticket?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete', style: 'destructive',
+        onPress: async () => {
+          try {
+            await api.delete(`/owner/support/${ticketId}`);
+            Alert.alert('Success', 'Ticket deleted successfully');
+            loadData(currentRestaurant?.id);
+          } catch (e) { Alert.alert('Error', e?.response?.data?.error || 'Failed to delete ticket'); }
         },
-      ]
-    );
+      },
+    ]);
   };
 
-  const callSupport = () => {
-    Linking.openURL('tel:+919999999999');
-  };
+  const callSupport = () => { Linking.openURL('tel:+919999999999'); };
 
   const canReply = selectedTicket &&
-    selectedTicket.status !== 'COMPLETED' &&
-    selectedTicket.status !== 'REJECTED' &&
-    selectedTicket.status !== 'completed' &&
-    selectedTicket.status !== 'rejected';
+    selectedTicket.status !== 'COMPLETED' && selectedTicket.status !== 'REJECTED' &&
+    selectedTicket.status !== 'completed' && selectedTicket.status !== 'rejected';
 
-  // Render Ticket Card
+  /* ───── TICKET CARD ───── */
   const renderTicketCard = ({ item }) => {
-    const statusStyle = getStatusStyle(item.status);
-    const repliesCount = item._count?.threads || item.threads?.length || 0;
+    const catCfg = CATEGORY_CONFIG[item.category] || CATEGORY_CONFIG.General;
+    const stCfg = getStatus(item.status);
+    const replies = item._count?.threads || item.threads?.length || 0;
 
     return (
-      <TouchableOpacity
-        style={styles.card}
-        onPress={() => openTicketDetail(item)}
-        activeOpacity={0.7}
-      >
-        <View style={styles.cardHeader}>
-          <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
-            <Icon name={statusStyle.icon} size={14} color={statusStyle.color} />
-            <Text style={[styles.statusText, { color: statusStyle.color }]}>{statusStyle.label}</Text>
+      <TouchableOpacity style={st.itemCard} onPress={() => openTicketDetail(item)} activeOpacity={0.92}>
+        <LinearGradient colors={catCfg.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={st.itemAccent} />
+        <View style={st.itemBody}>
+          {/* Header row */}
+          <View style={st.itemHeaderRow}>
+            <LinearGradient colors={catCfg.gradient} style={st.typeIconBox}>
+              <Icon name={catCfg.icon} size={18} color="#fff" />
+            </LinearGradient>
+            <View style={st.itemHeaderInfo}>
+              <Text style={st.itemTitle} numberOfLines={2}>{item.title}</Text>
+              <View style={st.itemMetaRow}>
+                <View style={[st.typePill, { backgroundColor: catCfg.lightBg }]}>
+                  <Text style={[st.typePillText, { color: catCfg.color }]}>{item.category || 'General'}</Text>
+                </View>
+                <Text style={st.timeAgoText}>{formatTimeAgo(item.createdAt)}</Text>
+              </View>
+            </View>
           </View>
-          <Text style={styles.cardIdText}>#{item.id?.slice(0, 8)}</Text>
-        </View>
 
-        <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
-        {item.equipmentName && (
-          <Text style={styles.cardEquipment}>{item.equipmentName}</Text>
-        )}
+          {/* Equipment */}
+          {item.equipmentName ? (
+            <View style={st.equipmentRow}>
+              <Icon name="hardware-chip-outline" size={13} color={C.muted} />
+              <Text style={st.equipmentText}>{item.equipmentName}</Text>
+            </View>
+          ) : null}
 
-        <View style={styles.cardMeta}>
-          <View style={styles.categoryBadge}>
-            <Text style={styles.categoryText}>{item.category || 'General'}</Text>
+          {/* Footer */}
+          <View style={st.itemFooter}>
+            <View style={[st.statusChip, { backgroundColor: stCfg.bg }]}>
+              <Icon name={stCfg.icon} size={13} color={stCfg.color} />
+              <Text style={[st.statusChipText, { color: stCfg.color }]}>{stCfg.label}</Text>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                <Icon name="chatbubble-outline" size={12} color={C.muted} />
+                <Text style={st.footerMeta}>{replies}</Text>
+              </View>
+              <Text style={st.footerMeta}>#{item.id?.slice(0, 8)}</Text>
+            </View>
           </View>
-          <View style={styles.metaItem}>
-            <Icon name="chatbubble-outline" size={14} color={C.muted} />
-            <Text style={styles.metaText}>{repliesCount}</Text>
-          </View>
-          <View style={styles.metaItem}>
-            <Icon name="calendar-outline" size={14} color={C.muted} />
-            <Text style={styles.metaText}>{formatDate(item.createdAt)}</Text>
-          </View>
-        </View>
 
-        <View style={styles.cardActions}>
-          <TouchableOpacity style={styles.viewBtn} onPress={() => openTicketDetail(item)}>
-            <Icon name="eye-outline" size={16} color={C.primary} />
-            <Text style={styles.viewBtnText}>View</Text>
-          </TouchableOpacity>
-          {(item.status === 'PENDING' || item.status === 'pending') && (
-            <TouchableOpacity
-              style={styles.deleteBtn}
-              onPress={() => handleDeleteTicket(item.id)}
-            >
-              <Icon name="trash-outline" size={16} color={C.danger} />
+          {/* Action */}
+          <View style={st.actionRow}>
+            <TouchableOpacity style={st.actionButton} onPress={() => openTicketDetail(item)} activeOpacity={0.7}>
+              <Icon name="eye-outline" size={16} color={C.info} />
+              <Text style={st.actionButtonText}>View Details</Text>
+              <Icon name="chevron-forward" size={14} color={C.info} />
             </TouchableOpacity>
-          )}
+            {(item.status === 'PENDING' || item.status === 'pending') && (
+              <TouchableOpacity style={st.deleteButton} onPress={() => handleDeleteTicket(item.id)}>
+                <Icon name="trash-outline" size={16} color={C.danger} />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       </TouchableOpacity>
     );
   };
 
-  // Summary Card Component
-  const SummaryCard = ({ status, count, isActive, onPress }) => {
-    const config = getStatusStyle(status);
-    return (
-      <TouchableOpacity
-        style={[styles.summaryCard, isActive && styles.summaryCardActive]}
-        onPress={onPress}
-      >
-        <View style={[styles.summaryIcon, isActive && { backgroundColor: `${config.color}20` }]}>
-          <Icon name={config.icon} size={20} color={isActive ? config.color : C.muted} />
-        </View>
-        <Text style={styles.summaryCount}>{count || 0}</Text>
-        <Text style={styles.summaryLabel}>{config.label}</Text>
+  /* ───── EMPTY ───── */
+  const renderEmpty = () => (
+    <View style={st.emptyBox}>
+      <LinearGradient colors={['#FEE2E2', '#FECACA']} style={st.emptyIconCircle}>
+        <Icon name="chatbubbles" size={48} color={C.primary} />
+      </LinearGradient>
+      <Text style={st.emptyTitle}>No Tickets Found</Text>
+      <Text style={st.emptySubtitle}>
+        {activeTab !== 'all' ? 'Try changing the filter tab' : 'Create your first support ticket'}
+      </Text>
+      <TouchableOpacity activeOpacity={0.85} onPress={() => { resetForm(); setCreateModalVisible(true); }}>
+        <LinearGradient colors={[C.primary, C.primaryDark]} style={st.emptyBtn}>
+          <Icon name="add-circle" size={18} color="#fff" />
+          <Text style={st.emptyBtnText}>New Ticket</Text>
+        </LinearGradient>
       </TouchableOpacity>
-    );
-  };
+    </View>
+  );
 
+  /* ───── HELP FOOTER ───── */
+  const renderHelpCard = () => (
+    <View style={st.helpCard}>
+      <LinearGradient colors={['#EFF6FF', '#DBEAFE']} style={st.helpGradient}>
+        <View style={st.helpIconBox}>
+          <Icon name="call" size={24} color="#3B82F6" />
+        </View>
+        <Text style={st.helpTitle}>Need Urgent Help?</Text>
+        <Text style={st.helpText}>
+          Our support team is available to assist you. Call us directly for urgent issues.
+        </Text>
+        <TouchableOpacity style={st.helpBtn} onPress={callSupport}>
+          <Icon name="call" size={16} color="#fff" />
+          <Text style={st.helpBtnText}>Call Support</Text>
+        </TouchableOpacity>
+      </LinearGradient>
+    </View>
+  );
+
+  /* ───── LOADING ───── */
   if (loading && !refreshing) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Icon name="arrow-back" size={24} color={C.ink} />
+      <SafeAreaView style={st.container}>
+        <LinearGradient colors={[C.primary, C.primaryDark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
+            <Icon name="arrow-back" size={22} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Support Center</Text>
-          <View style={{ width: 40 }} />
-        </View>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={C.primary} />
-          <Text style={styles.loadingText}>Loading support tickets...</Text>
+          <Text style={st.headerTitle}>Support Center</Text>
+          <View style={{ width: 38 }} />
+        </LinearGradient>
+        <View style={st.loadingBox}>
+          <LinearGradient colors={['#FEE2E2', '#FECACA']} style={st.loadingCircle}>
+            <ActivityIndicator size="large" color={C.primary} />
+          </LinearGradient>
+          <Text style={st.loadingText}>Loading tickets...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Icon name="arrow-back" size={24} color={C.ink} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Support Center</Text>
-        <View style={styles.headerActions}>
-          <TouchableOpacity onPress={callSupport} style={styles.headerBtn}>
-            <Icon name="call-outline" size={20} color={C.ink} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => { resetForm(); setCreateModalVisible(true); }} style={styles.headerBtn}>
-            <Icon name="add" size={24} color={C.primary} />
-          </TouchableOpacity>
-        </View>
-      </View>
+  const pendingCount = statusCounts['PENDING'] || 0;
 
-      {/* Restaurant Selector */}
+  /* ═══════════════════ MAIN RENDER ═══════════════════ */
+  return (
+    <SafeAreaView style={st.container}>
+      {/* ─── Gradient Header ─── */}
+      <LinearGradient colors={[C.primary, C.primaryDark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
+          <Icon name="arrow-back" size={22} color="#fff" />
+        </TouchableOpacity>
+        <View style={st.headerCenter}>
+          <Text style={st.headerTitle}>Support Center</Text>
+          {pendingCount > 0 && (
+            <View style={st.countBadge}>
+              <Text style={st.countBadgeText}>{pendingCount}</Text>
+            </View>
+          )}
+        </View>
+        <TouchableOpacity onPress={callSupport} style={st.backBtn}>
+          <Icon name="call" size={18} color="#fff" />
+        </TouchableOpacity>
+      </LinearGradient>
+
+      {/* ─── Restaurant Banner ─── */}
       {currentRestaurant && (
         <TouchableOpacity
-          style={styles.restaurantBanner}
+          style={st.restaurantBanner}
           onPress={() => restaurants.length > 1 && setRestaurantPickerVisible(true)}
           activeOpacity={restaurants.length > 1 ? 0.7 : 1}
         >
-          <Icon name="restaurant" size={18} color={C.primary} />
-          <View style={styles.restaurantInfo}>
-            <Text style={styles.restaurantName} numberOfLines={1}>
-              {currentRestaurant.name}
-            </Text>
-            <Text style={styles.restaurantSubtext}>Get help with your equipment and services</Text>
+          <View style={st.restaurantIconBox}>
+            <Icon name="restaurant" size={16} color={C.primary} />
           </View>
+          <Text style={st.restaurantName} numberOfLines={1}>{currentRestaurant.name}</Text>
           {restaurants.length > 1 && (
-            <View style={styles.switchBadge}>
+            <View style={st.switchPill}>
               <Icon name="swap-horizontal" size={14} color={C.primary} />
-              <Text style={styles.switchText}>Switch</Text>
+              <Text style={st.switchText}>Switch</Text>
             </View>
           )}
         </TouchableOpacity>
       )}
 
-      {/* Summary Cards */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.summaryContainer}
-      >
-        {STATUS_OPTIONS.slice(1).map((status) => (
-          <SummaryCard
-            key={status.value}
-            status={status.value}
-            count={statusCounts[status.value] || 0}
-            isActive={statusFilter === status.value}
-            onPress={() => setStatusFilter(status.value)}
-          />
-        ))}
-      </ScrollView>
+      {/* ─── Summary Grid ─── */}
+      <View style={st.summarySection}>
+        <View style={st.summaryGrid}>
+          <TouchableOpacity
+            style={[st.summaryCard, activeTab === 'PENDING' && st.summaryCardActive]}
+            onPress={() => setActiveTab(activeTab === 'PENDING' ? 'all' : 'PENDING')}
+          >
+            <LinearGradient colors={['#FEF3C7', '#FDE68A']} style={st.summaryIconCircle}>
+              <Icon name="time" size={18} color="#D97706" />
+            </LinearGradient>
+            <Text style={st.summaryCount}>{statusCounts['PENDING'] || 0}</Text>
+            <Text style={st.summaryLabel}>Pending</Text>
+          </TouchableOpacity>
 
-      {/* Search & Filter */}
-      <View style={styles.filtersContainer}>
-        <View style={styles.searchBox}>
-          <View style={styles.searchIconBox}>
-            <Icon name="search" size={18} color={C.primary} />
+          <TouchableOpacity
+            style={[st.summaryCard, activeTab === 'ON_WORK' && st.summaryCardActive]}
+            onPress={() => setActiveTab(activeTab === 'ON_WORK' ? 'all' : 'ON_WORK')}
+          >
+            <LinearGradient colors={['#E0E7FF', '#C7D2FE']} style={st.summaryIconCircle}>
+              <Icon name="construct" size={18} color="#4F46E5" />
+            </LinearGradient>
+            <Text style={st.summaryCount}>{statusCounts['ON_WORK'] || 0}</Text>
+            <Text style={st.summaryLabel}>On Work</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[st.summaryCard, activeTab === 'COMPLETED' && st.summaryCardActive]}
+            onPress={() => setActiveTab(activeTab === 'COMPLETED' ? 'all' : 'COMPLETED')}
+          >
+            <LinearGradient colors={['#D1FAE5', '#A7F3D0']} style={st.summaryIconCircle}>
+              <Icon name="checkmark-circle" size={18} color="#059669" />
+            </LinearGradient>
+            <Text style={st.summaryCount}>{statusCounts['COMPLETED'] || 0}</Text>
+            <Text style={st.summaryLabel}>Done</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[st.summaryCard, activeTab === 'all' && st.summaryCardActive]}
+            onPress={() => setActiveTab('all')}
+          >
+            <LinearGradient colors={['#FEE2E2', '#FECACA']} style={st.summaryIconCircle}>
+              <Icon name="documents" size={18} color={C.primary} />
+            </LinearGradient>
+            <Text style={st.summaryCount}>{tickets.length}</Text>
+            <Text style={st.summaryLabel}>Total</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* ─── Search ─── */}
+      <View style={st.searchSection}>
+        <View style={st.searchBox}>
+          <View style={st.searchIconBox}>
+            <Icon name="search" size={16} color={C.primary} />
           </View>
           <TextInput
-            style={styles.searchInput}
-            placeholder="Search tickets by title, ID..."
+            style={st.searchInput}
+            placeholder="Search tickets..."
             placeholderTextColor={C.muted}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearSearchBtn}>
-              <View style={styles.clearSearchIcon}>
-                <Icon name="close" size={14} color="#fff" />
-              </View>
+            <TouchableOpacity onPress={() => setSearchQuery('')} style={{ padding: 6 }}>
+              <View style={st.clearBtn}><Icon name="close" size={12} color="#fff" /></View>
             </TouchableOpacity>
           )}
         </View>
-
-        <TouchableOpacity style={styles.filterBtn} onPress={() => setStatusPickerVisible(true)}>
-          <View style={styles.filterIconBox}>
-            <Icon name="filter" size={16} color={C.primary} />
-          </View>
-          <Icon name="chevron-down" size={14} color={C.muted} />
-          {statusFilter !== 'all' && (
-            <View style={styles.filterActiveDot} />
-          )}
-        </TouchableOpacity>
       </View>
 
-      {/* Tickets List */}
+      {/* ─── Filter Tabs ─── */}
+      <View style={st.tabsWrapper}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.tabsContent}>
+          {FILTER_TABS.map((tab) => {
+            const isActive = activeTab === tab.key;
+            const cnt = tab.key === 'all' ? null : (statusCounts[tab.key] || 0);
+            return (
+              <TouchableOpacity
+                key={tab.key}
+                style={[st.tab, isActive && st.tabActive]}
+                onPress={() => setActiveTab(tab.key)}
+                activeOpacity={0.7}
+              >
+                <Icon name={tab.icon} size={14} color={isActive ? '#fff' : C.muted} style={{ marginRight: 5 }} />
+                <Text style={[st.tabText, isActive && st.tabTextActive]}>{tab.label}</Text>
+                {cnt !== null && cnt > 0 && (
+                  <View style={[st.tabBadge, isActive && st.tabBadgeActive]}>
+                    <Text style={[st.tabBadgeText, isActive && st.tabBadgeTextActive]}>{cnt}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      {/* ─── List Title ─── */}
+      <View style={st.listTitleRow}>
+        <Text style={st.listTitle}>
+          {activeTab === 'all' ? 'All Tickets' : (STATUS_CONFIG[activeTab]?.label || 'Tickets')}
+        </Text>
+        <Text style={st.listCount}>{filteredTickets.length} tickets</Text>
+      </View>
+
+      {/* ─── Ticket List ─── */}
       <FlatList
         data={filteredTickets}
         keyExtractor={item => item.id?.toString()}
         renderItem={renderTicketCard}
-        contentContainerStyle={styles.list}
+        ListEmptyComponent={renderEmpty}
+        ListFooterComponent={filteredTickets.length > 0 ? renderHelpCard : null}
+        contentContainerStyle={st.listContent}
+        style={{ flex: 1 }}
+        showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} />}
-        ListEmptyComponent={
-          <View style={styles.emptyBox}>
-            <Icon name="chatbubbles-outline" size={64} color={C.muted} />
-            <Text style={styles.emptyTitle}>No Tickets Found</Text>
-            <Text style={styles.emptyText}>
-              {statusFilter !== 'all' ? 'Try changing the filter' : 'Create your first support ticket'}
-            </Text>
-            <TouchableOpacity
-              style={styles.emptyBtn}
-              onPress={() => { resetForm(); setCreateModalVisible(true); }}
-            >
-              <Icon name="add-circle" size={18} color="#fff" />
-              <Text style={styles.emptyBtnText}>New Ticket</Text>
-            </TouchableOpacity>
-          </View>
-        }
       />
 
-      {/* ========== CREATE TICKET MODAL ========== */}
-      <Modal visible={createModalVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Create Support Ticket</Text>
-              <TouchableOpacity onPress={() => setCreateModalVisible(false)}>
-                <Icon name="close" size={24} color={C.ink} />
-              </TouchableOpacity>
-            </View>
+      {/* ─── FAB ─── */}
+      <TouchableOpacity style={st.fabWrap} activeOpacity={0.85} onPress={() => { resetForm(); setCreateModalVisible(true); }}>
+        <LinearGradient colors={[C.primary, C.primaryDark]} style={st.fab}>
+          <Icon name="add" size={28} color="#fff" />
+        </LinearGradient>
+      </TouchableOpacity>
 
-            <ScrollView style={styles.modalBody}>
-              <Text style={styles.inputLabel}>Title *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Brief description of your issue"
-                placeholderTextColor={C.muted}
-                value={formData.title}
-                onChangeText={(text) => setFormData({ ...formData, title: text })}
-              />
+      {/* ═══════════ CREATE TICKET MODAL (Full-screen) ═══════════ */}
+      <Modal visible={createModalVisible} animationType="slide">
+        <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top', 'left', 'right']}>
+          <LinearGradient colors={[C.primary, C.primaryDark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.header}>
+            <TouchableOpacity onPress={() => setCreateModalVisible(false)} style={st.backBtn}>
+              <Icon name="chevron-back" size={20} color="#fff" />
+            </TouchableOpacity>
+            <Text style={st.headerTitle}>New Ticket</Text>
+            <View style={{ width: 38 }} />
+          </LinearGradient>
 
-              <Text style={styles.inputLabel}>Category</Text>
-              <TouchableOpacity
-                style={styles.pickerInput}
-                onPress={() => setCategoryPickerVisible(true)}
-              >
-                <Text style={styles.pickerInputText}>{formData.category}</Text>
-                <Icon name="chevron-down" size={20} color={C.muted} />
-              </TouchableOpacity>
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingBottom: 100 }} keyboardShouldPersistTaps="handled">
+            <Text style={st.inputLabel}>Title *</Text>
+            <TextInput
+              style={st.input}
+              placeholder="Brief description of your issue"
+              placeholderTextColor={C.muted}
+              value={formData.title}
+              onChangeText={(t) => setFormData({ ...formData, title: t })}
+            />
 
-              <Text style={styles.inputLabel}>Equipment Name (Optional)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="If related to specific equipment"
-                placeholderTextColor={C.muted}
-                value={formData.equipmentName}
-                onChangeText={(text) => setFormData({ ...formData, equipmentName: text })}
-              />
+            <Text style={st.inputLabel}>Category</Text>
+            <TouchableOpacity style={st.pickerInput} onPress={() => setCategoryPickerVisible(true)}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <LinearGradient colors={CATEGORY_CONFIG[formData.category]?.gradient || ['#94A3B8', '#64748B']} style={st.pickerCatIcon}>
+                  <Icon name={CATEGORY_CONFIG[formData.category]?.icon || 'help-circle'} size={14} color="#fff" />
+                </LinearGradient>
+                <Text style={st.pickerInputText}>{formData.category}</Text>
+              </View>
+              <Icon name="chevron-down" size={18} color={C.muted} />
+            </TouchableOpacity>
 
-              <Text style={styles.inputLabel}>Description *</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                placeholder="Describe your issue in detail..."
-                placeholderTextColor={C.muted}
-                value={formData.description}
-                onChangeText={(text) => setFormData({ ...formData, description: text })}
-                multiline
-                numberOfLines={4}
-              />
+            <Text style={st.inputLabel}>Equipment Name (Optional)</Text>
+            <TextInput
+              style={st.input}
+              placeholder="If related to specific equipment"
+              placeholderTextColor={C.muted}
+              value={formData.equipmentName}
+              onChangeText={(t) => setFormData({ ...formData, equipmentName: t })}
+            />
 
-              <Text style={styles.inputLabel}>Attachment (Optional)</Text>
-              {ticketImageUri ? (
-                <View style={styles.imagePreviewContainer}>
-                  <Image source={{ uri: ticketImageUri }} style={styles.imagePreview} />
-                  <TouchableOpacity
-                    style={styles.removeImageBtn}
-                    onPress={() => setTicketImageUri('')}
-                  >
-                    <Icon name="close" size={16} color="#fff" />
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <TouchableOpacity style={styles.uploadBtn} onPress={pickTicketImage}>
-                  <Icon name="cloud-upload-outline" size={20} color={C.primary} />
-                  <Text style={styles.uploadBtnText}>Upload Image</Text>
+            <Text style={st.inputLabel}>Description *</Text>
+            <TextInput
+              style={[st.input, st.textArea]}
+              placeholder="Describe your issue in detail..."
+              placeholderTextColor={C.muted}
+              value={formData.description}
+              onChangeText={(t) => setFormData({ ...formData, description: t })}
+              multiline
+              numberOfLines={4}
+            />
+
+            <Text style={st.inputLabel}>Attachment (Optional)</Text>
+            {ticketImageUri ? (
+              <View style={st.imgPreviewWrap}>
+                <Image source={{ uri: ticketImageUri }} style={st.imgPreview} />
+                <TouchableOpacity style={st.removeImgBtn} onPress={() => setTicketImageUri('')}>
+                  <Icon name="close" size={14} color="#fff" />
                 </TouchableOpacity>
-              )}
-            </ScrollView>
+              </View>
+            ) : (
+              <TouchableOpacity style={st.uploadBtn} onPress={pickTicketImage}>
+                <Icon name="cloud-upload-outline" size={22} color={C.primary} />
+                <Text style={st.uploadBtnText}>Upload Image</Text>
+              </TouchableOpacity>
+            )}
+          </ScrollView>
 
-            <View style={styles.modalFooter}>
-              <TouchableOpacity
-                style={styles.cancelBtn}
-                onPress={() => setCreateModalVisible(false)}
-              >
-                <Text style={styles.cancelBtnText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.submitBtn, isCreating && styles.submitBtnDisabled]}
-                onPress={handleCreate}
-                disabled={isCreating}
-              >
-                {isCreating ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Text style={styles.submitBtnText}>Create Ticket</Text>
+          <View style={st.createFooter}>
+            <TouchableOpacity style={st.cancelBtn} onPress={() => setCreateModalVisible(false)}>
+              <Text style={st.cancelBtnText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity activeOpacity={0.85} onPress={handleCreate} disabled={isCreating} style={{ flex: 1 }}>
+              <LinearGradient colors={isCreating ? ['#FCA5A5', '#FCA5A5'] : [C.primary, C.primaryDark]} style={st.submitBtn}>
+                {isCreating ? <ActivityIndicator size="small" color="#fff" /> : (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Icon name="send" size={16} color="#fff" />
+                    <Text style={st.submitBtnText}>Create Ticket</Text>
+                  </View>
                 )}
-              </TouchableOpacity>
-            </View>
+              </LinearGradient>
+            </TouchableOpacity>
           </View>
-        </View>
+        </SafeAreaView>
       </Modal>
 
-      {/* ========== TICKET DETAIL MODAL ========== */}
-      <Modal visible={detailModalVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <View style={styles.detailHeaderLeft}>
-                <Text style={styles.modalTitle}>Ticket #{selectedTicket?.id?.slice(0, 8)}</Text>
-                {selectedTicket && (
-                  <View style={[styles.statusBadgeSmall, { backgroundColor: getStatusStyle(selectedTicket.status).bg }]}>
-                    <Text style={[styles.statusTextSmall, { color: getStatusStyle(selectedTicket.status).color }]}>
-                      {getStatusStyle(selectedTicket.status).label}
-                    </Text>
-                  </View>
-                )}
-              </View>
-              <TouchableOpacity onPress={() => setDetailModalVisible(false)}>
-                <Icon name="close" size={24} color={C.ink} />
-              </TouchableOpacity>
+      {/* ═══════════ TICKET DETAIL MODAL (Full-screen) ═══════════ */}
+      <Modal visible={detailModalVisible} animationType="slide">
+        <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top', 'left', 'right']}>
+          <LinearGradient colors={[C.primary, C.primaryDark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.header}>
+            <TouchableOpacity onPress={() => setDetailModalVisible(false)} style={st.backBtn}>
+              <Icon name="chevron-back" size={20} color="#fff" />
+            </TouchableOpacity>
+            <View style={st.headerCenter}>
+              <Text style={st.headerTitle}>Ticket Details</Text>
+              {selectedTicket && (
+                <View style={st.headerStatusPill}>
+                  <Text style={st.headerStatusText}>{getStatus(selectedTicket.status).label}</Text>
+                </View>
+              )}
             </View>
+            <View style={{ width: 38 }} />
+          </LinearGradient>
 
-            {selectedTicket && (
+          {selectedTicket && (() => {
+            const dCat = CATEGORY_CONFIG[selectedTicket.category] || CATEGORY_CONFIG.General;
+            const dSt = getStatus(selectedTicket.status);
+            return (
               <>
-                <ScrollView style={styles.modalBody}>
-                  {/* Ticket Info */}
-                  <View style={styles.ticketInfoCard}>
-                    <Text style={styles.ticketInfoTitle}>{selectedTicket.title}</Text>
-                    <View style={styles.ticketInfoMeta}>
-                      <Text style={styles.ticketInfoMetaText}>Category: {selectedTicket.category}</Text>
-                      {selectedTicket.equipmentName && (
-                        <Text style={styles.ticketInfoMetaText}>Equipment: {selectedTicket.equipmentName}</Text>
-                      )}
-                    </View>
-                    <Text style={styles.ticketInfoDesc}>{selectedTicket.description}</Text>
-                    {selectedTicket.photoUrl && (
-                      <View style={styles.ticketImageContainer}>
-                        <Text style={styles.ticketImageLabel}>
-                          <Icon name="image-outline" size={12} color={C.muted} /> Attachment
-                        </Text>
-                        <Image
-                          source={{ uri: toStorageUrl(selectedTicket.photoUrl) }}
-                          style={styles.ticketImage}
-                          resizeMode="cover"
-                        />
+                <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: canReply ? 90 : 24 }} showsVerticalScrollIndicator={false}>
+                  {/* Ticket Info Card */}
+                  <View style={st.detailCard}>
+                    <LinearGradient colors={dCat.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={st.itemAccent} />
+                    <View style={st.detailCardBody}>
+                      <View style={st.itemHeaderRow}>
+                        <LinearGradient colors={dCat.gradient} style={st.typeIconBox}>
+                          <Icon name={dCat.icon} size={18} color="#fff" />
+                        </LinearGradient>
+                        <View style={st.itemHeaderInfo}>
+                          <Text style={st.itemTitle}>{selectedTicket.title}</Text>
+                          <View style={st.itemMetaRow}>
+                            <View style={[st.typePill, { backgroundColor: dCat.lightBg }]}>
+                              <Text style={[st.typePillText, { color: dCat.color }]}>{selectedTicket.category}</Text>
+                            </View>
+                            <Text style={st.timeAgoText}>{formatTimeAgo(selectedTicket.createdAt)}</Text>
+                          </View>
+                        </View>
                       </View>
-                    )}
-                    <Text style={styles.ticketInfoDate}>Created: {formatDateTime(selectedTicket.createdAt)}</Text>
+
+                      {selectedTicket.equipmentName ? (
+                        <View style={[st.equipmentRow, { marginTop: 12 }]}>
+                          <Icon name="hardware-chip-outline" size={13} color={C.muted} />
+                          <Text style={st.equipmentText}>{selectedTicket.equipmentName}</Text>
+                        </View>
+                      ) : null}
+
+                      <Text style={st.detailDesc}>{selectedTicket.description}</Text>
+
+                      {selectedTicket.photoUrl ? (
+                        <View style={st.detailImgWrap}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 8 }}>
+                            <Icon name="image-outline" size={13} color={C.muted} />
+                            <Text style={{ fontSize: 12, color: C.muted, fontWeight: '600' }}>Attachment</Text>
+                          </View>
+                          <Image source={{ uri: toStorageUrl(selectedTicket.photoUrl) }} style={st.detailImg} resizeMode="cover" />
+                        </View>
+                      ) : null}
+
+                      <View style={st.detailFooterRow}>
+                        <View style={[st.statusChip, { backgroundColor: dSt.bg }]}>
+                          <Icon name={dSt.icon} size={13} color={dSt.color} />
+                          <Text style={[st.statusChipText, { color: dSt.color }]}>{dSt.label}</Text>
+                        </View>
+                        <Text style={st.footerMeta}>#{selectedTicket.id?.slice(0, 8)}</Text>
+                      </View>
+                    </View>
                   </View>
 
-                  {/* Thread Messages */}
-                  <Text style={styles.threadTitle}>Messages</Text>
+                  {/* Messages Section */}
+                  <View style={st.msgSectionHeader}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <Icon name="chatbubbles" size={16} color={C.ink} />
+                      <Text style={st.msgSectionTitle}>Messages</Text>
+                    </View>
+                    <View style={st.msgCountPill}>
+                      <Text style={st.msgCountText}>{threads.length}</Text>
+                    </View>
+                  </View>
+
                   {threads.length === 0 ? (
-                    <Text style={styles.noMessages}>No messages yet. Start the conversation!</Text>
+                    <View style={st.noMsgBox}>
+                      <LinearGradient colors={['#F1F5F9', '#E2E8F0']} style={st.noMsgCircle}>
+                        <Icon name="chatbox-outline" size={28} color={C.muted} />
+                      </LinearGradient>
+                      <Text style={st.noMsgText}>No messages yet</Text>
+                    </View>
                   ) : (
                     threads.map((thread) => (
                       <View
                         key={thread.id}
-                        style={[
-                          styles.threadMessage,
-                          thread.isAdmin ? styles.threadMessageAdmin : styles.threadMessageOwner,
-                        ]}
+                        style={[st.threadMsg, thread.isAdmin ? st.threadAdmin : st.threadOwner]}
                       >
-                        <View style={styles.threadHeader}>
-                          <Text style={styles.threadAuthor}>
-                            {thread.user?.name || (thread.isAdmin ? 'Support' : 'You')}
-                            {thread.isAdmin && (
-                              <View style={styles.supportBadge}>
-                                <Text style={styles.supportBadgeText}>Support</Text>
-                              </View>
-                            )}
-                          </Text>
-                          <Text style={styles.threadTime}>{formatDateTime(thread.createdAt)}</Text>
-                        </View>
-                        <Text style={styles.threadText}>{thread.message}</Text>
-                        {thread.imageUrl && (
-                          <Image
-                            source={{ uri: toStorageUrl(thread.imageUrl) }}
-                            style={styles.threadImage}
-                            resizeMode="cover"
-                          />
+                        {thread.isAdmin ? (
+                          <LinearGradient colors={['#3B82F6', '#1D4ED8']} style={st.threadAccentLine} />
+                        ) : (
+                          <LinearGradient colors={[C.primary, C.primaryDark]} style={st.threadAccentLine} />
                         )}
+                        <View style={st.threadInner}>
+                          <View style={st.threadHeader}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              <LinearGradient
+                                colors={thread.isAdmin ? ['#3B82F6', '#1D4ED8'] : [C.primary, C.primaryDark]}
+                                style={st.threadAvatar}
+                              >
+                                <Icon name={thread.isAdmin ? 'headset' : 'person'} size={10} color="#fff" />
+                              </LinearGradient>
+                              <Text style={st.threadAuthor}>
+                                {thread.user?.name || (thread.isAdmin ? 'Support' : 'You')}
+                              </Text>
+                              {thread.isAdmin && (
+                                <LinearGradient colors={[C.info, '#1D4ED8']} style={st.supportBadge}>
+                                  <Text style={st.supportBadgeText}>Support</Text>
+                                </LinearGradient>
+                              )}
+                            </View>
+                            <Text style={st.threadTime}>{formatDateTime(thread.createdAt)}</Text>
+                          </View>
+                          <Text style={st.threadText}>{thread.message}</Text>
+                          {thread.imageUrl ? (
+                            <Image source={{ uri: toStorageUrl(thread.imageUrl) }} style={st.threadImage} resizeMode="cover" />
+                          ) : null}
+                        </View>
                       </View>
                     ))
                   )}
                 </ScrollView>
 
-                {/* Reply Section */}
+                {/* Reply Bar */}
                 {canReply && (
-                  <View style={styles.replySection}>
-                    {replyImageUri && (
-                      <View style={styles.replyImagePreview}>
-                        <Image source={{ uri: replyImageUri }} style={styles.replyImage} />
-                        <TouchableOpacity
-                          style={styles.removeReplyImageBtn}
-                          onPress={() => setReplyImageUri('')}
-                        >
-                          <Icon name="close" size={12} color="#fff" />
+                  <View style={st.replyBar}>
+                    {replyImageUri ? (
+                      <View style={st.replyImgPreview}>
+                        <Image source={{ uri: replyImageUri }} style={st.replyImg} />
+                        <TouchableOpacity style={st.removeReplyBtn} onPress={() => setReplyImageUri('')}>
+                          <Icon name="close" size={10} color="#fff" />
                         </TouchableOpacity>
                       </View>
-                    )}
-                    <View style={styles.replyInputRow}>
+                    ) : null}
+                    <View style={st.replyInputRow}>
                       <TextInput
-                        style={styles.replyInput}
+                        style={st.replyInput}
                         placeholder="Type your message..."
                         placeholderTextColor={C.muted}
                         value={newMessage}
                         onChangeText={setNewMessage}
                       />
-                      <TouchableOpacity style={styles.attachBtn} onPress={pickReplyImage}>
-                        <Icon name="image-outline" size={20} color={C.primary} />
+                      <TouchableOpacity style={st.attachBtn} onPress={pickReplyImage}>
+                        <Icon name="image-outline" size={18} color={C.primary} />
                       </TouchableOpacity>
                       <TouchableOpacity
-                        style={[styles.sendBtn, (!newMessage.trim() && !replyImageUri) && styles.sendBtnDisabled]}
                         onPress={handleSendMessage}
                         disabled={isSending || (!newMessage.trim() && !replyImageUri)}
+                        activeOpacity={0.85}
                       >
-                        {isSending ? (
-                          <ActivityIndicator size="small" color="#fff" />
-                        ) : (
-                          <Icon name="send" size={18} color="#fff" />
-                        )}
+                        <LinearGradient
+                          colors={(!newMessage.trim() && !replyImageUri) ? ['#E2E8F0', '#E2E8F0'] : [C.primary, C.primaryDark]}
+                          style={st.sendBtn}
+                        >
+                          {isSending ? <ActivityIndicator size="small" color="#fff" /> : <Icon name="send" size={16} color="#fff" />}
+                        </LinearGradient>
                       </TouchableOpacity>
                     </View>
                   </View>
                 )}
               </>
-            )}
-          </View>
-        </View>
+            );
+          })()}
+        </SafeAreaView>
       </Modal>
 
-      {/* ========== STATUS PICKER MODAL ========== */}
-      <Modal visible={statusPickerVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.pickerContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Filter by Status</Text>
-              <TouchableOpacity onPress={() => setStatusPickerVisible(false)}>
-                <Icon name="close" size={24} color={C.ink} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.pickerBody}>
-              {STATUS_OPTIONS.map((status) => {
-                const isSelected = status.value === statusFilter;
-                return (
-                  <TouchableOpacity
-                    key={status.value}
-                    style={[styles.pickerOption, isSelected && styles.pickerOptionSelected]}
-                    onPress={() => {
-                      setStatusFilter(status.value);
-                      setStatusPickerVisible(false);
-                      loadData(currentRestaurant?.id);
-                    }}
-                  >
-                    <Text style={[styles.pickerOptionText, isSelected && styles.pickerOptionTextSelected]}>
-                      {status.label}
-                    </Text>
-                    {isSelected && <Icon name="checkmark-circle" size={20} color={C.primary} />}
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-
-      {/* ========== CATEGORY PICKER MODAL ========== */}
+      {/* ═══════════ CATEGORY PICKER ═══════════ */}
       <Modal visible={categoryPickerVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.pickerContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Category</Text>
-              <TouchableOpacity onPress={() => setCategoryPickerVisible(false)}>
-                <Icon name="close" size={24} color={C.ink} />
+        <View style={st.modalOverlay}>
+          <View style={st.pickerSheet}>
+            <View style={st.modalDragBar} />
+            <View style={st.modalHeaderRow}>
+              <View>
+                <Text style={st.modalTitle}>Select Category</Text>
+                <Text style={st.modalSubtitle}>Choose a category for your ticket</Text>
+              </View>
+              <TouchableOpacity onPress={() => setCategoryPickerVisible(false)} style={st.modalCloseBtn}>
+                <Icon name="close" size={20} color={C.muted} />
               </TouchableOpacity>
             </View>
-
-            <ScrollView style={styles.pickerBody}>
-              {CATEGORY_OPTIONS.map((category) => {
-                const isSelected = category === formData.category;
+            <ScrollView style={st.pickerBody} contentContainerStyle={{ paddingBottom: 30 }}>
+              {CATEGORY_OPTIONS.map((cat) => {
+                const isSelected = cat === formData.category;
+                const cfg = CATEGORY_CONFIG[cat] || CATEGORY_CONFIG.General;
                 return (
                   <TouchableOpacity
-                    key={category}
-                    style={[styles.pickerOption, isSelected && styles.pickerOptionSelected]}
-                    onPress={() => {
-                      setFormData({ ...formData, category });
-                      setCategoryPickerVisible(false);
-                    }}
+                    key={cat}
+                    style={[st.pickerOption, isSelected && st.pickerOptionSelected]}
+                    onPress={() => { setFormData({ ...formData, category: cat }); setCategoryPickerVisible(false); }}
+                    activeOpacity={0.7}
                   >
-                    <Text style={[styles.pickerOptionText, isSelected && styles.pickerOptionTextSelected]}>
-                      {category}
-                    </Text>
-                    {isSelected && <Icon name="checkmark-circle" size={20} color={C.primary} />}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                      <LinearGradient
+                        colors={isSelected ? cfg.gradient : [cfg.lightBg, cfg.lightBg]}
+                        style={st.pickerOptionIcon}
+                      >
+                        <Icon name={cfg.icon} size={16} color={isSelected ? '#fff' : cfg.color} />
+                      </LinearGradient>
+                      <Text style={[st.pickerOptionText, isSelected && { color: cfg.color, fontWeight: '800' }]}>{cat}</Text>
+                    </View>
+                    {isSelected && (
+                      <View style={[st.selectedCheck, { backgroundColor: cfg.color }]}>
+                        <Icon name="checkmark" size={14} color="#fff" />
+                      </View>
+                    )}
                   </TouchableOpacity>
                 );
               })}
@@ -884,40 +889,45 @@ export default function SupportCenter({ navigation }) {
         </View>
       </Modal>
 
-      {/* ========== RESTAURANT PICKER MODAL ========== */}
+      {/* ═══════════ RESTAURANT PICKER ═══════════ */}
       <Modal visible={restaurantPickerVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.pickerContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Restaurant</Text>
-              <TouchableOpacity onPress={() => setRestaurantPickerVisible(false)}>
-                <Icon name="close" size={24} color={C.ink} />
+        <View style={st.modalOverlay}>
+          <View style={st.pickerSheet}>
+            <View style={st.modalDragBar} />
+            <View style={st.modalHeaderRow}>
+              <View>
+                <Text style={st.modalTitle}>Select Restaurant</Text>
+                <Text style={st.modalSubtitle}>{restaurants.length} restaurants available</Text>
+              </View>
+              <TouchableOpacity onPress={() => setRestaurantPickerVisible(false)} style={st.modalCloseBtn}>
+                <Icon name="close" size={20} color={C.muted} />
               </TouchableOpacity>
             </View>
-
-            <ScrollView style={styles.pickerBody}>
-              {restaurants.map((restaurant) => {
-                const isSelected = restaurant.id === currentRestaurant?.id;
+            <ScrollView style={st.pickerBody} contentContainerStyle={{ paddingBottom: 30 }}>
+              {restaurants.map((r) => {
+                const isSel = r.id === currentRestaurant?.id;
                 return (
                   <TouchableOpacity
-                    key={restaurant.id}
-                    style={[styles.restaurantOption, isSelected && styles.restaurantOptionSelected]}
-                    onPress={() => selectRestaurant(restaurant)}
+                    key={r.id}
+                    style={[st.restaurantOption, isSel && st.restaurantOptionSel]}
+                    onPress={() => selectRestaurant(r)}
+                    activeOpacity={0.7}
                   >
-                    <View style={[styles.restaurantIcon, isSelected && styles.restaurantIconSelected]}>
-                      <Icon name="restaurant" size={20} color={isSelected ? '#fff' : C.primary} />
+                    <LinearGradient
+                      colors={isSel ? [C.primary, C.primaryDark] : ['#FEE2E2', '#FEE2E2']}
+                      style={st.restaurantOptIcon}
+                    >
+                      <Icon name="restaurant" size={20} color={isSel ? '#fff' : C.primary} />
+                    </LinearGradient>
+                    <View style={st.restaurantOptInfo}>
+                      <Text style={[st.restaurantOptName, isSel && { color: C.primary }]} numberOfLines={1}>{r.name}</Text>
+                      {r.address ? <Text style={st.restaurantOptAddr} numberOfLines={1}>{r.address}</Text> : null}
                     </View>
-                    <View style={styles.restaurantOptionInfo}>
-                      <Text style={[styles.restaurantOptionName, isSelected && styles.restaurantOptionNameSelected]} numberOfLines={1}>
-                        {restaurant.name}
-                      </Text>
-                      {restaurant.address && (
-                        <Text style={styles.restaurantOptionAddress} numberOfLines={1}>
-                          {restaurant.address}
-                        </Text>
-                      )}
-                    </View>
-                    {isSelected && <Icon name="checkmark-circle" size={24} color={C.primary} />}
+                    {isSel && (
+                      <View style={st.selectedCheck}>
+                        <Icon name="checkmark" size={16} color="#fff" />
+                      </View>
+                    )}
                   </TouchableOpacity>
                 );
               })}
@@ -929,292 +939,592 @@ export default function SupportCenter({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+/* ═══════════════════════════════════════════════ */
+/*                    STYLES                      */
+/* ═══════════════════════════════════════════════ */
+const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
+
+  // ─── Header ───
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: C.card,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
+    paddingVertical: 14,
   },
-  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
-  headerActions: { flexDirection: 'row', gap: 8 },
-  headerBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { marginTop: 12, fontSize: 14, color: C.muted },
+  backBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerCenter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#fff',
+  },
+  countBadge: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderRadius: 12,
+  },
+  countBadgeText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: C.primary,
+  },
+  headerStatusPill: {
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 10,
+    marginTop: 2,
+    alignSelf: 'center',
+  },
+  headerStatusText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#fff',
+  },
 
-  // Restaurant Banner
+  // ─── Loading ───
+  loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  loadingCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  loadingText: { fontSize: 14, color: C.muted },
+
+  // ─── Restaurant Banner ───
   restaurantBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#FEF2F2',
+    paddingVertical: 10,
+    backgroundColor: '#FFF5F5',
+    borderBottomWidth: 1,
+    borderBottomColor: '#FEE2E2',
   },
-  restaurantInfo: { flex: 1 },
-  restaurantName: { fontSize: 14, fontWeight: '600', color: C.primary },
-  restaurantSubtext: { fontSize: 11, color: C.muted, marginTop: 2 },
-  switchBadge: {
+  restaurantIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  restaurantName: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '700',
+    color: C.ink,
+  },
+  switchPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 5,
     backgroundColor: '#fff',
     borderRadius: 16,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: C.primary,
   },
-  switchText: { fontSize: 12, fontWeight: '600', color: C.primary },
+  switchText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: C.primary,
+  },
 
-  // Summary Cards
-  summaryContainer: { paddingHorizontal: 16, paddingVertical: 12 },
+  // ─── Summary Grid ───
+  summarySection: {
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 6,
+  },
+  summaryGrid: {
+    flexDirection: 'row',
+    gap: 8,
+  },
   summaryCard: {
+    flex: 1,
     backgroundColor: C.card,
-    borderRadius: 12,
-    padding: 12,
-    marginRight: 10,
+    borderRadius: 14,
+    padding: 10,
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: C.border,
-    alignItems: 'center',
-    minWidth: 80,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
-  summaryCardActive: { borderColor: C.primary, backgroundColor: '#FEF2F2' },
-  summaryIcon: {
-    width: 36,
-    height: 36,
+  summaryCardActive: {
+    borderColor: C.primary,
+    borderWidth: 1.5,
+  },
+  summaryIconCircle: {
+    width: 34,
+    height: 34,
     borderRadius: 10,
-    backgroundColor: C.bg,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 6,
   },
-  summaryCount: { fontSize: 20, fontWeight: '700', color: C.ink },
-  summaryLabel: { fontSize: 11, color: C.muted, marginTop: 2 },
+  summaryCount: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: C.ink,
+  },
+  summaryLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: C.muted,
+    marginTop: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
 
-  // Filters
-  filtersContainer: {
-    flexDirection: 'row',
+  // ─── Search ───
+  searchSection: {
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: C.card,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
+    paddingTop: 8,
+    paddingBottom: 4,
   },
   searchBox: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: C.card,
-    borderRadius: 16,
+    borderRadius: 14,
     paddingHorizontal: 6,
-    paddingVertical: 6,
-    marginRight: 10,
-    borderWidth: 2,
-    borderColor: C.border,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: '#EEF2F7',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
   searchIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 34,
+    height: 34,
+    borderRadius: 10,
     backgroundColor: '#FEF2F2',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  searchInput: { flex: 1, marginLeft: 12, fontSize: 15, fontWeight: '500', color: C.text, padding: 0 },
-  clearSearchBtn: { padding: 8 },
-  clearSearchIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+  searchInput: {
+    flex: 1,
+    marginLeft: 10,
+    fontSize: 14,
+    fontWeight: '500',
+    color: C.text,
+    padding: 0,
+  },
+  clearBtn: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     backgroundColor: C.muted,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  filterBtn: {
+
+  // ─── Filter Tabs ───
+  tabsWrapper: {
+    paddingTop: 8,
+    paddingBottom: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEEFF2',
+  },
+  tabsContent: {
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  tab: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingLeft: 4,
-    paddingRight: 12,
-    paddingVertical: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
     backgroundColor: C.card,
-    borderRadius: 14,
-    borderWidth: 2,
+    borderWidth: 1.5,
+    borderColor: C.border,
+  },
+  tabActive: {
+    backgroundColor: C.primary,
+    borderColor: C.primary,
+  },
+  tabText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: C.muted,
+  },
+  tabTextActive: {
+    color: '#fff',
+  },
+  tabBadge: {
+    marginLeft: 6,
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 8,
+  },
+  tabBadgeActive: {
+    backgroundColor: 'rgba(255,255,255,0.3)',
+  },
+  tabBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#D97706',
+  },
+  tabBadgeTextActive: {
+    color: '#fff',
+  },
+
+  // ─── List Title ───
+  listTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 6,
+  },
+  listTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: C.ink,
+  },
+  listCount: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: C.muted,
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  listContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 100,
+  },
+
+  // ─── Ticket Card ───
+  itemCard: {
+    backgroundColor: C.card,
+    borderRadius: 16,
+    marginBottom: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
     borderColor: C.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
-    shadowRadius: 6,
+    shadowRadius: 8,
     elevation: 2,
   },
-  filterIconBox: {
+  itemAccent: {
+    height: 3,
+  },
+  itemBody: {
+    padding: 14,
+  },
+  itemHeaderRow: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'flex-start',
+  },
+  typeIconBox: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#FEF2F2',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 6,
   },
-  filterActiveDot: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: C.primary,
+  itemHeaderInfo: {
+    flex: 1,
   },
-
-  list: { padding: 16 },
-
-  // Ticket Card
-  card: {
-    backgroundColor: C.card,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: C.border,
+  itemTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: C.ink,
+    marginBottom: 4,
   },
-  cardHeader: {
+  itemMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 10,
+    gap: 8,
   },
-  statusBadge: {
+  typePill: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  typePillText: {
+    fontSize: 10,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  timeAgoText: {
+    fontSize: 11,
+    color: C.muted,
+  },
+  equipmentRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 16,
+    marginTop: 10,
+    paddingLeft: 52,
   },
-  statusText: { fontSize: 12, fontWeight: '600' },
-  cardIdText: { fontSize: 12, color: C.muted, fontFamily: 'monospace' },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: C.ink, marginBottom: 4 },
-  cardEquipment: { fontSize: 13, color: C.muted, marginBottom: 8 },
-  cardMeta: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
-  categoryBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    backgroundColor: C.bg,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: C.border,
+  equipmentText: {
+    fontSize: 13,
+    color: C.muted,
   },
-  categoryText: { fontSize: 11, fontWeight: '600', color: C.text },
-  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  metaText: { fontSize: 12, color: C.muted },
-  cardActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  viewBtn: {
+  itemFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    justifyContent: 'space-between',
+    marginTop: 12,
+    paddingLeft: 52,
   },
-  viewBtnText: { fontSize: 14, fontWeight: '700', color: C.primary },
-  deleteBtn: { padding: 8 },
+  statusChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  statusChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  footerMeta: {
+    fontSize: 11,
+    color: C.muted,
+    fontFamily: 'monospace',
+  },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 12,
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    backgroundColor: '#EFF6FF',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  actionButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: C.info,
+  },
+  deleteButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
-  // Empty State
-  emptyBox: { alignItems: 'center', paddingTop: 80 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: C.ink, marginTop: 16 },
-  emptyText: { fontSize: 14, color: C.muted, textAlign: 'center', marginTop: 8 },
+  // ─── Empty State ───
+  emptyBox: {
+    alignItems: 'center',
+    paddingVertical: 50,
+  },
+  emptyIconCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: C.ink,
+    marginBottom: 6,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: C.muted,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
   emptyBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginTop: 20,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: C.primary,
+    gap: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 13,
+    borderRadius: 14,
   },
-  emptyBtnText: { fontSize: 14, fontWeight: '700', color: '#fff' },
+  emptyBtnText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#fff',
+  },
 
-  // Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
+  // ─── Help Card ───
+  helpCard: {
+    marginTop: 16,
+    borderRadius: 16,
+    overflow: 'hidden',
   },
-  modalContent: {
-    backgroundColor: C.card,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: '90%',
+  helpGradient: {
+    padding: 20,
+    alignItems: 'center',
+    borderRadius: 16,
   },
-  modalHeader: {
+  helpIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  helpTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: C.ink,
+    marginBottom: 6,
+  },
+  helpText: {
+    fontSize: 13,
+    color: C.muted,
+    textAlign: 'center',
+    lineHeight: 19,
+    marginBottom: 16,
+  },
+  helpBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 6,
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: C.info,
   },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
-  modalBody: { padding: 20 },
-  modalFooter: {
+  helpBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#fff',
+  },
+
+  // ─── FAB ───
+  fabWrap: {
+    position: 'absolute',
+    bottom: 90,
+    right: 20,
+    shadowColor: C.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  fab: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // ─── Create Modal ───
+  createFooter: {
     flexDirection: 'row',
     gap: 12,
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 14,
     borderTopWidth: 1,
-    borderTopColor: C.border,
+    borderTopColor: '#EEF2F7',
+    backgroundColor: C.card,
   },
-
-  // Form
-  inputLabel: { fontSize: 13, fontWeight: '600', color: C.text, marginBottom: 8, marginTop: 16 },
+  inputLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: C.ink,
+    marginBottom: 8,
+    marginTop: 16,
+  },
   input: {
-    backgroundColor: C.bg,
+    backgroundColor: '#F8FAFC',
     borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 15,
+    paddingVertical: 13,
+    fontSize: 14,
     color: C.text,
     borderWidth: 1,
-    borderColor: C.border,
+    borderColor: '#EEF2F7',
   },
   textArea: { minHeight: 100, textAlignVertical: 'top' },
   pickerInput: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: C.bg,
+    backgroundColor: '#F8FAFC',
     borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 13,
     borderWidth: 1,
-    borderColor: C.border,
+    borderColor: '#EEF2F7',
   },
-  pickerInputText: { fontSize: 15, color: C.text },
+  pickerCatIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pickerInputText: { fontSize: 14, color: C.text, fontWeight: '500' },
   uploadBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    paddingVertical: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: C.primary,
+    paddingVertical: 16,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#FECACA',
     borderStyle: 'dashed',
+    backgroundColor: '#FEF2F2',
   },
   uploadBtnText: { fontSize: 14, fontWeight: '600', color: C.primary },
-  imagePreviewContainer: { position: 'relative', alignSelf: 'flex-start' },
-  imagePreview: { width: 100, height: 100, borderRadius: 12, borderWidth: 1, borderColor: C.border },
-  removeImageBtn: {
+  imgPreviewWrap: { position: 'relative', alignSelf: 'flex-start' },
+  imgPreview: { width: 100, height: 100, borderRadius: 14, borderWidth: 1, borderColor: '#EEF2F7' },
+  removeImgBtn: {
     position: 'absolute',
     top: -8,
     right: -8,
@@ -1225,160 +1535,352 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-
   cancelBtn: {
     flex: 1,
     paddingVertical: 14,
-    backgroundColor: C.bg,
+    backgroundColor: '#F1F5F9',
     borderRadius: 12,
     alignItems: 'center',
   },
-  cancelBtnText: { fontSize: 15, fontWeight: '700', color: C.ink },
+  cancelBtnText: { fontSize: 15, fontWeight: '800', color: C.ink },
   submitBtn: {
-    flex: 1,
     paddingVertical: 14,
-    backgroundColor: C.primary,
     borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  submitBtnDisabled: { opacity: 0.7 },
-  submitBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  submitBtnText: { fontSize: 15, fontWeight: '800', color: '#fff' },
 
-  // Detail Modal
-  detailHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  statusBadgeSmall: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12 },
-  statusTextSmall: { fontSize: 11, fontWeight: '600' },
-
-  ticketInfoCard: {
-    backgroundColor: C.bg,
-    borderRadius: 12,
-    padding: 16,
+  // ─── Detail Modal ───
+  detailCard: {
+    backgroundColor: C.card,
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: C.border,
     marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  ticketInfoTitle: { fontSize: 16, fontWeight: '700', color: C.ink, marginBottom: 8 },
-  ticketInfoMeta: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 8 },
-  ticketInfoMetaText: { fontSize: 13, color: C.muted },
-  ticketInfoDesc: { fontSize: 14, color: C.text, lineHeight: 20 },
-  ticketImageContainer: { marginTop: 12 },
-  ticketImageLabel: { fontSize: 11, color: C.muted, marginBottom: 6 },
-  ticketImage: { width: '100%', height: 150, borderRadius: 10 },
-  ticketInfoDate: { fontSize: 12, color: C.muted, marginTop: 12 },
+  detailCardBody: {
+    padding: 14,
+  },
+  detailDesc: {
+    fontSize: 14,
+    color: C.text,
+    lineHeight: 21,
+    marginTop: 12,
+    paddingLeft: 52,
+  },
+  detailImgWrap: {
+    marginTop: 14,
+    paddingLeft: 52,
+  },
+  detailImg: {
+    width: '100%',
+    height: 160,
+    borderRadius: 12,
+  },
+  detailFooterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 14,
+    paddingLeft: 52,
+  },
 
-  threadTitle: { fontSize: 15, fontWeight: '700', color: C.ink, marginBottom: 12 },
-  noMessages: { textAlign: 'center', color: C.muted, paddingVertical: 20 },
+  // ─── Messages ───
+  msgSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  msgSectionTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: C.ink,
+  },
+  msgCountPill: {
+    backgroundColor: '#FEF2F2',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  msgCountText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: C.primary,
+  },
+  noMsgBox: {
+    alignItems: 'center',
+    paddingVertical: 30,
+  },
+  noMsgCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  noMsgText: {
+    fontSize: 13,
+    color: C.muted,
+  },
 
-  threadMessage: { padding: 12, borderRadius: 12, marginBottom: 10 },
-  threadMessageAdmin: { backgroundColor: '#FEF2F2', marginLeft: 32 },
-  threadMessageOwner: { backgroundColor: C.bg, marginRight: 32 },
-  threadHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  threadAuthor: { fontSize: 13, fontWeight: '600', color: C.ink },
+  // ─── Thread Messages ───
+  threadMsg: {
+    borderRadius: 14,
+    marginBottom: 10,
+    overflow: 'hidden',
+    borderWidth: 1,
+  },
+  threadAdmin: {
+    backgroundColor: '#F0F7FF',
+    borderColor: '#DBEAFE',
+    marginLeft: 20,
+  },
+  threadOwner: {
+    backgroundColor: '#FEF8F8',
+    borderColor: '#FECACA',
+    marginRight: 20,
+  },
+  threadAccentLine: {
+    height: 3,
+  },
+  threadInner: {
+    padding: 12,
+  },
+  threadHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  threadAvatar: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  threadAuthor: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: C.ink,
+  },
   supportBadge: {
-    backgroundColor: C.primary,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
-    marginLeft: 6,
   },
-  supportBadgeText: { fontSize: 10, fontWeight: '600', color: '#fff' },
-  threadTime: { fontSize: 11, color: C.muted },
-  threadText: { fontSize: 14, color: C.text, lineHeight: 20 },
-  threadImage: { width: '100%', height: 120, borderRadius: 8, marginTop: 8 },
-
-  replySection: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: C.border,
+  supportBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#fff',
   },
-  replyImagePreview: { position: 'relative', alignSelf: 'flex-start', marginBottom: 10 },
-  replyImage: { width: 60, height: 60, borderRadius: 8 },
-  removeReplyImageBtn: {
-    position: 'absolute',
-    top: -6,
-    right: -6,
-    width: 20,
-    height: 20,
+  threadTime: {
+    fontSize: 10,
+    color: C.muted,
+  },
+  threadText: {
+    fontSize: 13,
+    color: C.text,
+    lineHeight: 20,
+  },
+  threadImage: {
+    width: '100%',
+    height: 120,
     borderRadius: 10,
+    marginTop: 8,
+  },
+
+  // ─── Reply Bar ───
+  replyBar: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#EEF2F7',
+    backgroundColor: C.card,
+  },
+  replyImgPreview: {
+    position: 'relative',
+    alignSelf: 'flex-start',
+    marginBottom: 8,
+  },
+  replyImg: {
+    width: 56,
+    height: 56,
+    borderRadius: 10,
+  },
+  removeReplyBtn: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
     backgroundColor: C.danger,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  replyInputRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  replyInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   replyInput: {
     flex: 1,
-    backgroundColor: C.bg,
+    backgroundColor: '#F8FAFC',
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,
     fontSize: 14,
     color: C.text,
     borderWidth: 1,
-    borderColor: C.border,
+    borderColor: '#EEF2F7',
   },
-  attachBtn: { padding: 8 },
-  sendBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: C.primary,
+  attachBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FEF2F2',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  sendBtnDisabled: { backgroundColor: C.border },
+  sendBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
-  // Picker Modal
-  pickerContent: {
+  // ─── Picker Modals ───
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  pickerSheet: {
     backgroundColor: C.card,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     maxHeight: '70%',
   },
-  pickerBody: { padding: 16 },
+  modalDragBar: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#D1D5DB',
+    alignSelf: 'center',
+    marginTop: 12,
+  },
+  modalHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: C.ink,
+  },
+  modalSubtitle: {
+    fontSize: 12,
+    color: C.muted,
+    marginTop: 2,
+  },
+  modalCloseBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pickerBody: {
+    padding: 16,
+  },
   pickerOption: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 14,
-    marginBottom: 8,
-    borderRadius: 12,
-    borderWidth: 1,
+    marginBottom: 10,
+    borderRadius: 14,
+    borderWidth: 2,
     borderColor: C.border,
-    backgroundColor: C.bg,
+    backgroundColor: '#FAFBFC',
   },
   pickerOptionSelected: {
     borderColor: C.primary,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: '#FFF5F5',
   },
-  pickerOptionText: { fontSize: 15, fontWeight: '600', color: C.ink },
-  pickerOptionTextSelected: { color: C.primary },
+  pickerOptionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pickerOptionText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: C.ink,
+  },
+  selectedCheck: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: C.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
-  // Restaurant Picker
+  // ─── Restaurant Picker ───
   restaurantOption: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     padding: 14,
     marginBottom: 10,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 2,
     borderColor: C.border,
-    backgroundColor: C.bg,
+    backgroundColor: '#FAFBFC',
   },
-  restaurantOptionSelected: {
+  restaurantOptionSel: {
     borderColor: C.primary,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: '#FFF5F5',
   },
-  restaurantIcon: {
+  restaurantOptIcon: {
     width: 44,
     height: 44,
-    borderRadius: 12,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FEE2E2',
   },
-  restaurantIconSelected: { backgroundColor: C.primary },
-  restaurantOptionInfo: { flex: 1 },
-  restaurantOptionName: { fontSize: 15, fontWeight: '700', color: C.ink },
-  restaurantOptionNameSelected: { color: C.primary },
-  restaurantOptionAddress: { fontSize: 12, color: C.muted, marginTop: 2 },
+  restaurantOptInfo: {
+    flex: 1,
+  },
+  restaurantOptName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: C.ink,
+  },
+  restaurantOptAddr: {
+    fontSize: 12,
+    color: C.muted,
+    marginTop: 3,
+  },
 });

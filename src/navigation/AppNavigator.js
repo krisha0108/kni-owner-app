@@ -56,6 +56,7 @@ import CategoryDetailScreen from '../screens/CategoryDetailScreen';
 import PaymentTrackingScreen from '../screens/PaymentTrackingScreen';
 
 // Marketplace
+import MarketplaceScreen from '../screens/MarketplaceScreen';
 import MarketplaceProductScreen from '../screens/MarketplaceProductScreen';
 import MarketplaceOrdersScreen from '../screens/MarketplaceOrdersScreen';
 import MarketplaceCartScreen from '../screens/MarketplaceCartScreen';
@@ -75,7 +76,7 @@ import CartScreen from '../screens/CartScreen';
 import CreateMarketplaceOrderScreen from '../screens/CreateMarketplaceOrderScreen';
 
 // Legacy Screens (keeping for compatibility)
-import RequestScreen from '../screens/RequestScreen';
+// RequestScreen removed - using MarketplaceScreen instead
 import RequestDetail from '../screens/RequestDetail';
 // RequestNow screen removed - use Cart screen instead
 import RestaurantView from '../screens/RestaurantView';
@@ -151,7 +152,7 @@ export default function AppNavigator() {
         <Stack.Screen name="Staff" component={StaffScreen} />
         <Stack.Screen name="StaffAttendance" component={StaffAttendanceScreen} />
         <Stack.Screen name="StaffSalary" component={StaffSalaryScreen} />
-        <Stack.Screen name="Marketplace" component={RequestScreen} />
+        <Stack.Screen name="Marketplace" component={MarketplaceScreen} />
         <Stack.Screen name="MarketplaceProduct" component={MarketplaceProductScreen} />
         <Stack.Screen name="MarketplaceOrders" component={MarketplaceOrdersScreen} />
         <Stack.Screen name="MarketplaceCart" component={MarketplaceCartScreen} />
@@ -182,7 +183,7 @@ export default function AppNavigator() {
         <Stack.Screen name="OrderTracking" component={OrderTrackingScreen} />
 
         {/* Legacy screens kept for compatibility */}
-        <Stack.Screen name="Request" component={RequestScreen} />
+        {/* RequestScreen removed - using MarketplaceScreen instead */}
         <Stack.Screen name="RequestDetail" component={RequestDetail} />
         {/* RequestNow screen removed - use Cart screen for cart flow */}
         <Stack.Screen name="Restaurants" component={RestaurantsScreen} />

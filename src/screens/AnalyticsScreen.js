@@ -127,13 +127,18 @@ export default function AnalyticsScreen({ navigation }) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.menuBtn}>
-            <Icon name="arrow-back" size={24} color={C.ink} />
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Icon name="arrow-back" size={22} color={C.ink} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Analytics</Text>
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
-            <Icon name="menu" size={22} color="#1D2254" />
-          </TouchableOpacity>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>Analytics</Text>
+            <Text style={styles.headerSubtitle}>Business insights & reports</Text>
+          </View>
+          <View style={styles.headerActions}>
+            <TouchableOpacity style={styles.headerIconBtn} onPress={() => setMenuVisible(true)}>
+              <Icon name="menu" size={20} color={C.ink} />
+            </TouchableOpacity>
+          </View>
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={C.primary} />
@@ -146,13 +151,14 @@ export default function AnalyticsScreen({ navigation }) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.menuBtn}>
-            <Icon name="arrow-back" size={24} color={C.ink} />
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Icon name="arrow-back" size={22} color={C.ink} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Analytics</Text>
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
-            <Icon name="menu" size={22} color="#1D2254" />
-          </TouchableOpacity>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>Analytics</Text>
+            <Text style={styles.headerSubtitle}>Business insights & reports</Text>
+          </View>
+          <View style={{ width: 48 }} />
         </View>
         <View style={styles.emptyContainer}>
           <Icon name="restaurant-outline" size={80} color={C.muted} />
@@ -171,24 +177,29 @@ export default function AnalyticsScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.menuBtn}>
-          <Icon name="arrow-back" size={24} color={C.ink} />
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <Icon name="arrow-back" size={22} color={C.ink} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Analytics</Text>
-        <TouchableOpacity
-          onPress={handleExportPDF}
-          disabled={exporting}
-          style={styles.menuBtn}
-        >
-          {exporting ? (
-            <ActivityIndicator size="small" color={C.primary} />
-          ) : (
-            <Icon name="download-outline" size={24} color={C.primary} />
-          )}
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
-          <Icon name="menu" size={22} color="#1D2254" />
-        </TouchableOpacity>
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>Analytics</Text>
+          <Text style={styles.headerSubtitle}>Business insights & reports</Text>
+        </View>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.headerIconBtn}
+            onPress={handleExportPDF}
+            disabled={exporting}
+          >
+            {exporting ? (
+              <ActivityIndicator size="small" color={C.primary} />
+            ) : (
+              <Icon name="download-outline" size={20} color={C.primary} />
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.headerIconBtn} onPress={() => setMenuVisible(true)}>
+            <Icon name="menu" size={20} color={C.ink} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -376,15 +387,18 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: C.card,
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
-  menuBtn: { width: 40 },
+  backBtn: { width: 40, height: 40, borderRadius: 10, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
+  headerCenter: { flex: 1, marginLeft: 12 },
   headerTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
+  headerSubtitle: { fontSize: 12, color: C.muted, marginTop: 2 },
+  headerActions: { flexDirection: 'row' },
+  headerIconBtn: { width: 40, height: 40, borderRadius: 10, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', marginLeft: 8 },
   content: { flex: 1 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },

@@ -9,14 +9,19 @@ import {
   ActivityIndicator,
   ScrollView,
   Modal,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
+import LinearGradient from 'react-native-linear-gradient';
 import { api } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
 
+const { width } = Dimensions.get('window');
+
 const C = {
   primary: '#EF3A3A',
+  primaryDark: '#D42E2E',
   ink: '#1D2254',
   text: '#0F172A',
   muted: '#6B7280',
@@ -31,64 +36,88 @@ const C = {
 
 const TYPE_CONFIG = {
   RESTAURANT: {
-    icon: 'business-outline',
-    label: 'Restaurant Approval',
-    bg: '#DBEAFE',
+    icon: 'business',
+    label: 'Restaurant',
+    gradient: ['#3B82F6', '#1D4ED8'],
+    bg: '#EFF6FF',
     color: '#2563EB',
+    lightBg: '#DBEAFE',
   },
   TEAM_INVITE: {
-    icon: 'person-outline',
-    label: 'Team Invitation',
-    bg: '#F3E8FF',
-    color: '#9333EA',
+    icon: 'people',
+    label: 'Team Invite',
+    gradient: ['#8B5CF6', '#6D28D9'],
+    bg: '#F5F3FF',
+    color: '#7C3AED',
+    lightBg: '#EDE9FE',
   },
   BOOKING: {
-    icon: 'calendar-outline',
-    label: 'Booking Approval',
-    bg: '#D1FAE5',
+    icon: 'calendar',
+    label: 'Booking',
+    gradient: ['#10B981', '#059669'],
+    bg: '#ECFDF5',
     color: '#059669',
+    lightBg: '#D1FAE5',
   },
   CATEGORY_REQUEST: {
-    icon: 'document-text-outline',
-    label: 'Category Request',
-    bg: '#FFEDD5',
+    icon: 'folder-open',
+    label: 'Category',
+    gradient: ['#F97316', '#EA580C'],
+    bg: '#FFF7ED',
     color: '#EA580C',
+    lightBg: '#FFEDD5',
   },
 };
 
 const STATUS_CONFIG = {
   PENDING: {
-    icon: 'time-outline',
+    icon: 'time',
     label: 'Pending',
     bg: '#FEF3C7',
     color: '#D97706',
+    gradient: ['#FBBF24', '#F59E0B'],
   },
   APPROVED: {
-    icon: 'checkmark-circle-outline',
+    icon: 'checkmark-circle',
     label: 'Approved',
     bg: '#D1FAE5',
     color: '#059669',
+    gradient: ['#34D399', '#10B981'],
   },
   REJECTED: {
-    icon: 'close-circle-outline',
+    icon: 'close-circle',
     label: 'Rejected',
     bg: '#FEE2E2',
     color: '#DC2626',
+    gradient: ['#F87171', '#EF4444'],
   },
 };
 
 const TABS = [
-  { key: 'all', label: 'All' },
-  { key: 'pending', label: 'Pending' },
-  { key: 'RESTAURANT', label: 'Restaurants' },
-  { key: 'TEAM_INVITE', label: 'Team' },
-  { key: 'BOOKING', label: 'Bookings' },
+  { key: 'all', label: 'All', icon: 'apps' },
+  { key: 'pending', label: 'Pending', icon: 'time' },
+  { key: 'RESTAURANT', label: 'Restaurants', icon: 'business' },
+  { key: 'TEAM_INVITE', label: 'Team', icon: 'people' },
+  { key: 'BOOKING', label: 'Bookings', icon: 'calendar' },
 ];
 
 const formatDate = (dateString) => {
   if (!dateString) return '-';
   const date = new Date(dateString);
   return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+};
+
+const formatTimeAgo = (dateString) => {
+  if (!dateString) return '';
+  const now = new Date();
+  const date = new Date(dateString);
+  const diffMs = now - date;
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays} days ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+  return formatDate(dateString);
 };
 
 export default function PendingApprovalScreen({ navigation }) {
@@ -104,19 +133,17 @@ export default function PendingApprovalScreen({ navigation }) {
     try {
       setLoading(true);
 
-      // Get all restaurants
       const restaurantsRes = await api.get('/owner/restaurants');
       if (restaurantsRes.data.ok && restaurantsRes.data.data.length > 0) {
-        const approvedRestaurants = restaurantsRes.data.data.filter(r => r.status === 'APPROVED');
-        setRestaurants(approvedRestaurants);
+        const allRestaurants = restaurantsRes.data.data;
+        setRestaurants(allRestaurants);
 
-        // Use provided restaurantId or first approved
         let targetRestaurant = null;
         if (restaurantId) {
-          targetRestaurant = approvedRestaurants.find(r => r.id === restaurantId);
+          targetRestaurant = allRestaurants.find(r => r.id === restaurantId);
         }
-        if (!targetRestaurant && approvedRestaurants.length > 0) {
-          targetRestaurant = approvedRestaurants[0];
+        if (!targetRestaurant && allRestaurants.length > 0) {
+          targetRestaurant = allRestaurants[0];
         }
 
         if (targetRestaurant) {
@@ -129,7 +156,6 @@ export default function PendingApprovalScreen({ navigation }) {
           }
         }
       } else {
-        // Fallback - try without restaurant filter
         const response = await api.get('/owner/pending-approvals');
         if (response.data.ok) {
           setItems(response.data.data || []);
@@ -190,134 +216,110 @@ export default function PendingApprovalScreen({ navigation }) {
 
     return (
       <View style={styles.itemCard}>
-        <View style={styles.itemHeader}>
-          <View style={[styles.typeIcon, { backgroundColor: typeConfig.bg }]}>
-            <Icon name={typeConfig.icon} size={20} color={typeConfig.color} />
-          </View>
-          <View style={styles.itemInfo}>
-            <View style={styles.titleRow}>
-              <Text style={styles.itemTitle} numberOfLines={1}>{item.title}</Text>
-              <View style={[styles.typeBadge, { backgroundColor: typeConfig.bg }]}>
-                <Text style={[styles.typeBadgeText, { color: typeConfig.color }]}>
-                  {typeConfig.label}
-                </Text>
-              </View>
-            </View>
-            <Text style={styles.itemDesc} numberOfLines={2}>{item.description}</Text>
-            <View style={styles.itemMeta}>
-              <View style={[styles.statusBadge, { backgroundColor: statusConfig.bg }]}>
-                <Icon name={statusConfig.icon} size={12} color={statusConfig.color} />
-                <Text style={[styles.statusText, { color: statusConfig.color }]}>
-                  {statusConfig.label}
-                </Text>
-              </View>
-              <Text style={styles.dateText}>{formatDate(item.createdAt)}</Text>
-            </View>
-          </View>
-        </View>
+        {/* Top accent line */}
+        <LinearGradient
+          colors={typeConfig.gradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.itemAccent}
+        />
 
-        {item.status === 'PENDING' && (item.type === 'RESTAURANT' || item.type === 'TEAM_INVITE' || item.type === 'BOOKING') && (
-          <TouchableOpacity style={styles.viewBtn} onPress={() => handleViewAction(item)}>
-            <Icon name="eye-outline" size={16} color={C.info} />
-            <Text style={styles.viewBtnText}>
-              {item.type === 'RESTAURANT' ? 'View Status' : item.type === 'TEAM_INVITE' ? 'View Team' : 'View Booking'}
-            </Text>
-          </TouchableOpacity>
-        )}
+        <View style={styles.itemBody}>
+          {/* Header row */}
+          <View style={styles.itemHeaderRow}>
+            <LinearGradient
+              colors={typeConfig.gradient}
+              style={styles.typeIconBox}
+            >
+              <Icon name={typeConfig.icon} size={18} color="#fff" />
+            </LinearGradient>
+
+            <View style={styles.itemHeaderInfo}>
+              <Text style={styles.itemTitle} numberOfLines={1}>{item.title}</Text>
+              <View style={styles.itemMetaRow}>
+                <View style={[styles.typePill, { backgroundColor: typeConfig.lightBg }]}>
+                  <Text style={[styles.typePillText, { color: typeConfig.color }]}>
+                    {typeConfig.label}
+                  </Text>
+                </View>
+                <Text style={styles.timeAgoText}>{formatTimeAgo(item.createdAt)}</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Description */}
+          {item.description && (
+            <Text style={styles.itemDesc} numberOfLines={2}>{item.description}</Text>
+          )}
+
+          {/* Footer */}
+          <View style={styles.itemFooter}>
+            <View style={[styles.statusChip, { backgroundColor: statusConfig.bg }]}>
+              <Icon name={statusConfig.icon} size={13} color={statusConfig.color} />
+              <Text style={[styles.statusChipText, { color: statusConfig.color }]}>
+                {statusConfig.label}
+              </Text>
+            </View>
+            <Text style={styles.itemDateText}>{formatDate(item.createdAt)}</Text>
+          </View>
+
+          {/* Action Button */}
+          {item.status === 'PENDING' && (item.type === 'RESTAURANT' || item.type === 'TEAM_INVITE' || item.type === 'BOOKING') && (
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => handleViewAction(item)}
+              activeOpacity={0.7}
+            >
+              <Icon name="eye-outline" size={16} color={C.info} />
+              <Text style={styles.actionButtonText}>
+                {item.type === 'RESTAURANT' ? 'View Status' : item.type === 'TEAM_INVITE' ? 'View Team' : 'View Booking'}
+              </Text>
+              <Icon name="chevron-forward" size={14} color={C.info} />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     );
   };
 
-  const renderHeader = () => (
-    <>
-      {/* Summary Cards */}
-      <View style={styles.summaryGrid}>
-        <View style={styles.summaryCard}>
-          <View style={[styles.summaryIcon, { backgroundColor: '#FEF3C7' }]}>
-            <Icon name="time-outline" size={20} color="#D97706" />
-          </View>
-          <Text style={styles.summaryCount}>{pendingCount}</Text>
-          <Text style={styles.summaryLabel}>Pending</Text>
-        </View>
-        <View style={styles.summaryCard}>
-          <View style={[styles.summaryIcon, { backgroundColor: '#D1FAE5' }]}>
-            <Icon name="checkmark-circle-outline" size={20} color="#059669" />
-          </View>
-          <Text style={styles.summaryCount}>{approvedCount}</Text>
-          <Text style={styles.summaryLabel}>Approved</Text>
-        </View>
-        <View style={styles.summaryCard}>
-          <View style={[styles.summaryIcon, { backgroundColor: '#FEE2E2' }]}>
-            <Icon name="close-circle-outline" size={20} color="#DC2626" />
-          </View>
-          <Text style={styles.summaryCount}>{rejectedCount}</Text>
-          <Text style={styles.summaryLabel}>Rejected</Text>
-        </View>
-        <View style={styles.summaryCard}>
-          <View style={[styles.summaryIcon, { backgroundColor: '#DBEAFE' }]}>
-            <Icon name="documents-outline" size={20} color="#2563EB" />
-          </View>
-          <Text style={styles.summaryCount}>{items.length}</Text>
-          <Text style={styles.summaryLabel}>Total</Text>
-        </View>
-      </View>
-
-      {/* Tabs */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.tabsContainer}
-        contentContainerStyle={styles.tabsContent}
-      >
-        {TABS.map((tab) => {
-          const isActive = activeTab === tab.key;
-          return (
-            <TouchableOpacity
-              key={tab.key}
-              style={[styles.tab, isActive && styles.tabActive]}
-              onPress={() => setActiveTab(tab.key)}
-            >
-              <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
-                {tab.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
-
-      {/* List Header */}
-      <View style={styles.listHeader}>
-        <Text style={styles.listTitle}>Approval Items ({filteredItems.length})</Text>
-        <Text style={styles.listSubtitle}>Review status of your requests</Text>
-      </View>
-    </>
-  );
-
   const renderEmpty = () => (
     <View style={styles.emptyBox}>
-      <View style={styles.emptyIconBox}>
-        <Icon name="checkmark-circle-outline" size={48} color={C.muted} />
-      </View>
+      <LinearGradient
+        colors={['#F0FDF4', '#DCFCE7']}
+        style={styles.emptyIconCircle}
+      >
+        <Icon name="checkmark-done-circle" size={56} color="#22C55E" />
+      </LinearGradient>
       <Text style={styles.emptyTitle}>All Caught Up!</Text>
-      <Text style={styles.emptyText}>No pending items to review</Text>
+      <Text style={styles.emptySubtitle}>No pending items to review right now</Text>
+      <TouchableOpacity style={styles.emptyRefreshBtn} onPress={onRefresh}>
+        <Icon name="refresh" size={16} color={C.primary} />
+        <Text style={styles.emptyRefreshText}>Refresh</Text>
+      </TouchableOpacity>
     </View>
   );
 
   const renderFooter = () => (
     <View style={styles.helpCard}>
-      <View style={[styles.helpIcon, { backgroundColor: '#DBEAFE' }]}>
-        <Icon name="information-circle-outline" size={20} color="#2563EB" />
-      </View>
-      <View style={styles.helpContent}>
+      <LinearGradient
+        colors={['#EFF6FF', '#DBEAFE']}
+        style={styles.helpGradient}
+      >
+        <View style={styles.helpIconBox}>
+          <Icon name="help-circle" size={24} color="#3B82F6" />
+        </View>
         <Text style={styles.helpTitle}>Need Help?</Text>
         <Text style={styles.helpText}>
-          Approvals are typically processed within 24-48 hours. If your request has been pending
-          for longer, please contact our support team.
+          Approvals are typically processed within 24-48 hours. If your request has been pending longer, contact our support team.
         </Text>
-        <TouchableOpacity onPress={() => navigation.navigate('SupportCenter')}>
-          <Text style={styles.helpLink}>Contact Support</Text>
+        <TouchableOpacity
+          style={styles.helpBtn}
+          onPress={() => navigation.navigate('SupportCenter')}
+        >
+          <Icon name="chatbubbles" size={16} color="#fff" />
+          <Text style={styles.helpBtnText}>Contact Support</Text>
         </TouchableOpacity>
-      </View>
+      </LinearGradient>
     </View>
   );
 
@@ -326,14 +328,14 @@ export default function PendingApprovalScreen({ navigation }) {
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Icon name="arrow-back" size={24} color={C.ink} />
+            <Icon name="arrow-back" size={22} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Pending Approvals</Text>
           <View style={{ width: 40 }} />
         </View>
         <View style={styles.loadingBox}>
           <ActivityIndicator size="large" color={C.primary} />
-          <Text style={styles.loadingText}>Loading...</Text>
+          <Text style={styles.loadingText}>Loading approvals...</Text>
         </View>
       </SafeAreaView>
     );
@@ -341,10 +343,15 @@ export default function PendingApprovalScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
+      {/* Gradient Header */}
+      <LinearGradient
+        colors={[C.primary, C.primaryDark]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.header}
+      >
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Icon name="arrow-back" size={24} color={C.ink} />
+          <Icon name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>Pending Approvals</Text>
@@ -354,24 +361,26 @@ export default function PendingApprovalScreen({ navigation }) {
             </View>
           )}
         </View>
-        <TouchableOpacity onPress={onRefresh} style={styles.refreshBtn}>
-          <Icon name="refresh-outline" size={22} color={C.ink} />
+        <TouchableOpacity onPress={onRefresh} style={styles.backBtn}>
+          <Icon name="refresh" size={20} color="#fff" />
         </TouchableOpacity>
-      </View>
+      </LinearGradient>
 
-      {/* Restaurant Selector */}
+      {/* Restaurant Selector - Fixed */}
       {currentRestaurant && (
         <TouchableOpacity
           style={styles.restaurantBanner}
           onPress={() => restaurants.length > 1 && setRestaurantPickerVisible(true)}
           activeOpacity={restaurants.length > 1 ? 0.7 : 1}
         >
-          <Icon name="restaurant" size={18} color={C.primary} />
+          <View style={styles.restaurantIconBox}>
+            <Icon name="restaurant" size={16} color={C.primary} />
+          </View>
           <Text style={styles.restaurantName} numberOfLines={1}>
             {currentRestaurant.name}
           </Text>
           {restaurants.length > 1 && (
-            <View style={styles.switchBadge}>
+            <View style={styles.switchPill}>
               <Icon name="swap-horizontal" size={14} color={C.primary} />
               <Text style={styles.switchText}>Switch</Text>
             </View>
@@ -379,14 +388,123 @@ export default function PendingApprovalScreen({ navigation }) {
         </TouchableOpacity>
       )}
 
+      {/* Summary Stats - Fixed */}
+      <View style={styles.summarySection}>
+        <View style={styles.summaryGrid}>
+          <TouchableOpacity
+            style={[styles.summaryCard, activeTab === 'pending' && styles.summaryCardActive]}
+            onPress={() => setActiveTab('pending')}
+          >
+            <LinearGradient
+              colors={['#FEF3C7', '#FDE68A']}
+              style={styles.summaryIconCircle}
+            >
+              <Icon name="time" size={18} color="#D97706" />
+            </LinearGradient>
+            <Text style={styles.summaryCount}>{pendingCount}</Text>
+            <Text style={styles.summaryLabel}>Pending</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.summaryCard]}
+            onPress={() => setActiveTab('all')}
+          >
+            <LinearGradient
+              colors={['#D1FAE5', '#A7F3D0']}
+              style={styles.summaryIconCircle}
+            >
+              <Icon name="checkmark-circle" size={18} color="#059669" />
+            </LinearGradient>
+            <Text style={styles.summaryCount}>{approvedCount}</Text>
+            <Text style={styles.summaryLabel}>Approved</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.summaryCard]}
+            onPress={() => setActiveTab('all')}
+          >
+            <LinearGradient
+              colors={['#FEE2E2', '#FECACA']}
+              style={styles.summaryIconCircle}
+            >
+              <Icon name="close-circle" size={18} color="#DC2626" />
+            </LinearGradient>
+            <Text style={styles.summaryCount}>{rejectedCount}</Text>
+            <Text style={styles.summaryLabel}>Rejected</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.summaryCard]}
+            onPress={() => setActiveTab('all')}
+          >
+            <LinearGradient
+              colors={['#E0E7FF', '#C7D2FE']}
+              style={styles.summaryIconCircle}
+            >
+              <Icon name="documents" size={18} color="#4F46E5" />
+            </LinearGradient>
+            <Text style={styles.summaryCount}>{items.length}</Text>
+            <Text style={styles.summaryLabel}>Total</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Filter Tabs - Fixed */}
+      <View style={styles.tabsWrapper}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tabsContent}
+        >
+          {TABS.map((tab) => {
+            const isActive = activeTab === tab.key;
+            return (
+              <TouchableOpacity
+                key={tab.key}
+                style={[styles.tab, isActive && styles.tabActive]}
+                onPress={() => setActiveTab(tab.key)}
+                activeOpacity={0.7}
+              >
+                <Icon
+                  name={tab.icon}
+                  size={14}
+                  color={isActive ? '#fff' : C.muted}
+                  style={{ marginRight: 5 }}
+                />
+                <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
+                  {tab.label}
+                </Text>
+                {tab.key === 'pending' && pendingCount > 0 && (
+                  <View style={[styles.tabBadge, isActive && styles.tabBadgeActive]}>
+                    <Text style={[styles.tabBadgeText, isActive && styles.tabBadgeTextActive]}>
+                      {pendingCount}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      {/* List Title */}
+      <View style={styles.listTitleRow}>
+        <Text style={styles.listTitle}>
+          {activeTab === 'all' ? 'All Items' : activeTab === 'pending' ? 'Pending Items' : `${TABS.find(t => t.key === activeTab)?.label || 'Items'}`}
+        </Text>
+        <Text style={styles.listCount}>{filteredItems.length} items</Text>
+      </View>
+
+      {/* Scrollable List Only */}
       <FlatList
         data={filteredItems}
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderItem}
-        ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmpty}
-        ListFooterComponent={renderFooter}
+        ListFooterComponent={filteredItems.length > 0 ? renderFooter : null}
         contentContainerStyle={styles.listContent}
+        style={{ flex: 1 }}
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -400,15 +518,27 @@ export default function PendingApprovalScreen({ navigation }) {
       {/* Restaurant Picker Modal */}
       <Modal visible={restaurantPickerVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
-          <View style={styles.pickerContent}>
+          <View style={styles.pickerSheet}>
+            {/* Modal Header */}
+            <View style={styles.modalDragBar} />
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Restaurant</Text>
-              <TouchableOpacity onPress={() => setRestaurantPickerVisible(false)}>
-                <Icon name="close" size={24} color={C.ink} />
+              <View>
+                <Text style={styles.modalTitle}>Select Restaurant</Text>
+                <Text style={styles.modalSubtitle}>{restaurants.length} restaurants available</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setRestaurantPickerVisible(false)}
+                style={styles.modalCloseBtn}
+              >
+                <Icon name="close" size={20} color={C.muted} />
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.pickerBody}>
+            <ScrollView
+              style={styles.pickerBody}
+              contentContainerStyle={{ paddingBottom: 30 }}
+              showsVerticalScrollIndicator={false}
+            >
               {restaurants.map((restaurant) => {
                 const isSelected = restaurant.id === currentRestaurant?.id;
                 return (
@@ -419,14 +549,18 @@ export default function PendingApprovalScreen({ navigation }) {
                       isSelected && styles.restaurantOptionSelected,
                     ]}
                     onPress={() => selectRestaurant(restaurant)}
+                    activeOpacity={0.7}
                   >
-                    <View style={[styles.restaurantIcon, isSelected && styles.restaurantIconSelected]}>
+                    <LinearGradient
+                      colors={isSelected ? [C.primary, C.primaryDark] : ['#FEE2E2', '#FEE2E2']}
+                      style={styles.restaurantOptionIcon}
+                    >
                       <Icon
                         name="restaurant"
                         size={20}
                         color={isSelected ? '#fff' : C.primary}
                       />
-                    </View>
+                    </LinearGradient>
                     <View style={styles.restaurantOptionInfo}>
                       <Text
                         style={[
@@ -439,12 +573,14 @@ export default function PendingApprovalScreen({ navigation }) {
                       </Text>
                       {restaurant.address && (
                         <Text style={styles.restaurantOptionAddress} numberOfLines={1}>
-                          {restaurant.address}
+                          <Icon name="location-outline" size={11} color={C.muted} /> {restaurant.address}
                         </Text>
                       )}
                     </View>
                     {isSelected && (
-                      <Icon name="checkmark-circle" size={24} color={C.primary} />
+                      <View style={styles.selectedCheck}>
+                        <Icon name="checkmark" size={16} color="#fff" />
+                      </View>
                     )}
                   </TouchableOpacity>
                 );
@@ -462,19 +598,20 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: C.bg,
   },
+
+  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: C.card,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
+    paddingVertical: 14,
   },
   backBtn: {
-    width: 40,
-    height: 40,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -485,25 +622,19 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: C.ink,
+    fontWeight: '800',
+    color: '#fff',
   },
   countBadge: {
-    backgroundColor: C.warn,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    backgroundColor: '#fff',
+    paddingHorizontal: 9,
+    paddingVertical: 3,
     borderRadius: 12,
   },
   countBadgeText: {
     fontSize: 12,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  refreshBtn: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
+    fontWeight: '800',
+    color: C.primary,
   },
 
   loadingBox: {
@@ -517,59 +648,117 @@ const styles = StyleSheet.create({
     color: C.muted,
   },
 
-  listContent: {
-    padding: 16,
-  },
-
-  // Summary Cards
-  summaryGrid: {
+  // Restaurant Banner
+  restaurantBanner: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginBottom: 16,
-  },
-  summaryCard: {
-    flex: 1,
-    minWidth: '22%',
-    backgroundColor: C.card,
-    borderRadius: 12,
-    padding: 12,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: C.border,
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: '#FFF5F5',
+    borderBottomWidth: 1,
+    borderBottomColor: '#FEE2E2',
   },
-  summaryIcon: {
-    width: 36,
-    height: 36,
+  restaurantIconBox: {
+    width: 32,
+    height: 32,
     borderRadius: 10,
+    backgroundColor: '#FEE2E2',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
   },
-  summaryCount: {
-    fontSize: 20,
+  restaurantName: {
+    flex: 1,
+    fontSize: 14,
     fontWeight: '700',
     color: C.ink,
   },
+  switchPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: C.primary,
+  },
+  switchText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: C.primary,
+  },
+
+  // Summary Section
+  summarySection: {
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 6,
+  },
+  summaryGrid: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  summaryCard: {
+    flex: 1,
+    backgroundColor: C.card,
+    borderRadius: 14,
+    padding: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: C.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  summaryCardActive: {
+    borderColor: C.warn,
+    borderWidth: 1.5,
+  },
+  summaryIconCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  summaryCount: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: C.ink,
+  },
   summaryLabel: {
-    fontSize: 11,
+    fontSize: 10,
+    fontWeight: '600',
     color: C.muted,
     marginTop: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
 
   // Tabs
-  tabsContainer: {
-    marginBottom: 16,
+  tabsWrapper: {
+    paddingTop: 8,
+    paddingBottom: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEEFF2',
   },
   tabsContent: {
+    paddingHorizontal: 16,
     gap: 8,
   },
   tab: {
-    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
     backgroundColor: C.card,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: C.border,
   },
   tabActive: {
@@ -584,95 +773,147 @@ const styles = StyleSheet.create({
   tabTextActive: {
     color: '#fff',
   },
+  tabBadge: {
+    marginLeft: 6,
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 8,
+  },
+  tabBadgeActive: {
+    backgroundColor: 'rgba(255,255,255,0.3)',
+  },
+  tabBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#D97706',
+  },
+  tabBadgeTextActive: {
+    color: '#fff',
+  },
 
-  // List Header
-  listHeader: {
-    marginBottom: 12,
+  // List Title
+  listTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 6,
   },
   listTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: C.ink,
   },
-  listSubtitle: {
-    fontSize: 13,
+  listCount: {
+    fontSize: 12,
+    fontWeight: '600',
     color: C.muted,
-    marginTop: 2,
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+
+  // List Content
+  listContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 30,
   },
 
   // Item Card
   itemCard: {
     backgroundColor: C.card,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 10,
+    borderRadius: 16,
+    marginBottom: 12,
+    overflow: 'hidden',
     borderWidth: 1,
     borderColor: C.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  itemHeader: {
+  itemAccent: {
+    height: 3,
+  },
+  itemBody: {
+    padding: 14,
+  },
+  itemHeaderRow: {
     flexDirection: 'row',
     gap: 12,
+    alignItems: 'flex-start',
   },
-  typeIcon: {
+  typeIconBox: {
     width: 40,
     height: 40,
-    borderRadius: 10,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  itemInfo: {
+  itemHeaderInfo: {
     flex: 1,
   },
-  titleRow: {
+  itemTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: C.ink,
+    marginBottom: 4,
+  },
+  itemMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 4,
-    flexWrap: 'wrap',
   },
-  itemTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: C.ink,
-    flex: 1,
-  },
-  typeBadge: {
+  typePill: {
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,
   },
-  typeBadgeText: {
+  typePillText: {
     fontSize: 10,
-    fontWeight: '600',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  timeAgoText: {
+    fontSize: 11,
+    color: C.muted,
   },
   itemDesc: {
     fontSize: 13,
     color: C.muted,
-    lineHeight: 18,
-    marginBottom: 8,
+    lineHeight: 19,
+    marginTop: 10,
+    paddingLeft: 52,
   },
-  itemMeta: {
+  itemFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    justifyContent: 'space-between',
+    marginTop: 12,
+    paddingLeft: 52,
   },
-  statusBadge: {
+  statusChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
   },
-  statusText: {
-    fontSize: 11,
-    fontWeight: '600',
+  statusChipText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
-  dateText: {
+  itemDateText: {
     fontSize: 11,
     color: C.muted,
   },
-  viewBtn: {
+  actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -680,108 +921,102 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingVertical: 10,
     backgroundColor: '#EFF6FF',
-    borderRadius: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
   },
-  viewBtnText: {
+  actionButtonText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
     color: C.info,
   },
 
   // Empty State
   emptyBox: {
     alignItems: 'center',
-    paddingVertical: 40,
+    paddingVertical: 50,
   },
-  emptyIconBox: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#F3F4F6',
+  emptyIconCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
   },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '800',
     color: C.ink,
-    marginBottom: 8,
+    marginBottom: 6,
   },
-  emptyText: {
+  emptySubtitle: {
     fontSize: 14,
     color: C.muted,
+    marginBottom: 20,
+  },
+  emptyRefreshBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: C.primary,
+  },
+  emptyRefreshText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: C.primary,
   },
 
   // Help Card
   helpCard: {
-    flexDirection: 'row',
-    backgroundColor: C.card,
-    borderRadius: 12,
-    padding: 16,
     marginTop: 16,
-    borderWidth: 1,
-    borderColor: C.border,
-    gap: 12,
+    borderRadius: 16,
+    overflow: 'hidden',
   },
-  helpIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+  helpGradient: {
+    padding: 20,
+    alignItems: 'center',
+    borderRadius: 16,
+  },
+  helpIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  helpContent: {
-    flex: 1,
+    marginBottom: 12,
   },
   helpTitle: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '800',
     color: C.ink,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   helpText: {
     fontSize: 13,
     color: C.muted,
-    lineHeight: 18,
+    textAlign: 'center',
+    lineHeight: 19,
+    marginBottom: 16,
   },
-  helpLink: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: C.primary,
-    marginTop: 8,
-  },
-
-  // Restaurant Selector
-  restaurantBanner: {
+  helpBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 16,
+    gap: 6,
+    paddingHorizontal: 20,
     paddingVertical: 10,
-    backgroundColor: '#FEF2F2',
+    borderRadius: 20,
+    backgroundColor: C.info,
   },
-  restaurantName: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: '600',
-    color: C.primary,
-  },
-  switchBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: C.primary,
-  },
-  switchText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: C.primary,
+  helpBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#fff',
   },
 
   // Modal
@@ -790,25 +1025,47 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
+  pickerSheet: {
+    backgroundColor: C.card,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    maxHeight: '70%',
+  },
+  modalDragBar: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#D1D5DB',
+    alignSelf: 'center',
+    marginTop: 12,
+  },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingTop: 16,
+    paddingBottom: 14,
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '800',
     color: C.ink,
   },
-  pickerContent: {
-    backgroundColor: C.card,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: '70%',
+  modalSubtitle: {
+    fontSize: 12,
+    color: C.muted,
+    marginTop: 2,
+  },
+  modalCloseBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   pickerBody: {
     padding: 16,
@@ -819,25 +1076,21 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: 14,
     marginBottom: 10,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 2,
     borderColor: C.border,
-    backgroundColor: C.bg,
+    backgroundColor: '#FAFBFC',
   },
   restaurantOptionSelected: {
     borderColor: C.primary,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: '#FFF5F5',
   },
-  restaurantIcon: {
+  restaurantOptionIcon: {
     width: 44,
     height: 44,
-    borderRadius: 12,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FEE2E2',
-  },
-  restaurantIconSelected: {
-    backgroundColor: C.primary,
   },
   restaurantOptionInfo: {
     flex: 1,
@@ -853,6 +1106,14 @@ const styles = StyleSheet.create({
   restaurantOptionAddress: {
     fontSize: 12,
     color: C.muted,
-    marginTop: 2,
+    marginTop: 3,
+  },
+  selectedCheck: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: C.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

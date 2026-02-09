@@ -1,113 +1,117 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
-// Updated with stylish status tabs pattern
+/**
+ * ============================================================================
+ * MY EQUIPMENT SCREEN - PREMIUM DESIGN (Urban Clap Inspired)
+ * ============================================================================
+ */
+
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput,
   RefreshControl, Modal, ScrollView, Alert, ActivityIndicator, Image,
-  useWindowDimensions,
+  useWindowDimensions, Platform, StatusBar, Animated, Dimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary } from 'react-native-image-picker';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { api, getImageUrl } from '../api/client';
 import { useRestaurant } from '../context/RestaurantContext';
 import { RestaurantSelectorBar } from '../components/RestaurantSelector';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
-import { scale, moderateScale, isTablet, getContainerMaxWidth, getGridColumns } from '../utils/responsive';
 
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const CARD_WIDTH = (SCREEN_WIDTH - 48) / 2;
+
+// Premium Color Palette (Consistent with Marketplace)
 const C = {
   primary: '#EF3A3A',
+  primaryDark: '#DC2626',
+  primaryLight: '#FEE2E2',
+  gradient1: '#EF3A3A',
+  gradient2: '#DC2626',
   ink: '#1D2254',
-  text: '#0F172A',
-  muted: '#6B7280',
-  bg: '#F5F7FA',
+  text: '#334155',
+  muted: '#94A3B8',
+  bg: '#F8FAFC',
   card: '#FFFFFF',
-  border: '#E5E7EB',
-  ok: '#10B981',
-  warn: '#F59E0B',
+  border: '#E2E8F0',
+  success: '#10B981',
+  successLight: '#D1FAE5',
+  warning: '#F59E0B',
+  warningLight: '#FEF3C7',
   danger: '#EF4444',
+  dangerLight: '#FEE2E2',
   info: '#3B82F6',
+  infoLight: '#DBEAFE',
+  shadow: '#64748B',
 };
 
 const statusFilters = [
-  { key: 'all', label: 'All', icon: 'list-outline', bg: '#F3F4F6', color: '#1D2254' },
-  { key: 'AVAILABLE', label: 'Available', icon: 'checkmark-circle-outline', bg: '#ECFDF5', color: '#10B981' },
-  { key: 'IN_USE', label: 'In Use', icon: 'play-circle-outline', bg: '#DBEAFE', color: '#2563EB' },
-  { key: 'MAINTENANCE', label: 'Maintenance', icon: 'construct-outline', bg: '#FEF3C7', color: '#D97706' },
-  { key: 'RETIRED', label: 'Retired', icon: 'archive-outline', bg: '#F3F4F6', color: '#6B7280' },
+  { key: 'all', label: 'All', icon: 'grid-outline', color: C.ink },
+  { key: 'AVAILABLE', label: 'Available', icon: 'checkmark-circle', color: C.success },
+  { key: 'IN_USE', label: 'In Use', icon: 'play-circle', color: C.info },
+  { key: 'MAINTENANCE', label: 'Maintenance', icon: 'construct', color: C.warning },
+  { key: 'RETIRED', label: 'Retired', icon: 'archive', color: C.muted },
 ];
 
 const warrantyFilters = [
-  { key: 'all', label: 'All Warranty' },
-  { key: 'active', label: 'Active' },
-  { key: 'expiring', label: 'Expiring Soon' },
-  { key: 'expired', label: 'Expired' },
-  { key: 'no-warranty', label: 'No Warranty' },
+  { key: 'all', label: 'All', icon: 'shield-outline' },
+  { key: 'active', label: 'Active', icon: 'shield-checkmark', color: C.success },
+  { key: 'expiring', label: 'Expiring', icon: 'alert-circle', color: C.warning },
+  { key: 'expired', label: 'Expired', icon: 'close-circle', color: C.danger },
 ];
 
 const getWarrantyStatus = (warrantyEndDate) => {
-  if (!warrantyEndDate) {
-    return { color: 'gray', label: 'No Warranty' };
-  }
+  if (!warrantyEndDate) return { color: 'gray', label: 'No Warranty' };
   const endDate = new Date(warrantyEndDate);
   const now = new Date();
   const thirtyDaysFromNow = new Date();
   thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-
-  if (endDate < now) {
-    return { color: 'red', label: 'Expired' };
-  } else if (endDate <= thirtyDaysFromNow) {
-    return { color: 'yellow', label: 'Expiring Soon' };
-  }
+  if (endDate < now) return { color: 'red', label: 'Expired' };
+  if (endDate <= thirtyDaysFromNow) return { color: 'yellow', label: 'Expiring Soon' };
   return { color: 'green', label: 'Active' };
 };
 
 const getWarrantyStyle = (status) => {
   switch (status.color) {
-    case 'green':
-      return { bg: '#ECFDF5', text: C.ok, icon: 'shield-checkmark-outline' };
-    case 'yellow':
-      return { bg: '#FFFBEB', text: C.warn, icon: 'alert-circle-outline' };
-    case 'red':
-      return { bg: '#FEF2F2', text: C.danger, icon: 'close-circle-outline' };
-    default:
-      return { bg: '#F3F4F6', text: C.muted, icon: 'time-outline' };
+    case 'green': return { bg: C.successLight, text: C.success, icon: 'shield-checkmark' };
+    case 'yellow': return { bg: C.warningLight, text: C.warning, icon: 'alert-circle' };
+    case 'red': return { bg: C.dangerLight, text: C.danger, icon: 'close-circle' };
+    default: return { bg: '#F1F5F9', text: C.muted, icon: 'time-outline' };
   }
 };
 
 const getStatusStyle = (status) => {
   switch (status) {
-    case 'AVAILABLE':
-      return { bg: '#ECFDF5', text: C.ok, label: 'Available' };
-    case 'IN_USE':
-      return { bg: '#EFF6FF', text: C.info, label: 'In Use' };
-    case 'MAINTENANCE':
-      return { bg: '#FFFBEB', text: C.warn, label: 'Maintenance' };
-    case 'RETIRED':
-      return { bg: '#F3F4F6', text: C.muted, label: 'Retired' };
-    default:
-      return { bg: '#F3F4F6', text: C.muted, label: status };
+    case 'AVAILABLE': return { bg: C.successLight, text: C.success, label: 'Available', icon: 'checkmark-circle' };
+    case 'IN_USE': return { bg: C.infoLight, text: C.info, label: 'In Use', icon: 'play-circle' };
+    case 'MAINTENANCE': return { bg: C.warningLight, text: C.warning, label: 'Maintenance', icon: 'construct' };
+    case 'RETIRED': return { bg: '#F1F5F9', text: C.muted, label: 'Retired', icon: 'archive' };
+    default: return { bg: '#F1F5F9', text: C.muted, label: status, icon: 'help-circle' };
   }
 };
 
+const DELIVERY_OPTIONS = [
+  { value: "Same day", label: "Same day" },
+  { value: "1-2 days", label: "1-2 days" },
+  { value: "2-3 days", label: "2-3 days" },
+  { value: "3-5 days", label: "3-5 days" },
+  { value: "1 week", label: "1 week" },
+];
+
 export default function MyEquipmentScreen({ navigation }) {
-  // Responsive sizing
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const isTabletDevice = isTablet(width);
-  const gridColumns = isTabletDevice ? 2 : 1;
-  const horizontalPadding = isTabletDevice ? scale(24) : scale(16);
-  const cardGap = isTabletDevice ? scale(16) : scale(12);
+  const isTablet = width >= 768;
+  const gridColumns = isTablet ? 2 : 1;
 
-  // Global restaurant context
   const {
-    restaurants,
     selectedRestaurant,
     selectedRestaurantId,
     loading: restaurantsLoading,
     loadRestaurants,
-    selectRestaurant,
-    hasRestaurants,
   } = useRestaurant();
 
   const [equipments, setEquipments] = useState([]);
@@ -120,45 +124,34 @@ export default function MyEquipmentScreen({ navigation }) {
   const [saving, setSaving] = useState(false);
   const [categories, setCategories] = useState([]);
   const [uploading, setUploading] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   const [form, setForm] = useState({
-    id: null,
-    categoryId: '',
-    subCategoryId: '',
-    brand: '',
-    model: '',
-    serialNumber: '',
-    installLocation: '',
-    purchaseDate: '',
-    warrantyEndDate: '',
-    notes: '',
-    billImageUrl: '',
-    warrantyCardUrl: '',
-    photoUrls: [],
+    id: null, categoryId: '', subCategoryId: '', brand: '', model: '',
+    serialNumber: '', installLocation: '', purchaseDate: '', warrantyEndDate: '',
+    notes: '', billImageUrl: '', warrantyCardUrl: '', photoUrls: [],
   });
   const [subCategories, setSubCategories] = useState([]);
+  const [categoryPickerVisible, setCategoryPickerVisible] = useState(false);
+  const [subCategoryPickerVisible, setSubCategoryPickerVisible] = useState(false);
+  const [showPurchaseDatePicker, setShowPurchaseDatePicker] = useState(false);
+  const [showWarrantyDatePicker, setShowWarrantyDatePicker] = useState(false);
 
-  // Fetch categories (with subCategories included)
+  // Fetch categories
   const fetchCategories = useCallback(async () => {
     try {
       const { data } = await api.get('/public/categories');
-      if (data.ok && data.data) {
-        setCategories(data.data);
-      }
+      if (data.ok && data.data) setCategories(data.data);
     } catch (error) {
       console.log('Error fetching categories:', error);
     }
   }, []);
 
-  // Update subcategories when category changes
   useEffect(() => {
     if (form.categoryId) {
       const selectedCategory = categories.find(c => c.id === form.categoryId);
       setSubCategories(selectedCategory?.subCategories || []);
-      // Reset subcategory when category changes
-      if (!form.id) {
-        setForm(f => ({ ...f, subCategoryId: '' }));
-      }
+      if (!form.id) setForm(f => ({ ...f, subCategoryId: '' }));
     } else {
       setSubCategories([]);
     }
@@ -169,9 +162,7 @@ export default function MyEquipmentScreen({ navigation }) {
     if (!selectedRestaurantId) return;
     try {
       const { data } = await api.get(`/owner/equipment?restaurantId=${selectedRestaurantId}`);
-      if (data.ok && data.data) {
-        setEquipments(data.data.items || []);
-      }
+      if (data.ok && data.data) setEquipments(data.data.items || []);
     } catch (error) {
       console.log('Error fetching equipment:', error);
       Alert.alert('Error', 'Failed to load equipment');
@@ -181,10 +172,7 @@ export default function MyEquipmentScreen({ navigation }) {
     }
   }, [selectedRestaurantId]);
 
-  useEffect(() => {
-    fetchCategories();
-  }, [fetchCategories]);
-
+  useEffect(() => { fetchCategories(); }, [fetchCategories]);
   useEffect(() => {
     if (selectedRestaurantId) {
       setLoading(true);
@@ -198,14 +186,10 @@ export default function MyEquipmentScreen({ navigation }) {
     await fetchEquipments();
   };
 
-  // Calculate status counts for summary cards
+  // Status counts
   const statusCounts = useMemo(() => {
     const counts = { all: equipments.length, AVAILABLE: 0, IN_USE: 0, MAINTENANCE: 0, RETIRED: 0 };
-    equipments.forEach(e => {
-      if (counts[e.status] !== undefined) {
-        counts[e.status]++;
-      }
-    });
+    equipments.forEach(e => { if (counts[e.status] !== undefined) counts[e.status]++; });
     return counts;
   }, [equipments]);
 
@@ -213,62 +197,38 @@ export default function MyEquipmentScreen({ navigation }) {
   const filtered = equipments.filter(e => {
     const q = search.toLowerCase();
     const categoryName = typeof e.category === 'object' ? e.category?.name : e.category;
-    const okQ = !q ||
-      e.name?.toLowerCase().includes(q) ||
-      categoryName?.toLowerCase().includes(q) ||
-      e.serialNumber?.toLowerCase().includes(q);
-
-    // Status filter
+    const okQ = !q || e.name?.toLowerCase().includes(q) || categoryName?.toLowerCase().includes(q) || e.serialNumber?.toLowerCase().includes(q);
     const okStatus = statusFilter === 'all' || e.status === statusFilter;
-
-    // Warranty filter
     let okWarranty = true;
     if (warrantyFilter !== 'all') {
       const ws = getWarrantyStatus(e.warrantyEndDate);
       if (warrantyFilter === 'active' && ws.color !== 'green') okWarranty = false;
       if (warrantyFilter === 'expiring' && ws.color !== 'yellow') okWarranty = false;
       if (warrantyFilter === 'expired' && ws.color !== 'red') okWarranty = false;
-      if (warrantyFilter === 'no-warranty' && ws.color !== 'gray') okWarranty = false;
     }
-
     return okQ && okStatus && okWarranty;
   });
 
   const openForm = (equipment = null) => {
     if (equipment) {
-      // Handle both object and string category formats
       const categoryObj = typeof equipment.category === 'object' ? equipment.category : null;
       const subCategoryObj = typeof equipment.subCategory === 'object' ? equipment.subCategory : null;
       setForm({
         id: equipment.id,
         categoryId: categoryObj?.id || equipment.categoryId || '',
         subCategoryId: subCategoryObj?.id || equipment.subCategoryId || '',
-        brand: equipment.brand || '',
-        model: equipment.model || '',
-        serialNumber: equipment.serialNumber || '',
-        installLocation: equipment.installLocation || '',
+        brand: equipment.brand || '', model: equipment.model || '',
+        serialNumber: equipment.serialNumber || '', installLocation: equipment.installLocation || '',
         purchaseDate: equipment.purchaseDate ? equipment.purchaseDate.split('T')[0] : '',
         warrantyEndDate: equipment.warrantyEndDate ? equipment.warrantyEndDate.split('T')[0] : '',
-        notes: equipment.notes || '',
-        billImageUrl: equipment.billImageUrl || '',
-        warrantyCardUrl: equipment.warrantyCardUrl || '',
-        photoUrls: equipment.photoUrls || [],
+        notes: equipment.notes || '', billImageUrl: equipment.billImageUrl || '',
+        warrantyCardUrl: equipment.warrantyCardUrl || '', photoUrls: equipment.photoUrls || [],
       });
     } else {
       setForm({
-        id: null,
-        categoryId: '',
-        subCategoryId: '',
-        brand: '',
-        model: '',
-        serialNumber: '',
-        installLocation: '',
-        purchaseDate: '',
-        warrantyEndDate: '',
-        notes: '',
-        billImageUrl: '',
-        warrantyCardUrl: '',
-        photoUrls: [],
+        id: null, categoryId: '', subCategoryId: '', brand: '', model: '',
+        serialNumber: '', installLocation: '', purchaseDate: '', warrantyEndDate: '',
+        notes: '', billImageUrl: '', warrantyCardUrl: '', photoUrls: [],
       });
     }
     setModalVisible(true);
@@ -277,94 +237,48 @@ export default function MyEquipmentScreen({ navigation }) {
   // Image upload
   const uploadImage = async (type) => {
     try {
-      const result = await launchImageLibrary({
-        mediaType: 'photo',
-        quality: 0.8,
-        maxWidth: 1920,
-        maxHeight: 1920,
-      });
-
+      const result = await launchImageLibrary({ mediaType: 'photo', quality: 0.8, maxWidth: 1920, maxHeight: 1920 });
       if (result.didCancel || !result.assets?.[0]) return;
-
       setUploading(true);
-
       const asset = result.assets[0];
       const formData = new FormData();
-      formData.append('file', {
-        uri: asset.uri,
-        type: asset.type || 'image/jpeg',
-        name: asset.fileName || `image-${Date.now()}.jpg`,
-      });
+      formData.append('file', { uri: asset.uri, type: asset.type || 'image/jpeg', name: asset.fileName || `image-${Date.now()}.jpg` });
       formData.append('folder', `equipment/${type}`);
-
-      const { data } = await api.post('/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-
+      const { data } = await api.post('/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
       if (data.ok && data.url) {
-        if (type === 'bills') {
-          setForm(f => ({ ...f, billImageUrl: data.url }));
-        } else if (type === 'warranty-cards') {
-          setForm(f => ({ ...f, warrantyCardUrl: data.url }));
-        } else if (type === 'photos') {
-          if (form.photoUrls.length < 5) {
-            setForm(f => ({ ...f, photoUrls: [...f.photoUrls, data.url] }));
-          } else {
-            Alert.alert('Limit Reached', 'Maximum 5 photos allowed');
-          }
+        if (type === 'bills') setForm(f => ({ ...f, billImageUrl: data.url }));
+        else if (type === 'warranty-cards') setForm(f => ({ ...f, warrantyCardUrl: data.url }));
+        else if (type === 'photos') {
+          if (form.photoUrls.length < 5) setForm(f => ({ ...f, photoUrls: [...f.photoUrls, data.url] }));
+          else Alert.alert('Limit Reached', 'Maximum 5 photos allowed');
         }
-      } else {
-        Alert.alert('Error', 'Failed to upload image');
-      }
+      } else Alert.alert('Error', 'Failed to upload image');
     } catch (error) {
-      console.log('Upload error:', error);
       Alert.alert('Error', 'Failed to upload image');
     } finally {
       setUploading(false);
     }
   };
 
-  const removePhoto = (index) => {
-    setForm(f => ({
-      ...f,
-      photoUrls: f.photoUrls.filter((_, i) => i !== index)
-    }));
-  };
+  const removePhoto = (index) => setForm(f => ({ ...f, photoUrls: f.photoUrls.filter((_, i) => i !== index) }));
 
   const saveEquipment = async () => {
-    if (!form.categoryId) {
-      Alert.alert('Error', 'Please select a category');
-      return;
-    }
-    if (!form.purchaseDate) {
-      Alert.alert('Error', 'Please enter purchase date');
-      return;
-    }
-
     setSaving(true);
     try {
-      // Derive equipment name from category/subcategory (same as web)
       const selectedCategory = categories.find(c => c.id === form.categoryId);
       const selectedSubCategory = subCategories.find(sc => sc.id === form.subCategoryId);
       const equipmentName = selectedSubCategory?.name || selectedCategory?.name || 'Equipment';
-
       const payload = {
-        restaurantId: selectedRestaurantId,
-        name: equipmentName,
-        categoryId: form.categoryId,
-        subCategoryId: form.subCategoryId || undefined,
-        brand: form.brand || undefined,
-        model: form.model || undefined,
-        serialNumber: form.serialNumber || undefined,
-        installLocation: form.installLocation || undefined,
-        purchaseDate: new Date(form.purchaseDate).toISOString(),
+        restaurantId: selectedRestaurantId, name: equipmentName,
+        categoryId: form.categoryId || undefined, subCategoryId: form.subCategoryId || undefined,
+        brand: form.brand || undefined, model: form.model || undefined,
+        serialNumber: form.serialNumber || undefined, installLocation: form.installLocation || undefined,
+        purchaseDate: form.purchaseDate ? new Date(form.purchaseDate).toISOString() : undefined,
         warrantyEndDate: form.warrantyEndDate ? new Date(form.warrantyEndDate).toISOString() : undefined,
-        notes: form.notes || undefined,
-        billImageUrl: form.billImageUrl || undefined,
+        notes: form.notes || undefined, billImageUrl: form.billImageUrl || undefined,
         warrantyCardUrl: form.warrantyCardUrl || undefined,
         photoUrls: form.photoUrls.length > 0 ? form.photoUrls : undefined,
       };
-
       if (form.id) {
         await api.patch(`/owner/equipment/${form.id}`, payload);
         Alert.alert('Success', 'Equipment updated successfully');
@@ -372,7 +286,6 @@ export default function MyEquipmentScreen({ navigation }) {
         await api.post('/owner/equipment', payload);
         Alert.alert('Success', 'Equipment added successfully');
       }
-
       setModalVisible(false);
       fetchEquipments();
     } catch (error) {
@@ -383,33 +296,45 @@ export default function MyEquipmentScreen({ navigation }) {
   };
 
   const deleteEquipment = (equipment) => {
-    Alert.alert(
-      'Delete Equipment',
-      `Are you sure you want to delete "${equipment.name}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await api.delete(`/owner/equipment/${equipment.id}`);
-              setEquipments(prev => prev.filter(e => e.id !== equipment.id));
-              Alert.alert('Success', 'Equipment deleted');
-            } catch (error) {
-              Alert.alert('Error', 'Failed to delete equipment');
-            }
+    Alert.alert('Delete Equipment', `Are you sure you want to delete "${equipment.name}"?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete', style: 'destructive',
+        onPress: async () => {
+          try {
+            await api.delete(`/owner/equipment/${equipment.id}`);
+            setEquipments(prev => prev.filter(e => e.id !== equipment.id));
+            Alert.alert('Success', 'Equipment deleted');
+          } catch (error) {
+            Alert.alert('Error', 'Failed to delete equipment');
           }
         }
-      ]
-    );
+      }
+    ]);
   };
 
-  const EquipmentCard = ({ item }) => {
+  const onPurchaseDateChange = (event, selectedDate) => {
+    setShowPurchaseDatePicker(Platform.OS === 'ios');
+    if (selectedDate) setForm(f => ({ ...f, purchaseDate: selectedDate.toISOString().split('T')[0] }));
+  };
+
+  const onWarrantyDateChange = (event, selectedDate) => {
+    setShowWarrantyDatePicker(Platform.OS === 'ios');
+    if (selectedDate) setForm(f => ({ ...f, warrantyEndDate: selectedDate.toISOString().split('T')[0] }));
+  };
+
+  const formatDateDisplay = (dateStr) => {
+    if (!dateStr) return '';
+    return new Date(dateStr).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  };
+
+  // ==================== RENDER EQUIPMENT CARD ====================
+  const renderEquipmentCard = ({ item, index }) => {
     const ws = getWarrantyStatus(item.warrantyEndDate);
     const wStyle = getWarrantyStyle(ws);
     const sStyle = getStatusStyle(item.status);
     const photoCount = item.photoUrls?.length || 0;
+    const categoryName = typeof item.category === 'object' ? item.category?.name : item.category;
 
     return (
       <TouchableOpacity
@@ -417,81 +342,76 @@ export default function MyEquipmentScreen({ navigation }) {
         activeOpacity={0.9}
         onPress={() => navigation.navigate('EquipmentProfile', { equipmentId: item.id })}
       >
-        <View style={st.cardHeader}>
-          <View style={st.iconBox}>
-            {photoCount > 0 ? (
-              <Image source={{ uri: getImageUrl(item.photoUrls[0]) }} style={st.cardImage} />
-            ) : (
-              <Icon name="hardware-chip-outline" size={24} color={C.primary} />
-            )}
+        {/* Card Header with Image */}
+        <View style={st.cardImageContainer}>
+          {photoCount > 0 ? (
+            <Image source={{ uri: getImageUrl(item.photoUrls[0]) }} style={st.cardImage} />
+          ) : (
+            <View style={st.cardImagePlaceholder}>
+              <Icon name="hardware-chip-outline" size={40} color={C.muted} />
+            </View>
+          )}
+          {/* Status Badge */}
+          <View style={[st.statusBadge, { backgroundColor: sStyle.bg }]}>
+            <Icon name={sStyle.icon} size={12} color={sStyle.text} />
+            <Text style={[st.statusBadgeText, { color: sStyle.text }]}>{sStyle.label}</Text>
           </View>
-          <View style={st.cardInfo}>
-            <Text style={st.cardTitle} numberOfLines={1}>{item.name}</Text>
-            {item.category && (
-              <Text style={st.cardSub} numberOfLines={1}>
-                {typeof item.category === 'object' ? item.category.name : item.category}
-              </Text>
-            )}
-            {item.serialNumber && (
-              <Text style={st.serialText}>SN: {item.serialNumber}</Text>
-            )}
-          </View>
+          {/* Photo Count Badge */}
           {photoCount > 1 && (
-            <View style={st.photoBadge}>
-              <Icon name="images-outline" size={12} color={C.muted} />
-              <Text style={st.photoBadgeText}>{photoCount}</Text>
+            <View style={st.photoCountBadge}>
+              <Icon name="images" size={12} color="#fff" />
+              <Text style={st.photoCountText}>{photoCount}</Text>
             </View>
           )}
         </View>
 
-        <View style={st.statsRow}>
-          <View style={[st.statBox, { backgroundColor: sStyle.bg }]}>
-            <Text style={[st.statLabel, { color: sStyle.text }]}>{sStyle.label}</Text>
-          </View>
+        {/* Card Info */}
+        <View style={st.cardInfo}>
+          <Text style={st.cardTitle} numberOfLines={1}>{item.name}</Text>
+          {categoryName && (
+            <View style={st.categoryRow}>
+              <Icon name="folder-outline" size={12} color={C.muted} />
+              <Text style={st.categoryText} numberOfLines={1}>{categoryName}</Text>
+            </View>
+          )}
+          {item.serialNumber && (
+            <Text style={st.serialText}>SN: {item.serialNumber}</Text>
+          )}
 
-          <View style={[st.statBox, { backgroundColor: wStyle.bg }]}>
+          {/* Warranty Row */}
+          <View style={[st.warrantyRow, { backgroundColor: wStyle.bg }]}>
             <Icon name={wStyle.icon} size={14} color={wStyle.text} />
-            <Text style={[st.statLabel, { color: wStyle.text }]}>{ws.label}</Text>
+            <Text style={[st.warrantyText, { color: wStyle.text }]}>{ws.label}</Text>
           </View>
 
-          {item.purchaseDate && (
-            <View style={[st.statBox, { backgroundColor: '#F3F4F6' }]}>
-              <Icon name="calendar-outline" size={14} color={C.muted} />
-              <Text style={st.statLabel}>{item.purchaseDate.split('T')[0]}</Text>
+          {/* Documents */}
+          {(item.billImageUrl || item.warrantyCardUrl) && (
+            <View style={st.docsRow}>
+              {item.billImageUrl && (
+                <View style={st.docBadge}>
+                  <Icon name="document-text" size={10} color={C.info} />
+                  <Text style={st.docText}>Bill</Text>
+                </View>
+              )}
+              {item.warrantyCardUrl && (
+                <View style={st.docBadge}>
+                  <Icon name="card" size={10} color={C.success} />
+                  <Text style={st.docText}>Card</Text>
+                </View>
+              )}
             </View>
           )}
         </View>
 
-        {/* Document indicators */}
-        {(item.billImageUrl || item.warrantyCardUrl) && (
-          <View style={st.docsRow}>
-            {item.billImageUrl && (
-              <View style={st.docBadge}>
-                <Icon name="document-text-outline" size={12} color={C.info} />
-                <Text style={st.docBadgeText}>Bill</Text>
-              </View>
-            )}
-            {item.warrantyCardUrl && (
-              <View style={st.docBadge}>
-                <Icon name="shield-checkmark-outline" size={12} color={C.ok} />
-                <Text style={st.docBadgeText}>Warranty Card</Text>
-              </View>
-            )}
-          </View>
-        )}
-
+        {/* Card Actions */}
         <View style={st.cardActions}>
           <TouchableOpacity
-            style={[st.actionBtn, st.requestServiceBtn]}
+            style={st.serviceBtn}
             onPress={() => {
-              // Navigate to ServiceRequest screen (same flow as owner web /owner/request-service)
-              // Pass all equipment details including category/subcategory IDs for fetching services/parts
               const categoryObj = typeof item.category === 'object' ? item.category : null;
               const subCategoryObj = typeof item.subCategory === 'object' ? item.subCategory : null;
-
               navigation.navigate('ServiceRequest', {
-                equipmentId: item.id,
-                equipmentName: item.name,
+                equipmentId: item.id, equipmentName: item.name,
                 categoryId: categoryObj?.id || item.categoryId || null,
                 categoryName: categoryObj?.name || (typeof item.category === 'string' ? item.category : null),
                 subCategoryId: subCategoryObj?.id || item.subCategoryId || null,
@@ -499,479 +419,347 @@ export default function MyEquipmentScreen({ navigation }) {
               });
             }}
           >
-            <Icon name="construct" size={16} color="#fff" />
-            <Text style={[st.actionText, { color: '#fff' }]}>Request Service</Text>
+            <Icon name="construct" size={14} color="#fff" />
+            <Text style={st.serviceBtnText}>Service</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={st.actionBtn} onPress={() => navigation.navigate('EquipmentProfile', { equipmentId: item.id })}>
-            <Icon name="eye-outline" size={16} color={C.ink} />
-            <Text style={st.actionText}>View</Text>
+          <TouchableOpacity style={st.iconBtn} onPress={() => openForm(item)}>
+            <Icon name="pencil" size={16} color={C.info} />
           </TouchableOpacity>
-          <TouchableOpacity style={[st.actionBtn, { backgroundColor: '#EFF6FF' }]} onPress={() => openForm(item)}>
-            <Icon name="pencil-outline" size={16} color={C.info} />
-          </TouchableOpacity>
-          <TouchableOpacity style={[st.actionBtn, { backgroundColor: '#FEF2F2' }]} onPress={() => deleteEquipment(item)}>
-            <Icon name="trash-outline" size={16} color={C.danger} />
+          <TouchableOpacity style={[st.iconBtn, { backgroundColor: C.dangerLight }]} onPress={() => deleteEquipment(item)}>
+            <Icon name="trash" size={16} color={C.danger} />
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
     );
   };
 
-  // Restaurant picker modal
-  const [restaurantPickerVisible, setRestaurantPickerVisible] = useState(false);
-  const [categoryPickerVisible, setCategoryPickerVisible] = useState(false);
-  const [subCategoryPickerVisible, setSubCategoryPickerVisible] = useState(false);
-  const [menuVisible, setMenuVisible] = useState(false);
+  // ==================== LOADING STATE ====================
+  if ((loading || restaurantsLoading) && !refreshing) {
+    return (
+      <SafeAreaView style={st.container} edges={['top']}>
+        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <LinearGradient colors={[C.gradient1, C.gradient2]} style={st.loadingHero}>
+          <Text style={st.heroTitle}>My Equipment</Text>
+        </LinearGradient>
+        <View style={st.loadingContainer}>
+          <ActivityIndicator size="large" color={C.primary} />
+          <Text style={st.loadingText}>Loading equipment...</Text>
+        </View>
+        <KniBottomNav navigation={navigation} active="equipment" />
+      </SafeAreaView>
+    );
+  }
 
+  // ==================== MAIN RENDER ====================
   return (
     <SafeAreaView style={st.container} edges={['top']}>
-      {/* Header */}
-      <View style={st.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
-          <Icon name="arrow-back" size={22} color={C.ink} />
-        </TouchableOpacity>
-        <Text style={st.headerTitle}>My Equipment</Text>
-        <TouchableOpacity onPress={() => openForm()} style={st.addBtn}>
-          <Icon name="add" size={22} color="#fff" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
-          <Icon name="menu" size={22} color="#1D2254" />
-        </TouchableOpacity>
-      </View>
+      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
 
-      {/* Restaurant Selector - Global */}
+      {/* Premium Gradient Header */}
+      <LinearGradient
+        colors={[C.gradient1, C.gradient2]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={st.heroSection}
+      >
+        <View style={st.heroContent}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
+            <Icon name="arrow-back" size={22} color="#fff" />
+          </TouchableOpacity>
+          <View style={st.heroTextContainer}>
+            <Text style={st.heroTitle}>My Equipment</Text>
+            <Text style={st.heroSubtitle}>{selectedRestaurant?.name || 'Select Restaurant'}</Text>
+          </View>
+          <View style={st.heroActions}>
+            <TouchableOpacity style={st.heroIconBtn} onPress={() => openForm()}>
+              <Icon name="add" size={22} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity style={st.heroIconBtn} onPress={() => setMenuVisible(true)}>
+              <Icon name="menu" size={22} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Search Bar */}
+        <View style={st.searchContainer}>
+          <View style={st.searchBar}>
+            <Icon name="search" size={20} color={C.muted} />
+            <TextInput
+              style={st.searchInput}
+              placeholder="Search equipment..."
+              placeholderTextColor={C.muted}
+              value={search}
+              onChangeText={setSearch}
+              returnKeyType="search"
+            />
+            {search.length > 0 && (
+              <TouchableOpacity onPress={() => setSearch('')} style={st.clearBtn}>
+                <Icon name="close-circle" size={20} color={C.muted} />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      </LinearGradient>
+
+      {/* Restaurant Selector */}
       <RestaurantSelectorBar />
 
-      {/* Search */}
-      <View style={st.searchContainer}>
-        <View style={st.searchBox}>
-          <View style={st.searchIconBox}>
-            <Icon name="search" size={18} color={C.primary} />
-          </View>
-          <TextInput
-            style={st.searchInput}
-            placeholder="Search by name, category, serial..."
-            placeholderTextColor={C.muted}
-            value={search}
-            onChangeText={setSearch}
-          />
-          {search.length > 0 && (
-            <TouchableOpacity onPress={() => setSearch('')} style={st.clearSearchBtn}>
-              <View style={st.clearSearchIcon}>
-                <Icon name="close" size={14} color="#fff" />
-              </View>
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-
-      {/* Status Filter - Stylish Summary Cards */}
+      {/* Status Filter Chips */}
       <View style={st.filterSection}>
-        <View style={st.filterHeader}>
-          <Icon name="flag" size={14} color={C.primary} />
-          <Text style={st.filterLabel}>Status</Text>
-        </View>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={st.filterScrollContent}
-        >
-          {statusFilters.map((filter, index) => {
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.filterScroll}>
+          {statusFilters.map((filter) => {
             const isActive = statusFilter === filter.key;
-            const count = statusCounts[filter.key] || 0;
             return (
               <TouchableOpacity
                 key={filter.key}
-                style={[
-                  st.summaryCard,
-                  isActive && st.summaryCardActive,
-                  { borderColor: isActive ? filter.color : C.border },
-                  index === 0 && { marginLeft: 0 }
-                ]}
+                style={[st.filterChip, isActive && st.filterChipActive]}
                 onPress={() => setStatusFilter(filter.key)}
-                activeOpacity={0.7}
               >
-                <View style={[st.summaryIcon, { backgroundColor: filter.bg }]}>
-                  <Icon name={filter.icon} size={16} color={filter.color} />
-                </View>
-                <Text style={[st.summaryCount, isActive && { color: filter.color }]}>
-                  {count}
+                <Icon name={filter.icon} size={16} color={isActive ? '#fff' : filter.color} />
+                <Text style={[st.filterChipText, isActive && st.filterChipTextActive]}>
+                  {filter.label} ({statusCounts[filter.key] || 0})
                 </Text>
-                <Text style={[st.summaryLabel, isActive && { color: filter.color }]}>
-                  {filter.label}
-                </Text>
-                {isActive && (
-                  <View style={[st.summaryActiveBar, { backgroundColor: filter.color }]} />
-                )}
               </TouchableOpacity>
             );
           })}
         </ScrollView>
       </View>
 
-      {/* Warranty Filter */}
-      <View style={st.filterSection}>
-        <View style={st.filterHeader}>
-          <Icon name="shield-checkmark" size={14} color={C.info} />
-          <Text style={st.filterLabel}>Warranty</Text>
-        </View>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={st.filterScrollContent}
-        >
-          {warrantyFilters.map((filter, index) => {
+      {/* Warranty Filter Chips */}
+      <View style={st.warrantyFilterSection}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.filterScroll}>
+          {warrantyFilters.map((filter) => {
             const isActive = warrantyFilter === filter.key;
             return (
               <TouchableOpacity
                 key={filter.key}
-                style={[
-                  st.warrantyChip,
-                  isActive && st.warrantyChipActive,
-                  index === 0 && { marginLeft: 0 }
-                ]}
+                style={[st.warrantyChip, isActive && st.warrantyChipActive]}
                 onPress={() => setWarrantyFilter(filter.key)}
-                activeOpacity={0.7}
               >
-                {isActive && (
-                  <View style={st.warrantyCheckIcon}>
-                    <Icon name="checkmark" size={10} color="#fff" />
-                  </View>
-                )}
-                <Text style={[st.warrantyText, isActive && st.warrantyTextActive]}>
-                  {filter.label}
-                </Text>
+                <Icon name={filter.icon} size={14} color={isActive ? '#fff' : (filter.color || C.muted)} />
+                <Text style={[st.warrantyChipText, isActive && st.warrantyChipTextActive]}>{filter.label}</Text>
               </TouchableOpacity>
             );
           })}
         </ScrollView>
       </View>
 
-      {/* Results count */}
-      <View style={st.resultsRow}>
-        <View style={st.resultsLeft}>
-          <View style={st.resultsDot} />
-          <Text style={st.resultsText}>
-            {filtered.length} of {equipments.length} equipment
-          </Text>
-        </View>
-        {(statusFilter !== 'all' || warrantyFilter !== 'all' || search.length > 0) && (
+      {/* Results Header */}
+      <View style={st.resultsHeader}>
+        <Text style={st.resultsTitle}>{filtered.length} Equipment</Text>
+        {(statusFilter !== 'all' || warrantyFilter !== 'all' || search) && (
           <TouchableOpacity
-            style={st.resultsBadge}
-            onPress={() => {
-              setStatusFilter('all');
-              setWarrantyFilter('all');
-              setSearch('');
-            }}
+            style={st.clearFiltersBtn}
+            onPress={() => { setStatusFilter('all'); setWarrantyFilter('all'); setSearch(''); }}
           >
             <Icon name="close-circle" size={14} color={C.primary} />
-            <Text style={st.resultsBadgeText}>Clear All</Text>
+            <Text style={st.clearFiltersText}>Clear</Text>
           </TouchableOpacity>
         )}
       </View>
 
-      {/* List */}
-      {loading ? (
-        <View style={st.loadingBox}>
-          <ActivityIndicator size="large" color={C.primary} />
-        </View>
-      ) : (
-        <FlatList
-          data={filtered}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item, index }) => (
-            <View style={{
-              flex: 1,
-              maxWidth: isTabletDevice ? '50%' : '100%',
-              paddingLeft: isTabletDevice && index % 2 === 1 ? cardGap / 2 : 0,
-              paddingRight: isTabletDevice && index % 2 === 0 ? cardGap / 2 : 0,
-            }}>
-              <EquipmentCard item={item} />
-            </View>
-          )}
-          numColumns={gridColumns}
-          key={`grid-${gridColumns}`}
-          contentContainerStyle={[st.list, { paddingHorizontal: horizontalPadding }]}
-          columnWrapperStyle={gridColumns > 1 ? { marginBottom: cardGap } : undefined}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} />
-          }
-          ListEmptyComponent={
-            <View style={st.emptyBox}>
+      {/* Equipment List */}
+      <FlatList
+        data={filtered}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={renderEquipmentCard}
+        numColumns={gridColumns}
+        key={`grid-${gridColumns}`}
+        contentContainerStyle={st.listContent}
+        columnWrapperStyle={gridColumns > 1 ? st.columnWrapper : undefined}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} />}
+        ListEmptyComponent={
+          <View style={st.emptyState}>
+            <View style={st.emptyIconContainer}>
               <Icon name="hardware-chip-outline" size={64} color={C.muted} />
-              <Text style={st.emptyTitle}>
-                {equipments.length === 0 ? 'No Equipment Yet' : 'No Results'}
-              </Text>
-              <Text style={st.emptyText}>
-                {equipments.length === 0 ? 'Add your first equipment to get started' : 'No equipment matches your filters'}
-              </Text>
-              {equipments.length === 0 && (
-                <TouchableOpacity style={st.emptyBtn} onPress={() => openForm()}>
-                  <Icon name="add" size={18} color="#fff" />
-                  <Text style={st.emptyBtnText}>Add Equipment</Text>
-                </TouchableOpacity>
-              )}
             </View>
-          }
-        />
-      )}
+            <Text style={st.emptyTitle}>{equipments.length === 0 ? 'No Equipment Yet' : 'No Results'}</Text>
+            <Text style={st.emptySubtitle}>
+              {equipments.length === 0 ? 'Add your first equipment to get started' : 'Try different filters'}
+            </Text>
+            {equipments.length === 0 && (
+              <TouchableOpacity style={st.emptyBtn} onPress={() => openForm()}>
+                <Icon name="add" size={18} color="#fff" />
+                <Text style={st.emptyBtnText}>Add Equipment</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        }
+      />
 
       {/* Add/Edit Modal */}
       <Modal visible={modalVisible} animationType="slide" transparent>
         <View style={st.modalOverlay}>
-          <View style={st.modalContent}>
-            <View style={st.modalHeader}>
+          <View style={st.modalContainer}>
+            <LinearGradient colors={[C.gradient1, C.gradient2]} style={st.modalHeader}>
               <Text style={st.modalTitle}>{form.id ? 'Edit Equipment' : 'Add Equipment'}</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Icon name="close" size={24} color={C.ink} />
+              <TouchableOpacity onPress={() => setModalVisible(false)} style={st.modalCloseBtn}>
+                <Icon name="close" size={24} color="#fff" />
               </TouchableOpacity>
-            </View>
+            </LinearGradient>
 
-            <ScrollView style={st.modalBody}>
-              {/* Restaurant Display (read-only) */}
-              <Text style={st.label}>Restaurant</Text>
-              <View style={st.restaurantDisplay}>
+            <ScrollView style={st.modalBody} contentContainerStyle={st.modalBodyContent} showsVerticalScrollIndicator={true}>
+              {/* Restaurant */}
+              <Text style={st.inputLabel}>Restaurant</Text>
+              <View style={st.readOnlyInput}>
                 <Icon name="business" size={18} color={C.muted} />
-                <Text style={st.restaurantDisplayText}>{selectedRestaurant?.name || 'No restaurant selected'}</Text>
+                <Text style={st.readOnlyText}>{selectedRestaurant?.name || 'No restaurant'}</Text>
               </View>
 
-              {/* Category Picker */}
-              <Text style={st.label}>Category *</Text>
-              <TouchableOpacity
-                style={st.pickerBtn}
-                onPress={() => setCategoryPickerVisible(true)}
-              >
+              {/* Category */}
+              <Text style={st.inputLabel}>Category *</Text>
+              <TouchableOpacity style={st.pickerBtn} onPress={() => setCategoryPickerVisible(true)}>
                 <Text style={form.categoryId ? st.pickerText : st.pickerPlaceholder}>
                   {categories.find(c => c.id === form.categoryId)?.name || 'Select category'}
                 </Text>
                 <Icon name="chevron-down" size={18} color={C.muted} />
               </TouchableOpacity>
 
-              {/* Subcategory Picker */}
-              <Text style={st.label}>Subcategory</Text>
+              {/* Subcategory */}
+              <Text style={st.inputLabel}>Subcategory</Text>
               <TouchableOpacity
                 style={[st.pickerBtn, !form.categoryId && st.pickerBtnDisabled]}
                 onPress={() => form.categoryId && setSubCategoryPickerVisible(true)}
                 disabled={!form.categoryId}
               >
                 <Text style={form.subCategoryId ? st.pickerText : st.pickerPlaceholder}>
-                  {form.categoryId
-                    ? (subCategories.find(sc => sc.id === form.subCategoryId)?.name || 'Select subcategory')
-                    : 'Select category first'}
+                  {subCategories.find(sc => sc.id === form.subCategoryId)?.name || 'Select subcategory'}
                 </Text>
                 <Icon name="chevron-down" size={18} color={C.muted} />
               </TouchableOpacity>
 
-              {/* Brand & Model in a row */}
+              {/* Brand & Model Row */}
               <View style={st.formRow}>
                 <View style={st.formCol}>
-                  <Text style={st.label}>Brand</Text>
-                  <TextInput
-                    style={st.input}
-                    placeholder="e.g., Samsung"
-                    placeholderTextColor={C.muted}
-                    value={form.brand}
-                    onChangeText={v => setForm(f => ({ ...f, brand: v }))}
-                  />
+                  <Text style={st.inputLabel}>Brand</Text>
+                  <TextInput style={st.input} placeholder="e.g., Samsung" placeholderTextColor={C.muted}
+                    value={form.brand} onChangeText={v => setForm(f => ({ ...f, brand: v }))} />
                 </View>
                 <View style={st.formCol}>
-                  <Text style={st.label}>Model</Text>
-                  <TextInput
-                    style={st.input}
-                    placeholder="e.g., XYZ-123"
-                    placeholderTextColor={C.muted}
-                    value={form.model}
-                    onChangeText={v => setForm(f => ({ ...f, model: v }))}
-                  />
+                  <Text style={st.inputLabel}>Model</Text>
+                  <TextInput style={st.input} placeholder="e.g., XYZ-123" placeholderTextColor={C.muted}
+                    value={form.model} onChangeText={v => setForm(f => ({ ...f, model: v }))} />
                 </View>
               </View>
 
-              <Text style={st.label}>Serial Number</Text>
-              <TextInput
-                style={st.input}
-                placeholder="ABC123456"
-                placeholderTextColor={C.muted}
-                value={form.serialNumber}
-                onChangeText={v => setForm(f => ({ ...f, serialNumber: v }))}
-              />
+              {/* Serial Number */}
+              <Text style={st.inputLabel}>Serial Number</Text>
+              <TextInput style={st.input} placeholder="ABC123456" placeholderTextColor={C.muted}
+                value={form.serialNumber} onChangeText={v => setForm(f => ({ ...f, serialNumber: v }))} />
 
-              <Text style={st.label}>Install Location</Text>
-              <TextInput
-                style={st.input}
-                placeholder="e.g., Main Kitchen"
-                placeholderTextColor={C.muted}
-                value={form.installLocation}
-                onChangeText={v => setForm(f => ({ ...f, installLocation: v }))}
-              />
+              {/* Install Location */}
+              <Text style={st.inputLabel}>Install Location</Text>
+              <TextInput style={st.input} placeholder="e.g., Main Kitchen" placeholderTextColor={C.muted}
+                value={form.installLocation} onChangeText={v => setForm(f => ({ ...f, installLocation: v }))} />
 
-              <Text style={st.label}>Purchase Date *</Text>
-              <TextInput
-                style={st.input}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor={C.muted}
-                value={form.purchaseDate}
-                onChangeText={v => setForm(f => ({ ...f, purchaseDate: v }))}
-              />
+              {/* Purchase Date */}
+              <Text style={st.inputLabel}>Purchase Date</Text>
+              <TouchableOpacity style={st.dateBtn} onPress={() => setShowPurchaseDatePicker(true)}>
+                <Icon name="calendar" size={18} color={C.primary} />
+                <Text style={form.purchaseDate ? st.dateText : st.datePlaceholder}>
+                  {form.purchaseDate ? formatDateDisplay(form.purchaseDate) : 'Select date'}
+                </Text>
+              </TouchableOpacity>
+              {showPurchaseDatePicker && (
+                <DateTimePicker value={form.purchaseDate ? new Date(form.purchaseDate) : new Date()}
+                  mode="date" display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={onPurchaseDateChange} maximumDate={new Date()} />
+              )}
 
-              <Text style={st.label}>Warranty End Date</Text>
-              <TextInput
-                style={st.input}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor={C.muted}
-                value={form.warrantyEndDate}
-                onChangeText={v => setForm(f => ({ ...f, warrantyEndDate: v }))}
-              />
+              {/* Warranty End Date */}
+              <Text style={st.inputLabel}>Warranty End Date</Text>
+              <TouchableOpacity style={st.dateBtn} onPress={() => setShowWarrantyDatePicker(true)}>
+                <Icon name="shield-checkmark" size={18} color={C.info} />
+                <Text style={form.warrantyEndDate ? st.dateText : st.datePlaceholder}>
+                  {form.warrantyEndDate ? formatDateDisplay(form.warrantyEndDate) : 'Select date'}
+                </Text>
+              </TouchableOpacity>
+              {showWarrantyDatePicker && (
+                <DateTimePicker value={form.warrantyEndDate ? new Date(form.warrantyEndDate) : new Date()}
+                  mode="date" display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={onWarrantyDateChange} minimumDate={new Date()} />
+              )}
 
-              <Text style={st.label}>Notes</Text>
-              <TextInput
-                style={[st.input, { height: 80, textAlignVertical: 'top' }]}
-                placeholder="Additional notes about the equipment"
-                placeholderTextColor={C.muted}
-                multiline
-                value={form.notes}
-                onChangeText={v => setForm(f => ({ ...f, notes: v }))}
-              />
+              {/* Notes */}
+              <Text style={st.inputLabel}>Notes</Text>
+              <TextInput style={[st.input, st.textArea]} placeholder="Additional notes..." placeholderTextColor={C.muted}
+                multiline numberOfLines={3} value={form.notes} onChangeText={v => setForm(f => ({ ...f, notes: v }))} />
 
-              {/* Bill Image Upload */}
-              <Text style={st.label}>Product Bill Image</Text>
+              {/* Bill Image */}
+              <Text style={st.inputLabel}>Bill Image</Text>
               {form.billImageUrl ? (
-                <View style={st.imagePreviewBox}>
-                  <Image source={{ uri: getImageUrl(form.billImageUrl) }} style={st.imagePreview} />
-                  <TouchableOpacity
-                    style={st.removeImageBtn}
-                    onPress={() => setForm(f => ({ ...f, billImageUrl: '' }))}
-                  >
+                <View style={st.imagePreview}>
+                  <Image source={{ uri: getImageUrl(form.billImageUrl) }} style={st.previewImg} />
+                  <TouchableOpacity style={st.removeImgBtn} onPress={() => setForm(f => ({ ...f, billImageUrl: '' }))}>
                     <Icon name="close-circle" size={24} color={C.danger} />
                   </TouchableOpacity>
                 </View>
               ) : (
-                <TouchableOpacity
-                  style={st.uploadBtn}
-                  onPress={() => uploadImage('bills')}
-                  disabled={uploading}
-                >
-                  {uploading ? (
-                    <ActivityIndicator size="small" color={C.primary} />
-                  ) : (
+                <TouchableOpacity style={st.uploadBtn} onPress={() => uploadImage('bills')} disabled={uploading}>
+                  {uploading ? <ActivityIndicator size="small" color={C.primary} /> : (
                     <>
-                      <Icon name="cloud-upload-outline" size={24} color={C.primary} />
-                      <Text style={st.uploadText}>Upload Bill Image</Text>
+                      <Icon name="cloud-upload" size={24} color={C.primary} />
+                      <Text style={st.uploadText}>Upload Bill</Text>
                     </>
                   )}
                 </TouchableOpacity>
               )}
 
-              {/* Warranty Card Upload */}
-              <Text style={st.label}>Warranty Card Image</Text>
+              {/* Warranty Card */}
+              <Text style={st.inputLabel}>Warranty Card</Text>
               {form.warrantyCardUrl ? (
-                <View style={st.imagePreviewBox}>
-                  <Image source={{ uri: getImageUrl(form.warrantyCardUrl) }} style={st.imagePreview} />
-                  <TouchableOpacity
-                    style={st.removeImageBtn}
-                    onPress={() => setForm(f => ({ ...f, warrantyCardUrl: '' }))}
-                  >
+                <View style={st.imagePreview}>
+                  <Image source={{ uri: getImageUrl(form.warrantyCardUrl) }} style={st.previewImg} />
+                  <TouchableOpacity style={st.removeImgBtn} onPress={() => setForm(f => ({ ...f, warrantyCardUrl: '' }))}>
                     <Icon name="close-circle" size={24} color={C.danger} />
                   </TouchableOpacity>
                 </View>
               ) : (
-                <TouchableOpacity
-                  style={st.uploadBtn}
-                  onPress={() => uploadImage('warranty-cards')}
-                  disabled={uploading}
-                >
-                  {uploading ? (
-                    <ActivityIndicator size="small" color={C.primary} />
-                  ) : (
+                <TouchableOpacity style={st.uploadBtn} onPress={() => uploadImage('warranty-cards')} disabled={uploading}>
+                  {uploading ? <ActivityIndicator size="small" color={C.primary} /> : (
                     <>
-                      <Icon name="shield-checkmark-outline" size={24} color={C.primary} />
+                      <Icon name="shield-checkmark" size={24} color={C.primary} />
                       <Text style={st.uploadText}>Upload Warranty Card</Text>
                     </>
                   )}
                 </TouchableOpacity>
               )}
 
-              {/* Equipment Photos (Multiple) */}
-              <Text style={st.label}>Equipment Photos (Max 5)</Text>
+              {/* Photos */}
+              <Text style={st.inputLabel}>Equipment Photos (Max 5)</Text>
               <View style={st.photosGrid}>
                 {form.photoUrls.map((url, index) => (
                   <View key={index} style={st.photoItem}>
-                    <Image source={{ uri: getImageUrl(url) }} style={st.photoImage} />
-                    <TouchableOpacity
-                      style={st.removePhotoBtn}
-                      onPress={() => removePhoto(index)}
-                    >
+                    <Image source={{ uri: getImageUrl(url) }} style={st.photoImg} />
+                    <TouchableOpacity style={st.removePhotoBtn} onPress={() => removePhoto(index)}>
                       <Icon name="close-circle" size={20} color={C.danger} />
                     </TouchableOpacity>
-                    <View style={st.photoIndex}>
-                      <Text style={st.photoIndexText}>{index + 1}</Text>
-                    </View>
                   </View>
                 ))}
                 {form.photoUrls.length < 5 && (
-                  <TouchableOpacity
-                    style={st.addPhotoBtn}
-                    onPress={() => uploadImage('photos')}
-                    disabled={uploading}
-                  >
-                    {uploading ? (
-                      <ActivityIndicator size="small" color={C.primary} />
-                    ) : (
-                      <>
-                        <Icon name="add-circle-outline" size={32} color={C.primary} />
-                        <Text style={st.addPhotoText}>Add Photo</Text>
-                      </>
+                  <TouchableOpacity style={st.addPhotoBtn} onPress={() => uploadImage('photos')} disabled={uploading}>
+                    {uploading ? <ActivityIndicator size="small" color={C.primary} /> : (
+                      <Icon name="add" size={28} color={C.primary} />
                     )}
                   </TouchableOpacity>
                 )}
               </View>
             </ScrollView>
 
+            {/* Modal Footer */}
             <View style={st.modalFooter}>
               <TouchableOpacity style={st.cancelBtn} onPress={() => setModalVisible(false)}>
-                <Text style={st.cancelText}>Cancel</Text>
+                <Text style={st.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity style={st.saveBtn} onPress={saveEquipment} disabled={saving}>
-                {saving ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Text style={st.saveText}>{form.id ? 'Save Changes' : 'Add Equipment'}</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Restaurant Picker Modal */}
-      <Modal visible={restaurantPickerVisible} animationType="slide" transparent>
-        <View style={st.modalOverlay}>
-          <View style={st.pickerModal}>
-            <View style={st.modalHeader}>
-              <Text style={st.modalTitle}>Select Restaurant</Text>
-              <TouchableOpacity onPress={() => setRestaurantPickerVisible(false)}>
-                <Icon name="close" size={24} color={C.ink} />
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={st.pickerList}>
-              {restaurants.map(r => (
-                <TouchableOpacity
-                  key={r.id}
-                  style={[st.pickerItem, selectedRestaurant?.id === r.id && st.pickerItemActive]}
-                  onPress={() => {
-                    selectRestaurant(r.id);
-                    setRestaurantPickerVisible(false);
-                  }}
-                >
-                  <Icon name="business" size={20} color={selectedRestaurant?.id === r.id ? C.primary : C.muted} />
-                  <Text style={[st.pickerItemText, selectedRestaurant?.id === r.id && { color: C.primary }]}>
-                    {r.name}
-                  </Text>
-                  {selectedRestaurant?.id === r.id && (
-                    <Icon name="checkmark-circle" size={20} color={C.primary} />
+                <LinearGradient colors={[C.gradient1, C.gradient2]} style={st.saveBtnGradient}>
+                  {saving ? <ActivityIndicator size="small" color="#fff" /> : (
+                    <Text style={st.saveBtnText}>{form.id ? 'Save Changes' : 'Add Equipment'}</Text>
                   )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -980,37 +768,21 @@ export default function MyEquipmentScreen({ navigation }) {
       <Modal visible={categoryPickerVisible} animationType="slide" transparent>
         <View style={st.modalOverlay}>
           <View style={st.pickerModal}>
-            <View style={st.modalHeader}>
-              <Text style={st.modalTitle}>Select Category</Text>
+            <View style={st.pickerModalHeader}>
+              <Text style={st.pickerModalTitle}>Select Category</Text>
               <TouchableOpacity onPress={() => setCategoryPickerVisible(false)}>
                 <Icon name="close" size={24} color={C.ink} />
               </TouchableOpacity>
             </View>
             <ScrollView style={st.pickerList}>
-              {categories.length === 0 ? (
-                <View style={st.emptyPickerBox}>
-                  <Text style={st.emptyPickerText}>No categories available</Text>
-                </View>
-              ) : (
-                categories.map(c => (
-                  <TouchableOpacity
-                    key={c.id}
-                    style={[st.pickerItem, form.categoryId === c.id && st.pickerItemActive]}
-                    onPress={() => {
-                      setForm(f => ({ ...f, categoryId: c.id, subCategoryId: '' }));
-                      setCategoryPickerVisible(false);
-                    }}
-                  >
-                    <Icon name="folder-outline" size={20} color={form.categoryId === c.id ? C.primary : C.muted} />
-                    <Text style={[st.pickerItemText, form.categoryId === c.id && { color: C.primary }]}>
-                      {c.name}
-                    </Text>
-                    {form.categoryId === c.id && (
-                      <Icon name="checkmark-circle" size={20} color={C.primary} />
-                    )}
-                  </TouchableOpacity>
-                ))
-              )}
+              {categories.map(c => (
+                <TouchableOpacity key={c.id} style={[st.pickerItem, form.categoryId === c.id && st.pickerItemActive]}
+                  onPress={() => { setForm(f => ({ ...f, categoryId: c.id, subCategoryId: '' })); setCategoryPickerVisible(false); }}>
+                  <Icon name="folder" size={20} color={form.categoryId === c.id ? C.primary : C.muted} />
+                  <Text style={[st.pickerItemText, form.categoryId === c.id && { color: C.primary }]}>{c.name}</Text>
+                  {form.categoryId === c.id && <Icon name="checkmark-circle" size={20} color={C.primary} />}
+                </TouchableOpacity>
+              ))}
             </ScrollView>
           </View>
         </View>
@@ -1020,37 +792,23 @@ export default function MyEquipmentScreen({ navigation }) {
       <Modal visible={subCategoryPickerVisible} animationType="slide" transparent>
         <View style={st.modalOverlay}>
           <View style={st.pickerModal}>
-            <View style={st.modalHeader}>
-              <Text style={st.modalTitle}>Select Subcategory</Text>
+            <View style={st.pickerModalHeader}>
+              <Text style={st.pickerModalTitle}>Select Subcategory</Text>
               <TouchableOpacity onPress={() => setSubCategoryPickerVisible(false)}>
                 <Icon name="close" size={24} color={C.ink} />
               </TouchableOpacity>
             </View>
             <ScrollView style={st.pickerList}>
               {subCategories.length === 0 ? (
-                <View style={st.emptyPickerBox}>
-                  <Text style={st.emptyPickerText}>No subcategories for this category</Text>
-                </View>
-              ) : (
-                subCategories.map(sc => (
-                  <TouchableOpacity
-                    key={sc.id}
-                    style={[st.pickerItem, form.subCategoryId === sc.id && st.pickerItemActive]}
-                    onPress={() => {
-                      setForm(f => ({ ...f, subCategoryId: sc.id }));
-                      setSubCategoryPickerVisible(false);
-                    }}
-                  >
-                    <Icon name="layers-outline" size={20} color={form.subCategoryId === sc.id ? C.primary : C.muted} />
-                    <Text style={[st.pickerItemText, form.subCategoryId === sc.id && { color: C.primary }]}>
-                      {sc.name}
-                    </Text>
-                    {form.subCategoryId === sc.id && (
-                      <Icon name="checkmark-circle" size={20} color={C.primary} />
-                    )}
-                  </TouchableOpacity>
-                ))
-              )}
+                <View style={st.emptyPicker}><Text style={st.emptyPickerText}>No subcategories</Text></View>
+              ) : subCategories.map(sc => (
+                <TouchableOpacity key={sc.id} style={[st.pickerItem, form.subCategoryId === sc.id && st.pickerItemActive]}
+                  onPress={() => { setForm(f => ({ ...f, subCategoryId: sc.id })); setSubCategoryPickerVisible(false); }}>
+                  <Icon name="layers" size={20} color={form.subCategoryId === sc.id ? C.primary : C.muted} />
+                  <Text style={[st.pickerItemText, form.subCategoryId === sc.id && { color: C.primary }]}>{sc.name}</Text>
+                  {form.subCategoryId === sc.id && <Icon name="checkmark-circle" size={20} color={C.primary} />}
+                </TouchableOpacity>
+              ))}
             </ScrollView>
           </View>
         </View>
@@ -1062,290 +820,137 @@ export default function MyEquipmentScreen({ navigation }) {
   );
 }
 
+// ==================== STYLES ====================
 const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 12, backgroundColor: C.card,
-    borderBottomWidth: 1, borderBottomColor: C.border
-  },
-  backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '900', color: C.ink },
-  addBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' },
 
-  restaurantSelector: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    marginHorizontal: 16, marginTop: 12, padding: 12,
-    backgroundColor: C.card, borderRadius: 12, borderWidth: 1, borderColor: C.border
-  },
-  restaurantName: { flex: 1, fontSize: 14, fontWeight: '600', color: C.ink },
+  // Hero Section (Compact)
+  heroSection: { paddingTop: 8, paddingBottom: 16, borderBottomLeftRadius: 20, borderBottomRightRadius: 20 },
+  heroContent: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginBottom: 12 },
+  backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  heroTextContainer: { flex: 1 },
+  heroTitle: { fontSize: 24, fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
+  heroSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.8)', marginTop: 2 },
+  heroActions: { flexDirection: 'row', gap: 8 },
+  heroIconBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
 
-  searchContainer: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
-  searchBox: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: C.card,
-    borderRadius: 16, paddingHorizontal: 6, paddingVertical: 6, borderWidth: 2, borderColor: C.border,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 4
-  },
-  searchIconBox: {
-    width: 42, height: 42, borderRadius: 12, backgroundColor: '#FEF2F2',
-    alignItems: 'center', justifyContent: 'center'
-  },
-  searchInput: { flex: 1, marginLeft: 12, fontSize: 15, fontWeight: '500', color: C.text },
-  clearSearchBtn: { padding: 8 },
-  clearSearchIcon: {
-    width: 24, height: 24, borderRadius: 12, backgroundColor: C.muted,
-    alignItems: 'center', justifyContent: 'center'
-  },
+  // Search
+  searchContainer: { paddingHorizontal: 16 },
+  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 14, paddingHorizontal: 14, height: 48, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12, elevation: 5 },
+  searchInput: { flex: 1, marginLeft: 10, fontSize: 15, color: C.ink },
+  clearBtn: { padding: 4 },
 
-  filterSection: { marginBottom: 8 },
-  filterHeader: {
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginBottom: 8
-  },
-  filterLabel: { fontSize: 12, fontWeight: '700', color: C.muted, marginLeft: 6, textTransform: 'uppercase', letterSpacing: 0.5 },
-  filterScrollContent: { paddingHorizontal: 16, gap: 10 },
-
-  // Stylish summary cards for status filter
-  summaryCard: {
-    alignItems: 'center',
-    backgroundColor: C.card,
-    borderRadius: 14,
-    padding: 10,
-    minWidth: 72,
-    borderWidth: 2,
-    borderColor: C.border,
-    position: 'relative',
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 3,
-    marginLeft: 8,
-  },
-  summaryCardActive: {
-    backgroundColor: '#FAFAFA',
-    shadowOpacity: 0.1,
-    elevation: 5,
-  },
-  summaryIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
-  },
-  summaryCount: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: C.ink,
-  },
-  summaryLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: C.muted,
-    marginTop: 2,
-  },
-  summaryActiveBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 3,
-    borderBottomLeftRadius: 14,
-    borderBottomRightRadius: 14,
-  },
-
-  // Legacy filter chip styles (keeping for warranty filter)
-  filterChip: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingLeft: 4, paddingRight: 12, paddingVertical: 4, borderRadius: 12,
-    backgroundColor: C.card, borderWidth: 2, borderColor: C.border, marginLeft: 8,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2
-  },
+  // Filters
+  filterSection: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: C.border, backgroundColor: C.card },
+  warrantyFilterSection: { paddingVertical: 8, backgroundColor: C.bg },
+  filterScroll: { paddingHorizontal: 16 },
+  filterChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 10, marginRight: 8, backgroundColor: C.card, borderRadius: 20, borderWidth: 1.5, borderColor: C.border },
   filterChipActive: { backgroundColor: C.primary, borderColor: C.primary },
-  filterIconBox: {
-    width: 32, height: 32, borderRadius: 10, backgroundColor: '#FEF2F2',
-    alignItems: 'center', justifyContent: 'center', marginRight: 8
-  },
-  filterIconBoxActive: { backgroundColor: 'rgba(255,255,255,0.25)' },
-  filterText: { fontSize: 13, fontWeight: '600', color: C.ink },
-  filterTextActive: { color: '#fff' },
-  filterCheckBox: {
-    width: 18, height: 18, borderRadius: 9, backgroundColor: '#fff',
-    alignItems: 'center', justifyContent: 'center', marginLeft: 6
-  },
-
-  warrantyChip: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20,
-    backgroundColor: C.card, borderWidth: 2, borderColor: C.border, marginLeft: 8,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2
-  },
+  filterChipText: { fontSize: 13, fontWeight: '600', color: C.ink },
+  filterChipTextActive: { color: '#fff' },
+  warrantyChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, marginRight: 8, backgroundColor: C.card, borderRadius: 16, borderWidth: 1, borderColor: C.border },
   warrantyChipActive: { backgroundColor: C.info, borderColor: C.info },
-  warrantyText: { fontSize: 12, fontWeight: '700', color: C.muted },
-  warrantyTextActive: { color: '#fff' },
-  warrantyCheckIcon: {
-    width: 16, height: 16, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.3)',
-    alignItems: 'center', justifyContent: 'center', marginRight: 6
-  },
+  warrantyChipText: { fontSize: 12, fontWeight: '600', color: C.muted },
+  warrantyChipTextActive: { color: '#fff' },
 
-  resultsRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingBottom: 8, paddingTop: 8,
-    marginHorizontal: 16, marginBottom: 8, backgroundColor: C.card, borderRadius: 12,
-    borderWidth: 1, borderColor: C.border
-  },
-  resultsLeft: { flexDirection: 'row', alignItems: 'center' },
-  resultsDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: C.ok, marginRight: 8 },
-  resultsText: { fontSize: 13, fontWeight: '600', color: C.ink },
-  resultsBadge: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8,
-    backgroundColor: '#FEF2F2'
-  },
-  resultsBadgeText: { fontSize: 12, fontWeight: '700', color: C.primary, marginLeft: 4 },
+  // Results Header
+  resultsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10 },
+  resultsTitle: { fontSize: 15, fontWeight: '700', color: C.ink },
+  clearFiltersBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: C.primaryLight, borderRadius: 8 },
+  clearFiltersText: { fontSize: 12, fontWeight: '600', color: C.primary },
 
-  list: { padding: 16, paddingBottom: 100 },
-  card: {
-    backgroundColor: C.card, borderRadius: 16, padding: 16,
-    marginBottom: 12, borderWidth: 1, borderColor: C.border
-  },
-  cardHeader: { flexDirection: 'row', gap: 12 },
-  iconBox: {
-    width: 48, height: 48, borderRadius: 14, backgroundColor: '#FFE8E8',
-    alignItems: 'center', justifyContent: 'center', overflow: 'hidden'
-  },
-  cardImage: { width: 48, height: 48, borderRadius: 14 },
-  cardInfo: { flex: 1 },
-  cardTitle: { fontSize: 16, fontWeight: '900', color: C.ink },
-  cardSub: { fontSize: 13, color: C.muted, marginTop: 2 },
-  serialText: { fontSize: 11, color: C.muted, fontFamily: 'monospace', marginTop: 4 },
-  photoBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: 8, paddingVertical: 4, backgroundColor: C.bg, borderRadius: 8
-  },
-  photoBadgeText: { fontSize: 11, fontWeight: '600', color: C.muted },
+  // List
+  listContent: { paddingHorizontal: 16, paddingBottom: 120 },
+  columnWrapper: { justifyContent: 'space-between' },
 
-  statsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
-  statBox: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10 },
-  statLabel: { fontSize: 11, fontWeight: '600', color: C.muted },
+  // Card
+  card: { flex: 1, backgroundColor: C.card, borderRadius: 16, marginBottom: 12, marginHorizontal: 4, shadowColor: C.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3, overflow: 'hidden' },
+  cardImageContainer: { height: 120, backgroundColor: C.bg, position: 'relative' },
+  cardImage: { width: '100%', height: '100%' },
+  cardImagePlaceholder: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
+  statusBadge: { position: 'absolute', top: 8, left: 8, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  statusBadgeText: { fontSize: 10, fontWeight: '700' },
+  photoCountBadge: { position: 'absolute', top: 8, right: 8, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 8 },
+  photoCountText: { fontSize: 10, fontWeight: '700', color: '#fff' },
+  cardInfo: { padding: 12 },
+  cardTitle: { fontSize: 15, fontWeight: '700', color: C.ink },
+  categoryRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
+  categoryText: { fontSize: 12, color: C.muted },
+  serialText: { fontSize: 10, color: C.muted, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', marginTop: 4 },
+  warrantyRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
+  warrantyText: { fontSize: 11, fontWeight: '600' },
+  docsRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
+  docBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: C.bg, borderRadius: 6 },
+  docText: { fontSize: 10, fontWeight: '600', color: C.muted },
+  cardActions: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, paddingTop: 0 },
+  serviceBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, backgroundColor: C.primary, borderRadius: 10 },
+  serviceBtnText: { fontSize: 12, fontWeight: '700', color: '#fff' },
+  iconBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: C.infoLight, alignItems: 'center', justifyContent: 'center' },
 
-  docsRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
-  docBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: 8, paddingVertical: 4, backgroundColor: '#F8FAFC', borderRadius: 6
-  },
-  docBadgeText: { fontSize: 10, fontWeight: '600', color: C.muted },
+  // Loading & Empty
+  loadingHero: { paddingVertical: 24, paddingHorizontal: 20, borderBottomLeftRadius: 24, borderBottomRightRadius: 24 },
+  loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  loadingText: { marginTop: 16, fontSize: 15, color: C.muted },
+  emptyState: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 40 },
+  emptyIconContainer: { width: 120, height: 120, borderRadius: 60, backgroundColor: C.border, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
+  emptyTitle: { fontSize: 20, fontWeight: '700', color: C.ink, marginBottom: 8 },
+  emptySubtitle: { fontSize: 14, color: C.muted, textAlign: 'center' },
+  emptyBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 24, paddingHorizontal: 24, paddingVertical: 14, backgroundColor: C.primary, borderRadius: 14 },
+  emptyBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
 
-  cardActions: { flexDirection: 'row', gap: 8, marginTop: 12, flexWrap: 'wrap' },
-  actionBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, backgroundColor: C.bg
-  },
-  actionText: { fontSize: 12, fontWeight: '700', color: C.ink },
-  requestServiceBtn: { backgroundColor: C.primary },
-
-  loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  emptyBox: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
-  emptyTitle: { fontSize: 18, fontWeight: '900', color: C.ink, marginTop: 16 },
-  emptyText: { fontSize: 14, color: C.muted, textAlign: 'center', marginTop: 8 },
-  emptyBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 20,
-    paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12, backgroundColor: C.primary
-  },
-  emptyBtnText: { fontSize: 14, fontWeight: '700', color: '#fff' },
-
+  // Modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: C.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '90%' },
-  modalHeader: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    padding: 16, borderBottomWidth: 1, borderBottomColor: C.border
-  },
-  modalTitle: { fontSize: 18, fontWeight: '900', color: C.ink },
-  modalBody: { padding: 16 },
-  modalFooter: { flexDirection: 'row', gap: 12, padding: 16, borderTopWidth: 1, borderTopColor: C.border },
+  modalContainer: { backgroundColor: C.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '90%' },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, borderTopLeftRadius: 24, borderTopRightRadius: 24 },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: '#fff' },
+  modalCloseBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
+  modalBody: { flexGrow: 1, flexShrink: 1 },
+  modalBodyContent: { padding: 20, paddingBottom: 30 },
+  modalFooter: { flexDirection: 'row', gap: 12, padding: 20, borderTopWidth: 1, borderTopColor: C.border },
 
-  label: { fontSize: 12, fontWeight: '700', color: C.muted, marginBottom: 6, marginTop: 12 },
-  input: {
-    backgroundColor: C.bg, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12,
-    fontSize: 14, color: C.text, borderWidth: 1, borderColor: C.border
-  },
+  // Form inputs
+  inputLabel: { fontSize: 13, fontWeight: '600', color: C.muted, marginBottom: 8, marginTop: 16 },
+  input: { backgroundColor: C.bg, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 14, fontSize: 15, color: C.ink, borderWidth: 1, borderColor: C.border },
+  textArea: { height: 80, textAlignVertical: 'top' },
+  readOnlyInput: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.bg, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 14, borderWidth: 1, borderColor: C.border },
+  readOnlyText: { fontSize: 15, fontWeight: '600', color: C.ink },
+  pickerBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: C.bg, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 14, borderWidth: 1, borderColor: C.border },
+  pickerBtnDisabled: { opacity: 0.5 },
+  pickerText: { fontSize: 15, color: C.ink },
+  pickerPlaceholder: { fontSize: 15, color: C.muted },
+  dateBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.bg, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 14, borderWidth: 1, borderColor: C.border },
+  dateText: { fontSize: 15, color: C.ink, flex: 1 },
+  datePlaceholder: { fontSize: 15, color: C.muted, flex: 1 },
+  formRow: { flexDirection: 'row', gap: 12 },
+  formCol: { flex: 1 },
 
-  pickerBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: C.bg, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 14,
-    borderWidth: 1, borderColor: C.border
-  },
-  pickerBtnDisabled: {
-    opacity: 0.6,
-  },
-  pickerText: { fontSize: 14, color: C.text },
-  pickerPlaceholder: { fontSize: 14, color: C.muted },
-
-  restaurantDisplay: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: C.bg, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 14,
-    borderWidth: 1, borderColor: C.border
-  },
-  restaurantDisplayText: { fontSize: 14, fontWeight: '600', color: C.ink },
-
-  formRow: {
-    flexDirection: 'row', gap: 12,
-  },
-  formCol: {
-    flex: 1,
-  },
-
-  emptyPickerBox: {
-    padding: 20, alignItems: 'center', justifyContent: 'center',
-  },
-  emptyPickerText: {
-    fontSize: 14, color: C.muted, textAlign: 'center',
-  },
-
-  uploadBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: C.bg, borderRadius: 12, paddingVertical: 20,
-    borderWidth: 2, borderColor: C.border, borderStyle: 'dashed'
-  },
+  // Image uploads
+  uploadBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: C.bg, borderRadius: 12, paddingVertical: 20, borderWidth: 2, borderColor: C.border, borderStyle: 'dashed' },
   uploadText: { fontSize: 14, fontWeight: '600', color: C.primary },
-
-  imagePreviewBox: { position: 'relative' },
-  imagePreview: { width: '100%', height: 120, borderRadius: 12, backgroundColor: C.bg },
-  removeImageBtn: { position: 'absolute', top: 8, right: 8 },
-
+  imagePreview: { position: 'relative' },
+  previewImg: { width: '100%', height: 120, borderRadius: 12, backgroundColor: C.bg },
+  removeImgBtn: { position: 'absolute', top: 8, right: 8 },
   photosGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   photoItem: { position: 'relative' },
-  photoImage: { width: 80, height: 80, borderRadius: 12, backgroundColor: C.bg },
+  photoImg: { width: 80, height: 80, borderRadius: 12, backgroundColor: C.bg },
   removePhotoBtn: { position: 'absolute', top: -6, right: -6 },
-  photoIndex: {
-    position: 'absolute', bottom: 4, left: 4,
-    backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2
-  },
-  photoIndexText: { fontSize: 10, fontWeight: '700', color: '#fff' },
-  addPhotoBtn: {
-    width: 80, height: 80, borderRadius: 12, backgroundColor: C.bg,
-    alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.border, borderStyle: 'dashed'
-  },
-  addPhotoText: { fontSize: 10, color: C.primary, marginTop: 4 },
+  addPhotoBtn: { width: 80, height: 80, borderRadius: 12, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.border, borderStyle: 'dashed' },
 
+  // Modal buttons
   cancelBtn: { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: C.bg, alignItems: 'center' },
-  cancelText: { fontSize: 14, fontWeight: '700', color: C.ink },
-  saveBtn: {
-    flex: 1, flexDirection: 'row', paddingVertical: 14, borderRadius: 12,
-    backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center', gap: 6
-  },
-  saveText: { fontSize: 14, fontWeight: '700', color: '#fff' },
+  cancelBtnText: { fontSize: 15, fontWeight: '700', color: C.ink },
+  saveBtn: { flex: 1, borderRadius: 12, overflow: 'hidden' },
+  saveBtnGradient: { paddingVertical: 14, alignItems: 'center' },
+  saveBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
 
+  // Picker Modal
   pickerModal: { backgroundColor: C.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '70%' },
+  pickerModalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, borderBottomWidth: 1, borderBottomColor: C.border },
+  pickerModalTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
   pickerList: { padding: 16 },
-  pickerItem: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: C.border
-  },
-  pickerItemActive: { backgroundColor: '#FFF5F5' },
+  pickerItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: C.border },
+  pickerItemActive: { backgroundColor: C.primaryLight },
   pickerItemText: { flex: 1, fontSize: 15, fontWeight: '600', color: C.ink },
-  categoryInfo: { flex: 1 },
-  categoryParent: { fontSize: 11, color: C.muted },
+  emptyPicker: { padding: 20, alignItems: 'center' },
+  emptyPickerText: { fontSize: 14, color: C.muted },
 });

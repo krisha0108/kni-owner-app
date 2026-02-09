@@ -27,7 +27,7 @@ import {
   TextInput, ActivityIndicator, Alert, Modal, Image,
   useWindowDimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary } from 'react-native-image-picker';
 import Clipboard from '@react-native-clipboard/clipboard';
@@ -81,8 +81,11 @@ export default function ServiceRequestScreen({ navigation, route }) {
 
   // Responsive dimensions
   const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const isTabletDevice = isTablet(width);
   const containerMaxWidth = getContainerMaxWidth(width);
+  // Bottom nav height: bar (74) + wrap padding (12) + extra spacing
+  const BOTTOM_NAV_HEIGHT = 100;
 
   // Restaurant context
   const { selectedRestaurant, selectedRestaurantId } = useRestaurant();
@@ -444,7 +447,7 @@ export default function ServiceRequestScreen({ navigation, route }) {
               </View>
             )}
 
-            <View style={{ height: 200 }} />
+            <View style={{ height: 240 }} />
           </ScrollView>
         );
 
@@ -505,7 +508,7 @@ export default function ServiceRequestScreen({ navigation, route }) {
               />
             </View>
 
-            <View style={{ height: 200 }} />
+            <View style={{ height: 240 }} />
           </ScrollView>
         );
 
@@ -635,7 +638,7 @@ export default function ServiceRequestScreen({ navigation, route }) {
               </TouchableOpacity>
             </View>
 
-            <View style={{ height: 200 }} />
+            <View style={{ height: 240 }} />
           </ScrollView>
         );
 
@@ -675,8 +678,11 @@ export default function ServiceRequestScreen({ navigation, route }) {
       : step === 'payment' ? paymentScreenshot
       : false;
 
+    // Calculate proper bottom position: nav height + safe area + extra gap
+    const footerBottom = BOTTOM_NAV_HEIGHT + Math.max(insets.bottom, 10) + 20;
+
     return (
-      <View style={st.footer}>
+      <View style={[st.footer, { bottom: footerBottom }]}>
         {/* Mini summary */}
         <View style={st.footerSummary}>
           <View>
@@ -1070,9 +1076,16 @@ const st = StyleSheet.create({
 
   // Footer
   footer: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    backgroundColor: C.card, borderTopWidth: 1, borderTopColor: C.border,
-    paddingHorizontal: scale(16), paddingVertical: scale(12), paddingBottom: scale(80)
+    position: 'absolute', left: 0, right: 0,
+    backgroundColor: C.card,
+    borderTopWidth: 1, borderTopColor: C.border,
+    borderTopLeftRadius: scale(20), borderTopRightRadius: scale(20),
+    paddingHorizontal: scale(16), paddingVertical: scale(14),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 10,
   },
   footerSummary: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   footerItems: { fontSize: moderateScale(12), color: C.muted },

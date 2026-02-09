@@ -1,12 +1,13 @@
-// screens/HomeScreen.js - Unified Home with Dashboard & Analytics
+// screens/HomeScreen.js — God-Level Home Dashboard
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, Image, ImageBackground, TouchableOpacity,
   ScrollView, FlatList, Animated, Easing, RefreshControl, Linking,
-  useWindowDimensions, Alert, ActivityIndicator, Dimensions
+  useWindowDimensions, Alert, ActivityIndicator, Dimensions, StatusBar
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
+import LinearGradient from 'react-native-linear-gradient';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 import { RestaurantSelectorCompact, RestaurantSelectorChips } from '../components/RestaurantSelector';
@@ -15,7 +16,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { api, IMAGE_BASE_URL } from '../api/client';
 
-// Chart components (imported from Analytics)
 import LineChartCard from '../components/charts/LineChartCard';
 import PieChartCard from '../components/charts/PieChartCard';
 import BarChartCard from '../components/charts/BarChartCard';
@@ -30,38 +30,33 @@ const TONE_ICON = {
   danger: 'alert-outline',
 };
 
-/* ---------------- THEME ---------------- */
+/* ──────── THEME ──────── */
 const C = {
-  primary: '#EF3A3A', ink: '#1D2254', text: '#0F172A', muted: '#6B7280',
-  bg: '#F5F7FA', card: '#FFFFFF', border: '#E5E7EB', ok: '#10B981',
-  info: '#3B82F6', warn: '#F59E0B', danger: '#EF4444'
+  primary: '#EF3A3A', primaryDark: '#C62828', ink: '#1D2254', text: '#0F172A',
+  muted: '#6B7280', bg: '#F5F7FA', card: '#FFFFFF', border: '#E5E7EB',
+  ok: '#10B981', info: '#3B82F6', warn: '#F59E0B', danger: '#EF4444',
 };
-const R = 20;
+const { width: W } = Dimensions.get('window');
 
-/* ---------------- HELPERS ---------------- */
+/* ──────── HELPERS ──────── */
 const open = async (url) => { try { await Linking.openURL(url); } catch { } };
+const getCategoryColor = (i) => [C.primary, C.info, C.warn, C.ok, C.danger][i % 5];
+const getStatusColor = (s) =>
+  ({ PENDING: '#F59E0B', CONFIRMED: '#10B981', COMPLETED: '#3B82F6', CANCELLED: '#EF4444' })[s] || '#6B7280';
 
-const getCategoryColor = (index) => {
-  const colors = [C.primary, C.info, C.warn, C.ok, C.danger];
-  return colors[index % colors.length];
-};
-
-const getStatusColor = (status) => {
-  const statusColors = {
-    'PENDING': '#F59E0B',
-    'CONFIRMED': '#10B981',
-    'COMPLETED': '#3B82F6',
-    'CANCELLED': '#EF4444',
-  };
-  return statusColors[status] || '#6B7280';
-};
+/* ──────── QUICK ACTION DATA ──────── */
+const QA = [
+  { icon: 'calendar-outline', label: 'Bookings', grad: ['#FF6B6B', '#EF3A3A'], screen: 'MyBookings' },
+  { icon: 'storefront-outline', label: 'Restaurants', grad: ['#818CF8', '#6366F1'], screen: 'MyRestaurants' },
+  { icon: 'construct-outline', label: 'Equipment', grad: ['#34D399', '#10B981'], screen: 'MyEquipment' },
+  { icon: 'headset-outline', label: 'Support', grad: ['#FBBF24', '#F59E0B'], screen: 'SupportCenter' },
+];
 
 /* ======================================================================= */
 export default function HomeScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
 
-  // Global restaurant context
   const {
     restaurants,
     selectedRestaurantId: restaurantId,
@@ -70,7 +65,7 @@ export default function HomeScreen({ navigation }) {
     hasMultipleRestaurants,
   } = useRestaurant();
 
-  /* State for Home content */
+  /* ─── State ─── */
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [sponsoredData, setSponsoredData] = useState([]);
@@ -81,7 +76,6 @@ export default function HomeScreen({ navigation }) {
   const [cartCount, setCartCount] = useState(0);
   const [menuVisible, setMenuVisible] = useState(false);
 
-  /* State for Analytics/Dashboard */
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState(30);
   const [analyticsData, setAnalyticsData] = useState(null);
@@ -98,7 +92,14 @@ export default function HomeScreen({ navigation }) {
     { label: '1Y', value: 365 },
   ];
 
-  /* =========== HOME DATA FETCHING =========== */
+  /* ─── Greeting ─── */
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
+  const greetIcon = hour < 12 ? 'sunny' : hour < 17 ? 'partly-sunny' : 'moon';
+
+  const selectedRest = restaurants?.find(r => r.id === restaurantId);
+
+  /* ═══════════ HOME DATA FETCHING ═══════════ */
   const fetchSponsored = useCallback(async () => {
     try {
       const res = await api.get('/app_api/sponsored');
@@ -109,7 +110,6 @@ export default function HomeScreen({ navigation }) {
   }, []);
 
   const fetchFeed = useCallback(async () => {
-    // Default feeds to show if none exist in database
     const defaultFeeds = [
       { id: 'default-1', txt: 'Welcome to KNI Super App!', tone: 'ok', icon: 'checkmark-circle-outline' },
       { id: 'default-2', txt: 'Book equipment services easily', tone: 'info', icon: 'construct-outline' },
@@ -130,12 +130,10 @@ export default function HomeScreen({ navigation }) {
           return { id: String(f.id), txt: f.txt, tone: safeTone, icon };
         }));
       } else {
-        // Use default feeds if none exist
         setFeed(defaultFeeds);
       }
     } catch (e) {
       console.error('Feed error:', e?.response?.data || e.message);
-      // Use default feeds on error
       setFeed(defaultFeeds);
     }
   }, []);
@@ -174,7 +172,6 @@ export default function HomeScreen({ navigation }) {
 
   const calculateCartCount = useCallback(async () => {
     try {
-      // ONE-TIME CLEANUP: Clear all old cart data
       const cleanupDone = await AsyncStorage.getItem('cart_cleanup_v2_done');
       if (!cleanupDone) {
         console.log('[Home] Running one-time cart cleanup...');
@@ -203,7 +200,6 @@ export default function HomeScreen({ navigation }) {
       const myPrefix = `rdraft:${ownerKey}:`;
       const rdraftKeys = allKeys.filter(k => k.startsWith(myPrefix));
 
-      // Clean up legacy 'global' cart data and related keys
       const globalKey = `${myPrefix}global`;
       if (rdraftKeys.includes(globalKey)) {
         await AsyncStorage.multiRemove([
@@ -218,7 +214,6 @@ export default function HomeScreen({ navigation }) {
       const keysToRemove = [];
       console.log('[Home] calculateCartCount - ownerKey:', ownerKey, 'rdraftKeys:', rdraftKeys);
       for (const key of rdraftKeys) {
-        // Skip 'global' keys - they are legacy data
         const pid = key.slice(myPrefix.length);
         if (pid === 'global') continue;
 
@@ -230,7 +225,6 @@ export default function HomeScreen({ navigation }) {
           if (itemCount > 0) {
             totalCount += itemCount;
           } else {
-            // Mark empty carts for cleanup
             keysToRemove.push(key);
             keysToRemove.push(`pmeta:${ownerKey}:${pid}`);
             keysToRemove.push(`rservices:${ownerKey}:${pid}`);
@@ -238,7 +232,6 @@ export default function HomeScreen({ navigation }) {
           }
         }
       }
-      // Clean up empty cart entries
       if (keysToRemove.length > 0) {
         await AsyncStorage.multiRemove(keysToRemove).catch(() => {});
       }
@@ -249,16 +242,14 @@ export default function HomeScreen({ navigation }) {
     }
   }, []);
 
-  /* =========== ANALYTICS DATA FETCHING =========== */
+  /* ═══════════ ANALYTICS ═══════════ */
   const loadAnalytics = useCallback(async () => {
     if (!restaurantId) {
       setAnalyticsLoading(false);
       return;
     }
-
     try {
       setAnalyticsLoading(true);
-
       const response = await api.get(
         `/owner/analytics?restaurantId=${restaurantId}&period=${selectedPeriod}`
       );
@@ -272,7 +263,7 @@ export default function HomeScreen({ navigation }) {
     }
   }, [restaurantId, selectedPeriod]);
 
-  /* =========== COMBINED DATA LOADING =========== */
+  /* ═══════════ LIFECYCLE ═══════════ */
   useEffect(() => {
     const loadAll = async () => {
       setLoading(true);
@@ -301,7 +292,7 @@ export default function HomeScreen({ navigation }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restaurantId, selectedPeriod]);
 
-  /* =========== HERO BANNER ANIMATION =========== */
+  /* ═══════════ BANNER ANIMATION ═══════════ */
   const pulse = useRef(new Animated.Value(0.5)).current;
   const bar = useRef(new Animated.Value(0)).current;
   const DURATION = 10000;
@@ -336,7 +327,7 @@ export default function HomeScreen({ navigation }) {
     return () => bar.stopAnimation();
   }, [heroIdx, showSkel, cycle, banners.length, bar]);
 
-  /* =========== REFRESH =========== */
+  /* ═══════════ ACTIONS ═══════════ */
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     (async () => {
@@ -345,14 +336,13 @@ export default function HomeScreen({ navigation }) {
         fetchFeed(),
         fetchSponsored(),
         fetchGuides(),
-        loadRestaurants(), // Reload restaurants from context
+        loadRestaurants(),
         loadAnalytics(),
       ]);
       setTimeout(() => setRefreshing(false), 300);
     })();
   }, [fetchBanners, fetchFeed, fetchSponsored, fetchGuides, loadRestaurants, loadAnalytics]);
 
-  /* =========== EXPORT PDF =========== */
   const handleExportPDF = async () => {
     if (!restaurantId) {
       Alert.alert('Error', 'Please select a restaurant first');
@@ -372,169 +362,335 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
-  /* =========== QUICK NAVIGATION =========== */
-  const goSupport = () => navigation.navigate?.('SupportCenter');
-  const goRestaurants = () => navigation.navigate?.('MyRestaurants');
-  const goBookings = () => navigation.navigate?.('MyBookings');
   const goGuide = () => open(guides?.[0]?.link);
 
-  /* =========== ANALYTICS DATA =========== */
+  /* ═══════════ ANALYTICS DATA ═══════════ */
   const summary = analyticsData?.summary || {};
   const trends = analyticsData?.trends || {};
   const breakdowns = analyticsData?.breakdowns || {};
   const recent = analyticsData?.recent || {};
   const topCategories = breakdowns.expensesByCategory || [];
 
-  /* =========== RENDER =========== */
+  /* ═══════════════════════════════════════════════════════════════════════
+     ░░░ R E N D E R ░░░
+     ═══════════════════════════════════════════════════════════════════════ */
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top', 'left', 'right']}>
-      {/* Top bar */}
-      <View style={[st.top, { paddingTop: 6 }]}>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={st.hBtn}>
-            <Icon name="menu" size={20} color={C.ink} />
-          </TouchableOpacity>
-          <RestaurantSelectorCompact style={{ marginLeft: 10 }} />
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          <TouchableOpacity
-            onPress={handleExportPDF}
-            disabled={exporting || !restaurantId}
-            style={st.hBtn}
-          >
-            {exporting ? (
-              <ActivityIndicator size="small" color={C.primary} />
-            ) : (
-              <Icon name="download-outline" size={18} color={restaurantId ? C.primary : C.muted} />
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate?.('Notifications')} style={st.hBtn}>
-            <Icon name="notifications-outline" size={18} color={C.ink} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate?.('Cart')} style={st.hBtn}>
-            <Icon name="cart-outline" size={18} color={C.ink} />
-            {cartCount > 0 && (
-              <View style={st.cartBadge}>
-                <Text style={st.cartBadgeText}>{cartCount > 99 ? '99+' : cartCount}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
+    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['left', 'right']}>
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
+      {/* ══════ GRADIENT HEADER ══════ */}
+      <LinearGradient
+        colors={[C.primary, C.primaryDark]}
+        style={[st.headerGrad, { paddingTop: insets.top + 10 }]}
+      >
+        <View style={st.headerRow}>
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={st.headerBtn}>
+            <Icon name="menu" size={22} color="#fff" />
+          </TouchableOpacity>
+
+          <View style={{ flex: 1, marginLeft: 14 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Icon name={greetIcon} size={15} color="#FFD700" />
+              <Text style={st.greetText}>{greeting}</Text>
+            </View>
+            <Text style={st.headerRestName} numberOfLines={1}>
+              {selectedRest?.name || 'KNI Super App'}
+            </Text>
+          </View>
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <TouchableOpacity
+              onPress={handleExportPDF}
+              disabled={exporting || !restaurantId}
+              style={st.headerBtn}
+            >
+              {exporting ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Icon name="download-outline" size={18} color={restaurantId ? '#fff' : 'rgba(255,255,255,0.35)'} />
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation.navigate?.('Notifications')} style={st.headerBtn}>
+              <Icon name="notifications-outline" size={18} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation.navigate?.('Cart')} style={st.headerBtn}>
+              <Icon name="cart-outline" size={18} color="#fff" />
+              {cartCount > 0 && (
+                <View style={st.cartBadge}>
+                  <Text style={st.cartBadgeTxt}>{cartCount > 99 ? '99+' : cartCount}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </LinearGradient>
+
+      {/* ══════ SCROLLABLE CONTENT ══════ */}
       <ScrollView
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} tintColor={C.primary} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} tintColor={C.primary} />
+        }
         contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
         showsVerticalScrollIndicator={false}
       >
         {showSkel ? (
-          <SkeletonHome width={width} pulse={pulse} />
+          <SkeletonHome pulse={pulse} />
         ) : (
           <>
-            {/* ANALYTICS SECTION */}
-            <View style={st.sectionBox}>
-              <TouchableOpacity
-                style={st.sectionHeaderRow}
-                onPress={() => setShowAnalytics(!showAnalytics)}
+            {/* Restaurant Selector (for multi-restaurant owners) */}
+            {hasMultipleRestaurants && (
+              <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
+                <RestaurantSelectorCompact />
+              </View>
+            )}
+
+            {/* ══════ HERO BANNER ══════ */}
+            <View style={{ paddingHorizontal: 16, marginTop: 14 }}>
+              {banners.length ? (() => {
+                const rawUrl = banners[heroIdx]?.image_url || '';
+                const bannerImgUri = rawUrl.startsWith('http') ? rawUrl : `${IMAGE_BASE_URL}${rawUrl}`;
+                return (
+                <View style={st.bannerWrap}>
+                  <ImageBackground
+                    source={{ uri: bannerImgUri }}
+                    style={st.bannerImg}
+                    imageStyle={{ borderRadius: 20 }}
+                  >
+                    <LinearGradient
+                      colors={['transparent', 'rgba(0,0,0,0.6)']}
+                      style={st.bannerOverlay}
+                    />
+                    {banners[heroIdx]?.badge ? (
+                      <View style={st.bannerBadge}>
+                        <Text style={st.bannerBadgeTxt}>{banners[heroIdx].badge}</Text>
+                      </View>
+                    ) : null}
+                    <View style={st.bannerContent}>
+                      <Text style={st.bannerTitle} numberOfLines={2}>
+                        {banners[heroIdx]?.title ?? ''}
+                      </Text>
+                      {!!banners[heroIdx]?.subtitle && (
+                        <Text style={st.bannerSub} numberOfLines={2}>{banners[heroIdx].subtitle}</Text>
+                      )}
+                      {!!banners[heroIdx]?.cta_text && !!banners[heroIdx]?.cta_link && (
+                        <TouchableOpacity onPress={() => open(banners[heroIdx].cta_link)} style={st.bannerCta}>
+                          <Text style={st.bannerCtaTxt}>{banners[heroIdx].cta_text}</Text>
+                          <Icon name="arrow-forward" size={14} color="#fff" />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+
+                    {/* Dots + Progress */}
+                    <View style={st.bannerBottom}>
+                      {banners.length > 1 && (
+                        <View style={st.dotsRow}>
+                          {banners.map((_, i) => (
+                            <View key={i} style={[st.dot, i === heroIdx && st.dotActive]} />
+                          ))}
+                        </View>
+                      )}
+                      <View style={st.progWrap}>
+                        <Animated.View
+                          style={[st.progBar, {
+                            width: bar.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] })
+                          }]}
+                        />
+                      </View>
+                    </View>
+                  </ImageBackground>
+                </View>
+                );
+              })() : (
+                <View style={st.bannerEmpty}>
+                  <Icon name="image-outline" size={36} color={C.muted} />
+                  <Text style={{ color: C.muted, fontWeight: '700', marginTop: 8 }}>No banners yet</Text>
+                </View>
+              )}
+            </View>
+
+            {/* ══════ QUICK ACTIONS ══════ */}
+            <View style={st.qaRow}>
+              {QA.map((q, i) => (
+                <TouchableOpacity
+                  key={i}
+                  style={st.qaItem}
+                  activeOpacity={0.8}
+                  onPress={() => navigation.navigate(q.screen)}
+                >
+                  <LinearGradient colors={q.grad} style={st.qaIcon}>
+                    <Icon name={q.icon} size={20} color="#fff" />
+                  </LinearGradient>
+                  <Text style={st.qaLabel}>{q.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* ══════ FEED PILLS ══════ */}
+            {feed.length > 0 && (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 2 }}
+                style={{ marginTop: 16 }}
               >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Icon name="analytics" size={20} color={C.primary} />
+                {feed.map(f => (
+                  <View
+                    key={f.id}
+                    style={[
+                      st.pill,
+                      f.tone === 'ok' ? { backgroundColor: '#ECFDF5', borderColor: '#A7F3D0' } :
+                        f.tone === 'warn' ? { backgroundColor: '#FFFBEB', borderColor: '#FDE68A' } :
+                          f.tone === 'danger' ? { backgroundColor: '#FEF2F2', borderColor: '#FECACA' } :
+                            { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }
+                    ]}
+                  >
+                    <Icon
+                      name={f.icon}
+                      size={14}
+                      color={
+                        f.tone === 'ok' ? C.ok :
+                          f.tone === 'warn' ? C.warn :
+                            f.tone === 'danger' ? C.danger : C.info
+                      }
+                    />
+                    <Text style={st.pillTxt}>{f.txt}</Text>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+
+            {/* ══════ ANALYTICS DASHBOARD ══════ */}
+            <View style={st.section}>
+              <TouchableOpacity
+                style={st.sectionHead}
+                onPress={() => setShowAnalytics(!showAnalytics)}
+                activeOpacity={0.7}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <LinearGradient colors={[C.primary, C.primaryDark]} style={st.sectionBadge}>
+                    <Icon name="analytics" size={15} color="#fff" />
+                  </LinearGradient>
                   <Text style={st.sectionTitle}>Analytics Overview</Text>
                 </View>
-                <Icon name={showAnalytics ? 'chevron-up' : 'chevron-down'} size={20} color={C.muted} />
+                <Icon name={showAnalytics ? 'chevron-up' : 'chevron-down'} size={18} color={C.muted} />
               </TouchableOpacity>
 
               {showAnalytics && (
                 <>
-                  {/* Period Selector */}
-                  <View style={st.periodSelector}>
-                    {PERIOD_OPTIONS.map((option) => (
+                  {/* Period selector */}
+                  <View style={st.periodRow}>
+                    {PERIOD_OPTIONS.map(opt => (
                       <TouchableOpacity
-                        key={option.value}
-                        style={[st.periodButton, selectedPeriod === option.value && st.periodButtonActive]}
-                        onPress={() => setSelectedPeriod(option.value)}
+                        key={opt.value}
+                        style={[st.periodChip, selectedPeriod === opt.value && st.periodChipOn]}
+                        onPress={() => setSelectedPeriod(opt.value)}
                       >
-                        <Text style={[st.periodText, selectedPeriod === option.value && st.periodTextActive]}>
-                          {option.label}
+                        <Text style={[st.periodTxt, selectedPeriod === opt.value && st.periodTxtOn]}>
+                          {opt.label}
                         </Text>
                       </TouchableOpacity>
                     ))}
                   </View>
 
-                  {/* Restaurant Selector - Uses Global Context */}
                   {hasMultipleRestaurants && (
                     <RestaurantSelectorChips style={{ marginBottom: 12 }} />
                   )}
 
                   {analyticsLoading ? (
-                    <View style={{ padding: 20, alignItems: 'center' }}>
+                    <View style={{ padding: 28, alignItems: 'center' }}>
                       <ActivityIndicator color={C.primary} />
                     </View>
                   ) : !restaurantId ? (
-                    <View style={st.emptyAnalytics}>
-                      <Icon name="restaurant-outline" size={40} color={C.muted} />
-                      <Text style={st.emptyText}>Add a restaurant to view analytics</Text>
-                      <TouchableOpacity style={st.addRestBtn} onPress={() => navigation.navigate('MyRestaurants')}>
-                        <Text style={st.addRestBtnText}>Add Restaurant</Text>
+                    <View style={st.emptyAna}>
+                      <LinearGradient colors={['#FEF2F2', '#FFE4E6']} style={st.emptyIconBg}>
+                        <Icon name="restaurant-outline" size={28} color={C.primary} />
+                      </LinearGradient>
+                      <Text style={st.emptyTitle}>No Restaurant Selected</Text>
+                      <Text style={st.emptySubtitle}>Add a restaurant to view analytics</Text>
+                      <TouchableOpacity activeOpacity={0.85} onPress={() => navigation.navigate('MyRestaurants')}>
+                        <LinearGradient colors={[C.primary, C.primaryDark]} style={st.emptyBtn}>
+                          <Icon name="add" size={16} color="#fff" />
+                          <Text style={st.emptyBtnTxt}>Add Restaurant</Text>
+                        </LinearGradient>
                       </TouchableOpacity>
                     </View>
                   ) : (
                     <>
                       {/* Summary Cards */}
-                      <View style={st.summaryGrid}>
-                        <View style={[st.summaryCard, { borderLeftColor: C.primary }]}>
-                          <Icon name="calendar" size={20} color={C.primary} />
-                          <Text style={st.summaryValue}>₹{summary.bookings?.revenue || 0}</Text>
-                          <Text style={st.summaryLabel}>{summary.bookings?.count || 0} Bookings</Text>
-                        </View>
-                        <View style={[st.summaryCard, { borderLeftColor: C.warn }]}>
-                          <Icon name="cash" size={20} color={C.warn} />
-                          <Text style={st.summaryValue}>₹{summary.expenses?.total || 0}</Text>
-                          <Text style={st.summaryLabel}>{summary.expenses?.count || 0} Expenses</Text>
-                        </View>
+                      <View style={st.statsGrid}>
+                        <StatCard
+                          icon="calendar"
+                          gradColors={['#FEF2F2', '#FFE4E6']}
+                          iconColor={C.primary}
+                          value={`₹${(summary.bookings?.revenue || 0).toLocaleString()}`}
+                          label={`${summary.bookings?.count || 0} Bookings`}
+                        />
+                        <StatCard
+                          icon="cash"
+                          gradColors={['#FFFBEB', '#FEF3C7']}
+                          iconColor={C.warn}
+                          value={`₹${(summary.expenses?.total || 0).toLocaleString()}`}
+                          label={`${summary.expenses?.count || 0} Expenses`}
+                        />
                       </View>
-
-                      <View style={st.summaryGrid}>
-                        <View style={[st.summaryCard, { borderLeftColor: C.ok }]}>
-                          <Icon name="hardware-chip" size={20} color={C.ok} />
-                          <Text style={st.summaryValue}>{summary.equipment?.count || 0}</Text>
-                          <Text style={st.summaryLabel}>Equipment</Text>
-                        </View>
+                      <View style={st.statsGrid}>
+                        <StatCard
+                          icon="hardware-chip"
+                          gradColors={['#ECFDF5', '#D1FAE5']}
+                          iconColor={C.ok}
+                          value={`${summary.equipment?.count || 0}`}
+                          label="Equipment"
+                        />
+                        <View style={{ flex: 1 }} />
                       </View>
 
                       {/* Net Revenue */}
-                      <View style={[st.netRevenueCard, summary.netRevenue >= 0 ? st.profit : st.loss]}>
-                        <View style={st.netRevenueHeader}>
-                          <Icon name={summary.netRevenue >= 0 ? 'trending-up' : 'trending-down'} size={24} color="#fff" />
-                          <Text style={st.netRevenueLabel}>Net Revenue</Text>
+                      <LinearGradient
+                        colors={summary.netRevenue >= 0 ? ['#10B981', '#059669'] : ['#EF4444', '#DC2626']}
+                        style={st.netCard}
+                      >
+                        <View style={st.netTop}>
+                          <View style={st.netIconBg}>
+                            <Icon
+                              name={summary.netRevenue >= 0 ? 'trending-up' : 'trending-down'}
+                              size={20}
+                              color="#fff"
+                            />
+                          </View>
+                          <Text style={st.netLabel}>Net Revenue</Text>
                         </View>
-                        <Text style={st.netRevenueValue}>₹{Math.abs(summary.netRevenue || 0)}</Text>
-                        <Text style={st.netRevenueSubtext}>
+                        <Text style={st.netValue}>
+                          ₹{Math.abs(summary.netRevenue || 0).toLocaleString()}
+                        </Text>
+                        <Text style={st.netSub}>
                           {summary.netRevenue >= 0 ? 'Profit' : 'Loss'} for {selectedPeriod} days
                         </Text>
-                      </View>
+                      </LinearGradient>
                     </>
                   )}
                 </>
               )}
             </View>
 
-            {/* CHARTS SECTION (Collapsible) */}
+            {/* ══════ CHARTS (Collapsible) ══════ */}
             {restaurantId && analyticsData && (
-              <View style={st.sectionBox}>
+              <View style={st.section}>
                 <TouchableOpacity
-                  style={st.sectionHeaderRow}
+                  style={st.sectionHead}
                   onPress={() => setShowCharts(!showCharts)}
+                  activeOpacity={0.7}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <Icon name="bar-chart" size={20} color={C.primary} />
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <LinearGradient colors={['#818CF8', '#6366F1']} style={st.sectionBadge}>
+                      <Icon name="bar-chart" size={15} color="#fff" />
+                    </LinearGradient>
                     <Text style={st.sectionTitle}>Charts & Trends</Text>
                   </View>
-                  <Icon name={showCharts ? 'chevron-up' : 'chevron-down'} size={20} color={C.muted} />
+                  <Icon name={showCharts ? 'chevron-up' : 'chevron-down'} size={18} color={C.muted} />
                 </TouchableOpacity>
 
                 {showCharts && (
-                  <View style={{ marginTop: 12 }}>
+                  <View style={{ marginTop: 12, marginHorizontal: -16, overflow: 'hidden' }}>
                     {trends.bookingsByDay && trends.bookingsByDay.length > 0 && (
                       <LineChartCard
                         title="Booking Trends"
@@ -562,15 +718,15 @@ export default function HomeScreen({ navigation }) {
                       />
                     )}
                     {topCategories.length > 0 && (
-                      <View style={st.categoriesCard}>
-                        <Text style={st.chartCardTitle}>Top Expense Categories</Text>
-                        {topCategories.slice(0, 5).map((category, index) => (
-                          <View key={index} style={st.categoryRow}>
+                      <View style={st.catCard}>
+                        <Text style={st.catCardTitle}>Top Expense Categories</Text>
+                        {topCategories.slice(0, 5).map((cat, idx) => (
+                          <View key={idx} style={st.catRow}>
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                              <View style={[st.categoryDot, { backgroundColor: getCategoryColor(index) }]} />
-                              <Text style={st.categoryName}>{category.category}</Text>
+                              <View style={[st.catDot, { backgroundColor: getCategoryColor(idx) }]} />
+                              <Text style={st.catName}>{cat.category}</Text>
                             </View>
-                            <Text style={st.categoryAmount}>₹{category.total || 0}</Text>
+                            <Text style={st.catAmt}>₹{cat.total || 0}</Text>
                           </View>
                         ))}
                       </View>
@@ -580,137 +736,70 @@ export default function HomeScreen({ navigation }) {
               </View>
             )}
 
-            {/* HERO BANNER */}
-            <View style={{ paddingHorizontal: 16 }}>
-              {banners.length ? (
-                <ImageBackground
-                  source={{ uri: banners[heroIdx]?.image_url }}
-                  style={[st.hero, { height: 180 }]}
-                  imageStyle={{ borderRadius: R }}
-                >
-                  <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.28)', borderRadius: R }]} />
-                  {banners[heroIdx]?.badge ? (
-                    <View style={st.heroBadge}>
-                      <Text style={st.heroBadgeTxt}>{banners[heroIdx].badge}</Text>
-                    </View>
-                  ) : null}
-                  <View style={st.heroText}>
-                    <Text style={st.heroH} numberOfLines={2}>{banners[heroIdx]?.title ?? ''}</Text>
-                    {!!banners[heroIdx]?.subtitle && (
-                      <Text style={st.heroP} numberOfLines={2}>{banners[heroIdx].subtitle}</Text>
-                    )}
-                    {!!banners[heroIdx]?.cta_text && !!banners[heroIdx]?.cta_link && (
-                      <TouchableOpacity onPress={() => open(banners[heroIdx].cta_link)} style={st.heroBtn}>
-                        <Text style={st.heroBtnTxt}>{banners[heroIdx].cta_text}</Text>
-                        <Icon name="arrow-forward" size={14} color="#fff" />
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                  <View style={st.heroProgWrap}>
-                    <Animated.View style={[st.heroProgBar, { width: bar.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }]} />
-                  </View>
-                </ImageBackground>
-              ) : (
-                <View style={[st.hero, { height: 180, backgroundColor: '#E9EEF5', alignItems: 'center', justifyContent: 'center' }]}>
-                  <Text style={{ color: C.muted, fontWeight: '700' }}>No banners yet</Text>
-                </View>
-              )}
-            </View>
-
-            {/* Quick navigation */}
-            <View style={st.quickRow}>
-              <QuickNav icon="calendar-outline" label="My Bookings" onPress={goBookings} />
-              <QuickNav icon="storefront-outline" label="My Restaurants" onPress={goRestaurants} />
-              <QuickNav icon="headset-outline" label="Support" onPress={goSupport} />
-            </View>
-
-            {/* Feed pills */}
-            {feed.length > 0 && (
-              <View style={{ paddingHorizontal: 16, marginTop: 16 }}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  {feed.map(f => (
-                    <View
-                      key={f.id}
-                      style={[
-                        st.pill,
-                        f.tone === 'ok' ? { backgroundColor: '#ECFDF5', borderColor: '#D1FAE5' } :
-                          f.tone === 'warn' ? { backgroundColor: '#FFFBEB', borderColor: '#FDE68A' } :
-                            f.tone === 'danger' ? { backgroundColor: '#FEF2F2', borderColor: '#FECACA' } :
-                              { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }
-                      ]}
-                    >
-                      <Icon
-                        name={f.icon}
-                        size={14}
-                        color={
-                          f.tone === 'ok' ? C.ok :
-                            f.tone === 'warn' ? '#F59E0B' :
-                              f.tone === 'danger' ? '#EF4444' :
-                                C.info
-                        }
-                      />
-                      <Text style={st.pillTxt}>{f.txt}</Text>
-                    </View>
-                  ))}
-                </ScrollView>
-              </View>
-            )}
-
-            {/* RECENT ACTIVITY */}
+            {/* ══════ RECENT ACTIVITY ══════ */}
             {(recent.bookings?.length > 0 || recent.expenses?.length > 0) && (
-              <View style={st.sectionBox}>
-                <Text style={[st.sectionTitle, { marginBottom: 12 }]}>Recent Activity</Text>
+              <View style={st.section}>
+                <View style={[st.sectionHead, { marginBottom: 14 }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <LinearGradient colors={['#60A5FA', '#3B82F6']} style={st.sectionBadge}>
+                      <Icon name="time" size={15} color="#fff" />
+                    </LinearGradient>
+                    <Text style={st.sectionTitle}>Recent Activity</Text>
+                  </View>
+                </View>
 
-                {recent.bookings && recent.bookings.length > 0 && (
+                {recent.bookings?.length > 0 && (
                   <View style={{ marginBottom: 16 }}>
-                    <View style={st.recentHeader}>
-                      <Text style={st.recentTitle}>Recent Bookings</Text>
+                    <View style={st.recentSubHead}>
+                      <Text style={st.recentSubTitle}>Bookings</Text>
                       <TouchableOpacity onPress={() => navigation.navigate('MyBookings')}>
                         <Text style={st.link}>View All</Text>
                       </TouchableOpacity>
                     </View>
-                    {recent.bookings.slice(0, 3).map((booking) => (
-                      <View key={booking.id} style={st.recentItem}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                          <Icon name="calendar-outline" size={18} color={C.primary} />
-                          <View style={{ marginLeft: 10, flex: 1 }}>
-                            <Text style={st.recentItemTitle}>Booking #{booking.id.slice(0, 8)}</Text>
-                            <Text style={st.recentItemDate}>
-                              {new Date(booking.createdAt).toLocaleDateString()}
+                    {recent.bookings.slice(0, 3).map(b => (
+                      <View key={b.id} style={st.recentItem}>
+                        <LinearGradient colors={['#FEF2F2', '#FFE4E6']} style={st.recentIconBg}>
+                          <Icon name="calendar-outline" size={16} color={C.primary} />
+                        </LinearGradient>
+                        <View style={{ flex: 1, marginLeft: 12 }}>
+                          <Text style={st.recentName}>Booking #{b.id.slice(0, 8)}</Text>
+                          <Text style={st.recentDate}>
+                            {new Date(b.createdAt).toLocaleDateString()}
+                          </Text>
+                        </View>
+                        <View style={{ alignItems: 'flex-end' }}>
+                          <Text style={st.recentAmt}>₹{b.totalAmount}</Text>
+                          <View style={[st.statusChip, { backgroundColor: getStatusColor(b.status) + '20' }]}>
+                            <Text style={[st.statusChipTxt, { color: getStatusColor(b.status) }]}>
+                              {b.status}
                             </Text>
                           </View>
-                        </View>
-                        <View>
-                          <Text style={st.recentItemAmount}>₹{booking.totalAmount}</Text>
-                          <Text style={[st.recentItemStatus, { color: getStatusColor(booking.status) }]}>
-                            {booking.status}
-                          </Text>
                         </View>
                       </View>
                     ))}
                   </View>
                 )}
 
-                {recent.expenses && recent.expenses.length > 0 && (
+                {recent.expenses?.length > 0 && (
                   <View>
-                    <View style={st.recentHeader}>
-                      <Text style={st.recentTitle}>Recent Expenses</Text>
+                    <View style={st.recentSubHead}>
+                      <Text style={st.recentSubTitle}>Expenses</Text>
                       <TouchableOpacity onPress={() => navigation.navigate('Expenses')}>
                         <Text style={st.link}>View All</Text>
                       </TouchableOpacity>
                     </View>
-                    {recent.expenses.slice(0, 3).map((expense) => (
-                      <View key={expense.id} style={st.recentItem}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                          <Icon name="cash-outline" size={18} color={C.warn} />
-                          <View style={{ marginLeft: 10, flex: 1 }}>
-                            <Text style={st.recentItemTitle}>{expense.category}</Text>
-                            <Text style={st.recentItemDate}>
-                              {new Date(expense.expenseDate).toLocaleDateString()}
-                            </Text>
-                          </View>
+                    {recent.expenses.slice(0, 3).map(e => (
+                      <View key={e.id} style={st.recentItem}>
+                        <LinearGradient colors={['#FFFBEB', '#FEF3C7']} style={st.recentIconBg}>
+                          <Icon name="cash-outline" size={16} color={C.warn} />
+                        </LinearGradient>
+                        <View style={{ flex: 1, marginLeft: 12 }}>
+                          <Text style={st.recentName}>{e.category}</Text>
+                          <Text style={st.recentDate}>
+                            {new Date(e.expenseDate).toLocaleDateString()}
+                          </Text>
                         </View>
-                        <Text style={st.recentItemAmount}>₹{expense.amount}</Text>
+                        <Text style={st.recentAmt}>₹{e.amount}</Text>
                       </View>
                     ))}
                   </View>
@@ -718,43 +807,32 @@ export default function HomeScreen({ navigation }) {
               </View>
             )}
 
-            {/* Sponsored */}
+            {/* ══════ SPONSORED ══════ */}
             {sponsoredData.length > 0 && (
-              <View style={{ marginTop: 16 }}>
-                <View style={{ paddingHorizontal: 16, paddingVertical: 8 }}>
-                  <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#000' }}>Sponsored</Text>
+              <View style={{ marginTop: 20 }}>
+                <View style={st.sectionHdr}>
+                  <Text style={st.sectionTitle}>Sponsored</Text>
                 </View>
                 <FlatList
                   horizontal
                   data={sponsoredData}
                   keyExtractor={(item) => item.id.toString()}
                   showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 2 }}
+                  contentContainerStyle={{ paddingHorizontal: 16 }}
                   renderItem={({ item }) => (
                     <TouchableOpacity
                       onPress={() => Linking.openURL(item.link)}
                       activeOpacity={0.9}
-                      style={{
-                        width: Math.min(280, width * 0.75),
-                        marginRight: 10,
-                        borderRadius: 12,
-                        overflow: 'hidden',
-                        backgroundColor: '#fff',
-                        elevation: 2,
-                      }}
+                      style={st.sponsorCard}
                     >
                       <Image
                         source={{ uri: `${IMAGE_BASE_URL}/${item.image}` }}
-                        style={{ width: '100%', height: 120 }}
+                        style={st.sponsorImg}
                         resizeMode="cover"
                       />
-                      <View style={{ padding: 10 }}>
-                        <Text style={{ color: "#333", fontWeight: 'bold', fontSize: 15 }} numberOfLines={1}>
-                          {item.title}
-                        </Text>
-                        <Text style={{ color: '#666', fontSize: 13 }} numberOfLines={1}>
-                          {item.description}
-                        </Text>
+                      <View style={{ padding: 12 }}>
+                        <Text style={st.sponsorTitle} numberOfLines={1}>{item.title}</Text>
+                        <Text style={st.sponsorDesc} numberOfLines={1}>{item.description}</Text>
                       </View>
                     </TouchableOpacity>
                   )}
@@ -762,12 +840,14 @@ export default function HomeScreen({ navigation }) {
               </View>
             )}
 
-            {/* Guides */}
+            {/* ══════ QUICK GUIDES ══════ */}
             {guides.length > 0 && (
-              <>
+              <View style={{ marginTop: 20 }}>
                 <View style={st.sectionHdr}>
-                  <Text style={st.sectionTitle}>Quick guides</Text>
-                  <TouchableOpacity onPress={goGuide}><Text style={st.link}>View all</Text></TouchableOpacity>
+                  <Text style={st.sectionTitle}>Quick Guides</Text>
+                  <TouchableOpacity onPress={goGuide}>
+                    <Text style={st.link}>View all</Text>
+                  </TouchableOpacity>
                 </View>
                 <FlatList
                   horizontal
@@ -776,30 +856,50 @@ export default function HomeScreen({ navigation }) {
                   keyExtractor={(i) => i.id}
                   contentContainerStyle={{ paddingHorizontal: 16 }}
                   renderItem={({ item }) => (
-                    <TouchableOpacity onPress={() => open(item.link)} style={[st.guideCard, { width: Math.min(260, width * 0.68) }]}>
-                      <ImageBackground source={{ uri: item.thumb }} style={st.guideImg} imageStyle={{ borderTopLeftRadius: R, borderTopRightRadius: R }}>
-                        <View style={st.play}><Icon name="play" size={14} color="#fff" /></View>
+                    <TouchableOpacity onPress={() => open(item.link)} style={st.guideCard}>
+                      <ImageBackground
+                        source={{ uri: item.thumb }}
+                        style={st.guideImg}
+                        imageStyle={{ borderTopLeftRadius: 16, borderTopRightRadius: 16 }}
+                      >
+                        <LinearGradient
+                          colors={['transparent', 'rgba(0,0,0,0.3)']}
+                          style={StyleSheet.absoluteFill}
+                        />
+                        <View style={st.playBtn}>
+                          <Icon name="play" size={16} color="#fff" />
+                        </View>
                       </ImageBackground>
                       <View style={{ padding: 12 }}>
                         <Text style={st.guideTitle} numberOfLines={2}>{item.title}</Text>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
-                          <Icon name="time-outline" size={14} color={C.muted} />
-                          <Text style={st.guideMeta}>  {item.min} min</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 4 }}>
+                          <Icon name="time-outline" size={13} color={C.muted} />
+                          <Text style={st.guideMeta}>{item.min} min</Text>
                         </View>
                       </View>
                     </TouchableOpacity>
                   )}
                 />
-              </>
+              </View>
             )}
 
-            {/* Announcements */}
+            {/* ══════ FROM KNI ══════ */}
             <View style={st.sectionHdr}>
               <Text style={st.sectionTitle}>From KNI</Text>
             </View>
             <View style={{ paddingHorizontal: 16 }}>
-              <Announcement icon="rocket-outline" title="Faster approvals" text="Keep your restaurant profile complete to unlock same-day service." />
-              <Announcement icon="sparkles-outline" title="New: Inventory Timeline" text="Track spend & parts history across all equipment." />
+              <AnnCard
+                icon="rocket-outline"
+                grad={['#818CF8', '#6366F1']}
+                title="Faster approvals"
+                text="Keep your restaurant profile complete to unlock same-day service."
+              />
+              <AnnCard
+                icon="sparkles-outline"
+                grad={['#F472B6', '#EC4899']}
+                title="New: Inventory Timeline"
+                text="Track spend & parts history across all equipment."
+              />
             </View>
           </>
         )}
@@ -811,62 +911,67 @@ export default function HomeScreen({ navigation }) {
   );
 }
 
-/* ---------------- SKELETON ---------------- */
-function SkeletonHome({ width, pulse }) {
+/* ──────────────────── SKELETON ──────────────────── */
+function SkeletonHome({ pulse }) {
+  const Bone = ({ style }) => <Animated.View style={[stSK.bone, style, { opacity: pulse }]} />;
   return (
     <>
-      {/* Analytics skeleton */}
-      <View style={st.sectionBox}>
-        <Animated.View style={[stSK.h2, { opacity: pulse, width: 180, marginBottom: 12 }]} />
-        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
-          {[0, 1, 2, 3].map(i => (
-            <Animated.View key={i} style={[stSK.periodBtn, { opacity: pulse }]} />
-          ))}
-        </View>
-        <View style={{ flexDirection: 'row', gap: 12 }}>
-          <Animated.View style={[stSK.summaryCard, { opacity: pulse }]} />
-          <Animated.View style={[stSK.summaryCard, { opacity: pulse }]} />
-        </View>
+      {/* Banner skeleton */}
+      <View style={{ paddingHorizontal: 16, marginTop: 14 }}>
+        <Bone style={{ height: 190, borderRadius: 20 }} />
       </View>
 
-      {/* Hero */}
-      <View style={{ paddingHorizontal: 16 }}>
-        <Animated.View style={[stSK.hero, { opacity: pulse }]} />
-      </View>
-
-      {/* Quick nav */}
-      <View style={st.quickRow}>
-        {[0, 1, 2].map(i => (
-          <View key={i} style={st.qItem}>
-            <Animated.View style={[stSK.qIcon, { opacity: pulse }]} />
-            <Animated.View style={[stSK.lineXs, { opacity: pulse, width: 60, marginTop: 6 }]} />
+      {/* Quick actions skeleton */}
+      <View style={st.qaRow}>
+        {[0, 1, 2, 3].map(i => (
+          <View key={i} style={st.qaItem}>
+            <Bone style={{ width: 48, height: 48, borderRadius: 16 }} />
+            <Bone style={{ width: 50, height: 10, borderRadius: 5, marginTop: 8 }} />
           </View>
         ))}
       </View>
 
-      {/* Pills */}
-      <View style={{ paddingHorizontal: 16, marginTop: 16 }}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {[0, 1, 2].map(i => (
-            <Animated.View key={i} style={[stSK.pill, { opacity: pulse }]} />
+      {/* Pills skeleton */}
+      <View style={{ flexDirection: 'row', paddingHorizontal: 16, marginTop: 16, gap: 8 }}>
+        {[0, 1, 2].map(i => (
+          <Bone key={i} style={{ width: 140, height: 34, borderRadius: 999 }} />
+        ))}
+      </View>
+
+      {/* Analytics skeleton */}
+      <View style={[st.section, { marginTop: 16 }]}>
+        <Bone style={{ width: 180, height: 18, borderRadius: 8, marginBottom: 14 }} />
+        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
+          {[0, 1, 2, 3].map(i => (
+            <Bone key={i} style={{ flex: 1, height: 36, borderRadius: 10 }} />
           ))}
-        </ScrollView>
+        </View>
+        <View style={{ flexDirection: 'row', gap: 12 }}>
+          <Bone style={{ flex: 1, height: 100, borderRadius: 16 }} />
+          <Bone style={{ flex: 1, height: 100, borderRadius: 16 }} />
+        </View>
+        <Bone style={{ height: 80, borderRadius: 16, marginTop: 12 }} />
       </View>
     </>
   );
 }
 
-/* ---------------- SUB-COMPONENTS ---------------- */
-const QuickNav = ({ icon, label, onPress }) => (
-  <TouchableOpacity onPress={onPress} style={st.qItem} activeOpacity={0.9}>
-    <View style={st.qIcon}><Icon name={icon} size={18} color={C.primary} /></View>
-    <Text style={st.qTxt}>{label}</Text>
-  </TouchableOpacity>
+/* ──────────────────── SUBCOMPONENTS ──────────────────── */
+const StatCard = ({ icon, gradColors, iconColor, value, label }) => (
+  <View style={st.statCard}>
+    <LinearGradient colors={gradColors} style={st.statIconBg}>
+      <Icon name={icon} size={16} color={iconColor} />
+    </LinearGradient>
+    <Text style={st.statValue}>{value}</Text>
+    <Text style={st.statLabel}>{label}</Text>
+  </View>
 );
 
-const Announcement = ({ icon, title, text }) => (
+const AnnCard = ({ icon, grad, title, text }) => (
   <View style={st.annCard}>
-    <View style={st.annIcon}><Icon name={icon} size={16} color={C.primary} /></View>
+    <LinearGradient colors={grad} style={st.annIconBg}>
+      <Icon name={icon} size={16} color="#fff" />
+    </LinearGradient>
     <View style={{ flex: 1 }}>
       <Text style={st.annTitle}>{title}</Text>
       <Text style={st.annText}>{text}</Text>
@@ -874,116 +979,594 @@ const Announcement = ({ icon, title, text }) => (
   </View>
 );
 
-/* ---------------- STYLES ---------------- */
+/* ════════════════════════════════════════════════════════
+   ░░░ S T Y L E S ░░░
+   ════════════════════════════════════════════════════════ */
 const st = StyleSheet.create({
-  top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 10, backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border },
-  hBtn: { width: 38, height: 38, borderRadius: 12, borderWidth: 1, borderColor: '#EEF2F7', backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
-  cartBadge: { position: 'absolute', top: 2, right: 2, backgroundColor: C.primary, borderRadius: 10, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
-  cartBadgeText: { color: '#fff', fontSize: 10, fontWeight: '700' },
+  /* ── Header ── */
+  headerGrad: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  greetText: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  headerRestName: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '900',
+    marginTop: 2,
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    backgroundColor: '#FFD700',
+    borderRadius: 10,
+    minWidth: 16,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  cartBadgeTxt: {
+    color: C.ink,
+    fontSize: 9,
+    fontWeight: '800',
+  },
 
-  // Section box
-  sectionBox: { backgroundColor: C.card, marginHorizontal: 16, marginTop: 16, borderRadius: 16, padding: 16 },
-  sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  sectionTitle: { color: C.ink, fontWeight: '900', fontSize: 16 },
+  /* ── Banner ── */
+  bannerWrap: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 14,
+    elevation: 8,
+  },
+  bannerImg: {
+    width: '100%',
+    height: 190,
+    justifyContent: 'flex-end',
+  },
+  bannerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 20,
+  },
+  bannerBadge: {
+    position: 'absolute',
+    left: 14,
+    top: 14,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+  },
+  bannerBadgeTxt: {
+    color: C.ink,
+    fontWeight: '900',
+    fontSize: 11,
+  },
+  bannerContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 32,
+  },
+  bannerTitle: {
+    color: '#fff',
+    fontWeight: '900',
+    fontSize: 18,
+    lineHeight: 24,
+  },
+  bannerSub: {
+    color: '#E5E7EB',
+    marginTop: 3,
+    fontSize: 13,
+  },
+  bannerCta: {
+    marginTop: 10,
+    alignSelf: 'flex-start',
+    backgroundColor: C.primary,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  bannerCtaTxt: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  bannerBottom: {
+    position: 'absolute',
+    left: 14,
+    right: 14,
+    bottom: 10,
+    gap: 6,
+  },
+  dotsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.4)',
+  },
+  dotActive: {
+    width: 20,
+    backgroundColor: '#fff',
+    borderRadius: 4,
+  },
+  progWrap: {
+    height: 3,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  progBar: {
+    height: 3,
+    backgroundColor: '#fff',
+  },
+  bannerEmpty: {
+    height: 190,
+    borderRadius: 20,
+    backgroundColor: '#E9EEF5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
-  // Period selector
-  periodSelector: { flexDirection: 'row', gap: 8, marginTop: 12, marginBottom: 12 },
-  periodButton: { flex: 1, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: C.border, backgroundColor: C.card, alignItems: 'center' },
-  periodButtonActive: { backgroundColor: C.primary, borderColor: C.primary },
-  periodText: { fontSize: 13, color: C.text, fontWeight: '600' },
-  periodTextActive: { color: '#fff' },
+  /* ── Quick Actions ── */
+  qaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    marginTop: 18,
+    gap: 10,
+  },
+  qaItem: {
+    flex: 1,
+    backgroundColor: C.card,
+    borderRadius: 16,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#EEF2F7',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  qaIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  qaLabel: {
+    color: C.ink,
+    fontWeight: '700',
+    fontSize: 11,
+  },
 
-  // Filter chips
-  filterChip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, backgroundColor: C.bg, borderWidth: 1, borderColor: C.border, marginRight: 8 },
-  filterChipActive: { backgroundColor: C.primary, borderColor: C.primary },
-  filterText: { fontSize: 12, fontWeight: '600', color: C.ink },
-  filterTextActive: { color: '#fff' },
+  /* ── Feed Pills ── */
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    marginRight: 8,
+  },
+  pillTxt: {
+    color: C.ink,
+    fontWeight: '600',
+    fontSize: 12,
+  },
 
-  // Summary cards
-  summaryGrid: { flexDirection: 'row', gap: 12, marginBottom: 12 },
-  summaryCard: { flex: 1, backgroundColor: C.bg, padding: 14, borderRadius: 12, borderLeftWidth: 4 },
-  summaryValue: { fontSize: 18, fontWeight: '700', color: C.ink, marginTop: 6 },
-  summaryLabel: { fontSize: 12, color: C.muted, marginTop: 2 },
+  /* ── Sections ── */
+  section: {
+    backgroundColor: C.card,
+    marginHorizontal: 16,
+    marginTop: 18,
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#EEF2F7',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  sectionHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  sectionBadge: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sectionTitle: {
+    color: C.ink,
+    fontWeight: '900',
+    fontSize: 16,
+  },
+  sectionHdr: {
+    paddingHorizontal: 16,
+    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  link: {
+    color: C.primary,
+    fontWeight: '700',
+    fontSize: 13,
+  },
 
-  // Net revenue
-  netRevenueCard: { padding: 16, borderRadius: 12 },
-  profit: { backgroundColor: C.ok },
-  loss: { backgroundColor: C.danger },
-  netRevenueHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
-  netRevenueLabel: { fontSize: 13, color: '#fff', marginLeft: 8, fontWeight: '600' },
-  netRevenueValue: { fontSize: 28, fontWeight: '700', color: '#fff' },
-  netRevenueSubtext: { fontSize: 12, color: '#fff', opacity: 0.9, marginTop: 2 },
+  /* ── Period selector ── */
+  periodRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 14,
+    marginBottom: 14,
+  },
+  periodChip: {
+    flex: 1,
+    paddingVertical: 9,
+    borderRadius: 10,
+    borderWidth: 1.2,
+    borderColor: C.border,
+    backgroundColor: C.bg,
+    alignItems: 'center',
+  },
+  periodChipOn: {
+    backgroundColor: C.primary,
+    borderColor: C.primary,
+  },
+  periodTxt: {
+    fontSize: 13,
+    color: C.text,
+    fontWeight: '700',
+  },
+  periodTxtOn: {
+    color: '#fff',
+  },
 
-  // Empty analytics
-  emptyAnalytics: { alignItems: 'center', padding: 20 },
-  emptyText: { color: C.muted, marginTop: 8, marginBottom: 12 },
-  addRestBtn: { backgroundColor: C.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 },
-  addRestBtnText: { color: '#fff', fontWeight: '600' },
+  /* ── Empty analytics ── */
+  emptyAna: {
+    alignItems: 'center',
+    paddingVertical: 28,
+  },
+  emptyIconBg: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  emptyTitle: {
+    color: C.ink,
+    fontWeight: '800',
+    fontSize: 16,
+    marginBottom: 4,
+  },
+  emptySubtitle: {
+    color: C.muted,
+    fontSize: 13,
+    marginBottom: 16,
+  },
+  emptyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  emptyBtnTxt: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 14,
+  },
 
-  // Categories
-  categoriesCard: { backgroundColor: C.bg, padding: 14, borderRadius: 12, marginTop: 12 },
-  chartCardTitle: { fontSize: 14, fontWeight: '700', color: C.ink, marginBottom: 12 },
-  categoryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  categoryDot: { width: 10, height: 10, borderRadius: 5 },
-  categoryName: { fontSize: 13, color: C.text },
-  categoryAmount: { fontSize: 14, fontWeight: '700', color: C.ink },
+  /* ── Stats Cards ── */
+  statsGrid: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: C.bg,
+    borderRadius: 16,
+    padding: 14,
+  },
+  statIconBg: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: C.ink,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: C.muted,
+    fontWeight: '600',
+    marginTop: 2,
+  },
 
-  // Recent activity
-  recentHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  recentTitle: { fontSize: 14, fontWeight: '600', color: C.ink },
-  recentItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: C.bg, padding: 12, borderRadius: 10, marginBottom: 8 },
-  recentItemTitle: { fontSize: 13, fontWeight: '600', color: C.ink },
-  recentItemDate: { fontSize: 11, color: C.muted, marginTop: 2 },
-  recentItemAmount: { fontSize: 14, fontWeight: '700', color: C.ink, textAlign: 'right' },
-  recentItemStatus: { fontSize: 10, marginTop: 2, textAlign: 'right', fontWeight: '600' },
+  /* ── Net Revenue ── */
+  netCard: {
+    borderRadius: 16,
+    padding: 18,
+  },
+  netTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 8,
+  },
+  netIconBg: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  netLabel: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.85)',
+    fontWeight: '700',
+  },
+  netValue: {
+    fontSize: 30,
+    fontWeight: '900',
+    color: '#fff',
+  },
+  netSub: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.8)',
+    fontWeight: '600',
+    marginTop: 4,
+  },
 
-  // Hero
-  hero: { borderRadius: R, overflow: 'hidden', marginTop: 6 },
-  heroBadge: { position: 'absolute', left: 12, top: 12, backgroundColor: '#FFFFFFE6', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 },
-  heroBadgeTxt: { color: C.ink, fontWeight: '900', fontSize: 12 },
-  heroText: { position: 'absolute', left: 12, right: 12, bottom: 36 },
-  heroH: { color: '#fff', fontWeight: '900', fontSize: 18 },
-  heroP: { color: '#E5E7EB', marginTop: 2, fontSize: 13 },
-  heroBtn: { marginTop: 8, alignSelf: 'flex-start', backgroundColor: C.primary, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  heroBtnTxt: { color: '#fff', fontWeight: '700', fontSize: 13 },
-  heroProgWrap: { position: 'absolute', left: 12, right: 12, bottom: 10, height: 3, backgroundColor: '#FFFFFF55', borderRadius: 2, overflow: 'hidden' },
-  heroProgBar: { height: 3, backgroundColor: '#fff' },
+  /* ── Categories ── */
+  catCard: {
+    backgroundColor: C.bg,
+    padding: 14,
+    borderRadius: 14,
+    marginTop: 12,
+  },
+  catCardTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: C.ink,
+    marginBottom: 12,
+  },
+  catRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  catDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  catName: {
+    fontSize: 13,
+    color: C.text,
+    fontWeight: '500',
+  },
+  catAmt: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: C.ink,
+  },
 
-  // Quick nav
-  quickRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, marginTop: 16, gap: 10 },
-  qItem: { flex: 1, backgroundColor: '#fff', borderRadius: 14, borderWidth: 1, borderColor: '#EEF2F7', padding: 12, alignItems: 'center' },
-  qIcon: { width: 36, height: 36, borderRadius: 12, backgroundColor: '#FFE8E8', alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
-  qTxt: { color: C.ink, fontWeight: '700', fontSize: 12 },
+  /* ── Recent Activity ── */
+  recentSubHead: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  recentSubTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: C.ink,
+  },
+  recentItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: C.bg,
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 8,
+  },
+  recentIconBg: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recentName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: C.ink,
+  },
+  recentDate: {
+    fontSize: 11,
+    color: C.muted,
+    marginTop: 2,
+  },
+  recentAmt: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: C.ink,
+  },
+  statusChip: {
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginTop: 3,
+  },
+  statusChipTxt: {
+    fontSize: 9,
+    fontWeight: '800',
+  },
 
-  // Pills
-  pill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, borderWidth: 1, marginRight: 8 },
-  pillTxt: { color: C.ink, fontWeight: '600', fontSize: 12 },
+  /* ── Sponsored ── */
+  sponsorCard: {
+    width: Math.min(280, W * 0.75),
+    marginRight: 12,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: C.card,
+    borderWidth: 1,
+    borderColor: '#EEF2F7',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  sponsorImg: {
+    width: '100%',
+    height: 120,
+  },
+  sponsorTitle: {
+    color: C.ink,
+    fontWeight: '800',
+    fontSize: 14,
+  },
+  sponsorDesc: {
+    color: C.muted,
+    fontSize: 12,
+    marginTop: 3,
+  },
 
-  // Section headers
-  sectionHdr: { paddingHorizontal: 16, marginTop: 20, marginBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  link: { color: C.primary, fontWeight: '700', fontSize: 13 },
+  /* ── Guides ── */
+  guideCard: {
+    width: Math.min(260, W * 0.68),
+    backgroundColor: C.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#EEF2F7',
+    marginRight: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  guideImg: {
+    width: '100%',
+    height: 120,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  playBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  guideTitle: {
+    color: C.ink,
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  guideMeta: {
+    color: C.muted,
+    fontWeight: '600',
+    fontSize: 12,
+  },
 
-  // Guides
-  guideCard: { backgroundColor: '#fff', borderRadius: R, borderWidth: 1, borderColor: '#EEF2F7', marginRight: 12, overflow: 'hidden' },
-  guideImg: { width: '100%', height: 110, alignItems: 'center', justifyContent: 'center' },
-  play: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
-  guideTitle: { color: C.text, fontWeight: '700', fontSize: 13 },
-  guideMeta: { color: C.muted, fontWeight: '600', fontSize: 12 },
-
-  // Announcements
-  annCard: { backgroundColor: '#fff', borderRadius: R, borderWidth: 1, borderColor: '#EEF2F7', padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 10 },
-  annIcon: { width: 32, height: 32, borderRadius: 10, backgroundColor: '#FFE8E8', alignItems: 'center', justifyContent: 'center' },
-  annTitle: { color: C.ink, fontWeight: '700', fontSize: 14 },
-  annText: { color: C.muted, marginTop: 2, fontSize: 12 },
+  /* ── Announcements ── */
+  annCard: {
+    backgroundColor: C.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#EEF2F7',
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  annIconBg: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  annTitle: {
+    color: C.ink,
+    fontWeight: '800',
+    fontSize: 14,
+  },
+  annText: {
+    color: C.muted,
+    marginTop: 2,
+    fontSize: 12,
+    lineHeight: 17,
+  },
 });
 
-/* ---------------- SKELETON STYLES ---------------- */
+/* ──────────────────── SKELETON STYLES ──────────────────── */
 const stSK = StyleSheet.create({
-  hero: { height: 180, backgroundColor: '#E9EEF5', borderRadius: R, marginTop: 6 },
-  h2: { height: 18, borderRadius: 8, backgroundColor: '#E9EEF5' },
-  periodBtn: { flex: 1, height: 36, borderRadius: 8, backgroundColor: '#E9EEF5' },
-  summaryCard: { flex: 1, height: 90, borderRadius: 12, backgroundColor: '#E9EEF5' },
-  qIcon: { width: 36, height: 36, borderRadius: 12, backgroundColor: '#F1F5F9' },
-  pill: { width: 160, height: 34, borderRadius: 999, backgroundColor: '#EFF6FF', borderWidth: 1, borderColor: '#BFDBFE', marginRight: 8 },
-  lineXs: { height: 10, borderRadius: 8, backgroundColor: '#E9EEF5' },
+  bone: {
+    backgroundColor: '#E2E8F0',
+  },
 });

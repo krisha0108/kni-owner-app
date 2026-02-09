@@ -1,108 +1,88 @@
 // screens/EditOwnerProfile.js
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
+import {
+  View, Text, TextInput, TouchableOpacity, Alert, ScrollView,
+  StyleSheet, ActivityIndicator, StatusBar, KeyboardAvoidingView, Platform
+} from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
+import LinearGradient from 'react-native-linear-gradient';
 import { api } from '../api/client';
 
-const C = { primary:'#EF3A3A', ink:'#1D2254', text:'#0F172A', muted:'#6B7280', border:'#E5E7EB', bg:'#F5F7FA' };
+const C = {
+  primary: '#EF3A3A', primaryDark: '#D42E2E', ink: '#1D2254',
+  text: '#0F172A', muted: '#6B7280', border: '#E5E7EB', bg: '#F5F7FA',
+};
 
 export default function EditOwnerProfile() {
   const route = useRoute();
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const initialFromNav = route?.params?.initial || {};
 
   const [loading, setLoading] = useState(false);
-  const [saving,  setSaving]  = useState(false);
-// top of component (with other useState hooks)
-const [showPassword, setShowPassword] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-  // ---- state (prefilled from API) ----
-  const [firstName, setFirstName]           = useState(initialFromNav.first_name || '');
-  const [lastName, setLastName]             = useState(initialFromNav.last_name || '');
-  const [email, setEmail]                   = useState(initialFromNav.email || '');
-  const [phone, setPhone]                   = useState(initialFromNav.phone || '');
-  const [password, setPassword]             = useState(''); // NEVER prefill
+  const [firstName, setFirstName] = useState(initialFromNav.first_name || '');
+  const [lastName, setLastName] = useState(initialFromNav.last_name || '');
+  const [email, setEmail] = useState(initialFromNav.email || '');
+  const [phone, setPhone] = useState(initialFromNav.phone || '');
+  const [password, setPassword] = useState('');
   const [restaurantName, setRestaurantName] = useState(initialFromNav.restaurant_name || '');
-  const [locations, setLocations]           = useState(
+  const [locations, setLocations] = useState(
     typeof initialFromNav.locations === 'number'
       ? String(initialFromNav.locations)
       : (initialFromNav.locations ?? '0')
   );
 
-// ---- fetch fresh owner profile on mount to prefill all fields ----
-useEffect(() => {
-  (async () => {
-    try {
-      setLoading(true);
+  useEffect(() => {
+    (async () => {
+      try {
+        setLoading(true);
+        const res = await api.get('/app_api/owner/profile');
+        const p = (res?.data?.data ?? res?.data) || {};
 
-      const res = await api.get('/app_api/owner/profile');
-      // Some backends return { data: {...} } (Resources); support both
-      const p = (res?.data?.data ?? res?.data) || {};
-      console.log('Profile API full response:', res?.data);
+        const fullName = p?.name || '';
+        const fName = p?.first_name ?? (fullName.split(' ')[0] || '');
+        const lName = p?.last_name ?? (fullName.split(' ').slice(1).join(' ') || '');
 
-      // First/Last derivation fallback
-      const fullName = p?.name || '';
-      const fName = p?.first_name ?? (fullName.split(' ')[0] || '');
-      const lName = p?.last_name  ?? (fullName.split(' ').slice(1).join(' ') || '');
+        setFirstName(fName);
+        setLastName(lName);
+        setEmail(p?.email ?? '');
+        setPhone(p?.phone ?? '');
+        setPassword('');
 
-      setFirstName(fName);
-      setLastName(lName);
-      setEmail(p?.email ?? '');
-      setPhone(p?.phone ?? '');
-      setPassword(''); // never prefill
+        const locParsed = Number.parseInt((p?.locations ?? '').toString().trim(), 10);
+        const hotelsCount = Number.parseInt((p?.stats?.hotels_count ?? '').toString().trim(), 10);
+        const finalLocations = Number.isFinite(locParsed) ? locParsed : (Number.isFinite(hotelsCount) ? hotelsCount : 0);
 
-      // Parse locations robustly (may be "3" or 3 or null)
-      const locParsed = Number.parseInt(
-        (p?.locations ?? '').toString().trim(),
-        10
-      );
-      const hotelsCount = Number.parseInt(
-        (p?.stats?.hotels_count ?? '').toString().trim(),
-        10
-      );
-
-      const finalLocations = Number.isFinite(locParsed)
-        ? locParsed
-        : (Number.isFinite(hotelsCount) ? hotelsCount : 0);
-
-      console.log('Restaurant name from API:', p?.restaurant_name);
-      console.log('Locations from API:', p?.locations, '| Hotels count:', p?.stats?.hotels_count);
-
-      setRestaurantName(p?.restaurant_name ?? '');
-      setLocations(String(finalLocations));
-    } catch (e) {
-      const status = e?.response?.status;
-      const body = e?.response?.data;
-      console.log('Owner profile prefill failed:', status, body || e?.message);
-
-      // Optional: if not authenticated, send user to login
-      if (status === 401) {
-        // navigation.replace('Login'); // uncomment if you have a Login screen
+        setRestaurantName(p?.restaurant_name ?? '');
+        setLocations(String(finalLocations));
+      } catch (e) {
+        const status = e?.response?.status;
+        if (status === 401) { /* handle auth */ }
+      } finally {
+        setLoading(false);
       }
-    } finally {
-      setLoading(false);
-    }
-  })();
-}, []);
-
+    })();
+  }, []);
 
   const payload = useMemo(() => ({
     first_name: firstName,
     last_name: lastName,
     email,
     phone,
-    ...(password ? { password } : {}),           // only if user types
-    restaurant_name: restaurantName ?? null,     // optional
-    locations: Number.parseInt(locations || '0', 10) || 0, // integer
+    ...(password ? { password } : {}),
+    restaurant_name: restaurantName ?? null,
+    locations: Number.parseInt(locations || '0', 10) || 0,
   }), [firstName, lastName, email, phone, password, restaurantName, locations]);
 
   const onSave = async () => {
     if (!firstName.trim()) return Alert.alert('Validation', 'First name is required.');
-    if (!email.trim())     return Alert.alert('Validation', 'Email is required.');
-    if (!phone.trim())     return Alert.alert('Validation', 'Phone is required.');
-
+    if (!email.trim()) return Alert.alert('Validation', 'Email is required.');
+    if (!phone.trim()) return Alert.alert('Validation', 'Phone is required.');
     try {
       setSaving(true);
       await api.put('/app_api/owner/profile', payload);
@@ -111,113 +91,265 @@ useEffect(() => {
       ]);
     } catch (e) {
       Alert.alert('Error', e?.response?.data?.message || 'Unable to update.');
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   };
+
+  const initial = ((firstName || 'U')[0] || 'U').toUpperCase();
 
   if (loading) {
     return (
-      <View style={{flex:1, alignItems:'center', justifyContent:'center', backgroundColor:C.bg}}>
-        <ActivityIndicator />
-      </View>
+      <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top', 'left', 'right']}>
+        <StatusBar barStyle="light-content" />
+        <LinearGradient colors={[C.primary, C.primaryDark]} style={st.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
+            <Icon name="chevron-back" size={20} color="#fff" />
+          </TouchableOpacity>
+          <Text style={st.headerTitle}>Edit Profile</Text>
+          <View style={{ width: 40 }} />
+        </LinearGradient>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator size="large" color={C.primary} />
+          <Text style={{ color: C.muted, marginTop: 12 }}>Loading...</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={{flex:1, backgroundColor:C.bg}} edges={['top','left','right']}>
-    <ScrollView style={{ flex:1, backgroundColor: C.bg }} contentContainerStyle={{ padding:16 }}>
-      <Text style={st.h1}>Edit Profile</Text>
+    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top', 'left', 'right']}>
+      <StatusBar barStyle="light-content" />
 
-      <View style={st.row2}>
-        <View style={{ flex:1, marginRight:8 }}>
-          <Text style={st.label}>First name</Text>
-          <TextInput style={st.input} value={firstName} onChangeText={setFirstName} placeholder="First name" />
-        </View>
-        <View style={{ flex:1, marginLeft:8 }}>
-          <Text style={st.label}>Last name</Text>
-          <TextInput style={st.input} value={lastName} onChangeText={setLastName} placeholder="Last name" />
-        </View>
-      </View>
+      {/* ===== HEADER ===== */}
+      <LinearGradient colors={[C.primary, C.primaryDark]} style={st.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
+          <Icon name="chevron-back" size={20} color="#fff" />
+        </TouchableOpacity>
+        <Text style={st.headerTitle}>Edit Profile</Text>
+        <TouchableOpacity onPress={onSave} disabled={saving} style={st.saveTopBtn}>
+          {saving
+            ? <ActivityIndicator size="small" color="#fff" />
+            : <Text style={st.saveTopText}>Save</Text>
+          }
+        </TouchableOpacity>
+      </LinearGradient>
 
-      <Text style={st.label}>Email</Text>
-      <TextInput style={st.input} value={email} onChangeText={setEmail} placeholder="Email" autoCapitalize="none" keyboardType="email-address" />
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 40 }}>
 
-      <Text style={st.label}>Phone</Text>
-      <TextInput style={st.input} value={phone} onChangeText={setPhone} placeholder="Phone" keyboardType="phone-pad" />
+          {/* ===== AVATAR PREVIEW ===== */}
+          <View style={st.avatarSection}>
+            <LinearGradient colors={[C.primary, C.primaryDark]} style={st.avatarCircle}>
+              <Text style={st.avatarText}>{initial}</Text>
+            </LinearGradient>
+            <Text style={st.avatarName}>{firstName || 'Your'} {lastName || 'Name'}</Text>
+            <Text style={st.avatarSub}>{email || 'Add your email'}</Text>
+          </View>
 
-      {/* Auto field: keep empty by default for security */}
-      <Text style={st.label}>Password (leave blank to keep same)</Text>
-<View style={st.inputWrap}>
-  <TextInput
-    style={[st.input, st.inputWithIcon]}
-    value={password}
-    onChangeText={setPassword}
-    placeholder="New password"
-    secureTextEntry={!showPassword}
-    autoCapitalize="none"
-    autoCorrect={false}
-    textContentType="password" // iOS hint
-  />
-  <TouchableOpacity
-    onPress={() => setShowPassword(s => !s)}
-    style={st.eyeBtn}
-    accessibilityRole="button"
-    accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
-  >
-    <Icon name={showPassword ? 'eye-off' : 'eye'} size={18} color={C.muted} />
-  </TouchableOpacity>
-</View>
-      {/* Auto-filled from owner table */}
-      <Text style={st.label}>Restaurant name</Text>
-      <TextInput style={st.input} value={restaurantName} onChangeText={setRestaurantName} placeholder="Restaurant name" />
+          {/* ===== FORM ===== */}
+          <View style={st.formCard}>
 
-      {/* Auto-filled (integer) from owner table (or hotels_count fallback) */}
-      <Text style={st.label}>Locations (count)</Text>
-      <TextInput
-        style={st.input}
-        value={locations}
-        onChangeText={setLocations}
-        placeholder="e.g. 3"
-        keyboardType="number-pad"
-      />
+            {/* --- Name Row --- */}
+            <Text style={st.groupLabel}>Personal Details</Text>
+            <View style={st.nameRow}>
+              <View style={{ flex: 1, marginRight: 6 }}>
+                <Text style={st.label}>First Name <Text style={{ color: C.primary }}>*</Text></Text>
+                <View style={st.inputBox}>
+                  <TextInput style={st.input} value={firstName} onChangeText={setFirstName}
+                    placeholder="First name" placeholderTextColor="#B0B8C4" />
+                </View>
+              </View>
+              <View style={{ flex: 1, marginLeft: 6 }}>
+                <Text style={st.label}>Last Name</Text>
+                <View style={st.inputBox}>
+                  <TextInput style={st.input} value={lastName} onChangeText={setLastName}
+                    placeholder="Last name" placeholderTextColor="#B0B8C4" />
+                </View>
+              </View>
+            </View>
 
-      <TouchableOpacity disabled={saving} onPress={onSave} style={st.saveBtn}>
-        {saving ? <ActivityIndicator color="#fff" /> : (<>
-          <Icon name="save-outline" color="#fff" size={18} />
-          <Text style={st.saveTxt}>Save</Text>
-        </>)}
-      </TouchableOpacity>
-    </ScrollView>
+            <Text style={st.label}>Email <Text style={{ color: C.primary }}>*</Text></Text>
+            <View style={st.inputBox}>
+              <Icon name="mail-outline" size={16} color="#94A3B8" style={{ marginLeft: 12 }} />
+              <TextInput style={[st.input, { paddingLeft: 8 }]} value={email} onChangeText={setEmail}
+                placeholder="your@email.com" placeholderTextColor="#B0B8C4"
+                keyboardType="email-address" autoCapitalize="none" />
+            </View>
+
+            <Text style={st.label}>Phone <Text style={{ color: C.primary }}>*</Text></Text>
+            <View style={st.inputBox}>
+              <Icon name="call-outline" size={16} color="#94A3B8" style={{ marginLeft: 12 }} />
+              <TextInput style={[st.input, { paddingLeft: 8 }]} value={phone} onChangeText={setPhone}
+                placeholder="+91 98765 43210" placeholderTextColor="#B0B8C4" keyboardType="phone-pad" />
+            </View>
+
+            {/* --- Divider --- */}
+            <View style={st.divider} />
+
+            {/* --- Password --- */}
+            <Text style={st.groupLabel}>Security</Text>
+            <Text style={st.label}>New Password</Text>
+            <View style={st.inputBox}>
+              <Icon name="lock-closed-outline" size={16} color="#94A3B8" style={{ marginLeft: 12 }} />
+              <TextInput style={[st.input, { paddingLeft: 8 }]} value={password} onChangeText={setPassword}
+                placeholder="Leave blank to keep current" placeholderTextColor="#B0B8C4"
+                secureTextEntry={!showPassword} autoCapitalize="none" />
+              <TouchableOpacity onPress={() => setShowPassword(s => !s)} style={{ padding: 12 }}>
+                <Icon name={showPassword ? 'eye-off' : 'eye'} size={18} color="#94A3B8" />
+              </TouchableOpacity>
+            </View>
+            <Text style={st.hint}>Only fill this if you want to change your password</Text>
+
+            {/* --- Divider --- */}
+            <View style={st.divider} />
+
+            {/* --- Business --- */}
+            <Text style={st.groupLabel}>Business</Text>
+            <Text style={st.label}>Restaurant Name</Text>
+            <View style={st.inputBox}>
+              <Icon name="restaurant-outline" size={16} color="#94A3B8" style={{ marginLeft: 12 }} />
+              <TextInput style={[st.input, { paddingLeft: 8 }]} value={restaurantName} onChangeText={setRestaurantName}
+                placeholder="Your restaurant name" placeholderTextColor="#B0B8C4" />
+            </View>
+
+            <Text style={st.label}>Locations</Text>
+            <View style={st.inputBox}>
+              <Icon name="location-outline" size={16} color="#94A3B8" style={{ marginLeft: 12 }} />
+              <TextInput style={[st.input, { paddingLeft: 8 }]} value={locations} onChangeText={setLocations}
+                placeholder="e.g. 3" placeholderTextColor="#B0B8C4" keyboardType="number-pad" />
+            </View>
+          </View>
+
+          {/* ===== BUTTONS ===== */}
+          <TouchableOpacity disabled={saving} onPress={onSave} activeOpacity={0.85} style={{ marginTop: 16 }}>
+            <LinearGradient colors={[C.primary, C.primaryDark]} style={st.saveBtn}>
+              {saving ? <ActivityIndicator color="#fff" /> : (
+                <>
+                  <Icon name="checkmark-circle" size={20} color="#fff" />
+                  <Text style={st.saveBtnText}>Save Changes</Text>
+                </>
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={() => navigation.goBack()} style={st.cancelBtn}>
+            <Text style={st.cancelBtnText}>Cancel</Text>
+          </TouchableOpacity>
+
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const st = StyleSheet.create({
-  h1: { color: C.ink, fontWeight: '900', fontSize: 20, marginBottom: 12 },
-  label: { color: C.muted, marginBottom: 6, marginTop: 10 },
+  /* Header */
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  backBtn: {
+    width: 40, height: 40, borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  headerTitle: {
+    fontSize: 18, fontWeight: '800', color: '#fff',
+  },
+  saveTopBtn: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 16, paddingVertical: 8, borderRadius: 10,
+  },
+  saveTopText: {
+    color: '#fff', fontWeight: '800', fontSize: 14,
+  },
+
+  /* Avatar */
+  avatarSection: {
+    alignItems: 'center', paddingVertical: 20,
+  },
+  avatarCircle: {
+    width: 72, height: 72, borderRadius: 24,
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: C.primary, shadowOpacity: 0.3, shadowRadius: 10, elevation: 6,
+  },
+  avatarText: {
+    color: '#fff', fontSize: 30, fontWeight: '900',
+  },
+  avatarName: {
+    color: C.ink, fontWeight: '800', fontSize: 18, marginTop: 12,
+  },
+  avatarSub: {
+    color: C.muted, fontSize: 13, marginTop: 3,
+  },
+
+  /* Form Card */
+  formCard: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#EEF2F7',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+
+  /* Group Label */
+  groupLabel: {
+    fontSize: 14, fontWeight: '800', color: C.ink,
+    marginBottom: 12, marginTop: 4,
+  },
+
+  /* Label */
+  label: {
+    fontSize: 12, fontWeight: '600', color: C.muted,
+    marginBottom: 6, marginLeft: 2,
+  },
+
+  /* Input */
+  nameRow: { flexDirection: 'row' },
+  inputBox: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#F8FAFC', borderRadius: 12,
+    borderWidth: 1.2, borderColor: '#E2E8F0',
+    marginBottom: 14,
+  },
   input: {
-    backgroundColor: '#fff', borderWidth: 1, borderColor: C.border, borderRadius: 12,
-    paddingHorizontal: 12, paddingVertical: 10, color: C.text
+    flex: 1, paddingHorizontal: 14, paddingVertical: 13,
+    fontSize: 15, color: C.text, fontWeight: '500',
   },
-  row2: { flexDirection: 'row' },
+
+  /* Hint */
+  hint: {
+    fontSize: 11.5, color: '#94A3B8', marginTop: -6, marginBottom: 8, marginLeft: 2,
+  },
+
+  /* Divider */
+  divider: {
+    height: 1, backgroundColor: '#F1F5F9', marginVertical: 16,
+  },
+
+  /* Save / Cancel */
   saveBtn: {
-    marginTop: 18, backgroundColor: C.primary, borderRadius: 12, paddingVertical: 12,
-    alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8
+    borderRadius: 14, paddingVertical: 16,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    shadowColor: C.primary, shadowOpacity: 0.2, shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 }, elevation: 4,
   },
-  saveTxt: { color: '#fff', fontWeight: '900', marginLeft: 8 },
-  inputWrap: {
-    position: 'relative',
-    justifyContent: 'center',
+  saveBtnText: {
+    color: '#fff', fontWeight: '800', fontSize: 16,
   },
-  inputWithIcon: {
-    paddingRight: 44, // leave room for the eye button
+  cancelBtn: {
+    marginTop: 10, paddingVertical: 14, alignItems: 'center',
+    borderRadius: 14, backgroundColor: '#F1F5F9',
   },
-  eyeBtn: {
-    position: 'absolute',
-    right: 12,
-    height: '100%',
-    justifyContent: 'center',
-    paddingHorizontal: 4,
+  cancelBtnText: {
+    color: C.muted, fontWeight: '700', fontSize: 15,
   },
 });

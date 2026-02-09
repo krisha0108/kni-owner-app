@@ -1,102 +1,105 @@
+/**
+ * ============================================================================
+ * MY RESTAURANTS SCREEN - PREMIUM DESIGN (Urban Clap Inspired)
+ * ============================================================================
+ */
+
 import React, { useState, useCallback, useMemo } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  RefreshControl,
-  ActivityIndicator,
-  Alert,
+  View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl,
+  ActivityIndicator, Alert, Image, StatusBar, useWindowDimensions, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { api } from '../api/client';
+import { api, getImageUrl } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
+// Premium Color Palette (Consistent with other screens)
 const C = {
   primary: '#EF3A3A',
+  primaryDark: '#DC2626',
+  primaryLight: '#FEE2E2',
+  gradient1: '#EF3A3A',
+  gradient2: '#DC2626',
   ink: '#1D2254',
-  text: '#0F172A',
-  muted: '#6B7280',
-  bg: '#F5F7FA',
+  text: '#334155',
+  muted: '#94A3B8',
+  bg: '#F8FAFC',
   card: '#FFFFFF',
-  border: '#E5E7EB',
-  ok: '#10B981',
-  warn: '#F59E0B',
+  border: '#E2E8F0',
+  success: '#10B981',
+  successLight: '#D1FAE5',
+  warning: '#F59E0B',
+  warningLight: '#FEF3C7',
   danger: '#EF4444',
+  dangerLight: '#FEE2E2',
   info: '#3B82F6',
+  infoLight: '#DBEAFE',
+  shadow: '#64748B',
 };
+
+const statusFilters = [
+  { key: 'all', label: 'All', icon: 'restaurant', color: C.ink },
+  { key: 'APPROVED', label: 'Approved', icon: 'checkmark-circle', color: C.success },
+  { key: 'PENDING', label: 'Pending', icon: 'time', color: C.warning },
+  { key: 'REJECTED', label: 'Rejected', icon: 'close-circle', color: C.danger },
+];
 
 const getStatusStyle = (status) => {
   switch (status) {
     case 'APPROVED':
-      return { bg: '#ECFDF5', text: C.ok, icon: 'checkmark-circle', label: 'Approved' };
+      return { bg: C.successLight, text: C.success, icon: 'checkmark-circle', label: 'Approved' };
     case 'PENDING':
     case 'PENDING_APPROVAL':
-      return { bg: '#FFFBEB', text: C.warn, icon: 'time', label: 'Pending Approval' };
+      return { bg: C.warningLight, text: C.warning, icon: 'time', label: 'Pending' };
     case 'REJECTED':
-      return { bg: '#FEF2F2', text: C.danger, icon: 'close-circle', label: 'Rejected' };
+      return { bg: C.dangerLight, text: C.danger, icon: 'close-circle', label: 'Rejected' };
     default:
-      return { bg: '#F3F4F6', text: C.muted, icon: 'help-circle', label: status };
+      return { bg: '#F1F5F9', text: C.muted, icon: 'help-circle', label: status };
   }
 };
 
-// Status filter config for stylish tabs
-const STATUS_CONFIG = {
-  all: { bg: '#F3F4F6', color: C.ink, icon: 'restaurant-outline', label: 'All' },
-  APPROVED: { bg: '#ECFDF5', color: '#10B981', icon: 'checkmark-circle-outline', label: 'Approved' },
-  PENDING: { bg: '#FEF3C7', color: '#D97706', icon: 'time-outline', label: 'Pending' },
-  REJECTED: { bg: '#FEE2E2', color: '#EF4444', icon: 'close-circle-outline', label: 'Rejected' },
-};
-
-const STATUS_OPTIONS = ['all', 'APPROVED', 'PENDING', 'REJECTED'];
-
 export default function MyRestaurantsScreen({ navigation }) {
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
+  const gridColumns = isTablet ? 2 : 1;
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [restaurants, setRestaurants] = useState([]);
   const [menuVisible, setMenuVisible] = useState(false);
   const [deleting, setDeleting] = useState(null);
-  const [activeStatusTab, setActiveStatusTab] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
 
-  // Calculate status counts
+  // Status counts
   const statusCounts = useMemo(() => {
     const counts = { all: restaurants.length, APPROVED: 0, PENDING: 0, REJECTED: 0 };
     restaurants.forEach(r => {
       const status = r.status === 'PENDING_APPROVAL' ? 'PENDING' : r.status;
-      if (counts[status] !== undefined) {
-        counts[status]++;
-      }
+      if (counts[status] !== undefined) counts[status]++;
     });
     return counts;
   }, [restaurants]);
 
-  // Filter restaurants by status
-  const filteredRestaurants = useMemo(() => {
-    if (activeStatusTab === 'all') return restaurants;
+  // Filter restaurants
+  const filtered = useMemo(() => {
+    if (statusFilter === 'all') return restaurants;
     return restaurants.filter(r => {
       const status = r.status === 'PENDING_APPROVAL' ? 'PENDING' : r.status;
-      return status === activeStatusTab;
+      return status === statusFilter;
     });
-  }, [restaurants, activeStatusTab]);
+  }, [restaurants, statusFilter]);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadRestaurants();
-    }, [])
-  );
+  useFocusEffect(useCallback(() => { loadRestaurants(); }, []));
 
   const loadRestaurants = async () => {
     try {
       setLoading(true);
       const response = await api.get('/owner/restaurants');
-
-      if (response.data.ok) {
-        setRestaurants(response.data.data);
-      }
+      if (response.data.ok) setRestaurants(response.data.data);
     } catch (error) {
       console.error('Error loading restaurants:', error);
     } finally {
@@ -105,38 +108,21 @@ export default function MyRestaurantsScreen({ navigation }) {
     }
   };
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    loadRestaurants();
-  };
+  const onRefresh = () => { setRefreshing(true); loadRestaurants(); };
 
   const handleEdit = (restaurant) => {
     navigation.navigate('RestaurantEdit', { restaurantId: restaurant.id });
   };
 
   const handleDelete = (restaurant) => {
-    // Only allow deletion for PENDING or REJECTED restaurants
     if (restaurant.status === 'APPROVED') {
-      Alert.alert(
-        'Cannot Delete',
-        'Approved restaurants with active bookings cannot be deleted. Please contact support if you need assistance.',
-        [{ text: 'OK' }]
-      );
+      Alert.alert('Cannot Delete', 'Approved restaurants cannot be deleted. Contact support for assistance.', [{ text: 'OK' }]);
       return;
     }
-
-    Alert.alert(
-      'Delete Restaurant',
-      `Are you sure you want to delete "${restaurant.name}"? This action cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => confirmDelete(restaurant),
-        },
-      ]
-    );
+    Alert.alert('Delete Restaurant', `Are you sure you want to delete "${restaurant.name}"?`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => confirmDelete(restaurant) },
+    ]);
   };
 
   const confirmDelete = async (restaurant) => {
@@ -147,477 +133,315 @@ export default function MyRestaurantsScreen({ navigation }) {
         Alert.alert('Success', 'Restaurant deleted successfully');
         loadRestaurants();
       } else {
-        Alert.alert('Error', response.data.error || 'Failed to delete restaurant');
+        Alert.alert('Error', response.data.error || 'Failed to delete');
       }
     } catch (error) {
-      console.error('Error deleting restaurant:', error);
-      Alert.alert('Error', error?.response?.data?.error || 'Failed to delete restaurant');
+      Alert.alert('Error', error?.response?.data?.error || 'Failed to delete');
     } finally {
       setDeleting(null);
     }
   };
 
-  const canDelete = (restaurant) => {
-    return restaurant.status === 'PENDING' || restaurant.status === 'REJECTED';
+  const canDelete = (restaurant) => restaurant.status === 'PENDING' || restaurant.status === 'REJECTED' || restaurant.status === 'PENDING_APPROVAL';
+
+  // ==================== RENDER RESTAURANT CARD ====================
+  const renderRestaurantCard = ({ item, index }) => {
+    const statusStyle = getStatusStyle(item.status);
+    const isDeleting = deleting === item.id;
+
+    return (
+      <TouchableOpacity
+        style={[st.card, isTablet && { marginHorizontal: 6 }]}
+        activeOpacity={0.9}
+        onPress={() => navigation.navigate('RestaurantView', { restaurantId: item.id })}
+        disabled={isDeleting}
+      >
+        {/* Card Image */}
+        <View style={st.cardImageContainer}>
+          {item.restaurantImageUrl ? (
+            <Image source={{ uri: getImageUrl(item.restaurantImageUrl) }} style={st.cardImage} />
+          ) : (
+            <View style={st.cardImagePlaceholder}>
+              <Icon name="restaurant-outline" size={40} color={C.muted} />
+            </View>
+          )}
+          {/* Status Badge */}
+          <View style={[st.statusBadge, { backgroundColor: statusStyle.bg }]}>
+            <Icon name={statusStyle.icon} size={12} color={statusStyle.text} />
+            <Text style={[st.statusBadgeText, { color: statusStyle.text }]}>{statusStyle.label}</Text>
+          </View>
+        </View>
+
+        {/* Card Info */}
+        <View style={st.cardInfo}>
+          <Text style={st.cardTitle} numberOfLines={1}>{item.name}</Text>
+
+          {item.address && (
+            <View style={st.infoRow}>
+              <Icon name="location" size={14} color={C.primary} />
+              <Text style={st.infoText} numberOfLines={1}>{item.address}</Text>
+            </View>
+          )}
+
+          {item.city && (
+            <View style={st.infoRow}>
+              <Icon name="business" size={14} color={C.muted} />
+              <Text style={st.infoTextMuted}>{item.city}{item.pincode ? ` - ${item.pincode}` : ''}</Text>
+            </View>
+          )}
+
+          {item.fssaiNumber && (
+            <View style={st.fssaiBadge}>
+              <Icon name="shield-checkmark" size={12} color={C.success} />
+              <Text style={st.fssaiText}>FSSAI Verified</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Card Actions */}
+        <View style={st.cardActions}>
+          <TouchableOpacity
+            style={st.viewBtn}
+            onPress={() => navigation.navigate('RestaurantView', { restaurantId: item.id })}
+            disabled={isDeleting}
+          >
+            <Icon name="eye" size={16} color="#fff" />
+            <Text style={st.viewBtnText}>View</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={st.iconBtn}
+            onPress={() => handleEdit(item)}
+            disabled={isDeleting}
+          >
+            <Icon name="pencil" size={18} color={C.info} />
+          </TouchableOpacity>
+
+          {canDelete(item) && (
+            <TouchableOpacity
+              style={[st.iconBtn, { backgroundColor: C.dangerLight }]}
+              onPress={() => handleDelete(item)}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <ActivityIndicator size="small" color={C.danger} />
+              ) : (
+                <Icon name="trash" size={18} color={C.danger} />
+              )}
+            </TouchableOpacity>
+          )}
+        </View>
+      </TouchableOpacity>
+    );
   };
 
+  // ==================== HEADER COMPONENT ====================
+  const renderHeader = () => (
+    <>
+      {/* Status Filter Chips */}
+      <View style={st.filterSection}>
+        <FlatList
+          horizontal
+          data={statusFilters}
+          keyExtractor={(item) => item.key}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={st.filterScroll}
+          renderItem={({ item: filter }) => {
+            const isActive = statusFilter === filter.key;
+            const count = statusCounts[filter.key] || 0;
+            return (
+              <TouchableOpacity
+                style={[st.filterChip, isActive && st.filterChipActive]}
+                onPress={() => setStatusFilter(filter.key)}
+              >
+                <Icon name={filter.icon} size={16} color={isActive ? '#fff' : filter.color} />
+                <Text style={[st.filterChipText, isActive && st.filterChipTextActive]}>
+                  {filter.label} ({count})
+                </Text>
+              </TouchableOpacity>
+            );
+          }}
+        />
+      </View>
+
+      {/* Results Header */}
+      <View style={st.resultsHeader}>
+        <Text style={st.resultsTitle}>{filtered.length} Restaurant{filtered.length !== 1 ? 's' : ''}</Text>
+        {statusFilter !== 'all' && (
+          <TouchableOpacity style={st.clearFilterBtn} onPress={() => setStatusFilter('all')}>
+            <Icon name="close-circle" size={14} color={C.primary} />
+            <Text style={st.clearFilterText}>Clear</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </>
+  );
+
+  // ==================== LOADING STATE ====================
   if (loading && !refreshing) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.menuBtn}>
-            <Icon name="arrow-back" size={24} color={C.ink} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>My Restaurants</Text>
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
-            <Icon name="menu" size={22} color="#1D2254" />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.loadingContainer}>
+      <SafeAreaView style={st.container} edges={['top']}>
+        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <LinearGradient colors={[C.gradient1, C.gradient2]} style={st.loadingHero}>
+          <Text style={st.heroTitle}>My Restaurants</Text>
+        </LinearGradient>
+        <View style={st.loadingContainer}>
           <ActivityIndicator size="large" color={C.primary} />
-          <Text style={styles.loadingText}>Loading restaurants...</Text>
+          <Text style={st.loadingText}>Loading restaurants...</Text>
         </View>
+        <KniBottomNav navigation={navigation} />
       </SafeAreaView>
     );
   }
 
+  // ==================== MAIN RENDER ====================
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.menuBtn}>
-          <Icon name="arrow-back" size={24} color={C.ink} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Restaurants</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('RestaurantOnboarding', { isFirstRestaurant: false })}>
-          <Icon name="add-circle" size={28} color={C.primary} />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
-          <Icon name="menu" size={22} color="#1D2254" />
-        </TouchableOpacity>
-      </View>
+    <SafeAreaView style={st.container} edges={['top']}>
+      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
 
-      {/* Stylish Status Filter Tabs */}
-      <View style={styles.summaryContainer}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.summaryScroll}
-        >
-          {STATUS_OPTIONS.map(statusKey => {
-            const config = STATUS_CONFIG[statusKey];
-            const count = statusCounts[statusKey] || 0;
-            const isActive = activeStatusTab === statusKey;
-
-            return (
-              <TouchableOpacity
-                key={statusKey}
-                onPress={() => setActiveStatusTab(statusKey)}
-                style={[
-                  styles.summaryCard,
-                  isActive && styles.summaryCardActive,
-                  { borderColor: isActive ? config.color : C.border },
-                ]}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.summaryIcon, { backgroundColor: config.bg }]}>
-                  <Icon name={config.icon} size={18} color={config.color} />
-                </View>
-                <Text style={[styles.summaryCount, isActive && { color: config.color }]}>
-                  {count}
-                </Text>
-                <Text style={[styles.summaryLabel, isActive && { color: config.color }]}>
-                  {config.label}
-                </Text>
-                {isActive && (
-                  <View style={[styles.summaryActiveBar, { backgroundColor: config.color }]} />
-                )}
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      </View>
-
-      <ScrollView
-        style={styles.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      {/* Premium Gradient Header */}
+      <LinearGradient
+        colors={[C.gradient1, C.gradient2]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={st.heroSection}
       >
-        {filteredRestaurants.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Icon name="restaurant-outline" size={80} color={C.muted} />
-            <Text style={styles.emptyTitle}>
-              {restaurants.length === 0 ? 'No Restaurants Yet' : 'No Results'}
-            </Text>
-            <Text style={styles.emptyText}>
-              {restaurants.length === 0
-                ? 'Add your first restaurant to get started'
-                : `No ${STATUS_CONFIG[activeStatusTab]?.label || ''} restaurants found`}
+        <View style={st.heroContent}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
+            <Icon name="arrow-back" size={22} color="#fff" />
+          </TouchableOpacity>
+          <View style={st.heroTextContainer}>
+            <Text style={st.heroTitle}>My Restaurants</Text>
+            <Text style={st.heroSubtitle}>{restaurants.length} registered</Text>
+          </View>
+          <View style={st.heroActions}>
+            <TouchableOpacity
+              style={st.heroIconBtn}
+              onPress={() => navigation.navigate('RestaurantOnboarding', { isFirstRestaurant: false })}
+            >
+              <Icon name="add" size={22} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity style={st.heroIconBtn} onPress={() => setMenuVisible(true)}>
+              <Icon name="menu" size={22} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </LinearGradient>
+
+      {/* Restaurant List */}
+      <FlatList
+        data={filtered}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={renderRestaurantCard}
+        numColumns={gridColumns}
+        key={`grid-${gridColumns}`}
+        ListHeaderComponent={renderHeader}
+        contentContainerStyle={st.listContent}
+        columnWrapperStyle={gridColumns > 1 ? st.columnWrapper : undefined}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} />}
+        ListEmptyComponent={
+          <View style={st.emptyState}>
+            <View style={st.emptyIconContainer}>
+              <Icon name="restaurant-outline" size={64} color={C.muted} />
+            </View>
+            <Text style={st.emptyTitle}>{restaurants.length === 0 ? 'No Restaurants Yet' : 'No Results'}</Text>
+            <Text style={st.emptySubtitle}>
+              {restaurants.length === 0 ? 'Add your first restaurant to get started' : 'Try a different filter'}
             </Text>
             {restaurants.length === 0 && (
               <TouchableOpacity
-                style={styles.addButton}
+                style={st.emptyBtn}
                 onPress={() => navigation.navigate('RestaurantOnboarding', { isFirstRestaurant: false })}
               >
-                <Icon name="add" size={20} color={C.card} />
-                <Text style={styles.addButtonText}>Add Restaurant</Text>
+                <Icon name="add" size={18} color="#fff" />
+                <Text style={st.emptyBtnText}>Add Restaurant</Text>
               </TouchableOpacity>
             )}
           </View>
-        ) : (
-          <View style={styles.listContainer}>
-            {filteredRestaurants.map((restaurant) => {
-              const statusStyle = getStatusStyle(restaurant.status);
-              const isDeleting = deleting === restaurant.id;
-
-              return (
-                <View key={restaurant.id} style={styles.restaurantCard}>
-                  <TouchableOpacity
-                    onPress={() => navigation.navigate('RestaurantView', { restaurantId: restaurant.id })}
-                    disabled={isDeleting}
-                  >
-                    <View style={styles.cardHeader}>
-                      <View style={styles.iconBox}>
-                        <Icon name="restaurant" size={24} color={C.primary} />
-                      </View>
-                      <View style={styles.cardInfo}>
-                        <Text style={styles.restaurantName}>{restaurant.name}</Text>
-                        {restaurant.address && (
-                          <View style={styles.addressRow}>
-                            <Icon name="location-outline" size={14} color={C.muted} />
-                            <Text style={styles.restaurantAddress} numberOfLines={1}>
-                              {restaurant.address}
-                            </Text>
-                          </View>
-                        )}
-                      </View>
-                    </View>
-
-                    <View style={styles.detailsRow}>
-                      {restaurant.phone && (
-                        <View style={styles.detailItem}>
-                          <Icon name="call-outline" size={16} color={C.muted} />
-                          <Text style={styles.detailText}>{restaurant.phone}</Text>
-                        </View>
-                      )}
-                      {restaurant.email && (
-                        <View style={styles.detailItem}>
-                          <Icon name="mail-outline" size={16} color={C.muted} />
-                          <Text style={styles.detailText} numberOfLines={1}>
-                            {restaurant.email}
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-
-                    <View style={styles.statusRow}>
-                      <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
-                        <Icon name={statusStyle.icon} size={14} color={statusStyle.text} />
-                        <Text style={[styles.statusText, { color: statusStyle.text }]}>
-                          {statusStyle.label}
-                        </Text>
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-
-                  {/* Action Buttons */}
-                  <View style={styles.actionButtons}>
-                    <TouchableOpacity
-                      style={styles.actionBtn}
-                      onPress={() => navigation.navigate('RestaurantView', { restaurantId: restaurant.id })}
-                      disabled={isDeleting}
-                    >
-                      <Icon name="eye-outline" size={18} color={C.info} />
-                      <Text style={[styles.actionBtnText, { color: C.info }]}>View</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={styles.actionBtn}
-                      onPress={() => handleEdit(restaurant)}
-                      disabled={isDeleting}
-                    >
-                      <Icon name="create-outline" size={18} color={C.primary} />
-                      <Text style={[styles.actionBtnText, { color: C.primary }]}>Edit</Text>
-                    </TouchableOpacity>
-
-                    {canDelete(restaurant) && (
-                      <TouchableOpacity
-                        style={styles.actionBtn}
-                        onPress={() => handleDelete(restaurant)}
-                        disabled={isDeleting}
-                      >
-                        {isDeleting ? (
-                          <ActivityIndicator size="small" color={C.danger} />
-                        ) : (
-                          <>
-                            <Icon name="trash-outline" size={18} color={C.danger} />
-                            <Text style={[styles.actionBtnText, { color: C.danger }]}>Delete</Text>
-                          </>
-                        )}
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                </View>
-              );
-            })}
-
+        }
+        ListFooterComponent={
+          restaurants.length > 0 ? (
             <TouchableOpacity
-              style={styles.addAnotherButton}
+              style={st.addMoreBtn}
               onPress={() => navigation.navigate('RestaurantOnboarding', { isFirstRestaurant: false })}
             >
               <Icon name="add-circle-outline" size={24} color={C.primary} />
-              <Text style={styles.addAnotherText}>Add Another Restaurant</Text>
+              <Text style={st.addMoreText}>Add Another Restaurant</Text>
             </TouchableOpacity>
-          </View>
-        )}
+          ) : null
+        }
+      />
 
-        <View style={{ height: 100 }} />
-      </ScrollView>
-      <KniBottomNav navigation={navigation} />
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
+      <KniBottomNav navigation={navigation} />
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: C.bg,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: C.card,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
-  },
-  menuBtn: {
-    width: 40,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: C.ink,
-  },
-  // Stylish summary cards
-  summaryContainer: {
-    paddingTop: 12,
-    paddingBottom: 8,
-    backgroundColor: C.card,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
-  },
-  summaryScroll: {
-    paddingHorizontal: 16,
-    gap: 10,
-  },
-  summaryCard: {
-    alignItems: 'center',
-    backgroundColor: C.card,
-    borderRadius: 16,
-    padding: 12,
-    minWidth: 85,
-    borderWidth: 2,
-    borderColor: C.border,
-    position: 'relative',
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  summaryCardActive: {
-    backgroundColor: '#FAFAFA',
-    shadowOpacity: 0.1,
-    elevation: 5,
-  },
-  summaryIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 6,
-  },
-  summaryCount: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: C.ink,
-  },
-  summaryLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: C.muted,
-    marginTop: 2,
-  },
-  summaryActiveBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 3,
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16,
-  },
-  content: {
-    flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    fontSize: 14,
-    color: C.muted,
-    marginTop: 12,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 32,
-    marginTop: 100,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: C.ink,
-    marginTop: 16,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: C.muted,
-    textAlign: 'center',
-    marginTop: 8,
-  },
-  addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: C.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-    marginTop: 24,
-  },
-  addButtonText: {
-    color: C.card,
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  listContainer: {
-    padding: 16,
-  },
-  restaurantCard: {
-    backgroundColor: C.card,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 12,
-  },
-  iconBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: '#FFE8E8',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardInfo: {
-    flex: 1,
-  },
-  restaurantName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: C.ink,
-  },
-  addressRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 4,
-  },
-  restaurantAddress: {
-    fontSize: 13,
-    color: C.muted,
-    flex: 1,
-  },
-  detailsRow: {
-    gap: 8,
-    marginBottom: 12,
-  },
-  detailItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  detailText: {
-    fontSize: 13,
-    color: C.text,
-    flex: 1,
-  },
-  statusRow: {
-    marginBottom: 12,
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    alignSelf: 'flex-start',
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    borderTopWidth: 1,
-    borderTopColor: C.border,
-    paddingTop: 12,
-    gap: 8,
-  },
-  actionBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 8,
-    backgroundColor: C.bg,
-  },
-  actionBtnText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  addAnotherButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: C.card,
-    paddingVertical: 16,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: C.primary,
-    borderStyle: 'dashed',
-    marginTop: 8,
-  },
-  addAnotherText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: C.primary,
-  },
+// ==================== STYLES ====================
+const st = StyleSheet.create({
+  container: { flex: 1, backgroundColor: C.bg },
+
+  // Hero Section (Compact)
+  heroSection: { paddingTop: 8, paddingBottom: 16, borderBottomLeftRadius: 20, borderBottomRightRadius: 20 },
+  heroContent: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 },
+  backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  heroTextContainer: { flex: 1 },
+  heroTitle: { fontSize: 24, fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
+  heroSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.8)', marginTop: 2 },
+  heroActions: { flexDirection: 'row', gap: 8 },
+  heroIconBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
+
+  // Filters
+  filterSection: { paddingVertical: 12, backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border },
+  filterScroll: { paddingHorizontal: 16 },
+  filterChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 10, marginRight: 8, backgroundColor: C.card, borderRadius: 20, borderWidth: 1.5, borderColor: C.border },
+  filterChipActive: { backgroundColor: C.primary, borderColor: C.primary },
+  filterChipText: { fontSize: 13, fontWeight: '600', color: C.ink },
+  filterChipTextActive: { color: '#fff' },
+
+  // Results Header
+  resultsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
+  resultsTitle: { fontSize: 15, fontWeight: '700', color: C.ink },
+  clearFilterBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: C.primaryLight, borderRadius: 8 },
+  clearFilterText: { fontSize: 12, fontWeight: '600', color: C.primary },
+
+  // List
+  listContent: { paddingHorizontal: 16, paddingBottom: 120 },
+  columnWrapper: { justifyContent: 'space-between' },
+
+  // Card
+  card: { flex: 1, backgroundColor: C.card, borderRadius: 16, marginBottom: 12, shadowColor: C.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3, overflow: 'hidden' },
+  cardImageContainer: { height: 120, backgroundColor: C.bg, position: 'relative' },
+  cardImage: { width: '100%', height: '100%' },
+  cardImagePlaceholder: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
+  statusBadge: { position: 'absolute', top: 10, left: 10, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10 },
+  statusBadgeText: { fontSize: 11, fontWeight: '700' },
+  cardInfo: { padding: 14 },
+  cardTitle: { fontSize: 16, fontWeight: '700', color: C.ink, marginBottom: 8 },
+  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  infoText: { fontSize: 13, color: C.text, flex: 1 },
+  infoTextMuted: { fontSize: 12, color: C.muted },
+  fssaiBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8, paddingHorizontal: 10, paddingVertical: 5, backgroundColor: C.successLight, borderRadius: 8, alignSelf: 'flex-start' },
+  fssaiText: { fontSize: 11, fontWeight: '600', color: C.success },
+  cardActions: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 14, paddingTop: 0 },
+  viewBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, backgroundColor: C.primary, borderRadius: 10 },
+  viewBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
+  iconBtn: { width: 40, height: 40, borderRadius: 10, backgroundColor: C.infoLight, alignItems: 'center', justifyContent: 'center' },
+
+  // Loading & Empty
+  loadingHero: { paddingVertical: 24, paddingHorizontal: 20, borderBottomLeftRadius: 20, borderBottomRightRadius: 20 },
+  loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  loadingText: { marginTop: 16, fontSize: 15, color: C.muted },
+  emptyState: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 40 },
+  emptyIconContainer: { width: 120, height: 120, borderRadius: 60, backgroundColor: C.border, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
+  emptyTitle: { fontSize: 20, fontWeight: '700', color: C.ink, marginBottom: 8 },
+  emptySubtitle: { fontSize: 14, color: C.muted, textAlign: 'center' },
+  emptyBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 24, paddingHorizontal: 24, paddingVertical: 14, backgroundColor: C.primary, borderRadius: 14 },
+  emptyBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+
+  // Add More Button
+  addMoreBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 8, marginBottom: 20, paddingVertical: 16, backgroundColor: C.card, borderRadius: 14, borderWidth: 2, borderColor: C.primary, borderStyle: 'dashed' },
+  addMoreText: { fontSize: 15, fontWeight: '700', color: C.primary },
 });

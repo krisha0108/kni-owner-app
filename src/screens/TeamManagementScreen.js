@@ -338,10 +338,17 @@ export default function TeamManagementScreen({ navigation }) {
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Icon name="arrow-back" size={24} color={C.ink} />
+            <Icon name="arrow-back" size={22} color={C.ink} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Team Management</Text>
-          <View style={{ width: 40 }} />
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>Team Management</Text>
+            <Text style={styles.headerSubtitle}>Manage team access</Text>
+          </View>
+          <View style={styles.headerActions}>
+            <TouchableOpacity style={styles.headerIconBtn} onPress={() => setMenuVisible(true)}>
+              <Icon name="menu" size={20} color={C.ink} />
+            </TouchableOpacity>
+          </View>
         </View>
         <View style={styles.loadingBox}>
           <ActivityIndicator size="large" color={C.primary} />
@@ -356,15 +363,18 @@ export default function TeamManagementScreen({ navigation }) {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Icon name="arrow-back" size={24} color={C.ink} />
+          <Icon name="arrow-back" size={22} color={C.ink} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Team Management</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity onPress={openInviteModal} style={styles.inviteBtn}>
-            <Icon name="person-add" size={20} color="#fff" />
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>Team Management</Text>
+          <Text style={styles.headerSubtitle}>Manage team access</Text>
+        </View>
+        <View style={styles.headerActions}>
+          <TouchableOpacity onPress={openInviteModal} style={styles.headerIconBtn}>
+            <Icon name="person-add" size={20} color={C.primary} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
-            <Icon name="menu" size={22} color="#1D2254" />
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.headerIconBtn}>
+            <Icon name="menu" size={20} color={C.ink} />
           </TouchableOpacity>
         </View>
       </View>
@@ -618,7 +628,6 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: C.card,
@@ -628,13 +637,36 @@ const styles = StyleSheet.create({
   backBtn: {
     width: 40,
     height: 40,
+    borderRadius: 10,
+    backgroundColor: C.bg,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  headerCenter: {
+    flex: 1,
+    marginLeft: 12,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: C.ink,
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    color: C.muted,
+    marginTop: 2,
+  },
+  headerActions: {
+    flexDirection: 'row',
+  },
+  headerIconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: C.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
   },
   inviteBtn: {
     width: 40,

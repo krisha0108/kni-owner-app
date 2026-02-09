@@ -64,7 +64,7 @@ const MENU_SECTIONS = [
     title: 'Services',
     items: [
       { icon: 'folder-outline', label: 'Category Request', screen: 'CategoryRequest' },
-      { icon: 'layers-outline', label: 'Request Services', screen: 'Request' },
+      { icon: 'layers-outline', label: 'Request Services', screen: 'ServiceRequest' },
       { icon: 'cart-outline', label: 'My Cart', screen: 'Cart' },
     ],
   },
@@ -78,7 +78,7 @@ const MENU_SECTIONS = [
   {
     title: 'Marketplace',
     items: [
-      { icon: 'storefront-outline', label: 'Marketplace', screen: 'Request' },
+      { icon: 'storefront-outline', label: 'Marketplace', screen: 'Marketplace' },
       { icon: 'bag-check-outline', label: 'My Orders', screen: 'MarketplaceOrders' },
       { icon: 'locate-outline', label: 'Order Tracking', screen: 'OrderTracking' },
     ],

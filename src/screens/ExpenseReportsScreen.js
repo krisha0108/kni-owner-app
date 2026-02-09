@@ -260,10 +260,10 @@ export default function ExpenseReportsScreen({ navigation }) {
         }
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Month Navigator */}
+        {/* Month Navigator - Premium Design */}
         <View style={styles.monthNav}>
           <TouchableOpacity style={styles.navBtn} onPress={() => changeMonth(-1)}>
-            <Icon name="chevron-back" size={20} color={C.ink} />
+            <Icon name="chevron-back" size={18} color={C.ink} />
             <Text style={styles.navBtnText}>Previous</Text>
           </TouchableOpacity>
           <View style={styles.monthDisplay}>
@@ -280,7 +280,7 @@ export default function ExpenseReportsScreen({ navigation }) {
             </Text>
             <Icon
               name="chevron-forward"
-              size={20}
+              size={18}
               color={isCurrentMonth() ? C.border : C.ink}
             />
           </TouchableOpacity>
@@ -461,45 +461,37 @@ const styles = StyleSheet.create({
 
   scrollContent: { paddingBottom: 32 },
 
-  restaurantScroll: { marginTop: 12 },
-  restaurantScrollContent: { paddingHorizontal: 16, gap: 8 },
-  restaurantChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: C.card,
-    borderWidth: 1,
-    borderColor: C.border,
-    marginRight: 8,
-  },
-  restaurantChipActive: { backgroundColor: C.primary, borderColor: C.primary },
-  restaurantChipText: { fontSize: 13, fontWeight: '600', color: C.ink },
-  restaurantChipTextActive: { color: '#fff' },
-
+  // Month Navigator - Premium Design
   monthNav: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 16,
+    backgroundColor: C.card,
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: C.border,
   },
   navBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: C.card,
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: C.bg,
     borderWidth: 1,
     borderColor: C.border,
   },
-  navBtnDisabled: { opacity: 0.5 },
+  navBtnDisabled: { opacity: 0.4 },
   navBtnText: { fontSize: 13, fontWeight: '600', color: C.ink },
   navBtnTextDisabled: { color: C.muted },
   monthDisplay: { alignItems: 'center' },
-  monthText: { fontSize: 20, fontWeight: '900', color: C.ink },
-  yearText: { fontSize: 14, color: C.muted },
+  monthText: { fontSize: 22, fontWeight: '900', color: C.ink },
+  yearText: { fontSize: 14, color: C.muted, marginTop: 2 },
 
   noDataCard: {
     backgroundColor: C.card,
@@ -514,7 +506,7 @@ const styles = StyleSheet.create({
   noDataTitle: { fontSize: 16, fontWeight: '700', color: C.ink, marginTop: 12 },
   noDataText: { fontSize: 14, color: C.muted, textAlign: 'center', marginTop: 8 },
 
-  summaryRow: { paddingHorizontal: 16, marginBottom: 12 },
+  summaryRow: { paddingHorizontal: 16, marginTop: 16 },
   summaryCard: {
     borderRadius: 16,
     padding: 20,
@@ -528,7 +520,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 16,
     gap: 12,
-    marginBottom: 8,
+    marginTop: 12,
   },
   comparisonCard: {
     backgroundColor: C.card,

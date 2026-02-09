@@ -1,3 +1,9 @@
+/**
+ * ============================================================================
+ * MY BOOKINGS SCREEN - PREMIUM DESIGN
+ * ============================================================================
+ */
+
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
@@ -10,17 +16,13 @@ import {
   ScrollView,
   Alert,
   useWindowDimensions,
+  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { api } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
-import SearchBar from '../components/filters/SearchBar';
-import FilterBottomSheet from '../components/filters/FilterBottomSheet';
-import SortDropdown from '../components/filters/SortDropdown';
-import ActiveFilterBadges from '../components/filters/ActiveFilterBadges';
-import { applyFilters, getDefaultFilters, countActiveFilters } from '../utils/filterHelpers';
-import { exportAndShare, BOOKING_COLUMNS, formatBookingsForExport } from '../services/exportService';
 import { useRestaurant } from '../context/RestaurantContext';
 import { RestaurantSelectorBar } from '../components/RestaurantSelector';
 import KniBottomNav from '../components/KniBottomNav';
@@ -29,80 +31,45 @@ import { scale, moderateScale, isTablet, getContainerMaxWidth } from '../utils/r
 
 const C = {
   primary: '#EF3A3A',
+  primaryDark: '#DC2626',
   ink: '#1D2254',
-  text: '#0F172A',
-  muted: '#6B7280',
-  bg: '#F5F7FA',
+  text: '#334155',
+  muted: '#94A3B8',
+  bg: '#F8FAFC',
   card: '#FFFFFF',
-  border: '#E5E7EB',
+  border: '#E2E8F0',
   ok: '#10B981',
   warn: '#F59E0B',
   danger: '#EF4444',
   info: '#3B82F6',
+  purple: '#8B5CF6',
 };
-
-const getStatusStyle = (status) => {
-  switch (status) {
-    case 'PENDING_PAYMENT':
-      return { bg: '#FFFBEB', text: C.warn, icon: 'time' };
-    case 'PAYMENT_UPLOADED':
-      return { bg: '#FEF3C7', text: '#D97706', icon: 'cloud-upload' };
-    case 'PAYMENT_VERIFIED':
-      return { bg: '#D1FAE5', text: '#059669', icon: 'checkmark-circle' };
-    case 'SCHEDULED':
-      return { bg: '#EFF6FF', text: C.info, icon: 'calendar' };
-    case 'IN_PROGRESS':
-      return { bg: '#F3F4F6', text: C.ink, icon: 'construct' };
-    case 'COMPLETED':
-      return { bg: '#ECFDF5', text: C.ok, icon: 'checkmark-done-circle' };
-    case 'CANCELLED':
-      return { bg: '#FEF2F2', text: C.danger, icon: 'close-circle' };
-    default:
-      return { bg: '#F3F4F6', text: C.muted, icon: 'help-circle' };
-  }
-};
-
-const STATUS_OPTIONS = [
-  { value: 'all', label: 'All', icon: 'list-outline' },
-  { value: 'PENDING_PAYMENT', label: 'Pending', icon: 'time-outline' },
-  { value: 'PAYMENT_UPLOADED', label: 'Uploaded', icon: 'cloud-upload-outline' },
-  { value: 'PAYMENT_VERIFIED', label: 'Verified', icon: 'checkmark-circle-outline' },
-  { value: 'SCHEDULED', label: 'Scheduled', icon: 'calendar-outline' },
-  { value: 'IN_PROGRESS', label: 'In Progress', icon: 'construct-outline' },
-  { value: 'COMPLETED', label: 'Completed', icon: 'checkmark-done-outline' },
-  { value: 'CANCELLED', label: 'Cancelled', icon: 'close-circle-outline' },
-];
 
 const STATUS_CONFIG = {
-  all: { bg: '#F3F4F6', color: C.ink, icon: 'list-outline' },
-  PENDING_PAYMENT: { bg: '#FEF3C7', color: '#D97706', icon: 'time-outline' },
-  PAYMENT_UPLOADED: { bg: '#DBEAFE', color: '#2563EB', icon: 'cloud-upload-outline' },
-  PAYMENT_VERIFIED: { bg: '#D1FAE5', color: '#059669', icon: 'checkmark-circle-outline' },
-  SCHEDULED: { bg: '#E0E7FF', color: '#4F46E5', icon: 'calendar-outline' },
-  IN_PROGRESS: { bg: '#FEF3C7', color: '#D97706', icon: 'construct-outline' },
-  COMPLETED: { bg: '#D1FAE5', color: '#059669', icon: 'checkmark-done-outline' },
-  CANCELLED: { bg: '#FEE2E2', color: '#DC2626', icon: 'close-circle-outline' },
+  all: { bg: '#F1F5F9', color: C.ink, icon: 'apps', label: 'All' },
+  PENDING_PAYMENT: { bg: '#FEF3C7', color: '#D97706', icon: 'time', label: 'Pending' },
+  PAYMENT_UPLOADED: { bg: '#DBEAFE', color: '#2563EB', icon: 'cloud-upload', label: 'Uploaded' },
+  PAYMENT_VERIFIED: { bg: '#D1FAE5', color: '#059669', icon: 'checkmark-circle', label: 'Verified' },
+  ENGINEER_ASSIGNED: { bg: '#E0E7FF', color: '#4F46E5', icon: 'person', label: 'Assigned' },
+  SCHEDULED: { bg: '#E0E7FF', color: '#4F46E5', icon: 'calendar', label: 'Scheduled' },
+  IN_PROGRESS: { bg: '#FEF3C7', color: '#D97706', icon: 'construct', label: 'In Progress' },
+  COMPLETED: { bg: '#D1FAE5', color: '#059669', icon: 'checkmark-done-circle', label: 'Completed' },
+  CANCELLED: { bg: '#FEE2E2', color: '#DC2626', icon: 'close-circle', label: 'Cancelled' },
 };
 
-const SORT_OPTIONS = [
-  { value: 'date-desc', label: 'Newest First' },
-  { value: 'date-asc', label: 'Oldest First' },
-  { value: 'amount-desc', label: 'Highest Amount' },
-  { value: 'amount-asc', label: 'Lowest Amount' },
-];
-
-const FILTER_CONFIG = {
-  title: 'Bookings',
-  showStatus: true,
-  statusOptions: STATUS_OPTIONS,
-  showDateRange: true,
-  showAmountRange: true,
+const formatDate = (dateStr) => {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 };
+
+const formatPrice = (amount) => `₹${(amount || 0).toLocaleString('en-IN')}`;
 
 export default function MyBookingsScreen({ navigation }) {
-  // Global restaurant context
+  const { width } = useWindowDimensions();
+  const isTabletDevice = isTablet(width);
+
   const {
-    restaurants,
     selectedRestaurantId: selectedRestaurant,
     loading: restaurantsLoading,
     loadRestaurants,
@@ -112,15 +79,10 @@ export default function MyBookingsScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [bookings, setBookings] = useState([]);
-
-  // Filter states
-  const [filters, setFilters] = useState(getDefaultFilters());
-  const [showFilterSheet, setShowFilterSheet] = useState(false);
-  const [exporting, setExporting] = useState(false);
-  const [menuVisible, setMenuVisible] = useState(false);
   const [activeStatusTab, setActiveStatusTab] = useState('all');
+  const [menuVisible, setMenuVisible] = useState(false);
 
-  // Calculate status counts for summary cards
+  // Calculate status counts
   const statusCounts = useMemo(() => {
     const counts = { all: bookings.length };
     bookings.forEach((b) => {
@@ -133,7 +95,6 @@ export default function MyBookingsScreen({ navigation }) {
   useFocusEffect(
     useCallback(() => {
       loadData();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedRestaurant])
   );
 
@@ -145,10 +106,8 @@ export default function MyBookingsScreen({ navigation }) {
 
     try {
       setLoading(true);
-
       const params = new URLSearchParams({ restaurantId: selectedRestaurant });
       const response = await api.get(`/owner/bookings?${params}`);
-
       if (response.data.ok) {
         setBookings(response.data.data || []);
       }
@@ -160,23 +119,10 @@ export default function MyBookingsScreen({ navigation }) {
     }
   };
 
-  // Apply filters and sorting using useMemo
   const filteredBookings = useMemo(() => {
-    // First filter by status tab
-    let filtered = bookings;
-    if (activeStatusTab !== 'all') {
-      filtered = bookings.filter(b => b.status === activeStatusTab);
-    }
-
-    // Then apply other filters
-    return applyFilters(filtered, filters, {
-      searchFields: ['id', 'serviceType', 'status'],
-      statusField: 'status',
-      dateField: 'createdAt',
-      amountField: 'totalAmount',
-      sortFields: { date: 'createdAt', amount: 'totalAmount' },
-    });
-  }, [bookings, filters, activeStatusTab]);
+    if (activeStatusTab === 'all') return bookings;
+    return bookings.filter(b => b.status === activeStatusTab);
+  }, [bookings, activeStatusTab]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -184,477 +130,559 @@ export default function MyBookingsScreen({ navigation }) {
     await loadData();
   };
 
-  const handleApplyFilters = (newFilters) => {
-    setFilters(newFilters);
-  };
-
-  const handleRemoveFilter = (key) => {
-    const defaults = getDefaultFilters();
-    setFilters({ ...filters, [key]: defaults[key] });
-  };
-
-  const handleExport = async () => {
-    if (filteredBookings.length === 0) {
-      Alert.alert('No Data', 'No bookings to export');
-      return;
-    }
-
-    try {
-      setExporting(true);
-      const exportData = formatBookingsForExport(filteredBookings);
-      await exportAndShare('bookings', exportData, BOOKING_COLUMNS, 'Export Bookings');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to export bookings');
-    } finally {
-      setExporting(false);
-    }
-  };
-
-  const activeFilterCount = countActiveFilters(filters);
-
-  const renderBookingCard = ({ item }) => {
-    const statusStyle = getStatusStyle(item.status);
+  // Render status tab
+  const renderStatusTab = (statusKey) => {
+    const config = STATUS_CONFIG[statusKey];
+    const isActive = activeStatusTab === statusKey;
+    const count = statusCounts[statusKey] || 0;
 
     return (
       <TouchableOpacity
-        style={styles.card}
-        onPress={() => navigation.navigate('BookingDetail', { bookingId: item.id })}
+        key={statusKey}
+        style={[styles.statusTab, isActive && { backgroundColor: config.color }]}
+        onPress={() => setActiveStatusTab(statusKey)}
+        activeOpacity={0.7}
       >
-        <View style={styles.cardHeader}>
-          <View>
-            <Text style={styles.bookingNumber}>Booking #{item.id.slice(0, 8)}</Text>
-            <Text style={styles.bookingDate}>{new Date(item.createdAt).toLocaleDateString()}</Text>
-          </View>
-          <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
-            <Icon name={statusStyle.icon} size={14} color={statusStyle.text} />
-            <Text style={[styles.statusText, { color: statusStyle.text }]}>
-              {item.status.replace(/_/g, ' ')}
-            </Text>
-          </View>
-        </View>
-
-        {item.serviceType && (
-          <View style={styles.serviceRow}>
-            <Icon name="construct-outline" size={16} color={C.muted} />
-            <Text style={styles.serviceText}>{item.serviceType}</Text>
-          </View>
-        )}
-
-        {item.scheduledDate && (
-          <View style={styles.scheduleRow}>
-            <Icon name="calendar-outline" size={16} color={C.info} />
-            <Text style={styles.scheduleText}>
-              Scheduled: {new Date(item.scheduledDate).toLocaleDateString()}
-            </Text>
-          </View>
-        )}
-
-        {item.equipment && (
-          <View style={styles.equipmentRow}>
-            <Icon name="hardware-chip-outline" size={16} color={C.muted} />
-            <Text style={styles.equipmentText}>{item.equipment.name}</Text>
-          </View>
-        )}
-
-        <View style={styles.cardFooter}>
-          <View>
-            <Text style={styles.amountLabel}>Total Amount</Text>
-            <Text style={styles.amountValue}>₹{item.totalAmount || 0}</Text>
-          </View>
-          <TouchableOpacity style={styles.viewBtn}>
-            <Text style={styles.viewBtnText}>View Details</Text>
-            <Icon name="chevron-forward" size={16} color={C.primary} />
-          </TouchableOpacity>
+        <Icon
+          name={config.icon}
+          size={16}
+          color={isActive ? '#fff' : config.color}
+        />
+        <Text style={[styles.statusTabLabel, isActive && { color: '#fff' }]}>
+          {config.label}
+        </Text>
+        <View style={[styles.statusTabCount, isActive && { backgroundColor: 'rgba(255,255,255,0.3)' }]}>
+          <Text style={[styles.statusTabCountText, isActive && { color: '#fff' }]}>
+            {count}
+          </Text>
         </View>
       </TouchableOpacity>
     );
   };
 
+  // Render booking card
+  const renderBookingCard = ({ item, index }) => {
+    const config = STATUS_CONFIG[item.status] || STATUS_CONFIG.PENDING_PAYMENT;
+    const itemCount = (item.items || []).length;
+
+    return (
+      <TouchableOpacity
+        style={[
+          styles.bookingCard,
+          isTabletDevice && { width: (width - 48) / 2 - 6 },
+          isTabletDevice && index % 2 === 0 && { marginRight: 12 },
+        ]}
+        onPress={() => navigation.navigate('BookingDetail', { bookingId: item.id })}
+        activeOpacity={0.7}
+      >
+        {/* Card Header */}
+        <View style={styles.cardHeader}>
+          <View style={styles.cardHeaderLeft}>
+            <View style={[styles.bookingIconBox, { backgroundColor: config.bg }]}>
+              <Icon name={config.icon} size={20} color={config.color} />
+            </View>
+            <View>
+              <Text style={styles.bookingId}>#{item.id.slice(0, 8).toUpperCase()}</Text>
+              <Text style={styles.bookingDate}>{formatDate(item.createdAt)}</Text>
+            </View>
+          </View>
+          <View style={[styles.statusPill, { backgroundColor: config.bg }]}>
+            <Text style={[styles.statusPillText, { color: config.color }]}>
+              {config.label}
+            </Text>
+          </View>
+        </View>
+
+        {/* Card Body */}
+        <View style={styles.cardBody}>
+          {/* Items Summary */}
+          <View style={styles.itemsSummary}>
+            <Icon name="cube-outline" size={16} color={C.muted} />
+            <Text style={styles.itemsText}>
+              {itemCount} item{itemCount !== 1 ? 's' : ''}
+            </Text>
+          </View>
+
+          {/* Schedule if exists */}
+          {item.slotStartDateTime && (
+            <View style={styles.scheduleRow}>
+              <Icon name="calendar-outline" size={16} color={C.info} />
+              <Text style={styles.scheduleText}>{formatDate(item.slotStartDateTime)}</Text>
+            </View>
+          )}
+
+          {/* Engineer if assigned */}
+          {item.engineerAssignments?.length > 0 && (
+            <View style={styles.engineerRow}>
+              <Icon name="person-outline" size={16} color={C.purple} />
+              <Text style={styles.engineerText} numberOfLines={1}>
+                {item.engineerAssignments[0].engineer?.name || 'Engineer Assigned'}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* Card Footer */}
+        <View style={styles.cardFooter}>
+          <View>
+            <Text style={styles.amountLabel}>Total</Text>
+            <Text style={styles.amountValue}>{formatPrice(item.totalAmount)}</Text>
+          </View>
+          <View style={styles.viewDetailsBtn}>
+            <Text style={styles.viewDetailsText}>View</Text>
+            <Icon name="chevron-forward" size={16} color={C.primary} />
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  // Loading state
   if ((loading || restaurantsLoading) && !refreshing) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.menuBtn}>
-            <Icon name="arrow-back" size={24} color={C.ink} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>My Bookings</Text>
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
-            <Icon name="menu" size={22} color="#1D2254" />
-          </TouchableOpacity>
-        </View>
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <LinearGradient colors={[C.primary, C.primaryDark]} style={styles.heroHeader}>
+          <View style={styles.heroContent}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+              <Icon name="arrow-back" size={24} color="#fff" />
+            </TouchableOpacity>
+            <Text style={styles.heroTitle}>My Bookings</Text>
+            <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
+              <Icon name="menu" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={C.primary} />
+          <Text style={styles.loadingText}>Loading bookings...</Text>
         </View>
+        <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
       </SafeAreaView>
     );
   }
 
+  // No restaurant state
   if (!hasRestaurants) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.menuBtn}>
-            <Icon name="arrow-back" size={24} color={C.ink} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>My Bookings</Text>
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
-            <Icon name="menu" size={22} color="#1D2254" />
-          </TouchableOpacity>
-        </View>
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <LinearGradient colors={[C.primary, C.primaryDark]} style={styles.heroHeader}>
+          <View style={styles.heroContent}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+              <Icon name="arrow-back" size={24} color="#fff" />
+            </TouchableOpacity>
+            <Text style={styles.heroTitle}>My Bookings</Text>
+            <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
+              <Icon name="menu" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
         <View style={styles.emptyContainer}>
-          <Icon name="restaurant-outline" size={80} color={C.muted} />
+          <View style={styles.emptyIconBox}>
+            <Icon name="restaurant-outline" size={48} color={C.muted} />
+          </View>
           <Text style={styles.emptyTitle}>No Restaurant Found</Text>
-          <Text style={styles.emptyText}>Please add a restaurant first</Text>
+          <Text style={styles.emptySubtitle}>Please add a restaurant first</Text>
         </View>
+        <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
+        <KniBottomNav navigation={navigation} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.menuBtn}>
-          <Icon name="arrow-back" size={24} color={C.ink} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Bookings</Text>
-        <View style={styles.headerRight}>
-          <TouchableOpacity onPress={handleExport} disabled={exporting} style={styles.headerBtn}>
-            {exporting ? (
-              <ActivityIndicator size="small" color={C.ink} />
-            ) : (
-              <Icon name="download-outline" size={22} color={C.ink} />
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('NewBooking')} style={styles.headerBtn}>
-            <Icon name="add-circle" size={26} color={C.primary} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
-            <Icon name="menu" size={22} color="#1D2254" />
-          </TouchableOpacity>
-        </View>
-      </View>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
 
-      {/* Search Bar */}
-      <View style={styles.searchRow}>
-        <View style={styles.searchContainer}>
-          <SearchBar
-            value={filters.search}
-            onChangeText={(text) => setFilters({ ...filters, search: text })}
-            placeholder="Search bookings..."
-          />
-        </View>
-        <TouchableOpacity
-          style={styles.filterBtn}
-          onPress={() => setShowFilterSheet(true)}
-        >
-          <Icon name="options-outline" size={20} color={C.ink} />
-          {activeFilterCount > 0 && (
-            <View style={styles.filterBadge}>
-              <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
-        <SortDropdown
-          value={filters.sortBy}
-          options={SORT_OPTIONS}
-          onChange={(value) => setFilters({ ...filters, sortBy: value })}
-        />
-      </View>
-
-      {/* Active Filter Badges */}
-      {activeFilterCount > 0 && (
-        <ActiveFilterBadges
-          filters={filters}
-          onRemove={handleRemoveFilter}
-          statusOptions={STATUS_OPTIONS}
-        />
-      )}
-
-      {/* Status Summary Cards - Stylish Horizontal Tabs */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.summaryContainer}
+      {/* Hero Header */}
+      <LinearGradient
+        colors={[C.primary, C.primaryDark]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.heroHeader}
       >
-        {STATUS_OPTIONS.map((status) => {
-          const config = STATUS_CONFIG[status.value] || STATUS_CONFIG.all;
-          const isActive = activeStatusTab === status.value;
-          const count = statusCounts[status.value] || 0;
+        <View style={styles.heroContent}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Icon name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.heroTitle}>My Bookings</Text>
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
+            <Icon name="menu" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
 
-          return (
-            <TouchableOpacity
-              key={status.value}
-              style={[styles.summaryCard, isActive && styles.summaryCardActive]}
-              onPress={() => setActiveStatusTab(status.value)}
-            >
-              <View style={[styles.summaryIcon, isActive && { backgroundColor: `${config.color}20` }]}>
-                <Icon name={config.icon} size={20} color={isActive ? config.color : C.muted} />
-              </View>
-              <Text style={[styles.summaryCount, isActive && { color: config.color }]}>{count}</Text>
-              <Text style={[styles.summaryLabel, isActive && { color: config.color }]}>{status.label}</Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+        {/* Stats Row */}
+        <View style={styles.statsRow}>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{bookings.length}</Text>
+            <Text style={styles.statLabel}>Total</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{statusCounts['IN_PROGRESS'] || 0}</Text>
+            <Text style={styles.statLabel}>Active</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{statusCounts['COMPLETED'] || 0}</Text>
+            <Text style={styles.statLabel}>Completed</Text>
+          </View>
+        </View>
+      </LinearGradient>
 
-      {/* Restaurant Selector - Global */}
+      {/* Status Tabs */}
+      <View style={styles.statusTabsContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.statusTabsScroll}
+        >
+          {Object.keys(STATUS_CONFIG).map(renderStatusTab)}
+        </ScrollView>
+      </View>
+
+      {/* Restaurant Selector */}
       <RestaurantSelectorBar />
 
       {/* Results Count */}
       <View style={styles.resultsRow}>
         <Text style={styles.resultsText}>
-          {filteredBookings.length} booking{filteredBookings.length !== 1 ? 's' : ''} found
+          {filteredBookings.length} booking{filteredBookings.length !== 1 ? 's' : ''}
         </Text>
       </View>
 
+      {/* Bookings List */}
       <FlatList
         data={filteredBookings}
-        keyExtractor={item => item.id.toString()}
+        keyExtractor={item => item.id}
         renderItem={renderBookingCard}
-        contentContainerStyle={styles.list}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        numColumns={isTabletDevice ? 2 : 1}
+        key={isTabletDevice ? 'tablet' : 'phone'}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[C.primary]}
+            tintColor={C.primary}
+          />
+        }
         ListEmptyComponent={
-          <View style={styles.emptyBox}>
-            <Icon name="calendar-outline" size={64} color={C.muted} />
-            <Text style={styles.emptyTitle}>
-              {activeFilterCount > 0 ? 'No Matching Bookings' : 'No Bookings Yet'}
+          <View style={styles.emptyList}>
+            <View style={styles.emptyIconBox}>
+              <Icon name="calendar-outline" size={48} color={C.muted} />
+            </View>
+            <Text style={styles.emptyTitle}>No Bookings Found</Text>
+            <Text style={styles.emptySubtitle}>
+              {activeStatusTab !== 'all'
+                ? 'No bookings with this status'
+                : 'Your service bookings will appear here'}
             </Text>
-            <Text style={styles.emptyText}>
-              {activeFilterCount > 0
-                ? 'Try adjusting your filters'
-                : 'Your service bookings will appear here'
-              }
-            </Text>
-            {activeFilterCount === 0 && (
-              <TouchableOpacity
-                style={styles.emptyBtn}
-                onPress={() => navigation.navigate('NewBooking')}
-              >
-                <Icon name="add" size={18} color="#fff" />
-                <Text style={styles.emptyBtnText}>Request Service</Text>
-              </TouchableOpacity>
-            )}
           </View>
         }
       />
 
-      {/* Filter Bottom Sheet */}
-      <FilterBottomSheet
-        visible={showFilterSheet}
-        onClose={() => setShowFilterSheet(false)}
-        filters={filters}
-        onApply={handleApplyFilters}
-        config={FILTER_CONFIG}
-      />
-      <KniBottomNav navigation={navigation} />
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
+      <KniBottomNav navigation={navigation} />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: C.bg },
-  header: {
+  container: {
+    flex: 1,
+    backgroundColor: C.bg,
+  },
+
+  // Hero Header
+  heroHeader: {
+    paddingBottom: scale(20),
+    borderBottomLeftRadius: scale(24),
+    borderBottomRightRadius: scale(24),
+  },
+  heroContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: scale(16),
-    paddingVertical: scale(12),
+    paddingTop: scale(8),
+    paddingBottom: scale(16),
+  },
+  backBtn: {
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(12),
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroTitle: {
+    fontSize: moderateScale(20),
+    fontWeight: '700',
+    color: '#fff',
+  },
+  menuBtn: {
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(12),
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // Stats Row
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: scale(24),
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statValue: {
+    fontSize: moderateScale(24),
+    fontWeight: '800',
+    color: '#fff',
+  },
+  statLabel: {
+    fontSize: moderateScale(12),
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: scale(2),
+  },
+  statDivider: {
+    width: 1,
+    height: scale(32),
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    marginHorizontal: scale(16),
+  },
+
+  // Status Tabs
+  statusTabsContainer: {
     backgroundColor: C.card,
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
-  menuBtn: { width: scale(40) },
-  headerTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: scale(8) },
-  headerBtn: { padding: scale(4) },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: scale(32) },
-  emptyTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink, marginTop: scale(16) },
-  emptyText: { fontSize: moderateScale(14), color: C.muted, textAlign: 'center', marginTop: scale(8) },
-
-  // Summary Cards - Stylish Status Tabs
-  summaryContainer: {
+  statusTabsScroll: {
     paddingHorizontal: scale(16),
     paddingVertical: scale(12),
   },
-  summaryCard: {
-    backgroundColor: C.card,
-    borderRadius: scale(12),
-    padding: scale(12),
-    marginRight: scale(10),
-    borderWidth: 1,
-    borderColor: C.border,
-    alignItems: 'center',
-    minWidth: scale(80),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  summaryCardActive: {
-    borderColor: C.primary,
-    backgroundColor: '#FEF2F2',
-  },
-  summaryIcon: {
-    width: scale(36),
-    height: scale(36),
-    borderRadius: scale(10),
-    backgroundColor: C.bg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: scale(6),
-  },
-  summaryCount: {
-    fontSize: moderateScale(18),
-    fontWeight: '700',
-    color: C.ink,
-  },
-  summaryLabel: {
-    fontSize: moderateScale(10),
-    color: C.muted,
-    marginTop: scale(2),
-    textAlign: 'center',
-  },
-
-  searchRow: {
+  statusTab: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: scale(16),
-    paddingVertical: scale(12),
-    gap: scale(8),
-    backgroundColor: C.card,
-  },
-  searchContainer: { flex: 1 },
-  filterBtn: {
-    width: scale(44),
-    height: scale(44),
-    borderRadius: scale(12),
+    paddingHorizontal: scale(12),
+    paddingVertical: scale(8),
+    borderRadius: scale(20),
     backgroundColor: C.bg,
-    borderWidth: 1,
-    borderColor: C.border,
-    alignItems: 'center',
-    justifyContent: 'center',
+    marginRight: scale(8),
+    gap: scale(6),
   },
-  filterBadge: {
-    position: 'absolute',
-    top: scale(4),
-    right: scale(4),
-    width: scale(16),
-    height: scale(16),
-    borderRadius: scale(8),
-    backgroundColor: C.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
+  statusTabLabel: {
+    fontSize: moderateScale(13),
+    fontWeight: '600',
+    color: C.ink,
   },
-  filterBadgeText: {
-    fontSize: moderateScale(10),
+  statusTabCount: {
+    backgroundColor: C.border,
+    paddingHorizontal: scale(6),
+    paddingVertical: scale(2),
+    borderRadius: scale(10),
+    minWidth: scale(20),
+    alignItems: 'center',
+  },
+  statusTabCountText: {
+    fontSize: moderateScale(11),
     fontWeight: '700',
-    color: '#fff',
+    color: C.muted,
   },
 
+  // Results Row
   resultsRow: {
     paddingHorizontal: scale(16),
-    paddingVertical: scale(8),
+    paddingVertical: scale(10),
   },
   resultsText: {
     fontSize: moderateScale(13),
     color: C.muted,
+    fontWeight: '500',
   },
 
-  restaurantRow: { paddingHorizontal: scale(16), marginBottom: scale(8) },
-  restaurantChip: {
+  // List
+  listContent: {
     paddingHorizontal: scale(16),
-    paddingVertical: scale(8),
-    borderRadius: scale(20),
-    backgroundColor: C.card,
-    borderWidth: 1,
-    borderColor: C.border,
-    marginRight: scale(8),
+    paddingBottom: scale(100),
   },
-  restaurantChipActive: { backgroundColor: C.primary, borderColor: C.primary },
-  restaurantText: { fontSize: moderateScale(13), fontWeight: '600', color: C.ink },
-  restaurantTextActive: { color: '#fff' },
 
-  list: { padding: scale(16) },
-  card: {
+  // Booking Card
+  bookingCard: {
     backgroundColor: C.card,
     borderRadius: scale(16),
-    padding: scale(16),
     marginBottom: scale(12),
-    borderWidth: 1,
-    borderColor: C.border,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
   },
   cardHeader: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: scale(12),
+    padding: scale(16),
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
   },
-  bookingNumber: { fontSize: moderateScale(16), fontWeight: '700', color: C.ink },
-  bookingDate: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(2) },
-  statusBadge: {
+  cardHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: scale(6),
-    paddingHorizontal: scale(12),
-    paddingVertical: scale(6),
-    borderRadius: scale(20),
+    gap: scale(12),
   },
-  statusText: { fontSize: moderateScale(11), fontWeight: '600' },
+  bookingIconBox: {
+    width: scale(44),
+    height: scale(44),
+    borderRadius: scale(12),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bookingId: {
+    fontSize: moderateScale(15),
+    fontWeight: '700',
+    color: C.ink,
+  },
+  bookingDate: {
+    fontSize: moderateScale(12),
+    color: C.muted,
+    marginTop: scale(2),
+  },
+  statusPill: {
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(5),
+    borderRadius: scale(12),
+  },
+  statusPillText: {
+    fontSize: moderateScale(11),
+    fontWeight: '600',
+  },
 
-  serviceRow: {
+  // Card Body
+  cardBody: {
+    padding: scale(16),
+    gap: scale(10),
+  },
+  itemsSummary: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: scale(8),
-    marginBottom: scale(8),
   },
-  serviceText: { fontSize: moderateScale(14), color: C.text, fontWeight: '600' },
-
+  itemsText: {
+    fontSize: moderateScale(14),
+    color: C.text,
+    fontWeight: '500',
+  },
   scheduleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: scale(8),
-    marginBottom: scale(8),
   },
-  scheduleText: { fontSize: moderateScale(13), color: C.info },
-
-  equipmentRow: {
+  scheduleText: {
+    fontSize: moderateScale(13),
+    color: C.info,
+    fontWeight: '500',
+  },
+  engineerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: scale(8),
-    marginBottom: scale(12),
   },
-  equipmentText: { fontSize: moderateScale(13), color: C.muted },
+  engineerText: {
+    fontSize: moderateScale(13),
+    color: C.purple,
+    fontWeight: '500',
+    flex: 1,
+  },
 
+  // Card Footer
   cardFooter: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: scale(12),
+    justifyContent: 'space-between',
+    padding: scale(16),
+    backgroundColor: '#F8FAFC',
     borderTopWidth: 1,
     borderTopColor: C.border,
   },
-  amountLabel: { fontSize: moderateScale(12), color: C.muted },
-  amountValue: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink, marginTop: scale(2) },
-  viewBtn: {
+  amountLabel: {
+    fontSize: moderateScale(11),
+    color: C.muted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  amountValue: {
+    fontSize: moderateScale(18),
+    fontWeight: '700',
+    color: C.ink,
+    marginTop: scale(2),
+  },
+  viewDetailsBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: scale(4),
+    backgroundColor: '#FEE2E2',
+    paddingHorizontal: scale(14),
+    paddingVertical: scale(8),
+    borderRadius: scale(20),
   },
-  viewBtnText: { fontSize: moderateScale(14), fontWeight: '600', color: C.primary },
+  viewDetailsText: {
+    fontSize: moderateScale(13),
+    fontWeight: '600',
+    color: C.primary,
+  },
 
-  emptyBox: { alignItems: 'center', paddingTop: scale(80) },
-  emptyBtn: {
-    flexDirection: 'row',
+  // Loading
+  loadingContainer: {
+    flex: 1,
     alignItems: 'center',
-    gap: scale(6),
-    marginTop: scale(20),
-    paddingHorizontal: scale(20),
-    paddingVertical: scale(12),
-    borderRadius: scale(12),
-    backgroundColor: C.primary,
+    justifyContent: 'center',
   },
-  emptyBtnText: { fontSize: moderateScale(14), fontWeight: '700', color: '#fff' },
+  loadingText: {
+    fontSize: moderateScale(14),
+    color: C.muted,
+    marginTop: scale(12),
+  },
+
+  // Empty States
+  emptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: scale(32),
+  },
+  emptyList: {
+    alignItems: 'center',
+    paddingTop: scale(60),
+  },
+  emptyIconBox: {
+    width: scale(100),
+    height: scale(100),
+    borderRadius: scale(50),
+    backgroundColor: C.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: scale(20),
+  },
+  emptyTitle: {
+    fontSize: moderateScale(18),
+    fontWeight: '700',
+    color: C.ink,
+    marginBottom: scale(8),
+  },
+  emptySubtitle: {
+    fontSize: moderateScale(14),
+    color: C.muted,
+    textAlign: 'center',
+  },
 });

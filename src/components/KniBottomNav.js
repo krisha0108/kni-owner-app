@@ -42,7 +42,7 @@ export default function KniBottomNav({
     if (!navigation?.navigate) return;
     if (key==='home') navigation.navigate('Home');
     if (key==='equipment') navigation.navigate('MyEquipment');
-    if (key==='request') navigation.navigate('Request');
+    if (key==='request') navigation.navigate('Marketplace');
     if (key==='khatabook') navigation.navigate('Khatabook');
     if (key==='profile') navigation.navigate('Profile');
   };

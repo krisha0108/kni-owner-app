@@ -1,3 +1,9 @@
+/**
+ * ============================================================================
+ * STAFF MANAGEMENT SCREEN - PREMIUM GOD LEVEL DESIGN
+ * ============================================================================
+ */
+
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
@@ -11,9 +17,12 @@ import {
   TextInput,
   ScrollView,
   Alert,
+  Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { api } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRestaurant } from '../context/RestaurantContext';
@@ -21,61 +30,74 @@ import { RestaurantSelectorBar } from '../components/RestaurantSelector';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
+// Premium Color Palette
 const C = {
   primary: '#EF3A3A',
+  primaryLight: '#FEE2E2',
   ink: '#1D2254',
-  text: '#0F172A',
-  muted: '#6B7280',
-  bg: '#F5F7FA',
+  text: '#334155',
+  muted: '#94A3B8',
+  bg: '#F8FAFC',
   card: '#FFFFFF',
-  border: '#E5E7EB',
-  ok: '#10B981',
-  warn: '#F59E0B',
+  border: '#E2E8F0',
+  success: '#10B981',
+  successLight: '#D1FAE5',
+  warning: '#F59E0B',
+  warningLight: '#FEF3C7',
   danger: '#EF4444',
+  dangerLight: '#FEE2E2',
   info: '#3B82F6',
+  infoLight: '#DBEAFE',
+  purple: '#8B5CF6',
+  purpleLight: '#EDE9FE',
 };
 
-const ROLES = ['Chef', 'Waiter', 'Manager', 'Cleaner', 'Kitchen Helper', 'Cashier', 'Other'];
+const ROLES = [
+  { value: 'Chef', icon: 'restaurant', color: '#F59E0B', bg: '#FEF3C7' },
+  { value: 'Waiter', icon: 'cafe', color: '#3B82F6', bg: '#DBEAFE' },
+  { value: 'Manager', icon: 'briefcase', color: '#8B5CF6', bg: '#EDE9FE' },
+  { value: 'Cleaner', icon: 'sparkles', color: '#06B6D4', bg: '#CFFAFE' },
+  { value: 'Kitchen Helper', icon: 'flame', color: '#EF4444', bg: '#FEE2E2' },
+  { value: 'Cashier', icon: 'cash', color: '#10B981', bg: '#D1FAE5' },
+  { value: 'Other', icon: 'person', color: '#6B7280', bg: '#F3F4F6' },
+];
 
 const STAFF_TYPES = [
-  { value: 'FULL_TIME', label: 'Full Time', icon: 'briefcase' },
-  { value: 'PART_TIME', label: 'Part Time', icon: 'time' },
-  { value: 'CONTRACT', label: 'Contract', icon: 'document-text' },
-  { value: 'INTERN', label: 'Intern', icon: 'school' },
+  { value: 'FULL_TIME', label: 'Full Time', icon: 'briefcase', color: C.info, bg: C.infoLight },
+  { value: 'PART_TIME', label: 'Part Time', icon: 'time', color: C.warning, bg: C.warningLight },
+  { value: 'CONTRACT', label: 'Contract', icon: 'document-text', color: C.purple, bg: C.purpleLight },
+  { value: 'INTERN', label: 'Intern', icon: 'school', color: C.success, bg: C.successLight },
 ];
 
 const STAFF_STATUSES = [
-  { value: 'ACTIVE', label: 'Active', color: '#10B981' },
-  { value: 'ON_LEAVE', label: 'On Leave', color: '#F59E0B' },
-  { value: 'RESIGNED', label: 'Resigned', color: '#6B7280' },
-  { value: 'TERMINATED', label: 'Terminated', color: '#EF4444' },
+  { value: 'ACTIVE', label: 'Active', icon: 'checkmark-circle', color: '#10B981', bg: '#D1FAE5' },
+  { value: 'ON_LEAVE', label: 'On Leave', icon: 'airplane', color: '#F59E0B', bg: '#FEF3C7' },
+  { value: 'RESIGNED', label: 'Resigned', icon: 'exit', color: '#6B7280', bg: '#F3F4F6' },
+  { value: 'TERMINATED', label: 'Terminated', icon: 'close-circle', color: '#EF4444', bg: '#FEE2E2' },
 ];
 
-// Status filter config for stylish summary tabs
-const STATUS_CONFIG = {
-  all: { bg: '#F3F4F6', color: '#1D2254', icon: 'people-outline', label: 'All' },
-  ACTIVE: { bg: '#ECFDF5', color: '#10B981', icon: 'checkmark-circle-outline', label: 'Active' },
-  ON_LEAVE: { bg: '#FEF3C7', color: '#F59E0B', icon: 'airplane-outline', label: 'On Leave' },
-  RESIGNED: { bg: '#F3F4F6', color: '#6B7280', icon: 'exit-outline', label: 'Resigned' },
-  TERMINATED: { bg: '#FEE2E2', color: '#EF4444', icon: 'close-circle-outline', label: 'Terminated' },
+const getRoleConfig = (role) => ROLES.find(r => r.value === role) || ROLES[6];
+const getTypeConfig = (type) => STAFF_TYPES.find(t => t.value === type) || STAFF_TYPES[0];
+const getStatusConfig = (status) => STAFF_STATUSES.find(s => s.value === status) || STAFF_STATUSES[0];
+
+const formatDate = (dateStr) => {
+  if (!dateStr) return '-';
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
-const STATUS_FILTER_OPTIONS = ['all', 'ACTIVE', 'ON_LEAVE', 'RESIGNED', 'TERMINATED'];
-
-const getStatusColor = (status) => {
-  const found = STAFF_STATUSES.find(s => s.value === status);
-  return found?.color || C.muted;
-};
-
-const getStatusLabel = (status) => {
-  const found = STAFF_STATUSES.find(s => s.value === status);
-  return found?.label || status;
+const formatSalary = (item) => {
+  if (item.monthlySalary) return `₹${item.monthlySalary.toLocaleString('en-IN')}/mo`;
+  if (item.dailyWage) return `₹${item.dailyWage.toLocaleString('en-IN')}/day`;
+  return '-';
 };
 
 export default function StaffScreen({ navigation }) {
-  // Global restaurant context
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
+  const isLargePhone = width >= 400;
+
   const {
-    restaurants,
     selectedRestaurantId: selectedRestaurant,
     loading: restaurantsLoading,
     loadRestaurants,
@@ -92,58 +114,36 @@ export default function StaffScreen({ navigation }) {
   const [deleting, setDeleting] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
   const [activeStatusTab, setActiveStatusTab] = useState('all');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [modalKey, setModalKey] = useState(0);
 
-  // Calculate status counts for summary tabs
   const statusCounts = useMemo(() => {
     const counts = { all: staff.length, ACTIVE: 0, ON_LEAVE: 0, RESIGNED: 0, TERMINATED: 0 };
-    staff.forEach(s => {
-      if (counts[s.status] !== undefined) {
-        counts[s.status]++;
-      }
-    });
+    staff.forEach(s => { if (counts[s.status] !== undefined) counts[s.status]++; });
     return counts;
   }, [staff]);
 
-  // Filter staff by status
   const filteredStaff = useMemo(() => {
     if (activeStatusTab === 'all') return staff;
     return staff.filter(s => s.status === activeStatusTab);
   }, [staff, activeStatusTab]);
 
   const [form, setForm] = useState({
-    id: null,
-    name: '',
-    phone: '',
-    role: '',
-    staffType: 'FULL_TIME',
-    status: 'ACTIVE',
-    salary: '',
-    joiningDate: new Date().toISOString().split('T')[0],
+    id: null, name: '', phone: '', role: '', staffType: 'FULL_TIME',
+    status: 'ACTIVE', salary: '', joiningDate: new Date().toISOString().split('T')[0],
     restaurantId: '',
   });
 
   const isEditMode = form.id !== null;
 
-  useFocusEffect(
-    useCallback(() => {
-      loadData();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedRestaurant])
-  );
+  useFocusEffect(useCallback(() => { loadData(); }, [selectedRestaurant]));
 
   const loadData = async () => {
-    if (!selectedRestaurant) {
-      setLoading(false);
-      return;
-    }
-
+    if (!selectedRestaurant) { setLoading(false); return; }
     try {
       setLoading(true);
-
       const response = await api.get(`/owner/staff?restaurantId=${selectedRestaurant}`);
-      if (response.data.ok) {
-        setStaff(response.data.data);
-      }
+      if (response.data.ok) setStaff(response.data.data);
     } catch (error) {
       console.error('Error loading staff:', error);
     } finally {
@@ -158,31 +158,28 @@ export default function StaffScreen({ navigation }) {
     await loadData();
   };
 
+  const onDateChange = (event, selectedDate) => {
+    setShowDatePicker(Platform.OS === 'ios');
+    if (selectedDate) {
+      setForm(f => ({ ...f, joiningDate: selectedDate.toISOString().split('T')[0] }));
+    }
+  };
+
   const openForm = (item = null) => {
+    setModalKey(k => k + 1); // Force ScrollView re-render
     if (item) {
-      const salaryValue = item.monthlySalary ? item.monthlySalary.toString() :
-                          item.dailyWage ? item.dailyWage.toString() : '';
+      const salaryValue = item.monthlySalary ? item.monthlySalary.toString() : item.dailyWage ? item.dailyWage.toString() : '';
       setForm({
-        id: item.id,
-        name: item.name || '',
-        phone: item.phone || '',
-        role: item.designation || '',
-        staffType: item.staffType || 'FULL_TIME',
-        status: item.status || 'ACTIVE',
-        salary: salaryValue,
+        id: item.id, name: item.name || '', phone: item.phone || '',
+        role: item.designation || '', staffType: item.staffType || 'FULL_TIME',
+        status: item.status || 'ACTIVE', salary: salaryValue,
         joiningDate: item.joiningDate ? item.joiningDate.split('T')[0] : new Date().toISOString().split('T')[0],
         restaurantId: item.restaurantId || selectedRestaurant || '',
       });
     } else {
       setForm({
-        id: null,
-        name: '',
-        phone: '',
-        role: '',
-        staffType: 'FULL_TIME',
-        status: 'ACTIVE',
-        salary: '',
-        joiningDate: new Date().toISOString().split('T')[0],
+        id: null, name: '', phone: '', role: '', staffType: 'FULL_TIME',
+        status: 'ACTIVE', salary: '', joiningDate: new Date().toISOString().split('T')[0],
         restaurantId: selectedRestaurant || '',
       });
     }
@@ -195,55 +192,28 @@ export default function StaffScreen({ navigation }) {
   };
 
   const saveStaff = async () => {
-    if (!form.name.trim()) {
-      Alert.alert('Error', 'Please enter staff name');
-      return;
-    }
-    if (!form.phone || form.phone.length < 10) {
-      Alert.alert('Error', 'Please enter a valid phone number (min 10 digits)');
-      return;
-    }
-    if (!form.role) {
-      Alert.alert('Error', 'Please select a role/designation');
-      return;
-    }
-    if ((form.staffType === 'FULL_TIME' || form.staffType === 'CONTRACT') && !form.salary) {
-      Alert.alert('Error', 'Please enter monthly salary');
-      return;
-    }
-    if (form.staffType === 'PART_TIME' && !form.salary) {
-      Alert.alert('Error', 'Please enter daily wage');
-      return;
-    }
+    if (!form.name.trim()) { Alert.alert('Error', 'Please enter staff name'); return; }
+    if (!form.phone || form.phone.length < 10) { Alert.alert('Error', 'Please enter valid phone (min 10 digits)'); return; }
+    if (!form.role) { Alert.alert('Error', 'Please select a role'); return; }
+    if (!form.salary) { Alert.alert('Error', 'Please enter salary/wage'); return; }
 
     setSaving(true);
     try {
-      const salaryValue = form.salary ? parseFloat(form.salary) : null;
-
+      const salaryValue = parseFloat(form.salary);
       const payload = {
         restaurantId: form.restaurantId || selectedRestaurant,
-        name: form.name,
-        phone: form.phone,
-        designation: form.role,
-        staffType: form.staffType,
-        status: form.status,
-        joiningDate: form.joiningDate,
-        ...(form.staffType === 'PART_TIME'
-          ? { dailyWage: salaryValue }
-          : { monthlySalary: salaryValue }
-        ),
+        name: form.name, phone: form.phone, designation: form.role,
+        staffType: form.staffType, status: form.status, joiningDate: form.joiningDate,
+        ...(form.staffType === 'PART_TIME' ? { dailyWage: salaryValue } : { monthlySalary: salaryValue }),
       };
 
       if (isEditMode) {
-        // Update existing staff
         await api.patch(`/owner/staff/${form.id}`, payload);
         Alert.alert('Success', 'Staff updated successfully');
       } else {
-        // Create new staff
         await api.post('/owner/staff', payload);
         Alert.alert('Success', 'Staff added successfully');
       }
-
       setModalVisible(false);
       loadData();
     } catch (error) {
@@ -255,10 +225,9 @@ export default function StaffScreen({ navigation }) {
 
   const handleStatusChange = async (newStatus) => {
     if (!selectedStaff) return;
-
     try {
       await api.patch(`/owner/staff/${selectedStaff.id}`, { status: newStatus });
-      Alert.alert('Success', `Status updated to ${getStatusLabel(newStatus)}`);
+      Alert.alert('Success', `Status updated to ${getStatusConfig(newStatus).label}`);
       setActionModalVisible(false);
       setSelectedStaff(null);
       loadData();
@@ -274,339 +243,414 @@ export default function StaffScreen({ navigation }) {
   };
 
   const handleDelete = () => {
-    if (!selectedStaff) return;
-
-    if (selectedStaff.status === 'TERMINATED') {
-      Alert.alert('Info', 'Staff member is already terminated');
-      return;
-    }
-
-    Alert.alert(
-      'Terminate Staff',
-      `Are you sure you want to terminate ${selectedStaff.name}? This will mark them as terminated.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Terminate',
-          style: 'destructive',
-          onPress: async () => {
-            setDeleting(true);
-            try {
-              await api.delete(`/owner/staff/${selectedStaff.id}`);
-              Alert.alert('Success', 'Staff member terminated');
-              setActionModalVisible(false);
-              setSelectedStaff(null);
-              loadData();
-            } catch (error) {
-              Alert.alert('Error', 'Failed to terminate staff');
-            } finally {
-              setDeleting(false);
-            }
+    if (!selectedStaff || selectedStaff.status === 'TERMINATED') return;
+    Alert.alert('Terminate Staff', `Are you sure you want to terminate ${selectedStaff.name}?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Terminate', style: 'destructive',
+        onPress: async () => {
+          setDeleting(true);
+          try {
+            await api.delete(`/owner/staff/${selectedStaff.id}`);
+            Alert.alert('Success', 'Staff terminated');
+            setActionModalVisible(false);
+            setSelectedStaff(null);
+            loadData();
+          } catch (error) {
+            Alert.alert('Error', 'Failed to terminate staff');
+          } finally {
+            setDeleting(false);
           }
         }
-      ]
-    );
+      }
+    ]);
   };
 
-  const formatSalary = (item) => {
-    if (item.monthlySalary) {
-      return `₹${item.monthlySalary.toLocaleString('en-IN')}/month`;
-    }
-    if (item.dailyWage) {
-      return `₹${item.dailyWage.toLocaleString('en-IN')}/day`;
-    }
-    return '-';
-  };
+  // ==================== RENDER STAFF CARD ====================
+  const renderStaffCard = ({ item }) => {
+    const roleConfig = getRoleConfig(item.designation);
+    const statusConfig = getStatusConfig(item.status);
+    const typeConfig = getTypeConfig(item.staffType);
 
-  const renderStaffCard = ({ item }) => (
-    <TouchableOpacity style={styles.card} onPress={() => openActionModal(item)}>
-      <View style={styles.cardHeader}>
-        <View style={styles.iconBox}>
-          <Icon name="person" size={24} color={C.primary} />
+    return (
+      <TouchableOpacity style={[st.card, isTablet && st.cardTablet]} onPress={() => openActionModal(item)} activeOpacity={0.7}>
+        {/* Header */}
+        <View style={st.cardHeader}>
+          <View style={[st.avatar, { backgroundColor: roleConfig.bg }]}>
+            <Icon name={roleConfig.icon} size={24} color={roleConfig.color} />
+          </View>
+          <View style={st.cardInfo}>
+            <Text style={st.cardName}>{item.name}</Text>
+            <Text style={st.cardRole}>{item.designation || 'No Role'}</Text>
+          </View>
+          <View style={[st.statusBadge, { backgroundColor: statusConfig.bg }]}>
+            <View style={[st.statusDot, { backgroundColor: statusConfig.color }]} />
+            <Text style={[st.statusText, { color: statusConfig.color }]}>{statusConfig.label}</Text>
+          </View>
         </View>
-        <View style={styles.cardInfo}>
-          <Text style={styles.cardTitle}>{item.name}</Text>
-          {item.designation && <Text style={styles.cardSub}>{item.designation}</Text>}
-          {item.phone && (
-            <View style={styles.phoneRow}>
-              <Icon name="call-outline" size={12} color={C.muted} />
-              <Text style={styles.phoneText}>{item.phone}</Text>
+
+        {/* Details Grid */}
+        <View style={st.detailsGrid}>
+          <View style={st.detailItem}>
+            <View style={st.detailIconBox}>
+              <Icon name="call-outline" size={14} color={C.muted} />
             </View>
-          )}
+            <Text style={st.detailValue}>{item.phone || '-'}</Text>
+          </View>
+          <View style={st.detailItem}>
+            <View style={st.detailIconBox}>
+              <Icon name="calendar-outline" size={14} color={C.muted} />
+            </View>
+            <Text style={st.detailValue}>{formatDate(item.joiningDate)}</Text>
+          </View>
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}>
-          <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
-            {getStatusLabel(item.status)}
-          </Text>
-        </View>
-      </View>
 
-      <View style={styles.salaryBox}>
-        <View style={styles.salaryItem}>
-          <Text style={styles.salaryLabel}>
-            {item.monthlySalary ? 'Monthly Salary' : item.dailyWage ? 'Daily Wage' : 'Salary'}
-          </Text>
-          <Text style={styles.salaryValue}>{formatSalary(item)}</Text>
+        {/* Salary & Type Row */}
+        <View style={st.infoRow}>
+          <View style={[st.infoChip, { backgroundColor: C.successLight }]}>
+            <Icon name="cash-outline" size={14} color={C.success} />
+            <Text style={[st.infoChipText, { color: C.success }]}>{formatSalary(item)}</Text>
+          </View>
+          <View style={[st.infoChip, { backgroundColor: typeConfig.bg }]}>
+            <Icon name={typeConfig.icon} size={14} color={typeConfig.color} />
+            <Text style={[st.infoChipText, { color: typeConfig.color }]}>{typeConfig.label}</Text>
+          </View>
         </View>
-        <View style={styles.salaryItem}>
-          <Text style={styles.salaryLabel}>Type</Text>
-          <Text style={styles.salaryValue}>
-            {STAFF_TYPES.find(t => t.value === item.staffType)?.label || item.staffType}
-          </Text>
-        </View>
-      </View>
 
-      <View style={styles.cardFooter}>
-        <TouchableOpacity style={styles.actionBtn} onPress={() => { setSelectedStaff(item); handleEdit(); }}>
-          <Icon name="pencil-outline" size={16} color={C.info} />
-          <Text style={[styles.actionText, { color: C.info }]}>Edit</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionBtn} onPress={() => openActionModal(item)}>
-          <Icon name="ellipsis-horizontal" size={16} color={C.muted} />
-          <Text style={[styles.actionText, { color: C.muted }]}>More</Text>
-        </TouchableOpacity>
-      </View>
-    </TouchableOpacity>
-  );
-
-  if ((loading || restaurantsLoading) && !refreshing) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.menuBtn}>
-            <Icon name="arrow-back" size={24} color={C.ink} />
+        {/* Actions */}
+        <View style={st.cardActions}>
+          <TouchableOpacity style={[st.actionBtn, { backgroundColor: C.infoLight }]} onPress={() => { setSelectedStaff(item); handleEdit(); }}>
+            <Icon name="pencil" size={16} color={C.info} />
+            <Text style={[st.actionBtnText, { color: C.info }]}>Edit</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Staff Management</Text>
-          <View style={{ width: 40 }} />
-        </View>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={C.primary} />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (!hasRestaurants) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.menuBtn}>
-            <Icon name="arrow-back" size={24} color={C.ink} />
+          <TouchableOpacity style={[st.actionBtn, { backgroundColor: C.bg }]} onPress={() => openActionModal(item)}>
+            <Icon name="ellipsis-horizontal" size={16} color={C.muted} />
+            <Text style={[st.actionBtnText, { color: C.muted }]}>More</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Staff Management</Text>
-          <View style={{ width: 40 }} />
         </View>
-        <View style={styles.emptyContainer}>
-          <Icon name="restaurant-outline" size={80} color={C.muted} />
-          <Text style={styles.emptyTitle}>No Restaurant Found</Text>
-          <Text style={styles.emptyText}>Please add a restaurant first</Text>
-        </View>
-      </SafeAreaView>
+      </TouchableOpacity>
     );
-  }
+  };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.menuBtn}>
-          <Icon name="arrow-back" size={24} color={C.ink} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Staff Management</Text>
-        <TouchableOpacity onPress={() => openForm()}>
-          <Icon name="add-circle" size={28} color={C.primary} />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
-          <Icon name="menu" size={22} color="#1D2254" />
-        </TouchableOpacity>
+  // ==================== RENDER HEADER ====================
+  const renderHeader = () => (
+    <>
+      {/* Stats Summary */}
+      <View style={st.statsContainer}>
+        <View style={[st.statCard, { backgroundColor: C.primaryLight }]}>
+          <Icon name="people" size={24} color={C.primary} />
+          <Text style={[st.statValue, { color: C.primary }]}>{staff.length}</Text>
+          <Text style={st.statLabel}>Total Staff</Text>
+        </View>
+        <View style={[st.statCard, { backgroundColor: C.successLight }]}>
+          <Icon name="checkmark-circle" size={24} color={C.success} />
+          <Text style={[st.statValue, { color: C.success }]}>{statusCounts.ACTIVE}</Text>
+          <Text style={st.statLabel}>Active</Text>
+        </View>
+        <View style={[st.statCard, { backgroundColor: C.warningLight }]}>
+          <Icon name="airplane" size={24} color={C.warning} />
+          <Text style={[st.statValue, { color: C.warning }]}>{statusCounts.ON_LEAVE}</Text>
+          <Text style={st.statLabel}>On Leave</Text>
+        </View>
       </View>
 
-      {/* Restaurant Selector - Global */}
-      <RestaurantSelectorBar />
-
-      {/* Stylish Status Filter Tabs */}
-      <View style={styles.summaryContainer}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.summaryScroll}
-        >
-          {STATUS_FILTER_OPTIONS.map(statusKey => {
-            const config = STATUS_CONFIG[statusKey];
-            const count = statusCounts[statusKey] || 0;
+      {/* Filter Tabs */}
+      <View style={st.filterContainer}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.filterScroll}>
+          {['all', ...STAFF_STATUSES.map(s => s.value)].map(statusKey => {
             const isActive = activeStatusTab === statusKey;
+            const config = statusKey === 'all'
+              ? { label: 'All', color: C.ink, bg: C.bg, icon: 'grid' }
+              : getStatusConfig(statusKey);
+            const count = statusCounts[statusKey] || 0;
 
             return (
               <TouchableOpacity
                 key={statusKey}
+                style={[st.filterChip, isActive && { backgroundColor: config.color, borderColor: config.color }]}
                 onPress={() => setActiveStatusTab(statusKey)}
-                style={[
-                  styles.summaryCard,
-                  isActive && styles.summaryCardActive,
-                  { borderColor: isActive ? config.color : C.border },
-                ]}
-                activeOpacity={0.7}
               >
-                <View style={[styles.summaryIcon, { backgroundColor: config.bg }]}>
-                  <Icon name={config.icon} size={18} color={config.color} />
-                </View>
-                <Text style={[styles.summaryCount, isActive && { color: config.color }]}>
-                  {count}
-                </Text>
-                <Text style={[styles.summaryLabel, isActive && { color: config.color }]}>
-                  {config.label}
-                </Text>
-                {isActive && (
-                  <View style={[styles.summaryActiveBar, { backgroundColor: config.color }]} />
-                )}
+                <Icon name={config.icon} size={16} color={isActive ? '#fff' : config.color} />
+                <Text style={[st.filterChipText, isActive && { color: '#fff' }]}>{config.label} ({count})</Text>
               </TouchableOpacity>
             );
           })}
         </ScrollView>
       </View>
 
+      {/* Results Count */}
+      <View style={st.resultsRow}>
+        <Text style={st.resultsText}>{filteredStaff.length} Staff Member{filteredStaff.length !== 1 ? 's' : ''}</Text>
+        {activeStatusTab !== 'all' && (
+          <TouchableOpacity style={st.clearBtn} onPress={() => setActiveStatusTab('all')}>
+            <Icon name="close-circle" size={14} color={C.primary} />
+            <Text style={st.clearBtnText}>Clear</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </>
+  );
+
+  // ==================== LOADING STATE ====================
+  if ((loading || restaurantsLoading) && !refreshing) {
+    return (
+      <SafeAreaView style={st.container}>
+        <View style={st.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
+            <Icon name="arrow-back" size={22} color={C.ink} />
+          </TouchableOpacity>
+          <View style={st.headerCenter}>
+            <Text style={st.headerTitle}>Staff Management</Text>
+            <Text style={st.headerSubtitle}>Manage your team</Text>
+          </View>
+          <View style={st.headerActions}>
+            <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
+              <Icon name="menu" size={20} color={C.ink} />
+            </TouchableOpacity>
+          </View>
+        </View>
+        <View style={st.loadingBox}>
+          <ActivityIndicator size="large" color={C.primary} />
+          <Text style={st.loadingText}>Loading staff...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // ==================== NO RESTAURANT ====================
+  if (!hasRestaurants) {
+    return (
+      <SafeAreaView style={st.container}>
+        <View style={st.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
+            <Icon name="arrow-back" size={22} color={C.ink} />
+          </TouchableOpacity>
+          <View style={st.headerCenter}>
+            <Text style={st.headerTitle}>Staff Management</Text>
+            <Text style={st.headerSubtitle}>Manage your team</Text>
+          </View>
+          <View style={st.headerActions}>
+            <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
+              <Icon name="menu" size={20} color={C.ink} />
+            </TouchableOpacity>
+          </View>
+        </View>
+        <View style={st.emptyState}>
+          <View style={st.emptyIcon}>
+            <Icon name="restaurant-outline" size={64} color={C.muted} />
+          </View>
+          <Text style={st.emptyTitle}>No Restaurant Found</Text>
+          <Text style={st.emptySubtitle}>Please add a restaurant first</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // ==================== MAIN RENDER ====================
+  return (
+    <SafeAreaView style={st.container}>
+      {/* Header */}
+      <View style={st.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
+          <Icon name="arrow-back" size={22} color={C.ink} />
+        </TouchableOpacity>
+        <View style={st.headerCenter}>
+          <Text style={st.headerTitle}>Staff Management</Text>
+          <Text style={st.headerSubtitle}>Manage your team</Text>
+        </View>
+        <View style={st.headerActions}>
+          <TouchableOpacity style={st.headerIconBtn} onPress={() => openForm()}>
+            <Icon name="person-add" size={20} color={C.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
+            <Icon name="menu" size={20} color={C.ink} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Restaurant Selector */}
+      <RestaurantSelectorBar />
+
+      {/* Staff List */}
       <FlatList
         data={filteredStaff}
         keyExtractor={item => item.id.toString()}
         renderItem={renderStaffCard}
-        contentContainerStyle={styles.list}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        numColumns={isTablet ? 2 : 1}
+        key={`grid-${isTablet ? 2 : 1}`}
+        ListHeaderComponent={renderHeader}
+        contentContainerStyle={st.listContent}
+        columnWrapperStyle={isTablet ? st.columnWrapper : undefined}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} />}
         ListEmptyComponent={
-          <View style={styles.emptyBox}>
-            <Icon name="people-outline" size={64} color={C.muted} />
-            <Text style={styles.emptyTitle}>
-              {staff.length === 0 ? 'No Staff Yet' : 'No Results'}
-            </Text>
-            <Text style={styles.emptyText}>
-              {staff.length === 0
-                ? 'Add your first staff member'
-                : `No ${STATUS_CONFIG[activeStatusTab]?.label || ''} staff found`}
+          <View style={st.emptyState}>
+            <View style={st.emptyIcon}>
+              <Icon name="people-outline" size={64} color={C.muted} />
+            </View>
+            <Text style={st.emptyTitle}>{staff.length === 0 ? 'No Staff Yet' : 'No Results'}</Text>
+            <Text style={st.emptySubtitle}>
+              {staff.length === 0 ? 'Add your first team member' : 'No matching staff found'}
             </Text>
             {staff.length === 0 && (
-              <TouchableOpacity style={styles.emptyBtn} onPress={() => openForm()}>
+              <TouchableOpacity style={st.emptyBtn} onPress={() => openForm()}>
                 <Icon name="add" size={18} color="#fff" />
-                <Text style={styles.emptyBtnText}>Add Staff</Text>
+                <Text style={st.emptyBtnText}>Add Staff</Text>
               </TouchableOpacity>
             )}
           </View>
         }
       />
 
-      {/* Add/Edit Modal */}
+      {/* ========== ADD/EDIT MODAL ========== */}
       <Modal visible={modalVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{isEditMode ? 'Edit Staff' : 'Add Staff'}</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
+        <View style={st.modalOverlay}>
+          <View style={st.modalContent}>
+            <View style={st.modalHeader}>
+              <Text style={st.modalTitle}>{isEditMode ? 'Edit Staff' : 'Add Staff'}</Text>
+              <TouchableOpacity onPress={() => setModalVisible(false)} style={st.modalClose}>
                 <Icon name="close" size={24} color={C.ink} />
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalBody}>
-              <Text style={styles.label}>Staff Name *</Text>
+            <ScrollView
+              key={`modal-scroll-${modalKey}`}
+              style={st.modalBody}
+              contentContainerStyle={st.modalBodyContent}
+              showsVerticalScrollIndicator={true}
+              keyboardShouldPersistTaps="handled"
+              nestedScrollEnabled={true}
+              bounces={true}
+            >
+              <View style={{ minHeight: 650 }}>
+              {/* Name */}
+              <Text style={st.label}>Full Name *</Text>
               <TextInput
-                style={styles.input}
-                placeholder="Enter name"
+                style={st.input}
+                placeholder="Enter staff name"
+                placeholderTextColor={C.muted}
                 value={form.name}
                 onChangeText={v => setForm(f => ({ ...f, name: v }))}
               />
 
-              <Text style={styles.label}>Phone *</Text>
+              {/* Phone */}
+              <Text style={st.label}>Phone Number *</Text>
               <TextInput
-                style={styles.input}
-                placeholder="Enter phone number (min 10 digits)"
+                style={st.input}
+                placeholder="Enter phone number"
+                placeholderTextColor={C.muted}
                 keyboardType="phone-pad"
                 value={form.phone}
                 onChangeText={v => setForm(f => ({ ...f, phone: v }))}
               />
 
-              <Text style={styles.label}>Role / Designation *</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
-                {ROLES.map(role => (
-                  <TouchableOpacity
-                    key={role}
-                    style={[styles.roleChip, form.role === role && styles.roleChipActive]}
-                    onPress={() => setForm(f => ({ ...f, role }))}
-                  >
-                    <Text style={[styles.roleText, form.role === role && styles.roleTextActive]}>
-                      {role}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-
-              <Text style={styles.label}>Employment Type</Text>
-              <View style={styles.typeRow}>
-                {STAFF_TYPES.map(type => (
-                  <TouchableOpacity
-                    key={type.value}
-                    style={[styles.typeChip, form.staffType === type.value && styles.typeChipActive]}
-                    onPress={() => setForm(f => ({ ...f, staffType: type.value }))}
-                  >
-                    <Icon
-                      name={type.icon}
-                      size={14}
-                      color={form.staffType === type.value ? '#fff' : C.ink}
-                    />
-                    <Text style={[styles.typeText, form.staffType === type.value && styles.typeTextActive]}>
-                      {type.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+              {/* Role */}
+              <Text style={st.label}>Role / Designation *</Text>
+              <View style={st.roleGrid}>
+                {ROLES.map(role => {
+                  const isSelected = form.role === role.value;
+                  return (
+                    <TouchableOpacity
+                      key={role.value}
+                      style={[st.roleChip, isSelected && { backgroundColor: role.color, borderColor: role.color }]}
+                      onPress={() => setForm(f => ({ ...f, role: role.value }))}
+                    >
+                      <Icon name={role.icon} size={16} color={isSelected ? '#fff' : role.color} />
+                      <Text style={[st.roleChipText, isSelected && { color: '#fff' }]}>{role.value}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
 
+              {/* Employment Type */}
+              <Text style={st.label}>Employment Type</Text>
+              <View style={st.typeGrid}>
+                {STAFF_TYPES.map(type => {
+                  const isSelected = form.staffType === type.value;
+                  return (
+                    <TouchableOpacity
+                      key={type.value}
+                      style={[st.typeChip, isSelected && { backgroundColor: type.color, borderColor: type.color }]}
+                      onPress={() => setForm(f => ({ ...f, staffType: type.value }))}
+                    >
+                      <Icon name={type.icon} size={16} color={isSelected ? '#fff' : type.color} />
+                      <Text style={[st.typeChipText, isSelected && { color: '#fff' }]}>{type.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* Status (Edit Mode) */}
               {isEditMode && (
                 <>
-                  <Text style={styles.label}>Status</Text>
-                  <View style={styles.statusRow}>
-                    {STAFF_STATUSES.map(s => (
-                      <TouchableOpacity
-                        key={s.value}
-                        style={[
-                          styles.statusChip,
-                          form.status === s.value && { backgroundColor: s.color, borderColor: s.color }
-                        ]}
-                        onPress={() => setForm(f => ({ ...f, status: s.value }))}
-                      >
-                        <View style={[styles.statusDot, { backgroundColor: form.status === s.value ? '#fff' : s.color }]} />
-                        <Text style={[styles.statusChipText, form.status === s.value && { color: '#fff' }]}>
-                          {s.label}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
+                  <Text style={st.label}>Status</Text>
+                  <View style={st.statusGrid}>
+                    {STAFF_STATUSES.map(s => {
+                      const isSelected = form.status === s.value;
+                      return (
+                        <TouchableOpacity
+                          key={s.value}
+                          style={[st.statusChip, isSelected && { backgroundColor: s.color, borderColor: s.color }]}
+                          onPress={() => setForm(f => ({ ...f, status: s.value }))}
+                        >
+                          <Icon name={s.icon} size={14} color={isSelected ? '#fff' : s.color} />
+                          <Text style={[st.statusChipText, isSelected && { color: '#fff' }]}>{s.label}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
                   </View>
                 </>
               )}
 
-              <Text style={styles.label}>Joining Date *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="YYYY-MM-DD"
-                value={form.joiningDate}
-                onChangeText={v => setForm(f => ({ ...f, joiningDate: v }))}
-              />
+              {/* Joining Date */}
+              <Text style={st.label}>Joining Date</Text>
+              <TouchableOpacity style={st.dateBtn} onPress={() => setShowDatePicker(true)}>
+                <Icon name="calendar" size={20} color={C.primary} />
+                <Text style={st.dateBtnText}>{formatDate(form.joiningDate)}</Text>
+                <Icon name="chevron-down" size={18} color={C.muted} />
+              </TouchableOpacity>
+              {showDatePicker && (
+                <DateTimePicker
+                  value={form.joiningDate ? new Date(form.joiningDate) : new Date()}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={onDateChange}
+                  maximumDate={new Date()}
+                />
+              )}
 
-              <Text style={styles.label}>
-                {form.staffType === 'PART_TIME' ? 'Daily Wage (₹) *' : 'Monthly Salary (₹) *'}
-              </Text>
-              <TextInput
-                style={styles.input}
-                placeholder={form.staffType === 'PART_TIME' ? 'Enter daily wage' : 'Enter monthly salary'}
-                keyboardType="numeric"
-                value={form.salary}
-                onChangeText={v => setForm(f => ({ ...f, salary: v }))}
-              />
+              {/* Salary */}
+              <Text style={st.label}>{form.staffType === 'PART_TIME' ? 'Daily Wage (₹) *' : 'Monthly Salary (₹) *'}</Text>
+              <View style={st.salaryInputRow}>
+                <View style={st.currencyBox}>
+                  <Text style={st.currencyText}>₹</Text>
+                </View>
+                <TextInput
+                  style={st.salaryInput}
+                  placeholder={form.staffType === 'PART_TIME' ? 'Enter daily wage' : 'Enter monthly salary'}
+                  placeholderTextColor={C.muted}
+                  keyboardType="numeric"
+                  value={form.salary}
+                  onChangeText={v => setForm(f => ({ ...f, salary: v }))}
+                />
+              </View>
+
+              <View style={{ height: 30 }} />
+              </View>
             </ScrollView>
 
-            <View style={styles.modalFooter}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={() => setModalVisible(false)}>
-                <Text style={styles.cancelText}>Cancel</Text>
+            <View style={st.modalFooter}>
+              <TouchableOpacity style={st.cancelBtn} onPress={() => setModalVisible(false)}>
+                <Text style={st.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.saveBtn} onPress={saveStaff} disabled={saving}>
+              <TouchableOpacity style={st.saveBtn} onPress={saveStaff} disabled={saving}>
                 {saving ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Text style={styles.saveText}>{isEditMode ? 'Save Changes' : 'Add Staff'}</Text>
+                  <>
+                    <Icon name={isEditMode ? 'checkmark' : 'add'} size={18} color="#fff" />
+                    <Text style={st.saveBtnText}>{isEditMode ? 'Update' : 'Add Staff'}</Text>
+                  </>
                 )}
               </TouchableOpacity>
             </View>
@@ -614,52 +658,46 @@ export default function StaffScreen({ navigation }) {
         </View>
       </Modal>
 
-      {/* Action Modal */}
+      {/* ========== ACTION MODAL ========== */}
       <Modal visible={actionModalVisible} animationType="fade" transparent>
-        <TouchableOpacity
-          style={styles.actionModalOverlay}
-          activeOpacity={1}
-          onPress={() => setActionModalVisible(false)}
-        >
-          <View style={styles.actionModalContent}>
-            <View style={styles.actionModalHeader}>
-              <Text style={styles.actionModalTitle}>{selectedStaff?.name}</Text>
-              <Text style={styles.actionModalSubtitle}>{selectedStaff?.designation}</Text>
+        <TouchableOpacity style={st.actionOverlay} activeOpacity={1} onPress={() => setActionModalVisible(false)}>
+          <View style={st.actionContent}>
+            {/* Header */}
+            <View style={st.actionHeader}>
+              <Text style={st.actionTitle}>{selectedStaff?.name}</Text>
+              <Text style={st.actionSubtitle}>{selectedStaff?.designation}</Text>
             </View>
 
-            <TouchableOpacity style={styles.actionItem} onPress={handleEdit}>
+            {/* Edit Option */}
+            <TouchableOpacity style={st.actionItem} onPress={handleEdit}>
               <Icon name="pencil-outline" size={20} color={C.info} />
-              <Text style={styles.actionItemText}>Edit Details</Text>
+              <Text style={st.actionItemText}>Edit Details</Text>
             </TouchableOpacity>
 
-            <View style={styles.actionDivider} />
-            <Text style={styles.actionSectionTitle}>Change Status</Text>
+            <View style={st.actionDivider} />
+            <Text style={st.actionSectionTitle}>Change Status</Text>
 
+            {/* Status Options */}
             {STAFF_STATUSES.map(status => (
               <TouchableOpacity
                 key={status.value}
-                style={[
-                  styles.actionItem,
-                  selectedStaff?.status === status.value && styles.actionItemDisabled
-                ]}
+                style={[st.actionItem, selectedStaff?.status === status.value && st.actionItemDisabled]}
                 onPress={() => handleStatusChange(status.value)}
                 disabled={selectedStaff?.status === status.value}
               >
-                <View style={[styles.statusIndicator, { backgroundColor: status.color }]} />
-                <Text style={[
-                  styles.actionItemText,
-                  selectedStaff?.status === status.value && styles.actionItemTextDisabled
-                ]}>
+                <View style={[st.statusIndicator, { backgroundColor: status.color }]} />
+                <Text style={[st.actionItemText, selectedStaff?.status === status.value && st.actionItemTextDisabled]}>
                   {status.label}
                   {selectedStaff?.status === status.value && ' (Current)'}
                 </Text>
               </TouchableOpacity>
             ))}
 
-            <View style={styles.actionDivider} />
+            <View style={st.actionDivider} />
 
+            {/* Terminate Option */}
             <TouchableOpacity
-              style={[styles.actionItem, styles.actionItemDanger]}
+              style={[st.actionItem, st.actionItemDanger]}
               onPress={handleDelete}
               disabled={deleting || selectedStaff?.status === 'TERMINATED'}
             >
@@ -668,18 +706,16 @@ export default function StaffScreen({ navigation }) {
               ) : (
                 <>
                   <Icon name="trash-outline" size={20} color={C.danger} />
-                  <Text style={[styles.actionItemText, { color: C.danger }]}>
+                  <Text style={[st.actionItemText, { color: C.danger }]}>
                     {selectedStaff?.status === 'TERMINATED' ? 'Already Terminated' : 'Terminate Staff'}
                   </Text>
                 </>
               )}
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.actionCancelBtn}
-              onPress={() => setActionModalVisible(false)}
-            >
-              <Text style={styles.actionCancelText}>Cancel</Text>
+            {/* Cancel Button */}
+            <TouchableOpacity style={st.actionCancelBtn} onPress={() => setActionModalVisible(false)}>
+              <Text style={st.actionCancelText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -691,323 +727,132 @@ export default function StaffScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+// ==================== STYLES ====================
+const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: C.card,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
-  },
-  menuBtn: { width: 40 },
+
+  // Header
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border },
+  backBtn: { width: 40, height: 40, borderRadius: 10, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
+  headerCenter: { flex: 1, marginLeft: 12 },
   headerTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: C.ink, marginTop: 16 },
-  emptyText: { fontSize: 14, color: C.muted, textAlign: 'center', marginTop: 8 },
+  headerSubtitle: { fontSize: 12, color: C.muted, marginTop: 2 },
+  headerActions: { flexDirection: 'row' },
+  headerIconBtn: { width: 40, height: 40, borderRadius: 10, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', marginLeft: 8 },
 
-  // Stylish summary cards
-  summaryContainer: {
-    paddingVertical: 12,
-    backgroundColor: C.card,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
-  },
-  summaryScroll: {
-    paddingHorizontal: 16,
-    gap: 10,
-  },
-  summaryCard: {
-    alignItems: 'center',
-    backgroundColor: C.card,
-    borderRadius: 14,
-    padding: 10,
-    minWidth: 72,
-    borderWidth: 2,
-    borderColor: C.border,
-    position: 'relative',
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  summaryCardActive: {
-    backgroundColor: '#FAFAFA',
-    shadowOpacity: 0.1,
-    elevation: 5,
-  },
-  summaryIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
-  },
-  summaryCount: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: C.ink,
-  },
-  summaryLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: C.muted,
-    marginTop: 2,
-  },
-  summaryActiveBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 3,
-    borderBottomLeftRadius: 14,
-    borderBottomRightRadius: 14,
-  },
+  // Stats
+  statsContainer: { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 16 },
+  statCard: { flex: 1, alignItems: 'center', padding: 12, borderRadius: 12, marginHorizontal: 4 },
+  statValue: { fontSize: 24, fontWeight: '800', marginTop: 6 },
+  statLabel: { fontSize: 11, fontWeight: '600', color: C.muted, marginTop: 2 },
 
-  filterRow: { paddingHorizontal: 16, paddingVertical: 12 },
-  filterChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: C.card,
-    borderWidth: 1,
-    borderColor: C.border,
-    marginRight: 8,
-  },
-  filterChipActive: { backgroundColor: C.primary, borderColor: C.primary },
-  filterText: { fontSize: 13, fontWeight: '600', color: C.ink },
-  filterTextActive: { color: '#fff' },
+  // Filters
+  filterContainer: { paddingVertical: 12, backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border },
+  filterScroll: { paddingHorizontal: 16 },
+  filterChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10, marginRight: 8, borderRadius: 20, backgroundColor: C.card, borderWidth: 1.5, borderColor: C.border },
+  filterChipText: { fontSize: 13, fontWeight: '600', color: C.ink, marginLeft: 6 },
 
-  list: { padding: 16 },
-  card: {
-    backgroundColor: C.card,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: C.border,
-  },
+  // Results
+  resultsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
+  resultsText: { fontSize: 15, fontWeight: '700', color: C.ink },
+  clearBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, backgroundColor: C.primaryLight, borderRadius: 8 },
+  clearBtnText: { fontSize: 12, fontWeight: '600', color: C.primary, marginLeft: 4 },
+
+  // List
+  listContent: { paddingHorizontal: 16, paddingBottom: 120 },
+  columnWrapper: { justifyContent: 'space-between' },
+
+  // Card
+  card: { backgroundColor: C.card, borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: C.border },
+  cardTablet: { flex: 1, marginHorizontal: 6, maxWidth: '48%' },
   cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  iconBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: '#FFE8E8',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  cardInfo: { flex: 1 },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: C.ink },
-  cardSub: { fontSize: 13, color: C.muted, marginTop: 2 },
-  phoneRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
-  phoneText: { fontSize: 12, color: C.muted },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  statusText: { fontSize: 11, fontWeight: '600' },
+  avatar: { width: 52, height: 52, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  cardInfo: { flex: 1, marginLeft: 12 },
+  cardName: { fontSize: 16, fontWeight: '700', color: C.ink },
+  cardRole: { fontSize: 13, color: C.muted, marginTop: 2 },
+  statusBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
+  statusDot: { width: 6, height: 6, borderRadius: 3, marginRight: 6 },
+  statusText: { fontSize: 11, fontWeight: '700' },
 
-  salaryBox: {
-    flexDirection: 'row',
-    backgroundColor: C.bg,
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 12,
-  },
-  salaryItem: { flex: 1 },
-  salaryLabel: { fontSize: 11, color: C.muted, marginBottom: 4 },
-  salaryValue: { fontSize: 14, fontWeight: '700', color: C.ink },
+  detailsGrid: { flexDirection: 'row', marginBottom: 12 },
+  detailItem: { flex: 1, flexDirection: 'row', alignItems: 'center' },
+  detailIconBox: { width: 28, height: 28, borderRadius: 8, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', marginRight: 8 },
+  detailValue: { fontSize: 13, fontWeight: '600', color: C.text },
 
-  cardFooter: { flexDirection: 'row', gap: 8 },
-  actionBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: C.bg,
-  },
-  actionText: { fontSize: 13, fontWeight: '600' },
+  infoRow: { flexDirection: 'row', marginBottom: 14 },
+  infoChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, marginRight: 8 },
+  infoChipText: { fontSize: 12, fontWeight: '700', marginLeft: 5 },
 
-  emptyBox: { alignItems: 'center', paddingTop: 80 },
-  emptyBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 20,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: C.primary,
-  },
-  emptyBtnText: { fontSize: 14, fontWeight: '700', color: '#fff' },
+  cardActions: { flexDirection: 'row', paddingTop: 12, borderTopWidth: 1, borderTopColor: C.border },
+  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 10, marginHorizontal: 4 },
+  actionBtnText: { fontSize: 13, fontWeight: '600', marginLeft: 6 },
 
+  // Empty & Loading
+  loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  loadingText: { marginTop: 16, fontSize: 15, color: C.muted },
+  emptyState: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 40 },
+  emptyIcon: { width: 120, height: 120, borderRadius: 60, backgroundColor: C.border, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
+  emptyTitle: { fontSize: 20, fontWeight: '700', color: C.ink, marginBottom: 8 },
+  emptySubtitle: { fontSize: 14, color: C.muted, textAlign: 'center' },
+  emptyBtn: { flexDirection: 'row', alignItems: 'center', marginTop: 24, paddingHorizontal: 24, paddingVertical: 14, backgroundColor: C.primary, borderRadius: 14 },
+  emptyBtnText: { fontSize: 15, fontWeight: '700', color: '#fff', marginLeft: 8 },
+
+  // Modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: C.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '90%' },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
-  },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
-  modalBody: { padding: 16 },
-  modalFooter: { flexDirection: 'row', gap: 12, padding: 16, borderTopWidth: 1, borderTopColor: C.border },
+  modalContent: { backgroundColor: C.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, height: '90%' },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, borderBottomWidth: 1, borderBottomColor: C.border },
+  modalTitle: { fontSize: 20, fontWeight: '800', color: C.ink },
+  modalClose: { width: 40, height: 40, borderRadius: 20, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
+  modalBody: { flex: 1 },
+  modalBodyContent: { padding: 20, paddingBottom: 30 },
+  modalFooter: { flexDirection: 'row', padding: 20, borderTopWidth: 1, borderTopColor: C.border },
 
-  label: { fontSize: 13, fontWeight: '600', color: C.muted, marginBottom: 8, marginTop: 12 },
-  input: {
-    backgroundColor: C.bg,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 14,
-    color: C.text,
-    borderWidth: 1,
-    borderColor: C.border,
-  },
+  // Form
+  label: { fontSize: 13, fontWeight: '700', color: C.text, marginBottom: 10, marginTop: 16 },
+  input: { backgroundColor: C.bg, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: C.text, borderWidth: 1.5, borderColor: C.border },
 
-  roleChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: C.bg,
-    borderWidth: 1,
-    borderColor: C.border,
-    marginRight: 8,
-  },
-  roleChipActive: { backgroundColor: C.primary, borderColor: C.primary },
-  roleText: { fontSize: 13, fontWeight: '600', color: C.ink },
-  roleTextActive: { color: '#fff' },
+  roleGrid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 },
+  roleChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10, backgroundColor: C.bg, borderWidth: 1.5, borderColor: C.border, margin: 4 },
+  roleChipText: { fontSize: 12, fontWeight: '600', color: C.ink, marginLeft: 6 },
 
-  typeRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 16,
-  },
-  typeChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: C.bg,
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  typeChipActive: { backgroundColor: C.info, borderColor: C.info },
-  typeText: { fontSize: 12, fontWeight: '600', color: C.ink },
-  typeTextActive: { color: '#fff' },
+  typeGrid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 },
+  typeChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10, backgroundColor: C.bg, borderWidth: 1.5, borderColor: C.border, margin: 4 },
+  typeChipText: { fontSize: 12, fontWeight: '600', color: C.ink, marginLeft: 6 },
 
-  statusRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 16,
-  },
-  statusChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: C.card,
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  statusChipText: { fontSize: 12, fontWeight: '600', color: C.ink },
+  statusGrid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 },
+  statusChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10, backgroundColor: C.bg, borderWidth: 1.5, borderColor: C.border, margin: 4 },
+  statusChipText: { fontSize: 12, fontWeight: '600', color: C.ink, marginLeft: 6 },
 
-  cancelBtn: { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: C.bg, alignItems: 'center' },
-  cancelText: { fontSize: 14, fontWeight: '700', color: C.ink },
-  saveBtn: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: C.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  saveText: { fontSize: 14, fontWeight: '700', color: '#fff' },
+  dateBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, borderRadius: 12, borderWidth: 1.5, borderColor: C.border, backgroundColor: C.bg },
+  dateBtnText: { flex: 1, fontSize: 15, fontWeight: '600', color: C.ink, marginLeft: 10 },
 
-  // Action Modal Styles
-  actionModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  actionModalContent: {
-    backgroundColor: C.card,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingTop: 8,
-    paddingBottom: 24,
-  },
-  actionModalHeader: {
-    alignItems: 'center',
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
-    marginBottom: 8,
-  },
-  actionModalTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
-  actionModalSubtitle: { fontSize: 14, color: C.muted, marginTop: 4 },
-  actionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-  },
+  salaryInputRow: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, borderWidth: 1.5, borderColor: C.border, backgroundColor: C.bg, overflow: 'hidden' },
+  currencyBox: { width: 50, height: 50, backgroundColor: C.successLight, alignItems: 'center', justifyContent: 'center' },
+  currencyText: { fontSize: 18, fontWeight: '700', color: C.success },
+  salaryInput: { flex: 1, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, fontWeight: '600', color: C.ink },
+
+  cancelBtn: { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: C.bg, alignItems: 'center', marginRight: 8 },
+  cancelBtnText: { fontSize: 15, fontWeight: '700', color: C.ink },
+  saveBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 12, backgroundColor: C.primary, marginLeft: 8 },
+  saveBtnText: { fontSize: 15, fontWeight: '700', color: '#fff', marginLeft: 8 },
+
+  // Action Modal
+  actionOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  actionContent: { backgroundColor: C.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 8, paddingBottom: 24 },
+  actionHeader: { alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: C.border, marginBottom: 8 },
+  actionTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
+  actionSubtitle: { fontSize: 14, color: C.muted, marginTop: 4 },
+
+  actionItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 20 },
+  actionItemText: { fontSize: 15, color: C.ink, marginLeft: 12 },
   actionItemDisabled: { opacity: 0.5 },
-  actionItemDanger: { marginTop: 8 },
-  actionItemText: { fontSize: 15, color: C.ink },
   actionItemTextDisabled: { color: C.muted },
-  actionDivider: {
-    height: 1,
-    backgroundColor: C.border,
-    marginVertical: 8,
-    marginHorizontal: 20,
-  },
-  actionSectionTitle: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: C.muted,
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    textTransform: 'uppercase',
-  },
-  statusIndicator: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  actionCancelBtn: {
-    marginHorizontal: 20,
-    marginTop: 16,
-    paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: C.bg,
-    alignItems: 'center',
-  },
+  actionItemDanger: { marginTop: 8 },
+
+  actionDivider: { height: 1, backgroundColor: C.border, marginVertical: 8, marginHorizontal: 20 },
+  actionSectionTitle: { fontSize: 12, fontWeight: '600', color: C.muted, paddingHorizontal: 20, paddingVertical: 8, textTransform: 'uppercase' },
+  statusIndicator: { width: 10, height: 10, borderRadius: 5 },
+
+  actionCancelBtn: { marginHorizontal: 20, marginTop: 16, paddingVertical: 14, borderRadius: 12, backgroundColor: C.bg, alignItems: 'center' },
   actionCancelText: { fontSize: 15, fontWeight: '600', color: C.ink },
 });

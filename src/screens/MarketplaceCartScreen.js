@@ -228,7 +228,7 @@ export default function MarketplaceCartScreen({ navigation }) {
             <Text style={styles.emptyText}>Browse marketplace to add products</Text>
             <TouchableOpacity
               style={styles.browseButton}
-              onPress={() => navigation.navigate('Request')}
+              onPress={() => navigation.navigate('Marketplace')}
             >
               <Text style={styles.browseButtonText}>Browse Marketplace</Text>
             </TouchableOpacity>

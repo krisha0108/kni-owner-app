@@ -1,8 +1,9 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  RefreshControl, ActivityIndicator, Alert, Modal, TextInput, Image, Switch
+  RefreshControl, ActivityIndicator, Alert, Modal, TextInput, Image, Switch, Platform
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { api, getImageUrl } from '../api/client';
@@ -142,6 +143,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
   });
   const [featureInput, setFeatureInput] = useState('');
   const [durationPickerVisible, setDurationPickerVisible] = useState(false);
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
 
   // Service booking state
@@ -213,6 +215,14 @@ export default function EquipmentProfileScreen({ navigation, route }) {
       ...f,
       featuresJson: f.featuresJson.filter((_, i) => i !== index),
     }));
+  };
+
+  const onStartDateChange = (event, selectedDate) => {
+    setShowStartDatePicker(Platform.OS === 'ios');
+    if (selectedDate) {
+      const dateStr = selectedDate.toISOString().split('T')[0];
+      setAmcForm(f => ({ ...f, startDate: dateStr }));
+    }
   };
 
   const handleCreateAmc = async () => {
@@ -429,10 +439,14 @@ export default function EquipmentProfileScreen({ navigation, route }) {
       </View>
 
       <ScrollView
+        style={{ flex: 1 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} />
         }
         contentContainerStyle={st.scrollContent}
+        nestedScrollEnabled
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator
       >
         {/* Equipment Info Card */}
         <View style={st.infoCard}>
@@ -825,7 +839,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={st.modalBody}>
+            <ScrollView style={st.modalBody} contentContainerStyle={{ padding: 16, paddingBottom: 30 }} nestedScrollEnabled keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator bounces>
               <Text style={st.label}>Plan Name *</Text>
               <TextInput
                 style={st.input}
@@ -901,13 +915,24 @@ export default function EquipmentProfileScreen({ navigation, route }) {
               )}
 
               <Text style={st.label}>Start Date *</Text>
-              <TextInput
-                style={st.input}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor={C.muted}
-                value={amcForm.startDate}
-                onChangeText={v => setAmcForm(f => ({ ...f, startDate: v }))}
-              />
+              <TouchableOpacity
+                style={st.pickerBtn}
+                onPress={() => setShowStartDatePicker(true)}
+              >
+                <Text style={amcForm.startDate ? st.pickerText : { fontSize: 14, color: C.muted }}>
+                  {amcForm.startDate || 'Select start date'}
+                </Text>
+                <Icon name="calendar-outline" size={18} color={C.muted} />
+              </TouchableOpacity>
+              {showStartDatePicker && (
+                <DateTimePicker
+                  value={amcForm.startDate ? new Date(amcForm.startDate) : new Date()}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={onStartDateChange}
+                  minimumDate={new Date()}
+                />
+              )}
 
               <View style={st.switchRow}>
                 <Text style={st.switchLabel}>Enable auto-renewal</Text>
@@ -980,7 +1005,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={st.modalBody}>
+            <ScrollView style={st.modalBody} contentContainerStyle={{ padding: 16, paddingBottom: 30 }} nestedScrollEnabled keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator bounces>
               {/* Service Templates */}
               {equipment.equipmentType?.serviceTemplates?.length > 0 && (
                 <>
@@ -1130,7 +1155,7 @@ const st = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: '900', color: C.ink, flex: 1, textAlign: 'center' },
   serviceBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' },
 
-  scrollContent: { paddingBottom: 20 },
+  scrollContent: { paddingBottom: 100 },
 
   infoCard: {
     backgroundColor: C.card, margin: 16, borderRadius: 16,
@@ -1277,13 +1302,13 @@ const st = StyleSheet.create({
   imageModalImage: { width: '100%', height: '80%' },
 
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: C.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '90%' },
+  modalContent: { backgroundColor: C.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, height: '85%' },
   modalHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     padding: 16, borderBottomWidth: 1, borderBottomColor: C.border
   },
   modalTitle: { fontSize: 18, fontWeight: '900', color: C.ink },
-  modalBody: { padding: 16 },
+  modalBody: { flex: 1 },
   modalFooter: { flexDirection: 'row', gap: 12, padding: 16, borderTopWidth: 1, borderTopColor: C.border },
 
   label: { fontSize: 12, fontWeight: '700', color: C.muted, marginBottom: 6, marginTop: 12 },

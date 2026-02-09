@@ -7,7 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // NOTE: Update LOCAL_IP with your computer's local IP address
 // To find your IP: Windows (ipconfig) | Mac/Linux (ifconfig)
-const LOCAL_IP = '192.168.1.8';
+const LOCAL_IP = '192.168.29.54';
 
 // API URLs
 const DEV_API_BASE_URL = `http://${LOCAL_IP}:3000/api`;
@@ -16,7 +16,7 @@ const PROD_API_BASE_URL = 'https://kitchennetworkinternational.com/api';
 const PROD_IMAGE_BASE_URL = 'https://kitchennetworkinternational.com';
 
 // ⚠️ SWITCH: true = LOCAL, false = PRODUCTION
-const IS_DEV = false;
+const IS_DEV = true;
 
 const API_BASE_URL = IS_DEV ? DEV_API_BASE_URL : PROD_API_BASE_URL;
 const IMAGE_BASE_URL = IS_DEV ? DEV_IMAGE_BASE_URL : PROD_IMAGE_BASE_URL;

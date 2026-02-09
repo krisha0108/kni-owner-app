@@ -1,25 +1,25 @@
-import React, { useState, useCallback, useEffect } from 'react';
+/**
+ * ============================================================================
+ * VENDOR LEDGER SCREEN - Premium Redesign (Scroll Fixed)
+ * ============================================================================
+ */
+
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  RefreshControl,
-  ActivityIndicator,
-  Modal,
-  TextInput,
-  ScrollView,
-  Alert,
+  View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl,
+  ActivityIndicator, Modal, TextInput, ScrollView, Alert, StatusBar,
+  useWindowDimensions, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { api } from '../api/client';
 import { useRestaurant } from '../context/RestaurantContext';
 import { RestaurantSelectorBar } from '../components/RestaurantSelector';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
+// Keep original colors - not flashy
 const C = {
   primary: '#EF3A3A',
   ink: '#1D2254',
@@ -29,101 +29,109 @@ const C = {
   card: '#FFFFFF',
   border: '#E5E7EB',
   ok: '#10B981',
+  okLight: '#ECFDF5',
   warn: '#F59E0B',
+  warnLight: '#FFFBEB',
   danger: '#EF4444',
+  dangerLight: '#FEF2F2',
   info: '#3B82F6',
+  infoLight: '#EFF6FF',
 };
 
-const entryTypeLabels = {
-  PURCHASE: 'Purchase',
-  PAYMENT: 'Payment',
-  CREDIT_NOTE: 'Credit Note',
-  DEBIT_NOTE: 'Debit Note',
-};
+const ENTRY_TYPES = [
+  { value: 'PURCHASE', label: 'Purchase', icon: 'cart', color: C.danger, bg: C.dangerLight },
+  { value: 'PAYMENT', label: 'Payment', icon: 'wallet', color: C.ok, bg: C.okLight },
+  { value: 'CREDIT_NOTE', label: 'Credit Note', icon: 'document-text', color: C.info, bg: C.infoLight },
+  { value: 'DEBIT_NOTE', label: 'Debit Note', icon: 'document', color: C.warn, bg: C.warnLight },
+];
 
-const entryTypeConfig = {
-  PURCHASE: { bg: '#FEF2F2', color: C.danger, icon: 'arrow-down-circle' },
-  PAYMENT: { bg: '#ECFDF5', color: C.ok, icon: 'arrow-up-circle' },
-  CREDIT_NOTE: { bg: '#F3F4F6', color: C.muted, icon: 'document-text' },
-  DEBIT_NOTE: { bg: '#FFFBEB', color: C.warn, icon: 'document' },
-};
+const PAYMENT_MODES = [
+  { value: 'CASH', label: 'Cash', icon: 'cash' },
+  { value: 'BANK_TRANSFER', label: 'Bank Transfer', icon: 'swap-horizontal' },
+  { value: 'UPI', label: 'UPI', icon: 'phone-portrait' },
+  { value: 'CHEQUE', label: 'Cheque', icon: 'document-text' },
+  { value: 'CARD', label: 'Card', icon: 'card' },
+  { value: 'OTHER', label: 'Other', icon: 'ellipsis-horizontal' },
+];
 
-const paymentModes = ['CASH', 'BANK_TRANSFER', 'UPI', 'CHEQUE', 'CARD', 'OTHER'];
+const getEntryConfig = (type) => ENTRY_TYPES.find(t => t.value === type) || ENTRY_TYPES[0];
 
 const formatPrice = (amount) => {
-  const value = (amount || 0);
-  return `₹${value.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+  const value = Number(amount) || 0;
+  return `₹${value.toLocaleString('en-IN')}`;
 };
 
 const formatDate = (dateStr) => {
   if (!dateStr) return '-';
-  return new Date(dateStr).toLocaleDateString('en-IN', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric'
-  });
+  return new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 };
 
 export default function VendorLedgerScreen({ navigation }) {
-  // Global restaurant context
-  const {
-    selectedRestaurantId,
-    loading: restaurantsLoading,
-    loadRestaurants,
-  } = useRestaurant();
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
+
+  const { selectedRestaurantId, loading: restaurantsLoading, loadRestaurants, hasRestaurants } = useRestaurant();
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [vendors, setVendors] = useState([]);
   const [entries, setEntries] = useState([]);
-  const [summary, setSummary] = useState({
-    totalVendors: 0,
-    totalDue: 0,
-    totalAdvance: 0,
-    netBalance: 0,
-  });
-  const [activeTab, setActiveTab] = useState('summary'); // 'summary' or 'transactions'
-
-  // Entry modal state
-  const [entryModal, setEntryModal] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({
-    vendorName: '',
-    vendorPhone: '',
-    vendorGST: '',
-    entryType: 'PURCHASE',
-    amount: '',
-    paymentMode: 'CASH',
-    description: '',
-    billNumber: '',
-    billDate: new Date().toISOString().split('T')[0],
-    dueDate: '',
-    entryDate: new Date().toISOString().split('T')[0],
-  });
-
-  // Entry type picker modal
-  const [entryTypePicker, setEntryTypePicker] = useState(false);
-  const [paymentModePicker, setPaymentModePicker] = useState(false);
+  const [summary, setSummary] = useState({ totalVendors: 0, totalDue: 0, totalAdvance: 0, netBalance: 0 });
+  const [activeTab, setActiveTab] = useState('summary');
   const [menuVisible, setMenuVisible] = useState(false);
 
-  const loadData = useCallback(async () => {
-    if (!selectedRestaurantId) return;
+  // Modal states
+  const [entryModal, setEntryModal] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [modalKey, setModalKey] = useState(0); // For forcing scroll re-render
+  const [form, setForm] = useState({
+    vendorName: '', vendorPhone: '', vendorGST: '',
+    entryType: 'PURCHASE', amount: '', paymentMode: 'CASH',
+    description: '', billNumber: '',
+    billDate: new Date().toISOString().split('T')[0],
+    dueDate: '', entryDate: new Date().toISOString().split('T')[0],
+  });
 
+  // Date Picker states
+  const [showBillDatePicker, setShowBillDatePicker] = useState(false);
+  const [showDueDatePicker, setShowDueDatePicker] = useState(false);
+  const [showEntryDatePicker, setShowEntryDatePicker] = useState(false);
+
+  // Date picker handlers
+  const onBillDateChange = (event, selectedDate) => {
+    setShowBillDatePicker(Platform.OS === 'ios');
+    if (selectedDate) {
+      setForm(f => ({ ...f, billDate: selectedDate.toISOString().split('T')[0] }));
+    }
+  };
+
+  const onDueDateChange = (event, selectedDate) => {
+    setShowDueDatePicker(Platform.OS === 'ios');
+    if (selectedDate) {
+      setForm(f => ({ ...f, dueDate: selectedDate.toISOString().split('T')[0] }));
+    }
+  };
+
+  const onEntryDateChange = (event, selectedDate) => {
+    setShowEntryDatePicker(Platform.OS === 'ios');
+    if (selectedDate) {
+      setForm(f => ({ ...f, entryDate: selectedDate.toISOString().split('T')[0] }));
+    }
+  };
+
+  const loadData = useCallback(async () => {
+    if (!selectedRestaurantId) { setLoading(false); return; }
     try {
       setLoading(true);
-
-      // Fetch vendor summary
-      const summaryRes = await api.get(`/owner/vendor-ledger/summary?restaurantId=${selectedRestaurantId}`);
-        if (summaryRes.data.ok) {
-          setVendors(summaryRes.data.data.vendors || []);
-          setSummary(summaryRes.data.data.summary || { totalVendors: 0, totalDue: 0, totalAdvance: 0, netBalance: 0 });
-        }
-
-      // Fetch entries
-      const entriesRes = await api.get(`/owner/vendor-ledger?restaurantId=${selectedRestaurantId}`);
-      if (entriesRes.data.ok) {
-        setEntries(entriesRes.data.data || []);
+      const [summaryRes, entriesRes] = await Promise.all([
+        api.get(`/owner/vendor-ledger/summary?restaurantId=${selectedRestaurantId}`),
+        api.get(`/owner/vendor-ledger?restaurantId=${selectedRestaurantId}`),
+      ]);
+      if (summaryRes.data.ok) {
+        setVendors(summaryRes.data.data.vendors || []);
+        setSummary(summaryRes.data.data.summary || { totalVendors: 0, totalDue: 0, totalAdvance: 0, netBalance: 0 });
       }
+      if (entriesRes.data.ok) setEntries(entriesRes.data.data || []);
     } catch (error) {
       console.error('Error loading vendor ledger:', error);
     } finally {
@@ -132,11 +140,8 @@ export default function VendorLedgerScreen({ navigation }) {
     }
   }, [selectedRestaurantId]);
 
-  // Load data when restaurant changes
   useEffect(() => {
-    if (selectedRestaurantId) {
-      loadData();
-    }
+    if (selectedRestaurantId) loadData();
   }, [selectedRestaurantId, loadData]);
 
   const onRefresh = async () => {
@@ -145,38 +150,24 @@ export default function VendorLedgerScreen({ navigation }) {
     await loadData();
   };
 
-  const openEntryModal = (type = 'PURCHASE') => {
+  const openEntryModal = (type = 'PURCHASE', vendor = null) => {
     setForm({
-      vendorName: '',
-      vendorPhone: '',
-      vendorGST: '',
-      entryType: type,
-      amount: '',
-      paymentMode: 'CASH',
-      description: '',
-      billNumber: '',
+      vendorName: vendor?.vendorName || '',
+      vendorPhone: vendor?.vendorPhone || '',
+      vendorGST: vendor?.vendorGST || '',
+      entryType: type, amount: '', paymentMode: 'CASH',
+      description: '', billNumber: '',
       billDate: new Date().toISOString().split('T')[0],
-      dueDate: '',
-      entryDate: new Date().toISOString().split('T')[0],
+      dueDate: '', entryDate: new Date().toISOString().split('T')[0],
     });
+    setModalKey(k => k + 1); // Force ScrollView re-render
     setEntryModal(true);
   };
 
   const saveEntry = async () => {
-    if (!form.vendorName.trim()) {
-      Alert.alert('Error', 'Vendor name is required');
-      return;
-    }
-
-    if (!form.amount || parseFloat(form.amount) <= 0) {
-      Alert.alert('Error', 'Please enter a valid amount');
-      return;
-    }
-
-    if (!form.description.trim()) {
-      Alert.alert('Error', 'Description is required');
-      return;
-    }
+    if (!form.vendorName.trim()) { Alert.alert('Error', 'Vendor name is required'); return; }
+    if (!form.amount || parseFloat(form.amount) <= 0) { Alert.alert('Error', 'Please enter a valid amount'); return; }
+    if (!form.description.trim()) { Alert.alert('Error', 'Description is required'); return; }
 
     setSaving(true);
     try {
@@ -194,7 +185,6 @@ export default function VendorLedgerScreen({ navigation }) {
         dueDate: form.dueDate || undefined,
         entryDate: form.entryDate,
       });
-
       if (response.data.ok) {
         Alert.alert('Success', 'Entry added successfully');
         setEntryModal(false);
@@ -209,120 +199,90 @@ export default function VendorLedgerScreen({ navigation }) {
     }
   };
 
-  const selectVendorFromList = (vendor) => {
-    setForm({
-      ...form,
-      vendorName: vendor.vendorName,
-      vendorPhone: vendor.vendorPhone || '',
-      vendorGST: vendor.vendorGST || '',
-    });
-  };
-
+  // ==================== RENDER VENDOR CARD ====================
   const renderVendorCard = ({ item }) => (
-    <View style={styles.vendorCard}>
-      <View style={styles.vendorHeader}>
-        <View style={styles.iconBox}>
-          <Icon name="business" size={24} color={C.info} />
+    <View style={[st.vendorCard, isTablet && { marginHorizontal: 6 }]}>
+      <View style={st.vendorHeader}>
+        <View style={st.vendorIconBox}>
+          <Icon name="business" size={22} color={C.info} />
         </View>
-        <View style={styles.vendorInfo}>
-          <Text style={styles.vendorName}>{item.vendorName}</Text>
-          {item.vendorGST && (
-            <Text style={styles.vendorGST}>GST: {item.vendorGST}</Text>
-          )}
-          {item.vendorPhone && (
-            <Text style={styles.vendorPhone}>{item.vendorPhone}</Text>
-          )}
+        <View style={st.vendorInfo}>
+          <Text style={st.vendorName} numberOfLines={1}>{item.vendorName}</Text>
+          {item.vendorPhone && <Text style={st.vendorMeta}>{item.vendorPhone}</Text>}
+          {item.vendorGST && <Text style={st.vendorMeta}>GST: {item.vendorGST}</Text>}
         </View>
-      </View>
-
-      <View style={styles.vendorStats}>
-        <View style={styles.statItem}>
-          <Text style={styles.statLabel}>Purchases</Text>
-          <Text style={[styles.statValue, { color: C.danger }]}>{formatPrice(item.totalPurchases)}</Text>
-        </View>
-        <View style={styles.statItem}>
-          <Text style={styles.statLabel}>Payments</Text>
-          <Text style={[styles.statValue, { color: C.ok }]}>{formatPrice(item.totalPayments)}</Text>
-        </View>
-        <View style={styles.statItem}>
-          <Text style={styles.statLabel}>Balance</Text>
-          <Text style={[styles.statValue, { color: item.balance > 0 ? C.danger : item.balance < 0 ? C.ok : C.text }]}>
-            {formatPrice(item.balance)}
+        <View style={[st.balanceBadge, { backgroundColor: item.balance > 0 ? C.dangerLight : item.balance < 0 ? C.okLight : C.bg }]}>
+          <Text style={[st.balanceBadgeText, { color: item.balance > 0 ? C.danger : item.balance < 0 ? C.ok : C.muted }]}>
+            {formatPrice(Math.abs(item.balance))}
+          </Text>
+          <Text style={[st.balanceBadgeLabel, { color: item.balance > 0 ? C.danger : item.balance < 0 ? C.ok : C.muted }]}>
+            {item.balance > 0 ? 'Due' : item.balance < 0 ? 'Advance' : 'Settled'}
           </Text>
         </View>
       </View>
 
-      <View style={styles.vendorFooter}>
-        <Text style={styles.lastTransaction}>
-          Last: {formatDate(item.lastTransactionDate)}
-        </Text>
-        <View style={styles.vendorActions}>
-          <TouchableOpacity
-            style={[styles.vendorActionBtn, { backgroundColor: '#FEF2F2' }]}
-            onPress={() => {
-              selectVendorFromList(item);
-              setForm(f => ({ ...f, entryType: 'PURCHASE' }));
-              setEntryModal(true);
-            }}
-          >
-            <Icon name="arrow-down-circle" size={16} color={C.danger} />
-            <Text style={[styles.vendorActionText, { color: C.danger }]}>Purchase</Text>
+      <View style={st.vendorStats}>
+        <View style={st.statBox}>
+          <Icon name="cart-outline" size={14} color={C.danger} />
+          <Text style={st.statLabel}>Purchases</Text>
+          <Text style={[st.statValue, { color: C.danger }]}>{formatPrice(item.totalPurchases)}</Text>
+        </View>
+        <View style={st.statBox}>
+          <Icon name="wallet-outline" size={14} color={C.ok} />
+          <Text style={st.statLabel}>Payments</Text>
+          <Text style={[st.statValue, { color: C.ok }]}>{formatPrice(item.totalPayments)}</Text>
+        </View>
+      </View>
+
+      <View style={st.vendorFooter}>
+        <Text style={st.lastTxn}>Last: {formatDate(item.lastTransactionDate)}</Text>
+        <View style={st.vendorActions}>
+          <TouchableOpacity style={[st.vendorBtn, { backgroundColor: C.dangerLight }]} onPress={() => openEntryModal('PURCHASE', item)}>
+            <Icon name="cart" size={14} color={C.danger} />
+            <Text style={[st.vendorBtnText, { color: C.danger }]}>Purchase</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.vendorActionBtn, { backgroundColor: '#ECFDF5' }]}
-            onPress={() => {
-              selectVendorFromList(item);
-              setForm(f => ({ ...f, entryType: 'PAYMENT' }));
-              setEntryModal(true);
-            }}
-          >
-            <Icon name="arrow-up-circle" size={16} color={C.ok} />
-            <Text style={[styles.vendorActionText, { color: C.ok }]}>Payment</Text>
+          <TouchableOpacity style={[st.vendorBtn, { backgroundColor: C.okLight }]} onPress={() => openEntryModal('PAYMENT', item)}>
+            <Icon name="wallet" size={14} color={C.ok} />
+            <Text style={[st.vendorBtnText, { color: C.ok }]}>Payment</Text>
           </TouchableOpacity>
         </View>
       </View>
     </View>
   );
 
+  // ==================== RENDER ENTRY CARD ====================
   const renderEntryCard = ({ item }) => {
-    const config = entryTypeConfig[item.entryType] || entryTypeConfig.PURCHASE;
+    const config = getEntryConfig(item.entryType);
     const isDebit = item.entryType === 'PURCHASE' || item.entryType === 'DEBIT_NOTE';
 
     return (
-      <View style={styles.entryCard}>
-        <View style={styles.entryHeader}>
-          <View style={[styles.entryIconBox, { backgroundColor: config.bg }]}>
-            <Icon name={config.icon} size={20} color={config.color} />
+      <View style={[st.entryCard, isTablet && { marginHorizontal: 6 }]}>
+        <View style={st.entryHeader}>
+          <View style={[st.entryIcon, { backgroundColor: config.bg }]}>
+            <Icon name={config.icon} size={18} color={config.color} />
           </View>
-          <View style={styles.entryInfo}>
-            <Text style={styles.entryVendor}>{item.vendorName}</Text>
-            <Text style={styles.entryDate}>{formatDate(item.entryDate)}</Text>
+          <View style={st.entryInfo}>
+            <Text style={st.entryVendor} numberOfLines={1}>{item.vendorName}</Text>
+            <Text style={st.entryDate}>{formatDate(item.entryDate)}</Text>
           </View>
-          <View style={[styles.entryBadge, { backgroundColor: config.bg }]}>
-            <Text style={[styles.entryBadgeText, { color: config.color }]}>
-              {entryTypeLabels[item.entryType]}
-            </Text>
+          <View style={[st.entryBadge, { backgroundColor: config.bg }]}>
+            <Text style={[st.entryBadgeText, { color: config.color }]}>{config.label}</Text>
           </View>
         </View>
 
-        <Text style={styles.entryDescription} numberOfLines={2}>
-          {item.description}
-        </Text>
+        <Text style={st.entryDesc} numberOfLines={2}>{item.description}</Text>
+        {item.billNumber && <Text style={st.entryBill}>Bill #: {item.billNumber}</Text>}
 
-        {item.billNumber && (
-          <Text style={styles.entryBill}>Bill #: {item.billNumber}</Text>
-        )}
-
-        <View style={styles.entryFooter}>
+        <View style={st.entryFooter}>
           <View>
-            <Text style={styles.entryAmountLabel}>Amount</Text>
-            <Text style={[styles.entryAmount, { color: isDebit ? C.danger : C.ok }]}>
+            <Text style={st.entryAmtLabel}>Amount</Text>
+            <Text style={[st.entryAmt, { color: isDebit ? C.danger : C.ok }]}>
               {isDebit ? '+' : '-'}{formatPrice(item.amount)}
             </Text>
           </View>
-          <View style={styles.entryBalanceBox}>
-            <Text style={styles.entryBalanceLabel}>Balance After</Text>
-            <Text style={[styles.entryBalance, { color: item.balanceAfter > 0 ? C.danger : item.balanceAfter < 0 ? C.ok : C.text }]}>
+          <View style={st.entryBalBox}>
+            <Text style={st.entryBalLabel}>Balance</Text>
+            <Text style={[st.entryBal, { color: item.balanceAfter > 0 ? C.danger : item.balanceAfter < 0 ? C.ok : C.text }]}>
               {formatPrice(item.balanceAfter)}
             </Text>
           </View>
@@ -331,671 +291,518 @@ export default function VendorLedgerScreen({ navigation }) {
     );
   };
 
-  if (loading && !refreshing) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.menuBtn}>
-            <Icon name="arrow-back" size={24} color={C.ink} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Vendor Ledger</Text>
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
-            <Icon name="menu" size={22} color="#1D2254" />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={C.primary} />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.menuBtn}>
-          <Icon name="arrow-back" size={24} color={C.ink} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Vendor Ledger</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity onPress={() => openEntryModal()}>
-            <Icon name="add-circle" size={28} color={C.primary} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
-            <Icon name="menu" size={22} color="#1D2254" />
-          </TouchableOpacity>
-        </View>
+  // ==================== RENDER HEADER ====================
+  const renderHeader = () => (
+    <>
+      {/* Summary Cards */}
+      <View style={st.summarySection}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.summaryScroll}>
+          <View style={[st.summaryCard, { borderLeftColor: C.info }]}>
+            <View style={[st.summaryIcon, { backgroundColor: C.infoLight }]}>
+              <Icon name="people" size={18} color={C.info} />
+            </View>
+            <Text style={st.summaryLabel}>Vendors</Text>
+            <Text style={st.summaryValue}>{summary.totalVendors}</Text>
+          </View>
+          <View style={[st.summaryCard, { borderLeftColor: C.danger }]}>
+            <View style={[st.summaryIcon, { backgroundColor: C.dangerLight }]}>
+              <Icon name="trending-up" size={18} color={C.danger} />
+            </View>
+            <Text style={st.summaryLabel}>Total Due</Text>
+            <Text style={[st.summaryValue, { color: C.danger }]}>{formatPrice(summary.totalDue)}</Text>
+          </View>
+          <View style={[st.summaryCard, { borderLeftColor: C.ok }]}>
+            <View style={[st.summaryIcon, { backgroundColor: C.okLight }]}>
+              <Icon name="trending-down" size={18} color={C.ok} />
+            </View>
+            <Text style={st.summaryLabel}>Advance</Text>
+            <Text style={[st.summaryValue, { color: C.ok }]}>{formatPrice(summary.totalAdvance)}</Text>
+          </View>
+          <View style={[st.summaryCard, { borderLeftColor: C.warn }]}>
+            <View style={[st.summaryIcon, { backgroundColor: C.warnLight }]}>
+              <Icon name="wallet" size={18} color={C.warn} />
+            </View>
+            <Text style={st.summaryLabel}>Net Balance</Text>
+            <Text style={[st.summaryValue, { color: summary.netBalance > 0 ? C.danger : C.ok }]}>{formatPrice(summary.netBalance)}</Text>
+          </View>
+        </ScrollView>
       </View>
 
-      {/* Global Restaurant Selector */}
-      <RestaurantSelectorBar />
-
-      {/* Summary Cards - Same as Web */}
-      <View style={styles.summaryGrid}>
-        <View style={styles.summaryCard}>
-          <View style={[styles.summaryIcon, { backgroundColor: '#EFF6FF' }]}>
-            <Icon name="people" size={18} color={C.info} />
-          </View>
-          <Text style={styles.summaryLabel}>Vendors</Text>
-          <Text style={styles.summaryValue}>{summary.totalVendors}</Text>
-        </View>
-        <View style={styles.summaryCard}>
-          <View style={[styles.summaryIcon, { backgroundColor: '#FEF2F2' }]}>
-            <Icon name="trending-up" size={18} color={C.danger} />
-          </View>
-          <Text style={styles.summaryLabel}>Total Due</Text>
-          <Text style={[styles.summaryValue, { color: C.danger }]}>{formatPrice(summary.totalDue)}</Text>
-        </View>
-        <View style={styles.summaryCard}>
-          <View style={[styles.summaryIcon, { backgroundColor: '#ECFDF5' }]}>
-            <Icon name="trending-down" size={18} color={C.ok} />
-          </View>
-          <Text style={styles.summaryLabel}>Advance</Text>
-          <Text style={[styles.summaryValue, { color: C.ok }]}>{formatPrice(summary.totalAdvance)}</Text>
-        </View>
-        <View style={styles.summaryCard}>
-          <View style={[styles.summaryIcon, { backgroundColor: '#F3F4F6' }]}>
-            <Icon name="wallet" size={18} color={C.muted} />
-          </View>
-          <Text style={styles.summaryLabel}>Net</Text>
-          <Text style={[styles.summaryValue, { color: summary.netBalance > 0 ? C.danger : C.ok }]}>
-            {formatPrice(summary.netBalance)}
-          </Text>
-        </View>
-      </View>
-
-      {/* Action Buttons */}
-      <View style={styles.actionRow}>
-        <TouchableOpacity
-          style={[styles.actionBtn, { backgroundColor: '#FEF2F2', borderColor: C.danger }]}
-          onPress={() => openEntryModal('PURCHASE')}
-        >
-          <Icon name="arrow-down-circle" size={18} color={C.danger} />
-          <Text style={[styles.actionBtnText, { color: C.danger }]}>Add Purchase</Text>
+      {/* Quick Actions */}
+      <View style={st.quickRow}>
+        <TouchableOpacity style={[st.quickBtn, { backgroundColor: C.dangerLight, borderColor: C.danger }]} onPress={() => openEntryModal('PURCHASE')}>
+          <Icon name="cart" size={18} color={C.danger} />
+          <Text style={[st.quickBtnText, { color: C.danger }]}>Add Purchase</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.actionBtn, { backgroundColor: '#ECFDF5', borderColor: C.ok }]}
-          onPress={() => openEntryModal('PAYMENT')}
-        >
-          <Icon name="arrow-up-circle" size={18} color={C.ok} />
-          <Text style={[styles.actionBtnText, { color: C.ok }]}>Add Payment</Text>
+        <TouchableOpacity style={[st.quickBtn, { backgroundColor: C.okLight, borderColor: C.ok }]} onPress={() => openEntryModal('PAYMENT')}>
+          <Icon name="wallet" size={18} color={C.ok} />
+          <Text style={[st.quickBtnText, { color: C.ok }]}>Add Payment</Text>
         </TouchableOpacity>
       </View>
 
       {/* Tabs */}
-      <View style={styles.tabs}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'summary' && styles.tabActive]}
-          onPress={() => setActiveTab('summary')}
-        >
-          <Text style={[styles.tabText, activeTab === 'summary' && styles.tabTextActive]}>
-            Vendor Summary
-          </Text>
+      <View style={st.tabsContainer}>
+        <TouchableOpacity style={[st.tab, activeTab === 'summary' && st.tabActive]} onPress={() => setActiveTab('summary')}>
+          <Icon name="people" size={16} color={activeTab === 'summary' ? '#fff' : C.muted} />
+          <Text style={[st.tabText, activeTab === 'summary' && st.tabTextActive]}>Vendors ({vendors.length})</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'transactions' && styles.tabActive]}
-          onPress={() => setActiveTab('transactions')}
-        >
-          <Text style={[styles.tabText, activeTab === 'transactions' && styles.tabTextActive]}>
-            Transactions
-          </Text>
+        <TouchableOpacity style={[st.tab, activeTab === 'transactions' && st.tabActive]} onPress={() => setActiveTab('transactions')}>
+          <Icon name="list" size={16} color={activeTab === 'transactions' ? '#fff' : C.muted} />
+          <Text style={[st.tabText, activeTab === 'transactions' && st.tabTextActive]}>Transactions ({entries.length})</Text>
         </TouchableOpacity>
       </View>
+    </>
+  );
 
-      {/* Content based on tab */}
-      {activeTab === 'summary' ? (
-        <FlatList
-          data={vendors}
-          keyExtractor={item => item.vendorName}
-          renderItem={renderVendorCard}
-          contentContainerStyle={styles.list}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-          ListEmptyComponent={
-            <View style={styles.emptyBox}>
-              <Icon name="business-outline" size={64} color={C.muted} />
-              <Text style={styles.emptyTitle}>No Vendors Yet</Text>
-              <Text style={styles.emptyText}>Add your first vendor transaction</Text>
-            </View>
-          }
-        />
-      ) : (
-        <FlatList
-          data={entries}
-          keyExtractor={item => item.id}
-          renderItem={renderEntryCard}
-          contentContainerStyle={styles.list}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-          ListEmptyComponent={
-            <View style={styles.emptyBox}>
-              <Icon name="document-text-outline" size={64} color={C.muted} />
-              <Text style={styles.emptyTitle}>No Transactions Yet</Text>
-              <Text style={styles.emptyText}>Add a purchase or payment to get started</Text>
-            </View>
-          }
-        />
-      )}
+  // ==================== LOADING STATE ====================
+  if (loading && !refreshing) {
+    return (
+      <SafeAreaView style={st.container} edges={['top']}>
+        <StatusBar barStyle="dark-content" backgroundColor={C.card} />
+        <View style={st.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
+            <Icon name="arrow-back" size={22} color={C.ink} />
+          </TouchableOpacity>
+          <Text style={st.headerTitle}>Vendor Ledger</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={st.loadingBox}>
+          <ActivityIndicator size="large" color={C.primary} />
+          <Text style={st.loadingText}>Loading...</Text>
+        </View>
+        <KniBottomNav navigation={navigation} />
+      </SafeAreaView>
+    );
+  }
+
+  // ==================== NO RESTAURANT STATE ====================
+  if (!hasRestaurants) {
+    return (
+      <SafeAreaView style={st.container} edges={['top']}>
+        <StatusBar barStyle="dark-content" backgroundColor={C.card} />
+        <View style={st.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
+            <Icon name="arrow-back" size={22} color={C.ink} />
+          </TouchableOpacity>
+          <Text style={st.headerTitle}>Vendor Ledger</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={st.emptyState}>
+          <Icon name="business-outline" size={64} color={C.muted} />
+          <Text style={st.emptyTitle}>No Restaurant Found</Text>
+          <Text style={st.emptySubtitle}>Please add a restaurant first</Text>
+        </View>
+        <KniBottomNav navigation={navigation} />
+      </SafeAreaView>
+    );
+  }
+
+  // ==================== MAIN RENDER ====================
+  const listData = activeTab === 'summary' ? vendors : entries;
+  const renderItem = activeTab === 'summary' ? renderVendorCard : renderEntryCard;
+  const keyExtractor = activeTab === 'summary' ? (item) => item.vendorName : (item) => item.id;
+  const numColumns = isTablet ? 2 : 1;
+
+  return (
+    <SafeAreaView style={st.container} edges={['top']}>
+      <StatusBar barStyle="dark-content" backgroundColor={C.card} />
+
+      {/* Header */}
+      <View style={st.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
+          <Icon name="arrow-back" size={22} color={C.ink} />
+        </TouchableOpacity>
+        <View style={st.headerCenter}>
+          <Text style={st.headerTitle}>Vendor Ledger</Text>
+          <Text style={st.headerSubtitle}>Manage vendor accounts</Text>
+        </View>
+        <View style={st.headerActions}>
+          <TouchableOpacity style={st.headerIconBtn} onPress={() => openEntryModal()}>
+            <Icon name="add" size={20} color={C.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
+            <Icon name="menu" size={20} color={C.ink} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Restaurant Selector */}
+      <RestaurantSelectorBar />
+
+      {/* Main List */}
+      <FlatList
+        data={listData}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
+        numColumns={numColumns}
+        key={`grid-${numColumns}-${activeTab}`}
+        ListHeaderComponent={renderHeader}
+        contentContainerStyle={st.listContent}
+        columnWrapperStyle={numColumns > 1 ? st.columnWrapper : undefined}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} />}
+        ListEmptyComponent={
+          <View style={st.emptyState}>
+            <Icon name={activeTab === 'summary' ? 'business-outline' : 'document-text-outline'} size={64} color={C.muted} />
+            <Text style={st.emptyTitle}>{activeTab === 'summary' ? 'No Vendors Yet' : 'No Transactions Yet'}</Text>
+            <Text style={st.emptySubtitle}>Add a purchase or payment to get started</Text>
+            <TouchableOpacity style={st.emptyBtn} onPress={() => openEntryModal()}>
+              <Icon name="add" size={18} color="#fff" />
+              <Text style={st.emptyBtnText}>Add Entry</Text>
+            </TouchableOpacity>
+          </View>
+        }
+      />
+
+      <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
+      <KniBottomNav navigation={navigation} />
 
       {/* Add Entry Modal */}
-      <Modal visible={entryModal} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                Add {entryTypeLabels[form.entryType] || 'Entry'}
-              </Text>
-              <TouchableOpacity onPress={() => setEntryModal(false)}>
+      <Modal visible={entryModal} animationType="slide" transparent onRequestClose={() => setEntryModal(false)}>
+        <View style={st.modalOverlay}>
+          <View style={st.modalContent}>
+            {/* Modal Header */}
+            <View style={st.modalHeader}>
+              <Text style={st.modalTitle}>Add {getEntryConfig(form.entryType).label}</Text>
+              <TouchableOpacity onPress={() => setEntryModal(false)} style={st.modalClose}>
                 <Icon name="close" size={24} color={C.ink} />
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalBody}>
-              {/* Entry Type Selector */}
-              <Text style={styles.label}>Entry Type *</Text>
-              <TouchableOpacity
-                style={styles.selectInput}
-                onPress={() => setEntryTypePicker(true)}
-              >
-                <Text style={styles.selectText}>{entryTypeLabels[form.entryType]}</Text>
-                <Icon name="chevron-down" size={20} color={C.muted} />
-              </TouchableOpacity>
+            {/* Modal Body - Scrollable (Fixed) */}
+            <ScrollView
+              key={`modal-scroll-${modalKey}-${form.entryType}`}
+              style={st.modalBody}
+              contentContainerStyle={st.modalBodyContent}
+              showsVerticalScrollIndicator={true}
+              keyboardShouldPersistTaps="handled"
+              nestedScrollEnabled={true}
+              bounces={true}
+              scrollEnabled={true}
+              overScrollMode="always"
+              scrollEventThrottle={16}
+            >
+              {/* Form Content Wrapper */}
+              <View style={{ minHeight: 750 }}>
+                {/* Entry Type Selection */}
+                <Text style={st.label}>Entry Type *</Text>
+              <View style={st.typeGrid}>
+                {ENTRY_TYPES.map((type) => {
+                  const isActive = form.entryType === type.value;
+                  return (
+                    <TouchableOpacity
+                      key={type.value}
+                      style={[st.typeBtn, isActive && { backgroundColor: type.color, borderColor: type.color }]}
+                      onPress={() => setForm(f => ({ ...f, entryType: type.value }))}
+                    >
+                      <Icon name={type.icon} size={16} color={isActive ? '#fff' : type.color} />
+                      <Text style={[st.typeBtnText, isActive && { color: '#fff' }]}>{type.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
 
               {/* Vendor Name */}
-              <Text style={styles.label}>Vendor Name *</Text>
+              <Text style={st.label}>Vendor Name *</Text>
               <TextInput
-                style={styles.input}
+                style={st.input}
                 placeholder="Enter vendor name"
+                placeholderTextColor={C.muted}
                 value={form.vendorName}
                 onChangeText={v => setForm(f => ({ ...f, vendorName: v }))}
-                placeholderTextColor={C.muted}
               />
 
-              {/* Vendor Phone & GST */}
-              <View style={styles.row}>
-                <View style={styles.halfField}>
-                  <Text style={styles.label}>Phone</Text>
+              {/* Phone & GST */}
+              <View style={st.rowFields}>
+                <View style={st.halfField}>
+                  <Text style={st.label}>Phone</Text>
                   <TextInput
-                    style={styles.input}
-                    placeholder="Phone"
+                    style={st.input}
+                    placeholder="Phone number"
+                    placeholderTextColor={C.muted}
                     keyboardType="phone-pad"
                     value={form.vendorPhone}
                     onChangeText={v => setForm(f => ({ ...f, vendorPhone: v }))}
-                    placeholderTextColor={C.muted}
                   />
                 </View>
-                <View style={styles.halfField}>
-                  <Text style={styles.label}>GST No.</Text>
+                <View style={st.halfField}>
+                  <Text style={st.label}>GST No.</Text>
                   <TextInput
-                    style={styles.input}
+                    style={st.input}
                     placeholder="GST Number"
+                    placeholderTextColor={C.muted}
                     value={form.vendorGST}
                     onChangeText={v => setForm(f => ({ ...f, vendorGST: v }))}
-                    placeholderTextColor={C.muted}
                   />
                 </View>
               </View>
 
               {/* Amount */}
-              <Text style={styles.label}>Amount (₹) *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter amount"
-                keyboardType="decimal-pad"
-                value={form.amount}
-                onChangeText={v => setForm(f => ({ ...f, amount: v }))}
-                placeholderTextColor={C.muted}
-              />
+              <Text style={st.label}>Amount (₹) *</Text>
+              <View style={st.amountRow}>
+                <View style={st.currencyBox}>
+                  <Text style={st.currencyText}>₹</Text>
+                </View>
+                <TextInput
+                  style={st.amountInput}
+                  placeholder="Enter amount"
+                  placeholderTextColor={C.muted}
+                  keyboardType="decimal-pad"
+                  value={form.amount}
+                  onChangeText={v => setForm(f => ({ ...f, amount: v }))}
+                />
+              </View>
 
-              {/* Payment Mode (only for PAYMENT type) */}
+              {/* Payment Mode (only for PAYMENT) */}
               {form.entryType === 'PAYMENT' && (
                 <>
-                  <Text style={styles.label}>Payment Mode</Text>
-                  <TouchableOpacity
-                    style={styles.selectInput}
-                    onPress={() => setPaymentModePicker(true)}
-                  >
-                    <Text style={styles.selectText}>{form.paymentMode.replace('_', ' ')}</Text>
-                    <Icon name="chevron-down" size={20} color={C.muted} />
-                  </TouchableOpacity>
+                  <Text style={st.label}>Payment Mode</Text>
+                  <View style={st.modeGrid}>
+                    {PAYMENT_MODES.map((mode) => {
+                      const isActive = form.paymentMode === mode.value;
+                      return (
+                        <TouchableOpacity
+                          key={mode.value}
+                          style={[st.modeBtn, isActive && st.modeBtnActive]}
+                          onPress={() => setForm(f => ({ ...f, paymentMode: mode.value }))}
+                        >
+                          <Icon name={mode.icon} size={14} color={isActive ? '#fff' : C.ink} />
+                          <Text style={[st.modeBtnText, isActive && st.modeBtnTextActive]}>{mode.label}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
                 </>
               )}
 
               {/* Description */}
-              <Text style={styles.label}>Description *</Text>
+              <Text style={st.label}>Description *</Text>
               <TextInput
-                style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
+                style={st.textArea}
                 placeholder="Enter description or notes"
+                placeholderTextColor={C.muted}
                 multiline
+                numberOfLines={3}
                 value={form.description}
                 onChangeText={v => setForm(f => ({ ...f, description: v }))}
-                placeholderTextColor={C.muted}
               />
 
               {/* Bill Details */}
-              <View style={styles.row}>
-                <View style={styles.halfField}>
-                  <Text style={styles.label}>Bill Number</Text>
+              <View style={st.rowFields}>
+                <View style={st.halfField}>
+                  <Text style={st.label}>Bill Number</Text>
                   <TextInput
-                    style={styles.input}
+                    style={st.input}
                     placeholder="Bill/Invoice #"
+                    placeholderTextColor={C.muted}
                     value={form.billNumber}
                     onChangeText={v => setForm(f => ({ ...f, billNumber: v }))}
-                    placeholderTextColor={C.muted}
                   />
                 </View>
-                <View style={styles.halfField}>
-                  <Text style={styles.label}>Bill Date</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="YYYY-MM-DD"
-                    value={form.billDate}
-                    onChangeText={v => setForm(f => ({ ...f, billDate: v }))}
-                    placeholderTextColor={C.muted}
-                  />
-                </View>
-              </View>
-
-              {/* Entry & Due Date */}
-              <View style={styles.row}>
-                <View style={styles.halfField}>
-                  <Text style={styles.label}>Entry Date *</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="YYYY-MM-DD"
-                    value={form.entryDate}
-                    onChangeText={v => setForm(f => ({ ...f, entryDate: v }))}
-                    placeholderTextColor={C.muted}
-                  />
-                </View>
-                {form.entryType === 'PURCHASE' && (
-                  <View style={styles.halfField}>
-                    <Text style={styles.label}>Due Date</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="YYYY-MM-DD"
-                      value={form.dueDate}
-                      onChangeText={v => setForm(f => ({ ...f, dueDate: v }))}
-                      placeholderTextColor={C.muted}
+                <View style={st.halfField}>
+                  <Text style={st.label}>Bill Date</Text>
+                  <TouchableOpacity style={st.dateBtn} onPress={() => setShowBillDatePicker(true)}>
+                    <Icon name="calendar" size={18} color={C.info} />
+                    <Text style={st.dateBtnText}>{form.billDate ? formatDate(form.billDate) : 'Select Date'}</Text>
+                  </TouchableOpacity>
+                  {showBillDatePicker && (
+                    <DateTimePicker
+                      value={form.billDate ? new Date(form.billDate) : new Date()}
+                      mode="date"
+                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                      onChange={onBillDateChange}
                     />
-                  </View>
-                )}
+                  )}
+                </View>
               </View>
 
-              <View style={{ height: 20 }} />
+              {/* Entry Date */}
+              <Text style={st.label}>Entry Date *</Text>
+              <TouchableOpacity style={st.dateBtn} onPress={() => setShowEntryDatePicker(true)}>
+                <Icon name="calendar" size={18} color={C.info} />
+                <Text style={st.dateBtnText}>{form.entryDate ? formatDate(form.entryDate) : 'Select Date'}</Text>
+              </TouchableOpacity>
+              {showEntryDatePicker && (
+                <DateTimePicker
+                  value={form.entryDate ? new Date(form.entryDate) : new Date()}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={onEntryDateChange}
+                  maximumDate={new Date()}
+                />
+              )}
+
+              {/* Due Date (only for PURCHASE) */}
+              {form.entryType === 'PURCHASE' && (
+                <>
+                  <Text style={st.label}>Due Date</Text>
+                  <TouchableOpacity style={st.dateBtn} onPress={() => setShowDueDatePicker(true)}>
+                    <Icon name="calendar" size={18} color={C.warn} />
+                    <Text style={st.dateBtnText}>{form.dueDate ? formatDate(form.dueDate) : 'Select Due Date'}</Text>
+                  </TouchableOpacity>
+                  {showDueDatePicker && (
+                    <DateTimePicker
+                      value={form.dueDate ? new Date(form.dueDate) : new Date()}
+                      mode="date"
+                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                      onChange={onDueDateChange}
+                      minimumDate={new Date()}
+                    />
+                  )}
+                </>
+              )}
+
+                <View style={{ height: 60 }} />
+              </View>
             </ScrollView>
 
-            <View style={styles.modalFooter}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={() => setEntryModal(false)}>
-                <Text style={styles.cancelText}>Cancel</Text>
+            {/* Modal Footer */}
+            <View style={st.modalFooter}>
+              <TouchableOpacity style={st.cancelBtn} onPress={() => setEntryModal(false)}>
+                <Text style={st.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.saveBtn, saving && { opacity: 0.7 }]}
-                onPress={saveEntry}
-                disabled={saving}
-              >
+              <TouchableOpacity style={[st.saveBtn, saving && { opacity: 0.7 }]} onPress={saveEntry} disabled={saving}>
                 {saving ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Text style={styles.saveText}>Save Entry</Text>
+                  <>
+                    <Icon name="checkmark" size={18} color="#fff" />
+                    <Text style={st.saveBtnText}>Save</Text>
+                  </>
                 )}
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
-
-      {/* Entry Type Picker Modal */}
-      <Modal visible={entryTypePicker} animationType="fade" transparent>
-        <TouchableOpacity
-          style={styles.pickerOverlay}
-          activeOpacity={1}
-          onPress={() => setEntryTypePicker(false)}
-        >
-          <View style={styles.pickerContent}>
-            <Text style={styles.pickerTitle}>Select Entry Type</Text>
-            {Object.entries(entryTypeLabels).map(([key, label]) => {
-              const config = entryTypeConfig[key];
-              return (
-                <TouchableOpacity
-                  key={key}
-                  style={[styles.pickerOption, form.entryType === key && styles.pickerOptionActive]}
-                  onPress={() => {
-                    setForm(f => ({ ...f, entryType: key }));
-                    setEntryTypePicker(false);
-                  }}
-                >
-                  <View style={[styles.pickerIconBox, { backgroundColor: config.bg }]}>
-                    <Icon name={config.icon} size={20} color={config.color} />
-                  </View>
-                  <Text style={[styles.pickerOptionText, form.entryType === key && { color: C.primary }]}>
-                    {label}
-                  </Text>
-                  {form.entryType === key && (
-                    <Icon name="checkmark" size={20} color={C.primary} />
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </TouchableOpacity>
-      </Modal>
-
-      {/* Payment Mode Picker Modal */}
-      <Modal visible={paymentModePicker} animationType="fade" transparent>
-        <TouchableOpacity
-          style={styles.pickerOverlay}
-          activeOpacity={1}
-          onPress={() => setPaymentModePicker(false)}
-        >
-          <View style={styles.pickerContent}>
-            <Text style={styles.pickerTitle}>Select Payment Mode</Text>
-            {paymentModes.map(mode => (
-              <TouchableOpacity
-                key={mode}
-                style={[styles.pickerOption, form.paymentMode === mode && styles.pickerOptionActive]}
-                onPress={() => {
-                  setForm(f => ({ ...f, paymentMode: mode }));
-                  setPaymentModePicker(false);
-                }}
-              >
-                <Text style={[styles.pickerOptionText, form.paymentMode === mode && { color: C.primary }]}>
-                  {mode.replace('_', ' ')}
-                </Text>
-                {form.paymentMode === mode && (
-                  <Icon name="checkmark" size={20} color={C.primary} />
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
-        </TouchableOpacity>
-      </Modal>
-
-      <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
-      <KniBottomNav navigation={navigation} />
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+// ==================== STYLES ====================
+const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: C.card,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
-  },
-  menuBtn: { width: 40 },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: C.ink, marginTop: 16 },
-  emptyText: { fontSize: 14, color: C.muted, textAlign: 'center', marginTop: 8 },
 
-  // Summary Grid
-  summaryGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: 12,
-    paddingTop: 16,
-    gap: 8,
-  },
-  summaryCard: {
-    flex: 1,
-    minWidth: '47%',
-    backgroundColor: C.card,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  summaryIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 6,
-  },
-  summaryLabel: { fontSize: 11, color: C.muted, marginBottom: 2 },
+  // Header
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border },
+  backBtn: { width: 40, height: 40, borderRadius: 10, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
+  headerCenter: { flex: 1, marginLeft: 12 },
+  headerTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
+  headerSubtitle: { fontSize: 12, color: C.muted, marginTop: 2 },
+  headerActions: { flexDirection: 'row' },
+  headerIconBtn: { width: 40, height: 40, borderRadius: 10, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', marginLeft: 8 },
+
+  // Summary Section
+  summarySection: { marginTop: 16, marginBottom: 4 },
+  summaryScroll: { paddingHorizontal: 16, paddingBottom: 8 },
+  summaryCard: { width: 140, backgroundColor: C.card, borderRadius: 12, padding: 14, marginRight: 10, marginBottom: 4, borderLeftWidth: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
+  summaryIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
+  summaryLabel: { fontSize: 11, color: C.muted, marginBottom: 4 },
   summaryValue: { fontSize: 16, fontWeight: '700', color: C.ink },
 
-  // Action Row
-  actionRow: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    gap: 8,
-  },
-  actionBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  actionBtnText: { fontSize: 13, fontWeight: '600' },
+  // Quick Actions
+  quickRow: { flexDirection: 'row', paddingHorizontal: 16, marginTop: 16 },
+  quickBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 10, borderWidth: 1.5, marginRight: 8 },
+  quickBtnText: { fontSize: 13, fontWeight: '600', marginLeft: 8 },
 
   // Tabs
-  tabs: {
-    flexDirection: 'row',
-    marginHorizontal: 16,
-    marginTop: 12,
-    backgroundColor: C.card,
-    borderRadius: 10,
-    padding: 4,
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderRadius: 8,
-  },
+  tabsContainer: { flexDirection: 'row', marginHorizontal: 16, marginTop: 16, marginBottom: 16, backgroundColor: C.card, borderRadius: 12, padding: 4, borderWidth: 1, borderColor: C.border },
+  tab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 10 },
   tabActive: { backgroundColor: C.primary },
-  tabText: { fontSize: 13, fontWeight: '600', color: C.muted },
+  tabText: { fontSize: 12, fontWeight: '600', color: C.muted, marginLeft: 6 },
   tabTextActive: { color: '#fff' },
 
-  filterRow: { paddingHorizontal: 16, paddingVertical: 12 },
-  filterChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: C.card,
-    borderWidth: 1,
-    borderColor: C.border,
-    marginRight: 8,
-  },
-  filterChipActive: { backgroundColor: C.primary, borderColor: C.primary },
-  filterText: { fontSize: 13, fontWeight: '600', color: C.ink },
-  filterTextActive: { color: '#fff' },
-
-  list: { padding: 16, paddingBottom: 100 },
+  // List
+  listContent: { paddingHorizontal: 16, paddingBottom: 120, paddingTop: 16 },
+  columnWrapper: { justifyContent: 'space-between' },
 
   // Vendor Card
-  vendorCard: {
-    backgroundColor: C.card,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  vendorHeader: { flexDirection: 'row', gap: 12, marginBottom: 12 },
-  iconBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: '#EFF6FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  vendorCard: { flex: 1, backgroundColor: C.card, borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: C.border },
+  vendorHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
+  vendorIconBox: { width: 44, height: 44, borderRadius: 12, backgroundColor: C.infoLight, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   vendorInfo: { flex: 1 },
-  vendorName: { fontSize: 16, fontWeight: '700', color: C.ink },
-  vendorGST: { fontSize: 11, color: C.muted, marginTop: 2 },
-  vendorPhone: { fontSize: 12, color: C.muted, marginTop: 2 },
-  vendorStats: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 12,
-  },
-  statItem: { flex: 1, backgroundColor: C.bg, padding: 10, borderRadius: 8 },
-  statLabel: { fontSize: 10, color: C.muted, marginBottom: 2 },
+  vendorName: { fontSize: 15, fontWeight: '700', color: C.ink },
+  vendorMeta: { fontSize: 11, color: C.muted, marginTop: 2 },
+  balanceBadge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, alignItems: 'flex-end' },
+  balanceBadgeText: { fontSize: 14, fontWeight: '700' },
+  balanceBadgeLabel: { fontSize: 9, fontWeight: '600', marginTop: 2 },
+  vendorStats: { flexDirection: 'row', marginBottom: 12 },
+  statBox: { flex: 1, backgroundColor: C.bg, borderRadius: 8, padding: 10, marginRight: 8, alignItems: 'center' },
+  statLabel: { fontSize: 10, color: C.muted, marginTop: 4, marginBottom: 2 },
   statValue: { fontSize: 13, fontWeight: '700' },
-  vendorFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: C.border,
-  },
-  lastTransaction: { fontSize: 11, color: C.muted },
-  vendorActions: { flexDirection: 'row', gap: 6 },
-  vendorActionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  vendorActionText: { fontSize: 12, fontWeight: '600' },
+  vendorFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 12, borderTopWidth: 1, borderTopColor: C.border },
+  lastTxn: { fontSize: 10, color: C.muted },
+  vendorActions: { flexDirection: 'row' },
+  vendorBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, marginLeft: 6 },
+  vendorBtnText: { fontSize: 11, fontWeight: '600', marginLeft: 4 },
 
   // Entry Card
-  entryCard: {
-    backgroundColor: C.card,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: C.border,
-  },
+  entryCard: { flex: 1, backgroundColor: C.card, borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: C.border },
   entryHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-  entryIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-  },
+  entryIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginRight: 10 },
   entryInfo: { flex: 1 },
   entryVendor: { fontSize: 14, fontWeight: '700', color: C.ink },
   entryDate: { fontSize: 11, color: C.muted, marginTop: 2 },
-  entryBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
+  entryBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
   entryBadgeText: { fontSize: 10, fontWeight: '600' },
-  entryDescription: { fontSize: 13, color: C.text, marginBottom: 8 },
-  entryBill: { fontSize: 11, color: C.muted, marginBottom: 8 },
-  entryFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: C.border,
-  },
-  entryAmountLabel: { fontSize: 10, color: C.muted },
-  entryAmount: { fontSize: 15, fontWeight: '700', marginTop: 2 },
-  entryBalanceBox: { alignItems: 'flex-end' },
-  entryBalanceLabel: { fontSize: 10, color: C.muted },
-  entryBalance: { fontSize: 14, fontWeight: '700', marginTop: 2 },
+  entryDesc: { fontSize: 13, color: C.text, marginBottom: 6 },
+  entryBill: { fontSize: 11, color: C.muted, marginBottom: 6 },
+  entryFooter: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: 10, borderTopWidth: 1, borderTopColor: C.border },
+  entryAmtLabel: { fontSize: 10, color: C.muted },
+  entryAmt: { fontSize: 15, fontWeight: '700', marginTop: 2 },
+  entryBalBox: { alignItems: 'flex-end' },
+  entryBalLabel: { fontSize: 10, color: C.muted },
+  entryBal: { fontSize: 14, fontWeight: '700', marginTop: 2 },
 
-  emptyBox: { alignItems: 'center', paddingTop: 60 },
+  // Loading & Empty
+  loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  loadingText: { marginTop: 16, fontSize: 14, color: C.muted },
+  emptyState: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 40 },
+  emptyTitle: { fontSize: 18, fontWeight: '700', color: C.ink, marginTop: 16 },
+  emptySubtitle: { fontSize: 13, color: C.muted, textAlign: 'center', marginTop: 6 },
+  emptyBtn: { flexDirection: 'row', alignItems: 'center', marginTop: 20, paddingHorizontal: 20, paddingVertical: 12, backgroundColor: C.primary, borderRadius: 10 },
+  emptyBtnText: { fontSize: 14, fontWeight: '600', color: '#fff', marginLeft: 8 },
 
   // Modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: C.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '90%' },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
-  },
+  modalContent: { backgroundColor: C.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, height: '85%' },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: C.border },
   modalTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
-  modalBody: { padding: 16 },
-  modalFooter: { flexDirection: 'row', gap: 12, padding: 16, borderTopWidth: 1, borderTopColor: C.border },
+  modalClose: { width: 36, height: 36, borderRadius: 18, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
+  modalBody: { flex: 1 },
+  modalBodyContent: { padding: 16, paddingBottom: 80 },
+  modalFooter: { flexDirection: 'row', padding: 16, borderTopWidth: 1, borderTopColor: C.border },
 
-  label: { fontSize: 13, fontWeight: '600', color: C.muted, marginBottom: 6, marginTop: 12 },
-  input: {
-    backgroundColor: C.bg,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 14,
-    color: C.text,
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  selectInput: {
-    backgroundColor: C.bg,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: C.border,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  selectText: { fontSize: 14, color: C.text },
-  row: { flexDirection: 'row', gap: 12 },
-  halfField: { flex: 1 },
+  // Form
+  label: { fontSize: 12, fontWeight: '600', color: C.muted, marginBottom: 8, marginTop: 14 },
+  input: { backgroundColor: C.bg, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: C.text, borderWidth: 1, borderColor: C.border },
+  textArea: { backgroundColor: C.bg, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: C.text, borderWidth: 1, borderColor: C.border, minHeight: 80, textAlignVertical: 'top' },
+  rowFields: { flexDirection: 'row', marginHorizontal: -6 },
+  halfField: { flex: 1, marginHorizontal: 6 },
+  amountRow: { flexDirection: 'row', alignItems: 'center', borderRadius: 10, borderWidth: 1, borderColor: C.border, backgroundColor: C.bg, overflow: 'hidden' },
+  currencyBox: { width: 44, height: 48, backgroundColor: C.infoLight, alignItems: 'center', justifyContent: 'center' },
+  currencyText: { fontSize: 16, fontWeight: '700', color: C.info },
+  amountInput: { flex: 1, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, fontWeight: '600', color: C.ink },
 
-  cancelBtn: { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: C.bg, alignItems: 'center' },
-  cancelText: { fontSize: 14, fontWeight: '700', color: C.ink },
-  saveBtn: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: C.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  saveText: { fontSize: 14, fontWeight: '700', color: '#fff' },
+  // Date Button
+  dateBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.bg, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 14, borderWidth: 1, borderColor: C.border },
+  dateBtnText: { flex: 1, fontSize: 14, fontWeight: '600', color: C.ink, marginLeft: 10 },
 
-  // Picker Modal
-  pickerOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 32,
-  },
-  pickerContent: {
-    backgroundColor: C.card,
-    borderRadius: 16,
-    padding: 16,
-    width: '100%',
-    maxWidth: 320,
-  },
-  pickerTitle: { fontSize: 16, fontWeight: '700', color: C.ink, marginBottom: 16 },
-  pickerOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
-  },
-  pickerOptionActive: { backgroundColor: '#FFF5F5' },
-  pickerIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  pickerOptionText: { flex: 1, fontSize: 14, fontWeight: '600', color: C.text },
+  // Type Grid
+  typeGrid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 },
+  typeBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10, backgroundColor: C.bg, borderWidth: 1.5, borderColor: C.border, margin: 4 },
+  typeBtnText: { fontSize: 12, fontWeight: '600', color: C.ink, marginLeft: 6 },
+
+  // Mode Grid
+  modeGrid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 },
+  modeBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8, backgroundColor: C.bg, borderWidth: 1, borderColor: C.border, margin: 4 },
+  modeBtnActive: { backgroundColor: C.primary, borderColor: C.primary },
+  modeBtnText: { fontSize: 11, fontWeight: '600', color: C.ink, marginLeft: 5 },
+  modeBtnTextActive: { color: '#fff' },
+
+  // Buttons
+  cancelBtn: { flex: 1, paddingVertical: 14, borderRadius: 10, backgroundColor: C.bg, alignItems: 'center', marginRight: 6 },
+  cancelBtnText: { fontSize: 14, fontWeight: '700', color: C.ink },
+  saveBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 10, backgroundColor: C.primary, marginLeft: 6 },
+  saveBtnText: { fontSize: 14, fontWeight: '700', color: '#fff', marginLeft: 8 },
 });

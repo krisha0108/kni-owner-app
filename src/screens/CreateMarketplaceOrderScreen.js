@@ -209,7 +209,7 @@ export default function CreateMarketplaceOrderScreen({ navigation, route }) {
           <Text style={styles.emptyText}>Your cart is empty</Text>
           <TouchableOpacity
             style={styles.browseBtn}
-            onPress={() => navigation.navigate('Request')}
+            onPress={() => navigation.navigate('Marketplace')}
           >
             <Text style={styles.browseBtnText}>Browse Marketplace</Text>
           </TouchableOpacity>

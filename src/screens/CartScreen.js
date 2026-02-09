@@ -254,10 +254,11 @@ export default function CartScreen({ navigation }) {
   // Render category card
   const renderCategoryCard = (categoryData) => {
     const { categoryId, categoryName, services, parts } = categoryData;
-    const categoryTotal = [...services, ...parts].reduce((sum, item) => {
+    const allItems = [...services, ...parts];
+    const categoryTotal = allItems.reduce((sum, item) => {
       return sum + item.details.price * item.details.qty;
     }, 0);
-    const categoryItemCount = services.length + parts.length;
+    const categoryItemCount = allItems.length;
 
     return (
       <View key={categoryId} style={styles.categoryCard}>

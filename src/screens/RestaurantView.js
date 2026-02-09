@@ -1,53 +1,80 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, Image, Alert, Linking, RefreshControl
+  ActivityIndicator, Image, Alert, Linking, RefreshControl,
+  Dimensions, Modal, StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { api, getImageUrl } from '../api/client';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const HERO_HEIGHT = 260;
 
 const C = {
   primary: '#EF3A3A',
   ink: '#1D2254',
   text: '#0F172A',
   muted: '#6B7280',
+  subtle: '#94A3B8',
   bg: '#F5F7FA',
   card: '#FFFFFF',
   border: '#E5E7EB',
   ok: '#10B981',
   warn: '#F59E0B',
   danger: '#EF4444',
+  info: '#3B82F6',
+  purple: '#8B5CF6',
 };
 
 const getStatusConfig = (status) => {
   const configs = {
     PENDING: {
-      icon: 'time-outline',
+      icon: 'time',
       bg: '#FFFBEB',
       color: C.warn,
+      gradient: ['#FEF3C7', '#FDE68A'],
       label: 'Pending Approval',
-      title: 'Pending Approval',
-      description: 'Your restaurant is being reviewed by our team.',
+      description: 'Your restaurant is being reviewed by our team. This usually takes 24-48 hours.',
+      emoji: '⏳',
     },
     APPROVED: {
       icon: 'checkmark-circle',
       bg: '#ECFDF5',
       color: C.ok,
+      gradient: ['#D1FAE5', '#A7F3D0'],
       label: 'Approved',
-      title: 'Approved',
-      description: 'Your restaurant has been approved. You can now book services for this location.',
+      description: 'Your restaurant is live! You can now book services, manage equipment and explore the marketplace.',
+      emoji: '✅',
     },
     REJECTED: {
       icon: 'close-circle',
       bg: '#FEF2F2',
       color: C.danger,
+      gradient: ['#FEE2E2', '#FECACA'],
       label: 'Rejected',
-      title: 'Rejected',
-      description: 'Your restaurant application was rejected.',
+      description: 'Your restaurant application was rejected. Please review the reason and resubmit.',
+      emoji: '❌',
     },
   };
   return configs[status] || configs.PENDING;
+};
+
+const formatDate = (dateString) => {
+  return new Date(dateString).toLocaleDateString('en-IN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+};
+
+const formatDateShort = (dateString) => {
+  return new Date(dateString).toLocaleDateString('en-IN', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
 };
 
 export default function RestaurantView({ navigation, route }) {
@@ -55,6 +82,7 @@ export default function RestaurantView({ navigation, route }) {
   const [restaurant, setRestaurant] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [imagePreview, setImagePreview] = useState(null);
 
   const loadRestaurant = async () => {
     try {
@@ -87,453 +115,678 @@ export default function RestaurantView({ navigation, route }) {
     loadRestaurant();
   };
 
-  const openCertificate = async (url) => {
-    if (!url) return;
-    try {
-      await Linking.openURL(url);
-    } catch (error) {
-      Alert.alert('Error', 'Could not open certificate');
-    }
-  };
-
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-IN', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  };
-
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Icon name="arrow-back" size={24} color={C.ink} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Restaurant Details</Text>
-          <View style={{ width: 40 }} />
-        </View>
-        <View style={styles.loadingContainer}>
+      <SafeAreaView style={st.container} edges={['top']}>
+        <StatusBar barStyle="dark-content" />
+        <View style={st.loadingBox}>
           <ActivityIndicator size="large" color={C.primary} />
-          <Text style={styles.loadingText}>Loading restaurant...</Text>
+          <Text style={st.loadingText}>Loading restaurant...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  if (!restaurant) {
-    return null;
-  }
+  if (!restaurant) return null;
 
   const statusConfig = getStatusConfig(restaurant.status);
+  const restaurantImage = getImageUrl(restaurant.restaurantImageUrl);
+  const fssaiImage = getImageUrl(restaurant.fssaiCertificateUrl);
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Icon name="arrow-back" size={24} color={C.ink} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Restaurant Details</Text>
-        <View style={{ width: 40 }} />
-      </View>
+    <SafeAreaView style={st.container} edges={['top']}>
+      <StatusBar barStyle="dark-content" />
 
       <ScrollView
-        style={styles.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 100 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} />}
+        showsVerticalScrollIndicator={false}
       >
-        {/* Main Card */}
-        <View style={styles.card}>
-          {/* Header with name and status */}
-          <View style={styles.cardHeader}>
-            <View style={styles.iconBox}>
-              <Icon name="business" size={24} color={C.primary} />
+        {/* Hero Section with Image */}
+        <View style={st.heroSection}>
+          {restaurantImage ? (
+            <TouchableOpacity activeOpacity={0.9} onPress={() => setImagePreview(restaurantImage)}>
+              <Image source={{ uri: restaurantImage }} style={st.heroImage} />
+            </TouchableOpacity>
+          ) : (
+            <View style={st.heroPlaceholder}>
+              <Icon name="restaurant-outline" size={64} color="#D1D5DB" />
+              <Text style={st.heroPlaceholderText}>No Image</Text>
             </View>
-            <View style={styles.headerInfo}>
-              <Text style={styles.restaurantName}>{restaurant.name}</Text>
-              <View style={styles.addressRow}>
-                <Icon name="location-outline" size={14} color={C.muted} />
-                <Text style={styles.restaurantAddress}>
-                  {restaurant.address}, {restaurant.city}
-                </Text>
-              </View>
+          )}
+          <LinearGradient
+            colors={['transparent', 'rgba(0,0,0,0.7)']}
+            style={st.heroGradient}
+          />
+
+          {/* Back Button */}
+          <TouchableOpacity
+            style={st.heroBackBtn}
+            onPress={() => navigation.goBack()}
+          >
+            <Icon name="arrow-back" size={22} color="#fff" />
+          </TouchableOpacity>
+
+          {/* Edit Button */}
+          {restaurant.status !== 'APPROVED' && (
+            <TouchableOpacity
+              style={st.heroEditBtn}
+              onPress={() => navigation.navigate('RestaurantEdit', { restaurantId: restaurant.id })}
+            >
+              <Icon name="create-outline" size={20} color="#fff" />
+            </TouchableOpacity>
+          )}
+
+          {/* Hero Info Overlay */}
+          <View style={st.heroOverlay}>
+            <View style={[st.statusPill, { backgroundColor: statusConfig.color }]}>
+              <Icon name={statusConfig.icon} size={12} color="#fff" />
+              <Text style={st.statusPillText}>{statusConfig.label}</Text>
             </View>
-            <View style={[styles.statusBadge, { backgroundColor: statusConfig.bg }]}>
-              <Icon name={statusConfig.icon} size={14} color={statusConfig.color} />
-              <Text style={[styles.statusText, { color: statusConfig.color }]}>
+            <Text style={st.heroName}>{restaurant.name}</Text>
+            <View style={st.heroLocationRow}>
+              <Icon name="location" size={14} color="rgba(255,255,255,0.8)" />
+              <Text style={st.heroLocation}>
+                {restaurant.address}, {restaurant.city}
+                {restaurant.pincode ? ` - ${restaurant.pincode}` : ''}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Quick Stats */}
+        <View style={st.statsRow}>
+          <View style={st.statCard}>
+            <View style={[st.statIconBox, { backgroundColor: '#EFF6FF' }]}>
+              <Icon name="calendar-outline" size={20} color={C.info} />
+            </View>
+            <Text style={st.statLabel}>Registered</Text>
+            <Text style={st.statValue}>{formatDateShort(restaurant.createdAt)}</Text>
+          </View>
+          <View style={st.statCard}>
+            <View style={[st.statIconBox, { backgroundColor: statusConfig.bg }]}>
+              <Icon name={statusConfig.icon} size={20} color={statusConfig.color} />
+            </View>
+            <Text style={st.statLabel}>Status</Text>
+            <Text style={[st.statValue, { color: statusConfig.color }]}>{restaurant.status}</Text>
+          </View>
+          <View style={st.statCard}>
+            <View style={[st.statIconBox, { backgroundColor: '#F5F3FF' }]}>
+              <Icon name="location-outline" size={20} color={C.purple} />
+            </View>
+            <Text style={st.statLabel}>City</Text>
+            <Text style={st.statValue}>{restaurant.city}</Text>
+          </View>
+        </View>
+
+        {/* Status Alert Card */}
+        <View style={st.alertCard}>
+          <LinearGradient
+            colors={statusConfig.gradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={st.alertGradient}
+          >
+            <View style={st.alertIconBox}>
+              <Icon name={statusConfig.icon} size={28} color={statusConfig.color} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[st.alertTitle, { color: statusConfig.color }]}>
                 {statusConfig.label}
+              </Text>
+              <Text style={st.alertDesc}>{statusConfig.description}</Text>
+
+              {restaurant.status === 'REJECTED' && restaurant.rejectionReason && (
+                <View style={st.rejectionBox}>
+                  <Icon name="information-circle" size={16} color={C.danger} />
+                  <Text style={st.rejectionText}>Reason: {restaurant.rejectionReason}</Text>
+                </View>
+              )}
+            </View>
+          </LinearGradient>
+        </View>
+
+        {/* Quick Actions - Only for Approved */}
+        {restaurant.status === 'APPROVED' && (
+          <View style={st.actionsCard}>
+            <Text style={st.sectionTitle}>Quick Actions</Text>
+            <View style={st.actionsGrid}>
+              <TouchableOpacity style={st.actionItem} onPress={() => navigation.navigate('MyEquipment')}>
+                <View style={[st.actionIconBox, { backgroundColor: '#FEE2E2' }]}>
+                  <Icon name="construct" size={22} color={C.primary} />
+                </View>
+                <Text style={st.actionLabel}>Book Service</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={st.actionItem} onPress={() => navigation.navigate('MyEquipment')}>
+                <View style={[st.actionIconBox, { backgroundColor: '#EFF6FF' }]}>
+                  <Icon name="hardware-chip" size={22} color={C.info} />
+                </View>
+                <Text style={st.actionLabel}>Equipment</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={st.actionItem} onPress={() => navigation.navigate('Marketplace')}>
+                <View style={[st.actionIconBox, { backgroundColor: '#F5F3FF' }]}>
+                  <Icon name="storefront" size={22} color={C.purple} />
+                </View>
+                <Text style={st.actionLabel}>Marketplace</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={st.actionItem} onPress={() => navigation.navigate('MyBookings')}>
+                <View style={[st.actionIconBox, { backgroundColor: '#ECFDF5' }]}>
+                  <Icon name="receipt" size={22} color={C.ok} />
+                </View>
+                <Text style={st.actionLabel}>Bookings</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* Restaurant Details Card */}
+        <View style={st.detailsCard}>
+          <View style={st.sectionHeader}>
+            <View style={st.sectionIconBox}>
+              <Icon name="information-circle" size={20} color={C.primary} />
+            </View>
+            <Text style={st.sectionTitle}>Restaurant Details</Text>
+          </View>
+
+          <View style={st.detailRow}>
+            <View style={st.detailIcon}>
+              <Icon name="business-outline" size={18} color={C.muted} />
+            </View>
+            <View style={st.detailContent}>
+              <Text style={st.detailLabel}>Restaurant Name</Text>
+              <Text style={st.detailValue}>{restaurant.name}</Text>
+            </View>
+          </View>
+
+          <View style={st.divider} />
+
+          <View style={st.detailRow}>
+            <View style={st.detailIcon}>
+              <Icon name="location-outline" size={18} color={C.muted} />
+            </View>
+            <View style={st.detailContent}>
+              <Text style={st.detailLabel}>Full Address</Text>
+              <Text style={st.detailValue}>
+                {restaurant.address}, {restaurant.city}
+                {restaurant.pincode ? ` - ${restaurant.pincode}` : ''}
               </Text>
             </View>
           </View>
 
-          {/* Restaurant Image */}
-          {restaurant.restaurantImageUrl && (
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>Restaurant Image</Text>
-              <TouchableOpacity
-                onPress={() => openCertificate(restaurant.restaurantImageUrl)}
-                activeOpacity={0.8}
-              >
-                <Image
-                  source={{ uri: restaurant.restaurantImageUrl }}
-                  style={styles.restaurantImage}
-                />
-              </TouchableOpacity>
-              <Text style={styles.imageHint}>Tap image to view full size</Text>
-            </View>
-          )}
-
-          {/* Basic Information */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Basic Information</Text>
-            <View style={styles.infoGrid}>
-              <View style={styles.infoItem}>
-                <Text style={styles.infoLabel}>Restaurant Name</Text>
-                <Text style={styles.infoValue}>{restaurant.name}</Text>
-              </View>
-              <View style={styles.infoItem}>
-                <Text style={styles.infoLabel}>Status</Text>
-                <View style={[styles.statusBadgeSmall, { backgroundColor: statusConfig.bg }]}>
-                  <Text style={[styles.statusTextSmall, { color: statusConfig.color }]}>
-                    {restaurant.status}
+          {restaurant.pincode && (
+            <>
+              <View style={st.divider} />
+              <View style={st.detailRow}>
+                <View style={st.detailIcon}>
+                  <Icon name="navigate-outline" size={18} color={C.muted} />
+                </View>
+                <View style={st.detailContent}>
+                  <Text style={st.detailLabel}>Pincode</Text>
+                  <Text style={[st.detailValue, { fontFamily: 'monospace', letterSpacing: 2 }]}>
+                    {restaurant.pincode}
                   </Text>
                 </View>
               </View>
-              <View style={styles.infoItem}>
-                <Text style={styles.infoLabel}>Address</Text>
-                <Text style={styles.infoValue}>{restaurant.address}</Text>
-              </View>
-              <View style={styles.infoItem}>
-                <Text style={styles.infoLabel}>City</Text>
-                <Text style={styles.infoValue}>{restaurant.city}</Text>
-              </View>
-              {restaurant.pincode && (
-                <View style={styles.infoItem}>
-                  <Text style={styles.infoLabel}>Pincode</Text>
-                  <Text style={styles.infoValue}>{restaurant.pincode}</Text>
-                </View>
-              )}
-              <View style={styles.infoItem}>
-                <Text style={styles.infoLabel}>Created</Text>
-                <Text style={styles.infoValue}>{formatDate(restaurant.createdAt)}</Text>
-              </View>
+            </>
+          )}
+
+          <View style={st.divider} />
+
+          <View style={st.detailRow}>
+            <View style={st.detailIcon}>
+              <Icon name="calendar-outline" size={18} color={C.muted} />
+            </View>
+            <View style={st.detailContent}>
+              <Text style={st.detailLabel}>Registration Date</Text>
+              <Text style={st.detailValue}>{formatDate(restaurant.createdAt)}</Text>
             </View>
           </View>
+        </View>
 
-          {/* FSSAI Details */}
-          {(restaurant.fssaiNumber || restaurant.fssaiCertificateUrl) && (
-            <View style={styles.section}>
-              <View style={styles.sectionTitleRow}>
-                <Icon name="document-text" size={20} color={C.ink} />
-                <Text style={styles.sectionTitle}>FSSAI Details</Text>
+        {/* FSSAI Details Card */}
+        {(restaurant.fssaiNumber || restaurant.fssaiCertificateUrl) && (
+          <View style={st.detailsCard}>
+            <View style={st.sectionHeader}>
+              <View style={[st.sectionIconBox, { backgroundColor: '#FFF7ED' }]}>
+                <Icon name="document-text" size={20} color="#F97316" />
               </View>
-              <View style={styles.infoGrid}>
-                {restaurant.fssaiNumber && (
-                  <View style={styles.infoItem}>
-                    <Text style={styles.infoLabel}>FSSAI License Number</Text>
-                    <Text style={[styles.infoValue, { fontFamily: 'monospace' }]}>
-                      {restaurant.fssaiNumber}
-                    </Text>
-                  </View>
-                )}
-                {restaurant.fssaiCertificateUrl && (
-                  <View style={styles.infoItem}>
-                    <Text style={styles.infoLabel}>FSSAI Certificate</Text>
-                    <TouchableOpacity
-                      style={styles.viewCertBtn}
-                      onPress={() => openCertificate(getImageUrl(restaurant.fssaiCertificateUrl))}
-                    >
-                      <Icon name="open-outline" size={16} color={C.primary} />
-                      <Text style={styles.viewCertText}>View Certificate</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </View>
-              {restaurant.fssaiCertificateUrl && (
-                <TouchableOpacity
-                  onPress={() => openCertificate(getImageUrl(restaurant.fssaiCertificateUrl))}
-                  activeOpacity={0.8}
-                >
-                  <Image
-                    source={{ uri: getImageUrl(restaurant.fssaiCertificateUrl) }}
-                    style={styles.certificateImage}
-                    resizeMode="contain"
-                  />
-                </TouchableOpacity>
-              )}
+              <Text style={st.sectionTitle}>FSSAI License</Text>
             </View>
+
+            {restaurant.fssaiNumber && (
+              <View style={st.fssaiNumberBox}>
+                <Icon name="shield-checkmark" size={20} color={C.ok} />
+                <View style={{ flex: 1 }}>
+                  <Text style={st.fssaiLabel}>License Number</Text>
+                  <Text style={st.fssaiNumber}>{restaurant.fssaiNumber}</Text>
+                </View>
+              </View>
+            )}
+
+            {fssaiImage && (
+              <View style={{ marginTop: 16 }}>
+                <Text style={st.certLabel}>Certificate Document</Text>
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={() => setImagePreview(fssaiImage)}
+                >
+                  <View style={st.certImageBox}>
+                    <Image
+                      source={{ uri: fssaiImage }}
+                      style={st.certImage}
+                      resizeMode="cover"
+                    />
+                    <View style={st.certOverlay}>
+                      <View style={st.certViewBtn}>
+                        <Icon name="expand-outline" size={18} color="#fff" />
+                        <Text style={st.certViewText}>Tap to view full</Text>
+                      </View>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
+      </ScrollView>
+
+      {/* Image Preview Modal */}
+      <Modal visible={!!imagePreview} animationType="fade" transparent>
+        <View style={st.previewModal}>
+          <TouchableOpacity style={st.previewClose} onPress={() => setImagePreview(null)}>
+            <View style={st.previewCloseBox}>
+              <Icon name="close" size={24} color="#fff" />
+            </View>
+          </TouchableOpacity>
+          {imagePreview && (
+            <Image source={{ uri: imagePreview }} style={st.previewImage} resizeMode="contain" />
           )}
         </View>
-
-        {/* Status Alert */}
-        <View style={styles.card}>
-          <View style={[styles.alertBox, { backgroundColor: statusConfig.bg, borderColor: statusConfig.color }]}>
-            <Icon name={statusConfig.icon} size={20} color={statusConfig.color} />
-            <View style={styles.alertContent}>
-              <Text style={[styles.alertTitle, { color: statusConfig.color }]}>
-                {statusConfig.title}
-              </Text>
-              <Text style={styles.alertDescription}>{statusConfig.description}</Text>
-
-              {restaurant.status === 'APPROVED' && (
-                <View style={styles.alertActions}>
-                  <TouchableOpacity
-                    style={styles.primaryActionBtn}
-                    onPress={() => navigation.navigate('Home')}
-                  >
-                    <Text style={styles.primaryActionText}>Browse Services</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.secondaryActionBtn}
-                    onPress={() => navigation.navigate('MyEquipment')}
-                  >
-                    <Text style={styles.secondaryActionText}>Manage Equipment</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-
-              {restaurant.status === 'REJECTED' && restaurant.rejectionReason && (
-                <Text style={[styles.rejectionReason, { color: C.danger }]}>
-                  Reason: {restaurant.rejectionReason}
-                </Text>
-              )}
-            </View>
-          </View>
-        </View>
-
-        <View style={{ height: 100 }} />
-      </ScrollView>
+      </Modal>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: C.bg,
+const st = StyleSheet.create({
+  container: { flex: 1, backgroundColor: C.bg },
+  loadingBox: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingText: { marginTop: 12, color: C.muted, fontSize: 14 },
+
+  // Hero
+  heroSection: {
+    width: SCREEN_WIDTH,
+    height: HERO_HEIGHT,
+    position: 'relative',
+    backgroundColor: '#1F2937',
   },
-  header: {
-    flexDirection: 'row',
+  heroImage: {
+    width: SCREEN_WIDTH,
+    height: HERO_HEIGHT,
+  },
+  heroPlaceholder: {
+    width: SCREEN_WIDTH,
+    height: HERO_HEIGHT,
+    backgroundColor: '#E5E7EB',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: C.card,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
+    justifyContent: 'center',
   },
-  backBtn: {
+  heroPlaceholderText: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    marginTop: 8,
+  },
+  heroGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: HERO_HEIGHT * 0.7,
+  },
+  heroBackBtn: {
+    position: 'absolute',
+    top: 12,
+    left: 16,
     width: 40,
     height: 40,
-    borderRadius: 12,
-    backgroundColor: C.bg,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.4)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: C.ink,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  heroEditBtn: {
+    position: 'absolute',
+    top: 12,
+    right: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.4)',
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  loadingText: {
-    marginTop: 12,
-    color: C.muted,
+  heroOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 20,
   },
-  content: {
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    marginBottom: 8,
+  },
+  statusPillText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#fff',
+  },
+  heroName: {
+    fontSize: 26,
+    fontWeight: '900',
+    color: '#fff',
+    marginBottom: 4,
+  },
+  heroLocationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  heroLocation: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.85)',
     flex: 1,
   },
-  card: {
+
+  // Stats
+  statsRow: {
+    flexDirection: 'row',
+    marginHorizontal: 16,
+    marginTop: 16,
+    gap: 10,
+  },
+  statCard: {
+    flex: 1,
     backgroundColor: C.card,
+    borderRadius: 14,
+    padding: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+  statIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  statLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: C.muted,
+    marginBottom: 2,
+  },
+  statValue: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: C.ink,
+    textAlign: 'center',
+  },
+
+  // Alert
+  alertCard: {
     marginHorizontal: 16,
     marginTop: 16,
     borderRadius: 16,
-    padding: 20,
+    overflow: 'hidden',
     shadowColor: '#000',
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.06,
     shadowRadius: 10,
-    elevation: 2,
+    elevation: 3,
   },
-  cardHeader: {
+  alertGradient: {
     flexDirection: 'row',
+    padding: 16,
+    gap: 12,
     alignItems: 'flex-start',
-    marginBottom: 20,
   },
-  iconBox: {
-    width: 48,
-    height: 48,
+  alertIconBox: {
+    width: 44,
+    height: 44,
     borderRadius: 12,
-    backgroundColor: '#FFE8E8',
+    backgroundColor: 'rgba(255,255,255,0.7)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
   },
-  headerInfo: {
-    flex: 1,
-  },
-  restaurantName: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: C.ink,
+  alertTitle: {
+    fontSize: 16,
+    fontWeight: '800',
     marginBottom: 4,
   },
-  addressRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
+  alertDesc: {
+    fontSize: 13,
+    color: C.text,
+    lineHeight: 19,
   },
-  restaurantAddress: {
-    fontSize: 14,
-    color: C.muted,
+  rejectionBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    marginTop: 10,
+    padding: 10,
+    backgroundColor: 'rgba(239,68,68,0.1)',
+    borderRadius: 8,
+  },
+  rejectionText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: C.danger,
     flex: 1,
   },
-  statusBadge: {
+
+  // Quick Actions
+  actionsCard: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    backgroundColor: C.card,
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  actionsGrid: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 12,
+  },
+  actionItem: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 8,
+  },
+  actionIconBox: {
+    width: 50,
+    height: 50,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: C.ink,
+    textAlign: 'center',
+  },
+
+  // Details Card
+  detailsCard: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    backgroundColor: C.card,
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
+    gap: 10,
+    marginBottom: 20,
   },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: C.text,
-    marginBottom: 8,
+  sectionIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   sectionTitle: {
     fontSize: 17,
-    fontWeight: '700',
+    fontWeight: '800',
     color: C.ink,
-    marginBottom: 16,
   },
-  sectionTitleRow: {
+  detailRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 16,
+    alignItems: 'flex-start',
+    gap: 12,
+    paddingVertical: 4,
   },
-  restaurantImage: {
-    width: '100%',
-    height: 180,
-    borderRadius: 12,
+  detailIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
     backgroundColor: C.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
   },
-  imageHint: {
+  detailContent: {
+    flex: 1,
+  },
+  detailLabel: {
     fontSize: 11,
+    fontWeight: '600',
     color: C.muted,
-    marginTop: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 2,
   },
-  infoGrid: {
-    gap: 16,
-  },
-  infoItem: {
-    gap: 4,
-  },
-  infoLabel: {
-    fontSize: 13,
-    color: C.muted,
-  },
-  infoValue: {
+  detailValue: {
     fontSize: 15,
     fontWeight: '600',
     color: C.text,
+    lineHeight: 21,
   },
-  statusBadgeSmall: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
+  divider: {
+    height: 1,
+    backgroundColor: C.border,
+    marginVertical: 12,
+    marginLeft: 44,
   },
-  statusTextSmall: {
+
+  // FSSAI
+  fssaiNumberBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#F0FDF4',
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+  fssaiLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: C.muted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  fssaiNumber: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: C.ink,
+    fontFamily: 'monospace',
+    letterSpacing: 1.5,
+    marginTop: 2,
+  },
+  certLabel: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '600',
+    color: C.muted,
+    marginBottom: 8,
   },
-  viewCertBtn: {
+  certImageBox: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  certImage: {
+    width: '100%',
+    height: 160,
+    borderRadius: 12,
+    backgroundColor: C.bg,
+  },
+  certOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 10,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    alignItems: 'center',
+  },
+  certViewBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    alignSelf: 'flex-start',
-    paddingVertical: 4,
   },
-  viewCertText: {
-    fontSize: 14,
+  certViewText: {
+    fontSize: 12,
     fontWeight: '600',
-    color: C.primary,
+    color: '#fff',
   },
-  certificateImage: {
-    width: '100%',
-    height: 120,
-    borderRadius: 12,
-    backgroundColor: C.bg,
-    borderWidth: 1,
-    borderColor: C.border,
-    marginTop: 12,
-  },
-  alertBox: {
-    flexDirection: 'row',
-    gap: 12,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  alertContent: {
+
+  // Image Preview Modal
+  previewModal: {
     flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  alertTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    marginBottom: 4,
+  previewClose: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    zIndex: 10,
   },
-  alertDescription: {
-    fontSize: 14,
-    color: C.text,
-    lineHeight: 20,
+  previewCloseBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  alertActions: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 16,
-  },
-  primaryActionBtn: {
-    backgroundColor: C.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  primaryActionText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#FFF',
-  },
-  secondaryActionBtn: {
-    borderWidth: 1,
-    borderColor: C.border,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-    backgroundColor: C.card,
-  },
-  secondaryActionText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: C.ink,
-  },
-  rejectionReason: {
-    fontSize: 13,
-    marginTop: 8,
-    fontWeight: '600',
+  previewImage: {
+    width: '100%',
+    height: '80%',
   },
 });

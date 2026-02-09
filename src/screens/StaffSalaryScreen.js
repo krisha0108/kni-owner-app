@@ -1,16 +1,23 @@
+/**
+ * ============================================================================
+ * STAFF SALARY SCREEN - PREMIUM REDESIGN
+ * ============================================================================
+ */
+
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  FlatList,
+  ScrollView,
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
   Alert,
   Modal,
-  ScrollView,
   TextInput,
+  useWindowDimensions,
+  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -20,18 +27,24 @@ import { RestaurantSelectorBar } from '../components/RestaurantSelector';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
+// Premium Color Palette
 const C = {
   primary: '#EF3A3A',
+  primaryLight: '#FEE2E2',
   ink: '#1D2254',
-  text: '#0F172A',
-  muted: '#6B7280',
-  bg: '#F5F7FA',
+  text: '#334155',
+  muted: '#94A3B8',
+  bg: '#F8FAFC',
   card: '#FFFFFF',
-  border: '#E5E7EB',
-  ok: '#10B981',
-  warn: '#F59E0B',
+  border: '#E2E8F0',
+  success: '#10B981',
+  successLight: '#D1FAE5',
+  warning: '#F59E0B',
+  warningLight: '#FEF3C7',
   danger: '#EF4444',
+  dangerLight: '#FEE2E2',
   info: '#3B82F6',
+  infoLight: '#DBEAFE',
 };
 
 const monthNames = [
@@ -41,23 +54,25 @@ const monthNames = [
 
 const getStatusConfig = (status) => {
   const configs = {
-    PENDING: { bg: '#FFFBEB', color: C.warn, icon: 'time', label: 'Pending' },
-    PARTIAL: { bg: '#EFF6FF', color: C.info, icon: 'pie-chart', label: 'Partial' },
-    PARTIALLY_PAID: { bg: '#EFF6FF', color: C.info, icon: 'pie-chart', label: 'Partial' },
-    PAID: { bg: '#ECFDF5', color: C.ok, icon: 'checkmark-circle', label: 'Paid' },
+    PENDING: { bg: C.warningLight, color: C.warning, icon: 'time', label: 'Pending' },
+    PARTIAL: { bg: C.infoLight, color: C.info, icon: 'pie-chart', label: 'Partial' },
+    PARTIALLY_PAID: { bg: C.infoLight, color: C.info, icon: 'pie-chart', label: 'Partial' },
+    PAID: { bg: C.successLight, color: C.success, icon: 'checkmark-circle', label: 'Paid' },
   };
   return configs[status] || configs.PENDING;
 };
 
 const formatPrice = (amount) => {
   const num = amount || 0;
-  return `₹${num.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+  return `₹${num.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 };
 
 export default function StaffSalaryScreen({ navigation }) {
-  // Global restaurant context
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
+
   const {
-    selectedRestaurantIdId,
+    selectedRestaurantId,
     loading: restaurantsLoading,
     loadRestaurants,
   } = useRestaurant();
@@ -69,20 +84,20 @@ export default function StaffSalaryScreen({ navigation }) {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [detailModal, setDetailModal] = useState(null);
   const [generating, setGenerating] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   // Payment dialog state
   const [paymentModal, setPaymentModal] = useState(null);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [isRecordingPayment, setIsRecordingPayment] = useState(false);
-  const [menuVisible, setMenuVisible] = useState(false);
 
   const loadData = useCallback(async () => {
-    if (!selectedRestaurantIdId) return;
+    if (!selectedRestaurantId) return;
 
     try {
       setLoading(true);
       const response = await api.get(
-        `/owner/staff-salary?restaurantId=${selectedRestaurantIdId}&month=${selectedMonth}&year=${selectedYear}`
+        `/owner/staff-salary?restaurantId=${selectedRestaurantId}&month=${selectedMonth}&year=${selectedYear}`
       );
 
       if (response.data.ok) {
@@ -94,14 +109,13 @@ export default function StaffSalaryScreen({ navigation }) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [selectedRestaurantIdId, selectedMonth, selectedYear]);
+  }, [selectedRestaurantId, selectedMonth, selectedYear]);
 
-  // Load data when restaurant or date changes
   useEffect(() => {
-    if (selectedRestaurantIdId) {
+    if (selectedRestaurantId) {
       loadData();
     }
-  }, [selectedRestaurantIdId, selectedMonth, selectedYear, loadData]);
+  }, [selectedRestaurantId, selectedMonth, selectedYear, loadData]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -122,7 +136,7 @@ export default function StaffSalaryScreen({ navigation }) {
             setGenerating(true);
             try {
               const response = await api.post('/owner/staff-salary/generate', {
-                restaurantId: selectedRestaurantIdId,
+                restaurantId: selectedRestaurantId,
                 month: selectedMonth,
                 year: selectedYear,
               });
@@ -146,7 +160,7 @@ export default function StaffSalaryScreen({ navigation }) {
 
   const openPaymentDialog = (record) => {
     const remaining = record.totalPayable - record.totalPaid;
-    setPaymentAmount(remaining.toFixed(2));
+    setPaymentAmount(remaining.toString());
     setPaymentModal(record);
   };
 
@@ -161,7 +175,7 @@ export default function StaffSalaryScreen({ navigation }) {
 
     const remainingAmount = paymentModal.totalPayable - paymentModal.totalPaid;
     if (amount > remainingAmount) {
-      Alert.alert('Error', `Payment amount cannot exceed remaining amount (${formatPrice(remainingAmount)})`);
+      Alert.alert('Error', `Payment cannot exceed remaining amount (${formatPrice(remainingAmount)})`);
       return;
     }
 
@@ -194,7 +208,7 @@ export default function StaffSalaryScreen({ navigation }) {
 
     Alert.alert(
       'Delete Salary Record',
-      `Delete salary record for ${record.staff?.name}? This action cannot be undone.`,
+      `Delete salary record for ${record.staff?.name}?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -204,13 +218,13 @@ export default function StaffSalaryScreen({ navigation }) {
             try {
               const response = await api.delete(`/owner/staff-salary/${record.id}`);
               if (response.data.ok) {
-                Alert.alert('Success', 'Salary record deleted successfully');
+                Alert.alert('Success', 'Salary record deleted');
                 loadData();
               } else {
-                Alert.alert('Error', response.data.error || 'Failed to delete salary record');
+                Alert.alert('Error', response.data.error || 'Failed to delete');
               }
             } catch (error) {
-              Alert.alert('Error', error.response?.data?.error || 'Failed to delete salary record');
+              Alert.alert('Error', error.response?.data?.error || 'Failed to delete');
             }
           }
         }
@@ -234,94 +248,124 @@ export default function StaffSalaryScreen({ navigation }) {
     setSelectedYear(newYear);
   };
 
-  const calculateSummary = () => {
-    const totalPayable = salaries.reduce((sum, record) => sum + (record.totalPayable || 0), 0);
-    const totalPaid = salaries.reduce((sum, record) => sum + (record.totalPaid || 0), 0);
-    const totalPending = totalPayable - totalPaid;
-    const staffCount = salaries.length;
+  // Summary calculations
+  const totalPayable = salaries.reduce((sum, r) => sum + (r.totalPayable || 0), 0);
+  const totalPaid = salaries.reduce((sum, r) => sum + (r.totalPaid || 0), 0);
+  const totalPending = totalPayable - totalPaid;
+  const staffCount = salaries.length;
 
-    return { totalPayable, totalPaid, totalPending, staffCount };
-  };
+  // ==================== LOADING STATE ====================
+  if (loading && !refreshing) {
+    return (
+      <SafeAreaView style={st.container}>
+        <StatusBar barStyle="dark-content" backgroundColor={C.card} />
+        <View style={st.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
+            <Icon name="arrow-back" size={22} color={C.ink} />
+          </TouchableOpacity>
+          <View style={st.headerCenter}>
+            <Text style={st.headerTitle}>Staff Salary</Text>
+            <Text style={st.headerSubtitle}>Manage monthly payments</Text>
+          </View>
+          <View style={st.headerActions}>
+            <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
+              <Icon name="menu" size={20} color={C.ink} />
+            </TouchableOpacity>
+          </View>
+        </View>
+        <View style={st.loadingBox}>
+          <ActivityIndicator size="large" color={C.primary} />
+          <Text style={st.loadingText}>Loading salaries...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
-  const summary = calculateSummary();
-
-  const renderSalaryCard = ({ item }) => {
+  // ==================== RENDER SALARY CARD ====================
+  const renderSalaryCard = (item) => {
     const statusConfig = getStatusConfig(item.status);
     const remaining = item.totalPayable - item.totalPaid;
+    const progressPercent = item.totalPayable > 0 ? (item.totalPaid / item.totalPayable) * 100 : 0;
 
     return (
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <View style={styles.iconBox}>
-            <Icon name="person" size={24} color={C.primary} />
+      <View key={item.id} style={[st.card, isTablet && st.cardTablet]}>
+        {/* Card Header */}
+        <View style={st.cardHeader}>
+          <View style={st.staffInfo}>
+            <View style={st.staffAvatar}>
+              <Icon name="person" size={20} color={C.primary} />
+            </View>
+            <View style={st.staffDetails}>
+              <Text style={st.staffName}>{item.staff?.name || 'Staff'}</Text>
+              <Text style={st.staffRole}>{item.staff?.designation || 'Staff Member'}</Text>
+            </View>
           </View>
-          <View style={styles.cardInfo}>
-            <Text style={styles.cardTitle}>{item.staff?.name || 'Staff'}</Text>
-            <Text style={styles.cardSub}>{item.staff?.designation || 'Staff'}</Text>
-          </View>
-          <View style={[styles.statusBadge, { backgroundColor: statusConfig.bg }]}>
-            <Icon name={statusConfig.icon} size={14} color={statusConfig.color} />
-            <Text style={[styles.statusText, { color: statusConfig.color }]}>{statusConfig.label}</Text>
-          </View>
-        </View>
-
-        <View style={styles.detailsRow}>
-          <View style={styles.detailBox}>
-            <Text style={styles.detailLabel}>Basic Salary</Text>
-            <Text style={styles.detailValue}>{formatPrice(item.basicSalary)}</Text>
-          </View>
-          <View style={styles.detailBox}>
-            <Text style={styles.detailLabel}>Total Payable</Text>
-            <Text style={[styles.detailValue, { color: C.ink }]}>{formatPrice(item.totalPayable)}</Text>
-          </View>
-          <View style={styles.detailBox}>
-            <Text style={styles.detailLabel}>Paid</Text>
-            <Text style={[styles.detailValue, { color: C.ok }]}>{formatPrice(item.totalPaid)}</Text>
+          <View style={[st.statusBadge, { backgroundColor: statusConfig.bg }]}>
+            <Icon name={statusConfig.icon} size={12} color={statusConfig.color} />
+            <Text style={[st.statusText, { color: statusConfig.color }]}>{statusConfig.label}</Text>
           </View>
         </View>
 
-        {/* Allowances/Deductions Row */}
+        {/* Amount Details */}
+        <View style={st.amountRow}>
+          <View style={st.amountItem}>
+            <Text style={st.amountLabel}>Payable</Text>
+            <Text style={st.amountValue}>{formatPrice(item.totalPayable)}</Text>
+          </View>
+          <View style={st.amountItem}>
+            <Text style={st.amountLabel}>Paid</Text>
+            <Text style={[st.amountValue, { color: C.success }]}>{formatPrice(item.totalPaid)}</Text>
+          </View>
+          <View style={st.amountItem}>
+            <Text style={st.amountLabel}>Remaining</Text>
+            <Text style={[st.amountValue, { color: remaining > 0 ? C.warning : C.success }]}>
+              {formatPrice(remaining)}
+            </Text>
+          </View>
+        </View>
+
+        {/* Progress Bar */}
+        <View style={st.progressContainer}>
+          <View style={st.progressBar}>
+            <View style={[st.progressFill, { width: `${Math.min(progressPercent, 100)}%` }]} />
+          </View>
+          <Text style={st.progressText}>{progressPercent.toFixed(0)}% paid</Text>
+        </View>
+
+        {/* Allowances/Deductions */}
         {(item.allowances > 0 || item.deductions > 0) && (
-          <View style={styles.allowanceRow}>
+          <View style={st.extraRow}>
             {item.allowances > 0 && (
-              <View style={styles.allowanceItem}>
-                <Icon name="add-circle" size={14} color={C.ok} />
-                <Text style={styles.allowanceText}>Allowances: {formatPrice(item.allowances)}</Text>
+              <View style={st.extraItem}>
+                <Icon name="add-circle" size={14} color={C.success} />
+                <Text style={st.extraText}>+{formatPrice(item.allowances)}</Text>
               </View>
             )}
             {item.deductions > 0 && (
-              <View style={styles.allowanceItem}>
+              <View style={st.extraItem}>
                 <Icon name="remove-circle" size={14} color={C.danger} />
-                <Text style={styles.allowanceText}>Deductions: {formatPrice(item.deductions)}</Text>
+                <Text style={st.extraText}>-{formatPrice(item.deductions)}</Text>
               </View>
             )}
           </View>
         )}
 
-        <View style={styles.cardActions}>
-          <TouchableOpacity
-            style={styles.viewBtn}
-            onPress={() => setDetailModal(item)}
-          >
+        {/* Actions */}
+        <View style={st.cardActions}>
+          <TouchableOpacity style={st.detailBtn} onPress={() => setDetailModal(item)}>
             <Icon name="eye-outline" size={16} color={C.info} />
-            <Text style={[styles.actionText, { color: C.info }]}>Details</Text>
+            <Text style={[st.actionBtnText, { color: C.info }]}>Details</Text>
           </TouchableOpacity>
 
           {item.status !== 'PAID' && (
-            <TouchableOpacity
-              style={styles.payBtn}
-              onPress={() => openPaymentDialog(item)}
-            >
+            <TouchableOpacity style={st.payBtn} onPress={() => openPaymentDialog(item)}>
               <Icon name="cash" size={16} color="#fff" />
-              <Text style={[styles.actionText, { color: '#fff' }]}>Pay {formatPrice(remaining)}</Text>
+              <Text style={st.payBtnText}>Pay {formatPrice(remaining)}</Text>
             </TouchableOpacity>
           )}
 
           {item.totalPaid === 0 && (
-            <TouchableOpacity
-              style={styles.deleteBtn}
-              onPress={() => handleDeleteRecord(item)}
-            >
+            <TouchableOpacity style={st.deleteBtn} onPress={() => handleDeleteRecord(item)}>
               <Icon name="trash-outline" size={16} color={C.danger} />
             </TouchableOpacity>
           )}
@@ -330,101 +374,101 @@ export default function StaffSalaryScreen({ navigation }) {
     );
   };
 
-  if (loading && !refreshing) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.menuBtn}>
-            <Icon name="arrow-back" size={24} color={C.ink} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Staff Salary</Text>
-          <View style={{ width: 40 }} />
-        </View>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={C.primary} />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
+  // ==================== MAIN RENDER ====================
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.menuBtn}>
-          <Icon name="arrow-back" size={24} color={C.ink} />
+    <SafeAreaView style={st.container}>
+      <StatusBar barStyle="dark-content" backgroundColor={C.card} />
+
+      {/* Header */}
+      <View style={st.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
+          <Icon name="arrow-back" size={22} color={C.ink} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Staff Salary</Text>
-        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
-          <Icon name="menu" size={22} color="#1D2254" />
-        </TouchableOpacity>
+        <View style={st.headerCenter}>
+          <Text style={st.headerTitle}>Staff Salary</Text>
+          <Text style={st.headerSubtitle}>Manage monthly payments</Text>
+        </View>
+        <View style={st.headerActions}>
+          {salaries.length > 0 && (
+            <TouchableOpacity
+              style={[st.headerIconBtn, { backgroundColor: C.primaryLight }]}
+              onPress={generateSalaries}
+              disabled={generating}
+            >
+              {generating ? (
+                <ActivityIndicator size="small" color={C.primary} />
+              ) : (
+                <Icon name="add" size={20} color={C.primary} />
+              )}
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
+            <Icon name="menu" size={20} color={C.ink} />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Global Restaurant Selector */}
+      {/* Restaurant Selector */}
       <RestaurantSelectorBar />
 
-      {/* Month Selector */}
-      <View style={styles.monthSelector}>
-        <TouchableOpacity style={styles.monthBtn} onPress={() => changeMonth(-1)}>
-          <Icon name="chevron-back" size={20} color={C.ink} />
-        </TouchableOpacity>
-        <View style={styles.monthBox}>
-          <Icon name="calendar" size={20} color={C.primary} />
-          <Text style={styles.monthText}>
-            {monthNames[selectedMonth - 1]} {selectedYear}
-          </Text>
+      <ScrollView
+        style={st.content}
+        contentContainerStyle={st.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} />}
+      >
+        {/* Month Selector */}
+        <View style={st.monthSelector}>
+          <TouchableOpacity style={st.monthBtn} onPress={() => changeMonth(-1)}>
+            <Icon name="chevron-back" size={20} color={C.ink} />
+          </TouchableOpacity>
+          <View style={st.monthBox}>
+            <Icon name="calendar" size={20} color={C.primary} />
+            <Text style={st.monthText}>{monthNames[selectedMonth - 1]} {selectedYear}</Text>
+          </View>
+          <TouchableOpacity style={st.monthBtn} onPress={() => changeMonth(1)}>
+            <Icon name="chevron-forward" size={20} color={C.ink} />
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.monthBtn} onPress={() => changeMonth(1)}>
-          <Icon name="chevron-forward" size={20} color={C.ink} />
-        </TouchableOpacity>
-      </View>
 
-      {/* Summary Cards - Same as Web */}
-      {salaries.length > 0 && (
-        <View style={styles.summaryGrid}>
-          <View style={styles.summaryCard}>
-            <View style={styles.summaryIcon}>
-              <Icon name="people" size={18} color={C.info} />
+        {/* Summary Stats */}
+        {salaries.length > 0 && (
+          <View style={st.statsRow}>
+            <View style={[st.statCard, { backgroundColor: C.infoLight }]}>
+              <Icon name="people" size={20} color={C.info} />
+              <Text style={[st.statValue, { color: C.info }]}>{staffCount}</Text>
+              <Text style={st.statLabel}>Staff</Text>
             </View>
-            <Text style={styles.summaryLabel}>Staff Count</Text>
-            <Text style={styles.summaryValue}>{summary.staffCount}</Text>
-          </View>
-          <View style={styles.summaryCard}>
-            <View style={[styles.summaryIcon, { backgroundColor: '#FFE8E8' }]}>
-              <Icon name="wallet" size={18} color={C.primary} />
+            <View style={[st.statCard, { backgroundColor: C.primaryLight }]}>
+              <Icon name="wallet" size={20} color={C.primary} />
+              <Text style={[st.statValue, { color: C.primary }]}>{formatPrice(totalPayable)}</Text>
+              <Text style={st.statLabel}>Payable</Text>
             </View>
-            <Text style={styles.summaryLabel}>Total Payable</Text>
-            <Text style={styles.summaryValue}>{formatPrice(summary.totalPayable)}</Text>
-          </View>
-          <View style={styles.summaryCard}>
-            <View style={[styles.summaryIcon, { backgroundColor: '#ECFDF5' }]}>
-              <Icon name="trending-up" size={18} color={C.ok} />
+            <View style={[st.statCard, { backgroundColor: C.successLight }]}>
+              <Icon name="checkmark-done" size={20} color={C.success} />
+              <Text style={[st.statValue, { color: C.success }]}>{formatPrice(totalPaid)}</Text>
+              <Text style={st.statLabel}>Paid</Text>
             </View>
-            <Text style={styles.summaryLabel}>Total Paid</Text>
-            <Text style={[styles.summaryValue, { color: C.ok }]}>{formatPrice(summary.totalPaid)}</Text>
-          </View>
-          <View style={styles.summaryCard}>
-            <View style={[styles.summaryIcon, { backgroundColor: '#FFFBEB' }]}>
-              <Icon name="time" size={18} color={C.warn} />
+            <View style={[st.statCard, { backgroundColor: C.warningLight }]}>
+              <Icon name="time" size={20} color={C.warning} />
+              <Text style={[st.statValue, { color: C.warning }]}>{formatPrice(totalPending)}</Text>
+              <Text style={st.statLabel}>Pending</Text>
             </View>
-            <Text style={styles.summaryLabel}>Pending</Text>
-            <Text style={[styles.summaryValue, { color: C.warn }]}>{formatPrice(summary.totalPending)}</Text>
           </View>
-        </View>
-      )}
+        )}
 
-      <FlatList
-        data={salaries}
-        keyExtractor={item => item.id.toString()}
-        renderItem={renderSalaryCard}
-        contentContainerStyle={styles.list}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        ListEmptyComponent={
-          <View style={styles.emptyBox}>
-            <Icon name="cash-outline" size={64} color={C.muted} />
-            <Text style={styles.emptyTitle}>No Salaries Generated</Text>
-            <Text style={styles.emptyText}>Generate salaries for {monthNames[selectedMonth - 1]} {selectedYear}</Text>
+        {/* Salary Cards or Empty State */}
+        {salaries.length === 0 ? (
+          <View style={st.emptyState}>
+            <View style={st.emptyIcon}>
+              <Icon name="cash-outline" size={64} color={C.muted} />
+            </View>
+            <Text style={st.emptyTitle}>No Salaries Generated</Text>
+            <Text style={st.emptySubtitle}>
+              Generate salaries for {monthNames[selectedMonth - 1]} {selectedYear}
+            </Text>
             <TouchableOpacity
-              style={styles.generateBtn}
+              style={st.generateBtn}
               onPress={generateSalaries}
               disabled={generating}
             >
@@ -433,98 +477,112 @@ export default function StaffSalaryScreen({ navigation }) {
               ) : (
                 <>
                   <Icon name="add-circle" size={18} color="#fff" />
-                  <Text style={styles.generateBtnText}>Generate Salary</Text>
+                  <Text style={st.generateBtnText}>Generate Salary</Text>
                 </>
               )}
             </TouchableOpacity>
           </View>
-        }
-      />
+        ) : (
+          <View style={[st.cardList, isTablet && st.cardListTablet]}>
+            {salaries.map(item => renderSalaryCard(item))}
+          </View>
+        )}
+
+        <View style={{ height: 120 }} />
+      </ScrollView>
 
       {/* Detail Modal */}
       <Modal visible={!!detailModal} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Salary Details</Text>
-              <TouchableOpacity onPress={() => setDetailModal(null)}>
+        <View style={st.modalOverlay}>
+          <View style={st.modalContent}>
+            <View style={st.modalHeader}>
+              <Text style={st.modalTitle}>Salary Details</Text>
+              <TouchableOpacity onPress={() => setDetailModal(null)} style={st.modalClose}>
                 <Icon name="close" size={24} color={C.ink} />
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalBody}>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailRowLabel}>Staff Name</Text>
-                <Text style={styles.detailRowValue}>{detailModal?.staff?.name}</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailRowLabel}>Designation</Text>
-                <Text style={styles.detailRowValue}>{detailModal?.staff?.designation || 'N/A'}</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailRowLabel}>Month/Year</Text>
-                <Text style={styles.detailRowValue}>
-                  {monthNames[(detailModal?.month || 1) - 1]} {detailModal?.year}
-                </Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailRowLabel}>Basic Salary</Text>
-                <Text style={styles.detailRowValue}>{formatPrice(detailModal?.basicSalary)}</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailRowLabel}>Allowances</Text>
-                <Text style={[styles.detailRowValue, { color: C.ok }]}>
-                  +{formatPrice(detailModal?.allowances)}
-                </Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailRowLabel}>Deductions</Text>
-                <Text style={[styles.detailRowValue, { color: C.danger }]}>
-                  -{formatPrice(detailModal?.deductions)}
-                </Text>
-              </View>
-              <View style={[styles.detailRow, styles.totalRow]}>
-                <Text style={styles.totalLabel}>Total Payable</Text>
-                <Text style={styles.totalValue}>{formatPrice(detailModal?.totalPayable)}</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailRowLabel}>Total Paid</Text>
-                <Text style={[styles.detailRowValue, { color: C.ok }]}>
-                  {formatPrice(detailModal?.totalPaid)}
-                </Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailRowLabel}>Remaining</Text>
-                <Text style={[styles.detailRowValue, { color: C.warn }]}>
-                  {formatPrice((detailModal?.totalPayable || 0) - (detailModal?.totalPaid || 0))}
-                </Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailRowLabel}>Status</Text>
-                <View style={[styles.statusBadge, { backgroundColor: getStatusConfig(detailModal?.status).bg }]}>
-                  <Icon
-                    name={getStatusConfig(detailModal?.status).icon}
-                    size={14}
-                    color={getStatusConfig(detailModal?.status).color}
-                  />
-                  <Text style={[styles.statusText, { color: getStatusConfig(detailModal?.status).color }]}>
-                    {getStatusConfig(detailModal?.status).label}
+            <ScrollView style={st.modalBody} showsVerticalScrollIndicator={false}>
+              <View style={st.detailCard}>
+                <View style={st.detailRow}>
+                  <Text style={st.detailLabel}>Staff Name</Text>
+                  <Text style={st.detailValue}>{detailModal?.staff?.name}</Text>
+                </View>
+                <View style={st.detailRow}>
+                  <Text style={st.detailLabel}>Designation</Text>
+                  <Text style={st.detailValue}>{detailModal?.staff?.designation || 'N/A'}</Text>
+                </View>
+                <View style={st.detailRow}>
+                  <Text style={st.detailLabel}>Period</Text>
+                  <Text style={st.detailValue}>
+                    {monthNames[(detailModal?.month || 1) - 1]} {detailModal?.year}
                   </Text>
+                </View>
+              </View>
+
+              <View style={st.detailCard}>
+                <View style={st.detailRow}>
+                  <Text style={st.detailLabel}>Basic Salary</Text>
+                  <Text style={st.detailValue}>{formatPrice(detailModal?.basicSalary)}</Text>
+                </View>
+                <View style={st.detailRow}>
+                  <Text style={st.detailLabel}>Allowances</Text>
+                  <Text style={[st.detailValue, { color: C.success }]}>
+                    +{formatPrice(detailModal?.allowances)}
+                  </Text>
+                </View>
+                <View style={st.detailRow}>
+                  <Text style={st.detailLabel}>Deductions</Text>
+                  <Text style={[st.detailValue, { color: C.danger }]}>
+                    -{formatPrice(detailModal?.deductions)}
+                  </Text>
+                </View>
+                <View style={[st.detailRow, st.totalRow]}>
+                  <Text style={st.totalLabel}>Total Payable</Text>
+                  <Text style={st.totalValue}>{formatPrice(detailModal?.totalPayable)}</Text>
+                </View>
+              </View>
+
+              <View style={st.detailCard}>
+                <View style={st.detailRow}>
+                  <Text style={st.detailLabel}>Total Paid</Text>
+                  <Text style={[st.detailValue, { color: C.success }]}>
+                    {formatPrice(detailModal?.totalPaid)}
+                  </Text>
+                </View>
+                <View style={st.detailRow}>
+                  <Text style={st.detailLabel}>Remaining</Text>
+                  <Text style={[st.detailValue, { color: C.warning }]}>
+                    {formatPrice((detailModal?.totalPayable || 0) - (detailModal?.totalPaid || 0))}
+                  </Text>
+                </View>
+                <View style={st.detailRow}>
+                  <Text style={st.detailLabel}>Status</Text>
+                  <View style={[st.statusBadge, { backgroundColor: getStatusConfig(detailModal?.status).bg }]}>
+                    <Icon
+                      name={getStatusConfig(detailModal?.status).icon}
+                      size={12}
+                      color={getStatusConfig(detailModal?.status).color}
+                    />
+                    <Text style={[st.statusText, { color: getStatusConfig(detailModal?.status).color }]}>
+                      {getStatusConfig(detailModal?.status).label}
+                    </Text>
+                  </View>
                 </View>
               </View>
             </ScrollView>
 
             {detailModal?.status !== 'PAID' && (
-              <View style={styles.modalFooter}>
+              <View style={st.modalFooter}>
                 <TouchableOpacity
-                  style={styles.modalPayBtn}
+                  style={st.modalPayBtn}
                   onPress={() => {
                     setDetailModal(null);
                     openPaymentDialog(detailModal);
                   }}
                 >
                   <Icon name="cash" size={20} color="#fff" />
-                  <Text style={styles.modalPayBtnText}>Record Payment</Text>
+                  <Text style={st.modalPayBtnText}>Record Payment</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -532,84 +590,85 @@ export default function StaffSalaryScreen({ navigation }) {
         </View>
       </Modal>
 
-      {/* Payment Modal - Supports Partial Payments */}
+      {/* Payment Modal */}
       <Modal visible={!!paymentModal} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Record Payment</Text>
-              <TouchableOpacity onPress={() => { setPaymentModal(null); setPaymentAmount(''); }}>
+        <View style={st.modalOverlay}>
+          <View style={st.modalContent}>
+            <View style={st.modalHeader}>
+              <Text style={st.modalTitle}>Record Payment</Text>
+              <TouchableOpacity
+                onPress={() => { setPaymentModal(null); setPaymentAmount(''); }}
+                style={st.modalClose}
+              >
                 <Icon name="close" size={24} color={C.ink} />
               </TouchableOpacity>
             </View>
 
-            <View style={styles.modalBody}>
-              <Text style={styles.paymentSubtitle}>
+            <ScrollView style={st.modalBody} showsVerticalScrollIndicator={false}>
+              <Text style={st.paymentSubtitle}>
                 Record salary payment for {paymentModal?.staff?.name}
               </Text>
 
               {/* Payment Summary */}
-              <View style={styles.paymentSummary}>
-                <View style={styles.paymentSummaryItem}>
-                  <Text style={styles.paymentSummaryLabel}>Total Payable</Text>
-                  <Text style={styles.paymentSummaryValue}>{formatPrice(paymentModal?.totalPayable)}</Text>
+              <View style={st.paymentSummary}>
+                <View style={st.paymentSummaryItem}>
+                  <Text style={st.paymentSummaryLabel}>Total</Text>
+                  <Text style={st.paymentSummaryValue}>{formatPrice(paymentModal?.totalPayable)}</Text>
                 </View>
-                <View style={styles.paymentSummaryItem}>
-                  <Text style={styles.paymentSummaryLabel}>Already Paid</Text>
-                  <Text style={styles.paymentSummaryValue}>{formatPrice(paymentModal?.totalPaid)}</Text>
+                <View style={st.paymentSummaryItem}>
+                  <Text style={st.paymentSummaryLabel}>Paid</Text>
+                  <Text style={[st.paymentSummaryValue, { color: C.success }]}>
+                    {formatPrice(paymentModal?.totalPaid)}
+                  </Text>
                 </View>
-                <View style={styles.paymentSummaryItem}>
-                  <Text style={styles.paymentSummaryLabel}>Remaining</Text>
-                  <Text style={[styles.paymentSummaryValue, { color: C.warn }]}>
+                <View style={st.paymentSummaryItem}>
+                  <Text style={st.paymentSummaryLabel}>Due</Text>
+                  <Text style={[st.paymentSummaryValue, { color: C.warning }]}>
                     {formatPrice((paymentModal?.totalPayable || 0) - (paymentModal?.totalPaid || 0))}
                   </Text>
                 </View>
               </View>
 
               {/* Payment Amount Input */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Payment Amount (₹) *</Text>
-                <View style={styles.inputBox}>
-                  <Icon name="cash-outline" size={18} color={C.muted} style={styles.inputIcon} />
+              <View style={st.inputGroup}>
+                <Text style={st.inputLabel}>Payment Amount (₹)</Text>
+                <View style={st.inputBox}>
+                  <Icon name="cash-outline" size={20} color={C.muted} />
                   <TextInput
-                    style={styles.input}
+                    style={st.input}
                     value={paymentAmount}
                     onChangeText={setPaymentAmount}
                     keyboardType="decimal-pad"
-                    placeholder="Enter payment amount"
+                    placeholder="Enter amount"
                     placeholderTextColor={C.muted}
                   />
                 </View>
-                <Text style={styles.inputHint}>
-                  Enter full amount for complete payment or partial amount
-                </Text>
+                <Text style={st.inputHint}>Enter full or partial payment amount</Text>
               </View>
-            </View>
+            </ScrollView>
 
-            <View style={styles.modalFooter}>
-              <View style={styles.footerActions}>
-                <TouchableOpacity
-                  style={styles.cancelBtn}
-                  onPress={() => { setPaymentModal(null); setPaymentAmount(''); }}
-                  disabled={isRecordingPayment}
-                >
-                  <Text style={styles.cancelBtnText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.confirmPayBtn, isRecordingPayment && { opacity: 0.7 }]}
-                  onPress={handleRecordPayment}
-                  disabled={isRecordingPayment}
-                >
-                  {isRecordingPayment ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <>
-                      <Icon name="checkmark-circle" size={18} color="#fff" />
-                      <Text style={styles.confirmPayBtnText}>Record Payment</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              </View>
+            <View style={st.modalFooter}>
+              <TouchableOpacity
+                style={st.cancelBtn}
+                onPress={() => { setPaymentModal(null); setPaymentAmount(''); }}
+                disabled={isRecordingPayment}
+              >
+                <Text style={st.cancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[st.confirmPayBtn, isRecordingPayment && { opacity: 0.7 }]}
+                onPress={handleRecordPayment}
+                disabled={isRecordingPayment}
+              >
+                {isRecordingPayment ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Icon name="checkmark-circle" size={18} color="#fff" />
+                    <Text style={st.confirmPayBtnText}>Record Payment</Text>
+                  </>
+                )}
+              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -621,35 +680,58 @@ export default function StaffSalaryScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+// ==================== STYLES ====================
+const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
+
+  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: C.card,
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
-  menuBtn: { width: 40 },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: C.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerCenter: { flex: 1, marginLeft: 12 },
   headerTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: C.ink, marginTop: 16 },
-  emptyText: { fontSize: 14, color: C.muted, textAlign: 'center', marginTop: 8 },
+  headerSubtitle: { fontSize: 12, color: C.muted, marginTop: 2 },
+  headerActions: { flexDirection: 'row' },
+  headerIconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: C.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+  },
 
+  content: { flex: 1 },
+  scrollContent: { flexGrow: 1 },
+  loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  loadingText: { marginTop: 16, fontSize: 15, color: C.muted },
+
+  // Month Selector
   monthSelector: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingVertical: 14,
     backgroundColor: C.card,
     marginHorizontal: 16,
     marginTop: 16,
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: C.border,
   },
@@ -661,210 +743,211 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  monthBox: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  monthText: { fontSize: 16, fontWeight: '700', color: C.ink },
+  monthBox: { flexDirection: 'row', alignItems: 'center' },
+  monthText: { fontSize: 15, fontWeight: '700', color: C.ink, marginLeft: 8 },
 
-  // Summary Grid - 4 cards like web
-  summaryGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: 12,
-    marginTop: 12,
-    gap: 8,
-  },
-  summaryCard: {
+  // Stats
+  statsRow: { flexDirection: 'row', paddingHorizontal: 16, paddingTop: 16 },
+  statCard: {
     flex: 1,
-    minWidth: '47%',
-    backgroundColor: C.card,
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  summaryIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: '#EFF6FF',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
+    padding: 10,
+    borderRadius: 12,
+    marginHorizontal: 3,
   },
-  summaryLabel: { fontSize: 12, color: C.muted, marginBottom: 4 },
-  summaryValue: { fontSize: 18, fontWeight: '700', color: C.ink },
+  statValue: { fontSize: 14, fontWeight: '800', marginTop: 4 },
+  statLabel: { fontSize: 9, fontWeight: '600', color: C.muted, marginTop: 2 },
 
-  filterRow: { paddingHorizontal: 16, paddingVertical: 12 },
-  filterChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: C.card,
-    borderWidth: 1,
-    borderColor: C.border,
-    marginRight: 8,
-  },
-  filterChipActive: { backgroundColor: C.primary, borderColor: C.primary },
-  filterText: { fontSize: 13, fontWeight: '600', color: C.ink },
-  filterTextActive: { color: '#fff' },
+  // Card List
+  cardList: { paddingHorizontal: 16, paddingTop: 16 },
+  cardListTablet: { flexDirection: 'row', flexWrap: 'wrap' },
 
-  list: { padding: 16 },
+  // Salary Card
   card: {
     backgroundColor: C.card,
-    borderRadius: 16,
     padding: 16,
+    borderRadius: 14,
     marginBottom: 12,
     borderWidth: 1,
     borderColor: C.border,
   },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  iconBox: {
-    width: 48,
-    height: 48,
+  cardTablet: { width: '48%', marginHorizontal: '1%' },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  staffInfo: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  staffAvatar: {
+    width: 44,
+    height: 44,
     borderRadius: 12,
-    backgroundColor: '#FFE8E8',
+    backgroundColor: C.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
   },
-  cardInfo: { flex: 1 },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: C.ink },
-  cardSub: { fontSize: 12, color: C.muted, marginTop: 2 },
+  staffDetails: { flex: 1, marginLeft: 12 },
+  staffName: { fontSize: 15, fontWeight: '700', color: C.ink },
+  staffRole: { fontSize: 12, color: C.muted, marginTop: 2 },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 12,
-    backgroundColor: C.bg,
+    borderRadius: 8,
   },
-  statusText: { fontSize: 11, fontWeight: '600' },
+  statusText: { fontSize: 11, fontWeight: '600', marginLeft: 4 },
 
-  detailsRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 12,
-  },
-  detailBox: { flex: 1, backgroundColor: C.bg, padding: 10, borderRadius: 8 },
-  detailLabel: { fontSize: 10, color: C.muted, marginBottom: 4 },
-  detailValue: { fontSize: 13, fontWeight: '700', color: C.ink },
+  // Amount Row
+  amountRow: { flexDirection: 'row', marginBottom: 12 },
+  amountItem: { flex: 1, backgroundColor: C.bg, padding: 10, borderRadius: 8, marginHorizontal: 2 },
+  amountLabel: { fontSize: 10, color: C.muted, marginBottom: 2 },
+  amountValue: { fontSize: 13, fontWeight: '700', color: C.ink },
 
-  allowanceRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 12,
-    paddingHorizontal: 4,
-  },
-  allowanceItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  allowanceText: { fontSize: 12, color: C.text },
+  // Progress
+  progressContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  progressBar: { flex: 1, height: 6, backgroundColor: C.border, borderRadius: 3, overflow: 'hidden', marginRight: 10 },
+  progressFill: { height: '100%', backgroundColor: C.success, borderRadius: 3 },
+  progressText: { fontSize: 11, color: C.muted, fontWeight: '600' },
 
-  cardActions: { flexDirection: 'row', gap: 8 },
-  viewBtn: {
+  // Extra Row (Allowances/Deductions)
+  extraRow: { flexDirection: 'row', marginBottom: 12 },
+  extraItem: { flexDirection: 'row', alignItems: 'center', marginRight: 16 },
+  extraText: { fontSize: 12, color: C.text, marginLeft: 4 },
+
+  // Card Actions
+  cardActions: { flexDirection: 'row', marginTop: 4 },
+  detailBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
     paddingVertical: 10,
     borderRadius: 10,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: C.infoLight,
+    marginRight: 8,
   },
+  actionBtnText: { fontSize: 12, fontWeight: '600', marginLeft: 4 },
   payBtn: {
     flex: 2,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
     paddingVertical: 10,
     borderRadius: 10,
-    backgroundColor: C.ok,
+    backgroundColor: C.success,
+    marginRight: 8,
   },
+  payBtnText: { fontSize: 12, fontWeight: '700', color: '#fff', marginLeft: 4 },
   deleteBtn: {
     width: 40,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 10,
     borderRadius: 10,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: C.dangerLight,
   },
-  actionText: { fontSize: 13, fontWeight: '600' },
 
-  emptyBox: { alignItems: 'center', paddingTop: 80 },
+  // Empty State
+  emptyState: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 40 },
+  emptyIcon: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: C.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  emptyTitle: { fontSize: 20, fontWeight: '700', color: C.ink, marginBottom: 8 },
+  emptySubtitle: { fontSize: 14, color: C.muted, textAlign: 'center' },
   generateBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginTop: 20,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
+    marginTop: 24,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
     backgroundColor: C.primary,
+    borderRadius: 14,
   },
-  generateBtnText: { fontSize: 14, fontWeight: '700', color: '#fff' },
+  generateBtnText: { fontSize: 15, fontWeight: '700', color: '#fff', marginLeft: 8 },
 
+  // Modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: C.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '85%' },
+  modalContent: {
+    backgroundColor: C.card,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '85%',
+  },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
+    padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
   modalTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
-  modalBody: { padding: 16 },
-  modalFooter: { padding: 16, borderTopWidth: 1, borderTopColor: C.border },
+  modalClose: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: C.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalBody: { padding: 20 },
+  modalFooter: {
+    flexDirection: 'row',
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: C.border,
+  },
 
+  // Detail Card
+  detailCard: {
+    backgroundColor: C.bg,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  },
   detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
-  detailRowLabel: { fontSize: 14, color: C.muted },
-  detailRowValue: { fontSize: 14, fontWeight: '600', color: C.ink },
-  totalRow: { backgroundColor: C.bg, paddingHorizontal: 12, borderRadius: 8, marginTop: 8 },
-  totalLabel: { fontSize: 15, fontWeight: '700', color: C.ink },
-  totalValue: { fontSize: 18, fontWeight: '700', color: C.primary },
+  detailLabel: { fontSize: 13, color: C.muted },
+  detailValue: { fontSize: 14, fontWeight: '600', color: C.ink },
+  totalRow: {
+    backgroundColor: C.card,
+    marginTop: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderBottomWidth: 0,
+  },
+  totalLabel: { fontSize: 14, fontWeight: '700', color: C.ink },
+  totalValue: { fontSize: 18, fontWeight: '800', color: C.primary },
 
   modalPayBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    backgroundColor: C.ok,
+    backgroundColor: C.success,
     paddingVertical: 14,
     borderRadius: 12,
   },
-  modalPayBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  modalPayBtnText: { fontSize: 15, fontWeight: '700', color: '#fff', marginLeft: 8 },
 
-  // Payment Modal Styles
-  paymentSubtitle: {
-    fontSize: 14,
-    color: C.muted,
-    marginBottom: 16,
-  },
-  paymentSummary: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 20,
-  },
+  // Payment Modal
+  paymentSubtitle: { fontSize: 14, color: C.muted, marginBottom: 16 },
+  paymentSummary: { flexDirection: 'row', marginBottom: 20 },
   paymentSummaryItem: {
     flex: 1,
     backgroundColor: C.bg,
     padding: 12,
     borderRadius: 10,
+    marginHorizontal: 3,
   },
   paymentSummaryLabel: { fontSize: 11, color: C.muted, marginBottom: 4 },
   paymentSummaryValue: { fontSize: 14, fontWeight: '700', color: C.ink },
@@ -874,41 +957,34 @@ const styles = StyleSheet.create({
   inputBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: C.border,
-    backgroundColor: '#fff',
+    backgroundColor: C.bg,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
-  inputIcon: { marginRight: 10 },
-  input: { flex: 1, color: C.text, fontSize: 16 },
+  input: { flex: 1, color: C.text, fontSize: 16, marginLeft: 10 },
   inputHint: { fontSize: 12, color: C.muted, marginTop: 6 },
 
-  footerActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
   cancelBtn: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 14,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: C.border,
-    backgroundColor: C.card,
+    backgroundColor: C.bg,
+    marginRight: 8,
   },
-  cancelBtnText: { fontSize: 15, fontWeight: '600', color: C.ink },
+  cancelBtnText: { fontSize: 15, fontWeight: '700', color: C.ink },
   confirmPayBtn: {
     flex: 2,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
     paddingVertical: 14,
     borderRadius: 12,
-    backgroundColor: C.ok,
+    backgroundColor: C.success,
   },
-  confirmPayBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  confirmPayBtnText: { fontSize: 15, fontWeight: '700', color: '#fff', marginLeft: 8 },
 });
