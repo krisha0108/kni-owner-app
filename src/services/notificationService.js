@@ -230,10 +230,10 @@ class NotificationService {
         sound: 'default',
       });
 
-      // Display notification
+      // Display notification (read from data payload first for data-only messages)
       await notifee.displayNotification({
-        title: remoteMessage.notification?.title || 'Notification',
-        body: remoteMessage.notification?.body || '',
+        title: remoteMessage.notification?.title || remoteMessage.data?.title || 'Notification',
+        body: remoteMessage.notification?.body || remoteMessage.data?.body || '',
         data: remoteMessage.data,
         android: {
           channelId,
