@@ -16,6 +16,13 @@ export function RestaurantProvider({ children }) {
   // Load restaurants from API
   const loadRestaurants = useCallback(async () => {
     try {
+      // Don't fetch if user is not logged in
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
       setError(null);
 

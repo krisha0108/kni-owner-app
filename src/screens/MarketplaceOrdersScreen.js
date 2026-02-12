@@ -181,11 +181,9 @@ export default function MarketplaceOrdersScreen({ navigation }) {
 
     setIsSubmittingRating(true);
     try {
-      const response = await api.post('/owner/marketplace/ratings', {
-        orderId: orderToRate.id,
-        vendorId: orderToRate.vendor?.id || orderToRate.vendorId,
-        rating,
-        comment: ratingComment.trim() || undefined,
+      const response = await api.post(`/owner/marketplace/orders/${orderToRate.id}/rate`, {
+        overallRating: rating,
+        review: ratingComment.trim() || undefined,
       });
 
       if (response.data.ok) {
@@ -623,16 +621,23 @@ export default function MarketplaceOrdersScreen({ navigation }) {
             {/* Footer Actions */}
             <View style={styles.detailModalFooter}>
               {selectedOrder?.status === 'DELIVERED' && (
-                <TouchableOpacity
-                  style={styles.detailRateBtn}
-                  onPress={() => {
-                    setDetailModalVisible(false);
-                    openRatingModal(selectedOrder);
-                  }}
-                >
-                  <Icon name="star" size={18} color="#fff" />
-                  <Text style={styles.detailRateBtnText}>Rate Vendor</Text>
-                </TouchableOpacity>
+                selectedOrder?.rating ? (
+                  <View style={styles.detailRatedBadge}>
+                    <Icon name="star" size={16} color="#F59E0B" />
+                    <Text style={styles.detailRatedText}>Rated {selectedOrder.rating?.overallRating || 0}/5</Text>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.detailRateBtn}
+                    onPress={() => {
+                      setDetailModalVisible(false);
+                      openRatingModal(selectedOrder);
+                    }}
+                  >
+                    <Icon name="star" size={18} color="#fff" />
+                    <Text style={styles.detailRateBtnText}>Rate Vendor</Text>
+                  </TouchableOpacity>
+                )
               )}
               <TouchableOpacity
                 style={[styles.detailCloseBtn, selectedOrder?.status === 'DELIVERED' && { flex: 1 }]}
@@ -645,60 +650,69 @@ export default function MarketplaceOrdersScreen({ navigation }) {
         </View>
       </Modal>
 
-      {/* ========== RATING MODAL ========== */}
-      <Modal visible={ratingModalVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Rate Vendor</Text>
+      {/* ========== RATING MODAL - Bottom Sheet ========== */}
+      <Modal visible={ratingModalVisible} animationType="slide" transparent onRequestClose={() => setRatingModalVisible(false)}>
+        <View style={styles.ratingOverlay}>
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setRatingModalVisible(false)} />
+          <View style={styles.ratingSheet}>
+            {/* Handle bar */}
+            <View style={styles.ratingHandle} />
+
+            {/* Header */}
+            <View style={styles.ratingSheetHeader}>
+              <Text style={styles.ratingSheetTitle}>Rate Vendor</Text>
               <TouchableOpacity onPress={() => setRatingModalVisible(false)}>
-                <Icon name="close" size={24} color={C.ink} />
+                <Icon name="close-circle" size={28} color={C.muted} />
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalBody}>
-              <Text style={styles.ratingVendorName}>
-                {typeof orderToRate?.vendor === 'object' ? orderToRate?.vendor?.name : orderToRate?.vendor || 'Vendor'}
-              </Text>
+            {/* Vendor Name */}
+            <Text style={styles.ratingVendorName}>
+              {typeof orderToRate?.vendor === 'object' ? orderToRate?.vendor?.name : orderToRate?.vendor || 'Vendor'}
+            </Text>
 
-              <Text style={styles.ratingLabel}>Your Rating</Text>
-              <View style={styles.starsRow}>
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <TouchableOpacity key={star} onPress={() => setRating(star)}>
-                    <Icon
-                      name={star <= rating ? 'star' : 'star-outline'}
-                      size={36}
-                      color={star <= rating ? C.warn : C.border}
-                    />
-                  </TouchableOpacity>
-                ))}
-              </View>
+            {/* Stars */}
+            <View style={styles.starsRow}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <TouchableOpacity key={star} onPress={() => setRating(star)} activeOpacity={0.7}>
+                  <Icon
+                    name={star <= rating ? 'star' : 'star-outline'}
+                    size={40}
+                    color={star <= rating ? '#F59E0B' : '#D1D5DB'}
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={styles.ratingHint}>
+              {rating === 1 ? 'Poor' : rating === 2 ? 'Below Average' : rating === 3 ? 'Average' : rating === 4 ? 'Good' : 'Excellent'}
+            </Text>
 
-              <Text style={styles.ratingLabel}>Comment (Optional)</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                placeholder="Share your experience with this vendor..."
-                placeholderTextColor={C.muted}
-                value={ratingComment}
-                onChangeText={setRatingComment}
-                multiline
-                numberOfLines={4}
-              />
-            </ScrollView>
+            {/* Comment */}
+            <TextInput
+              style={styles.ratingTextArea}
+              placeholder="Comment (optional)"
+              placeholderTextColor={C.muted}
+              value={ratingComment}
+              onChangeText={setRatingComment}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+            />
 
-            <View style={styles.modalFooter}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={() => setRatingModalVisible(false)}>
-                <Text style={styles.cancelBtnText}>Cancel</Text>
+            {/* Buttons */}
+            <View style={styles.ratingBtnRow}>
+              <TouchableOpacity style={styles.ratingCancelBtn} onPress={() => setRatingModalVisible(false)}>
+                <Text style={styles.ratingCancelText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.submitBtn, isSubmittingRating && styles.submitBtnDisabled]}
+                style={[styles.ratingSubmitBtn, isSubmittingRating && { opacity: 0.7 }]}
                 onPress={submitRating}
                 disabled={isSubmittingRating}
               >
                 {isSubmittingRating ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Text style={styles.submitBtnText}>Submit Rating</Text>
+                  <Text style={styles.ratingSubmitText}>Submit Rating</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -1323,6 +1337,23 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#fff',
   },
+  detailRatedBadge: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 14,
+    backgroundColor: '#FEF3C7',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+  },
+  detailRatedText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#D97706',
+  },
   detailCloseBtn: {
     flex: 2,
     paddingVertical: 14,
@@ -1336,49 +1367,94 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
 
-  // Rating Modal
-  ratingVendorName: {
+  // Rating Modal - Bottom Sheet
+  ratingOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  ratingSheet: {
+    backgroundColor: C.card,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingBottom: 30,
+  },
+  ratingHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: C.border,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 12,
+    marginBottom: 12,
+  },
+  ratingSheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  ratingSheetTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: C.ink,
-    textAlign: 'center',
-    marginBottom: 20,
   },
-  ratingLabel: { fontSize: 13, fontWeight: '600', color: C.muted, marginBottom: 10, marginTop: 16 },
+  ratingVendorName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: C.text,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
   starsRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 8,
+    gap: 10,
+    marginBottom: 4,
   },
-  input: {
+  ratingHint: {
+    textAlign: 'center',
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#F59E0B',
+    marginBottom: 16,
+  },
+  ratingTextArea: {
     backgroundColor: C.bg,
     borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 12,
     fontSize: 15,
     color: C.text,
     borderWidth: 1,
     borderColor: C.border,
+    minHeight: 80,
+    textAlignVertical: 'top',
+    marginBottom: 16,
   },
-  textArea: { minHeight: 100, textAlignVertical: 'top' },
-
-  cancelBtn: {
+  ratingBtnRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  ratingCancelBtn: {
     flex: 1,
     paddingVertical: 14,
     backgroundColor: C.bg,
     borderRadius: 12,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: C.border,
   },
-  cancelBtnText: { fontSize: 15, fontWeight: '700', color: C.ink },
-  submitBtn: {
-    flex: 1,
+  ratingCancelText: { fontSize: 15, fontWeight: '700', color: C.ink },
+  ratingSubmitBtn: {
+    flex: 2,
     paddingVertical: 14,
     backgroundColor: C.primary,
     borderRadius: 12,
     alignItems: 'center',
   },
-  submitBtnDisabled: { opacity: 0.7 },
-  submitBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  ratingSubmitText: { fontSize: 15, fontWeight: '700', color: '#fff' },
 
   // Restaurant Picker
   pickerContent: {

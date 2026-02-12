@@ -75,6 +75,14 @@ import CategoryRequestScreen from '../screens/CategoryRequestScreen';
 import CartScreen from '../screens/CartScreen';
 import CreateMarketplaceOrderScreen from '../screens/CreateMarketplaceOrderScreen';
 
+// AMC (Annual Maintenance Contract)
+import AMCDashboardScreen from '../screens/AMCDashboardScreen';
+import AMCRequestScreen from '../screens/AMCRequestScreen';
+import AMCRequestsListScreen from '../screens/AMCRequestsListScreen';
+import AMCRequestDetailScreen from '../screens/AMCRequestDetailScreen';
+import AMCContractsScreen from '../screens/AMCContractsScreen';
+import AMCContractDetailScreen from '../screens/AMCContractDetailScreen';
+
 // Legacy Screens (keeping for compatibility)
 // RequestScreen removed - using MarketplaceScreen instead
 import RequestDetail from '../screens/RequestDetail';
@@ -181,6 +189,14 @@ export default function AppNavigator() {
         <Stack.Screen name="CategoryDetail" component={CategoryDetailScreen} />
         <Stack.Screen name="PaymentTracking" component={PaymentTrackingScreen} />
         <Stack.Screen name="OrderTracking" component={OrderTrackingScreen} />
+
+        {/* AMC Screens */}
+        <Stack.Screen name="AMCDashboard" component={AMCDashboardScreen} />
+        <Stack.Screen name="AMCRequest" component={AMCRequestScreen} />
+        <Stack.Screen name="AMCRequestsList" component={AMCRequestsListScreen} />
+        <Stack.Screen name="AMCRequestDetail" component={AMCRequestDetailScreen} />
+        <Stack.Screen name="AMCContracts" component={AMCContractsScreen} />
+        <Stack.Screen name="AMCContractDetail" component={AMCContractDetailScreen} />
 
         {/* Legacy screens kept for compatibility */}
         {/* RequestScreen removed - using MarketplaceScreen instead */}

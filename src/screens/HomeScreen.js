@@ -525,6 +525,33 @@ export default function HomeScreen({ navigation }) {
               ))}
             </View>
 
+            {/* ══════ AMC BANNER ══════ */}
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={() => navigation.navigate('AMCDashboard')}
+              style={{ paddingHorizontal: 16, marginTop: 14 }}
+            >
+              <LinearGradient
+                colors={['#7C3AED', '#6D28D9', '#5B21B6']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0.5 }}
+                style={st.amcBanner}
+              >
+                <View style={st.amcBannerLeft}>
+                  <View style={st.amcIconBg}>
+                    <Icon name="shield-checkmark" size={22} color="#7C3AED" />
+                  </View>
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={st.amcBannerTitle}>AMC Management</Text>
+                    <Text style={st.amcBannerSub}>Annual maintenance contracts, visits & breakdowns</Text>
+                  </View>
+                </View>
+                <View style={st.amcArrowBg}>
+                  <Icon name="chevron-forward" size={16} color="#fff" />
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+
             {/* ══════ FEED PILLS ══════ */}
             {feed.length > 0 && (
               <ScrollView
@@ -1168,6 +1195,53 @@ const st = StyleSheet.create({
     color: C.ink,
     fontWeight: '700',
     fontSize: 11,
+  },
+
+  /* ── AMC Banner ── */
+  amcBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  amcBannerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  amcIconBg: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  amcBannerTitle: {
+    color: '#fff',
+    fontWeight: '900',
+    fontSize: 15,
+  },
+  amcBannerSub: {
+    color: 'rgba(255,255,255,0.75)',
+    fontSize: 11,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  amcArrowBg: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
   },
 
   /* ── Feed Pills ── */
