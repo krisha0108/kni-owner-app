@@ -83,7 +83,6 @@ export default function VendorLedgerScreen({ navigation }) {
   // Modal states
   const [entryModal, setEntryModal] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [modalKey, setModalKey] = useState(0); // For forcing scroll re-render
   const [form, setForm] = useState({
     vendorName: '', vendorPhone: '', vendorGST: '',
     entryType: 'PURCHASE', amount: '', paymentMode: 'CASH',
@@ -160,7 +159,6 @@ export default function VendorLedgerScreen({ navigation }) {
       billDate: new Date().toISOString().split('T')[0],
       dueDate: '', entryDate: new Date().toISOString().split('T')[0],
     });
-    setModalKey(k => k + 1); // Force ScrollView re-render
     setEntryModal(true);
   };
 
@@ -457,10 +455,9 @@ export default function VendorLedgerScreen({ navigation }) {
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
       <KniBottomNav navigation={navigation} />
 
-      {/* Add Entry Modal */}
-      <Modal visible={entryModal} animationType="slide" transparent onRequestClose={() => setEntryModal(false)}>
-        <View style={st.modalOverlay}>
-          <View style={st.modalContent}>
+      {/* Add Entry Modal - Full screen (no transparent) to fix Android scroll */}
+      <Modal visible={entryModal} animationType="slide" onRequestClose={() => setEntryModal(false)}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: C.card }} edges={['top']}>
             {/* Modal Header */}
             <View style={st.modalHeader}>
               <Text style={st.modalTitle}>Add {getEntryConfig(form.entryType).label}</Text>
@@ -469,21 +466,14 @@ export default function VendorLedgerScreen({ navigation }) {
               </TouchableOpacity>
             </View>
 
-            {/* Modal Body - Scrollable (Fixed) */}
+            {/* Modal Body - Scrollable */}
             <ScrollView
-              key={`modal-scroll-${modalKey}-${form.entryType}`}
               style={st.modalBody}
               contentContainerStyle={st.modalBodyContent}
               showsVerticalScrollIndicator={true}
               keyboardShouldPersistTaps="handled"
-              nestedScrollEnabled={true}
-              bounces={true}
-              scrollEnabled={true}
-              overScrollMode="always"
-              scrollEventThrottle={16}
             >
-              {/* Form Content Wrapper */}
-              <View style={{ minHeight: 750 }}>
+              <View>
                 {/* Entry Type Selection */}
                 <Text style={st.label}>Entry Type *</Text>
               <View style={st.typeGrid}>
@@ -672,8 +662,7 @@ export default function VendorLedgerScreen({ navigation }) {
                 )}
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
+        </SafeAreaView>
       </Modal>
     </SafeAreaView>
   );
@@ -764,8 +753,6 @@ const st = StyleSheet.create({
   emptyBtnText: { fontSize: 14, fontWeight: '600', color: '#fff', marginLeft: 8 },
 
   // Modal
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: C.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, height: '85%' },
   modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: C.border },
   modalTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
   modalClose: { width: 36, height: 36, borderRadius: 18, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },

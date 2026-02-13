@@ -70,9 +70,10 @@ export default function AMCDashboardScreen({ navigation }) {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
+      const params = { ...(selectedRestaurant ? { restaurantId: selectedRestaurant } : {}) };
       const [dashRes, bdRes] = await Promise.all([
-        api.get('/owner/amc-dashboard'),
-        api.get('/owner/amc-breakdown'),
+        api.get('/owner/amc-dashboard', { params }),
+        api.get('/owner/amc-breakdown', { params }),
       ]);
       if (dashRes.data.ok) setData(dashRes.data.data);
       if (bdRes.data.ok) {

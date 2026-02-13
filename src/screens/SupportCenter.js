@@ -575,12 +575,14 @@ export default function SupportCenter({ navigation }) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} />}
       />
 
-      {/* ─── FAB ─── */}
-      <TouchableOpacity style={st.fabWrap} activeOpacity={0.85} onPress={() => { resetForm(); setCreateModalVisible(true); }}>
-        <LinearGradient colors={[C.primary, C.primaryDark]} style={st.fab}>
-          <Icon name="add" size={28} color="#fff" />
-        </LinearGradient>
-      </TouchableOpacity>
+      {/* ─── FAB (hide when empty state shows its own button) ─── */}
+      {filteredTickets.length > 0 && (
+        <TouchableOpacity style={st.fabWrap} activeOpacity={0.85} onPress={() => { resetForm(); setCreateModalVisible(true); }}>
+          <LinearGradient colors={[C.primary, C.primaryDark]} style={st.fab}>
+            <Icon name="add" size={28} color="#fff" />
+          </LinearGradient>
+        </TouchableOpacity>
+      )}
 
       {/* ═══════════ CREATE TICKET MODAL (Full-screen) ═══════════ */}
       <Modal visible={createModalVisible} animationType="slide">

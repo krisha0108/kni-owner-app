@@ -465,10 +465,9 @@ export default function ExpensesScreen({ navigation }) {
         }
       />
 
-      {/* Add/Edit Modal */}
-      <Modal visible={modalVisible} animationType="slide" transparent>
-        <View style={st.modalOverlay}>
-          <View style={st.modalContent}>
+      {/* Add/Edit Modal - Full screen (no transparent) to fix Android scroll */}
+      <Modal visible={modalVisible} animationType="slide" onRequestClose={() => setModalVisible(false)}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: C.card }} edges={['top']}>
             {/* Modal Header */}
             <LinearGradient colors={[C.gradient1, C.gradient2]} style={st.modalHeader}>
               <Text style={st.modalTitle}>{form.id ? 'Edit Expense' : 'Add Expense'}</Text>
@@ -581,8 +580,7 @@ export default function ExpensesScreen({ navigation }) {
                 )}
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
+        </SafeAreaView>
       </Modal>
 
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
@@ -667,12 +665,10 @@ const st = StyleSheet.create({
   emptyBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
 
   // Modal
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: C.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '92%' },
-  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, borderTopLeftRadius: 24, borderTopRightRadius: 24 },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20 },
   modalTitle: { fontSize: 20, fontWeight: '800', color: '#fff' },
   modalClose: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
-  modalBody: { padding: 20 },
+  modalBody: { flex: 1, padding: 20 },
   modalFooter: { flexDirection: 'row', gap: 12, padding: 20, borderTopWidth: 1, borderTopColor: C.border },
 
   // Form
