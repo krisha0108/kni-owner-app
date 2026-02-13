@@ -16,7 +16,7 @@ const PROD_API_BASE_URL = 'https://kitchennetworkinternational.com/api';
 const PROD_IMAGE_BASE_URL = 'https://kitchennetworkinternational.com';
 
 // ⚠️ SWITCH: true = LOCAL, false = PRODUCTION
-const IS_DEV = false;
+const IS_DEV = true;
 
 const API_BASE_URL = IS_DEV ? DEV_API_BASE_URL : PROD_API_BASE_URL;
 const IMAGE_BASE_URL = IS_DEV ? DEV_IMAGE_BASE_URL : PROD_IMAGE_BASE_URL;

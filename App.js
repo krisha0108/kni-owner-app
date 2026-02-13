@@ -15,7 +15,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import AppNavigator from './src/navigation/AppNavigator';
 import { RestaurantProvider } from './src/context/RestaurantContext';
-import { getMessaging, requestPermission as requestFCMPermission, onMessage, onNotificationOpenedApp, getInitialNotification, AuthorizationStatus } from '@react-native-firebase/messaging';
+import { getMessaging, requestPermission as requestFCMPermission, onNotificationOpenedApp, getInitialNotification, AuthorizationStatus } from '@react-native-firebase/messaging';
 import notifee, { AndroidImportance } from '@notifee/react-native';
 import { Alert, PermissionsAndroid, Platform } from 'react-native';
 import notificationService from './src/services/notificationService';
@@ -118,19 +118,8 @@ function useNotifications() {
 
     requestPermission();
 
-    // Foreground notifications
-    const unsubscribe = onMessage(getMessaging(), async remoteMessage => {
-      console.log('📩 Foreground message:', remoteMessage);
-
-      // Show notification with Notifee
-      await notifee.displayNotification({
-        title: remoteMessage.notification?.title || remoteMessage.data?.title || 'Notification',
-        body: remoteMessage.notification?.body || remoteMessage.data?.body || '',
-        android: {
-          channelId: 'high_importance_channel',
-        },
-      });
-    });
+    // NOTE: Foreground notification display is handled by notificationService.js
+    // Do NOT add onMessage display here - it causes duplicate notifications
 
     // App opened from background
     const unsubscribeOpened = onNotificationOpenedApp(getMessaging(), remoteMessage => {
@@ -152,7 +141,6 @@ function useNotifications() {
       });
 
     return () => {
-      unsubscribe();
       unsubscribeOpened();
     };
   }, []);

@@ -154,21 +154,39 @@ export default function RestaurantRegisterScreen({ navigation }) {
 
       if (res.data?.ok) {
         const user = res.data?.data?.user;
-        const token = res.data?.data?.token;
+        const requiresVerification = res.data?.data?.requiresVerification;
 
-        // Save session
-        await saveSessionAndFcm(token, user, 'password');
-
-        Alert.alert(
-          'Welcome to KNI Super App!',
-          'Registration successful. Let\'s set up your restaurant.',
-          [
-            {
-              text: 'Continue',
-              onPress: () => navigation.replace('RestaurantOnboarding'),
-            },
-          ]
-        );
+        if (requiresVerification) {
+          // Redirect to email verification screen
+          Alert.alert(
+            'Verify Your Email',
+            'A verification code has been sent to your email address.',
+            [
+              {
+                text: 'Verify Now',
+                onPress: () =>
+                  navigation.replace('EmailVerification', {
+                    email: email.trim().toLowerCase(),
+                    userName: form.name.trim(),
+                  }),
+              },
+            ]
+          );
+        } else {
+          // Fallback: if no verification needed (shouldn't happen for new owners)
+          const token = res.data?.data?.token;
+          await saveSessionAndFcm(token, user, 'password');
+          Alert.alert(
+            'Welcome to KNI Super App!',
+            'Registration successful. Let\'s set up your restaurant.',
+            [
+              {
+                text: 'Continue',
+                onPress: () => navigation.replace('RestaurantOnboarding'),
+              },
+            ]
+          );
+        }
       } else {
         Alert.alert('Registration Failed', res.data?.error || 'Please try again.');
       }

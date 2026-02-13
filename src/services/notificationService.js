@@ -1,4 +1,4 @@
-import { getMessaging, requestPermission, getToken, onTokenRefresh, onMessage, setBackgroundMessageHandler, onNotificationOpenedApp, getInitialNotification, hasPermission, AuthorizationStatus } from '@react-native-firebase/messaging';
+import { getMessaging, requestPermission, getToken, onTokenRefresh, onMessage, onNotificationOpenedApp, getInitialNotification, hasPermission, AuthorizationStatus } from '@react-native-firebase/messaging';
 import notifee from '@notifee/react-native';
 import { api } from '../api/client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -11,12 +11,19 @@ import { Platform } from 'react-native';
 
 class NotificationService {
   navigationRef = null;
+  _initialized = false;
+  _onMessageUnsubscribe = null;
 
   /**
    * Initialize notification service
    * Call this in App.js on mount
    */
   async initialize() {
+    // Guard against multiple initializations (prevents duplicate listeners)
+    if (this._initialized) {
+      console.log('ℹ️ Notification service already initialized, skipping');
+      return;
+    }
     try {
       console.log('🔔 Initializing notification service');
 
@@ -45,6 +52,7 @@ class NotificationService {
         console.log('ℹ️ FCM token already registered');
       }
 
+      this._initialized = true;
       console.log('✅ Notification service initialized');
     } catch (error) {
       console.error('❌ Notification service initialization error:', error);
@@ -185,17 +193,13 @@ class NotificationService {
 
   /**
    * Setup notification listeners
+   * NOTE: Background handler is in index.js (required at top level by RN Firebase).
+   * Only foreground + navigation handlers are set up here.
    */
   async setupNotificationListeners() {
-    // Foreground messages
-    onMessage(getMessaging(), async (remoteMessage) => {
+    // Foreground messages - this is the ONLY place that displays foreground notifications
+    this._onMessageUnsubscribe = onMessage(getMessaging(), async (remoteMessage) => {
       console.log('📬 Foreground notification received:', remoteMessage);
-      await this.displayNotification(remoteMessage);
-    });
-
-    // Background messages (when app is in background but not killed)
-    setBackgroundMessageHandler(getMessaging(), async (remoteMessage) => {
-      console.log('📬 Background notification received:', remoteMessage);
       await this.displayNotification(remoteMessage);
     });
 

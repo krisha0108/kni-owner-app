@@ -101,6 +101,25 @@ export default function RestaurantLogin({ navigation }) {
       }
     } catch (error) {
       console.log('❌ Login error:', error);
+
+      // Handle email not verified
+      if (error.response?.data?.code === 'EMAIL_NOT_VERIFIED') {
+        Alert.alert(
+          'Email Not Verified',
+          'A verification code has been sent to your email.',
+          [
+            {
+              text: 'Verify Now',
+              onPress: () =>
+                navigation.navigate('EmailVerification', {
+                  email: error.response?.data?.email || email.trim(),
+                }),
+            },
+          ]
+        );
+        return;
+      }
+
       const errorMessage = error.response?.data?.error || error.message || 'Login failed';
       Alert.alert('Login Error', errorMessage);
     } finally {
@@ -245,6 +264,14 @@ export default function RestaurantLogin({ navigation }) {
             </TouchableOpacity>
           </View>
 
+          {/* Forgot Password */}
+          <TouchableOpacity
+            onPress={() => navigation.navigate('ForgotPassword')}
+            style={styles.forgotPasswordContainer}
+          >
+            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+          </TouchableOpacity>
+
           {/* Login Button */}
           <TouchableOpacity
             style={[styles.loginButton, loading && styles.loginButtonDisabled]}
@@ -348,14 +375,24 @@ const styles = StyleSheet.create({
   eyeIcon: {
     padding: 8,
   },
+  forgotPasswordContainer: {
+    alignSelf: 'flex-end',
+    marginBottom: 8,
+    marginTop: -8,
+  },
+  forgotPasswordText: {
+    fontSize: 14,
+    color: '#EF3A3A',
+    fontWeight: '500',
+  },
   loginButton: {
-    backgroundColor: '#FF6B35',
+    backgroundColor: '#EF3A3A',
     borderRadius: 12,
     height: 56,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 8,
-    shadowColor: '#FF6B35',
+    shadowColor: '#EF3A3A',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -418,7 +455,7 @@ const styles = StyleSheet.create({
   },
   registerLink: {
     fontSize: 14,
-    color: '#FF6B35',
+    color: '#EF3A3A',
     fontWeight: '600',
   },
 });

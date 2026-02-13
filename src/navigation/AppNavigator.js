@@ -9,6 +9,8 @@ import SplashScreen from '../screens/SplashScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import RestaurantLogin from '../screens/RestaurantLogin';
 import RestaurantRegister from '../screens/RestaurantRegisterScreen';
+import EmailVerificationScreen from '../screens/EmailVerificationScreen';
+import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import RestaurantOnboarding from '../screens/RestaurantOnboardingScreen';
 import PendingApprovalScreen from '../screens/PendingApprovalScreen';
 
@@ -136,6 +138,8 @@ export default function AppNavigator() {
         <Stack.Screen name="Onboarding" component={OnboardingScreen} />
         <Stack.Screen name="RestaurantLogin" component={RestaurantLogin} />
         <Stack.Screen name="RestaurantRegister" component={RestaurantRegister} />
+        <Stack.Screen name="EmailVerification" component={EmailVerificationScreen} />
+        <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
         <Stack.Screen name="RestaurantOnboarding" component={RestaurantOnboarding} />
         <Stack.Screen name="PendingApproval" component={PendingApprovalScreen} />
         <Stack.Screen name="TeamAccept" component={TeamAcceptScreen} />
