@@ -9,6 +9,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { api, getImageUrl } from '../api/client';
 
+import { scale, moderateScale } from '../utils/responsive';
 const C = {
   primary: '#EF3A3A',
   ink: '#1D2254',
@@ -123,8 +124,8 @@ export default function RestaurantEditScreen({ navigation, route }) {
       {
         mediaType: 'photo',
         quality: 0.8,
-        maxWidth: 1024,
-        maxHeight: 1024,
+        maxWidth: scale(1024),
+        maxHeight: scale(1024),
       },
       (response) => {
         if (response.didCancel) return;
@@ -149,8 +150,8 @@ export default function RestaurantEditScreen({ navigation, route }) {
       {
         mediaType: 'photo',
         quality: 0.8,
-        maxWidth: 1920,
-        maxHeight: 1920,
+        maxWidth: scale(1920),
+        maxHeight: scale(1920),
       },
       (response) => {
         if (response.didCancel) return;
@@ -273,10 +274,10 @@ export default function RestaurantEditScreen({ navigation, route }) {
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Icon name="arrow-back" size={24} color={C.ink} />
+            <Icon name="arrow-back" size={scale(24)} color={C.ink} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Edit Restaurant</Text>
-          <View style={{ width: 40 }} />
+          <View style={{ width: scale(40) }} />
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={C.primary} />
@@ -293,10 +294,10 @@ export default function RestaurantEditScreen({ navigation, route }) {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Icon name="arrow-back" size={24} color={C.ink} />
+          <Icon name="arrow-back" size={scale(24)} color={C.ink} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Edit Restaurant</Text>
-        <View style={{ width: 40 }} />
+        <View style={{ width: scale(40) }} />
       </View>
 
       <ScrollView
@@ -314,12 +315,12 @@ export default function RestaurantEditScreen({ navigation, route }) {
                 style={styles.changeImageBtn}
                 onPress={handlePickRestaurantImage}
               >
-                <Icon name="camera" size={20} color={C.card} />
+                <Icon name="camera" size={scale(20)} color={C.card} />
               </TouchableOpacity>
             </View>
           ) : (
             <View style={styles.imagePlaceholder}>
-              <Icon name="camera-outline" size={40} color={C.muted} />
+              <Icon name="camera-outline" size={scale(40)} color={C.muted} />
               <Text style={styles.imagePlaceholderText}>Add Restaurant Photo</Text>
             </View>
           )}
@@ -329,7 +330,7 @@ export default function RestaurantEditScreen({ navigation, route }) {
         <Text style={styles.sectionTitle}>Basic Information</Text>
 
         <View style={styles.inputBox}>
-          <Icon name="business" size={18} color={C.primary} style={styles.inputIcon} />
+          <Icon name="business" size={scale(18)} color={C.primary} style={styles.inputIcon} />
           <TextInput
             placeholder="Restaurant Name *"
             style={styles.input}
@@ -340,10 +341,10 @@ export default function RestaurantEditScreen({ navigation, route }) {
         </View>
 
         <View style={[styles.inputBox, { alignItems: 'flex-start' }]}>
-          <Icon name="location" size={18} color={C.primary} style={[styles.inputIcon, { marginTop: 12 }]} />
+          <Icon name="location" size={scale(18)} color={C.primary} style={[styles.inputIcon, { marginTop: scale(12) }]} />
           <TextInput
             placeholder="Full Address *"
-            style={[styles.input, { minHeight: 70, textAlignVertical: 'top', paddingTop: 10 }]}
+            style={[styles.input, { minHeight: scale(70), textAlignVertical: 'top', paddingTop: scale(10) }]}
             multiline
             numberOfLines={3}
             value={form.address}
@@ -358,11 +359,11 @@ export default function RestaurantEditScreen({ navigation, route }) {
           onPress={() => setShowStatePicker(true)}
           disabled={saving}
         >
-          <Icon name="map" size={18} color={C.primary} style={styles.inputIcon} />
+          <Icon name="map" size={scale(18)} color={C.primary} style={styles.inputIcon} />
           <Text style={selectedStateName ? styles.pickerBtnText : styles.pickerBtnPlaceholder}>
             {selectedStateName || 'Select State'}
           </Text>
-          <Icon name="chevron-down" size={18} color={C.muted} />
+          <Icon name="chevron-down" size={scale(18)} color={C.muted} />
         </TouchableOpacity>
 
         <Text style={styles.pickerLabel}>City *</Text>
@@ -377,15 +378,15 @@ export default function RestaurantEditScreen({ navigation, route }) {
           }}
           disabled={saving}
         >
-          <Icon name="business" size={18} color={C.primary} style={styles.inputIcon} />
+          <Icon name="business" size={scale(18)} color={C.primary} style={styles.inputIcon} />
           <Text style={form.city ? styles.pickerBtnText : styles.pickerBtnPlaceholder}>
             {form.city || 'Select City'}
           </Text>
-          <Icon name="chevron-down" size={18} color={C.muted} />
+          <Icon name="chevron-down" size={scale(18)} color={C.muted} />
         </TouchableOpacity>
 
         <View style={styles.inputBox}>
-          <Icon name="location-outline" size={18} color={C.primary} style={styles.inputIcon} />
+          <Icon name="location-outline" size={scale(18)} color={C.primary} style={styles.inputIcon} />
           <TextInput
             placeholder="Pincode (6 digits)"
             style={styles.input}
@@ -401,7 +402,7 @@ export default function RestaurantEditScreen({ navigation, route }) {
         <Text style={styles.sectionTitle}>FSSAI Details</Text>
 
         <View style={styles.inputBox}>
-          <Icon name="document-text" size={18} color={C.primary} style={styles.inputIcon} />
+          <Icon name="document-text" size={scale(18)} color={C.primary} style={styles.inputIcon} />
           <TextInput
             placeholder="FSSAI Number (14 digits)"
             style={styles.input}
@@ -421,12 +422,12 @@ export default function RestaurantEditScreen({ navigation, route }) {
                 style={styles.changeImageBtn}
                 onPress={handlePickFssaiCertificate}
               >
-                <Icon name="camera" size={20} color={C.card} />
+                <Icon name="camera" size={scale(20)} color={C.card} />
               </TouchableOpacity>
             </View>
           ) : (
             <View style={styles.certificatePlaceholder}>
-              <Icon name="cloud-upload-outline" size={30} color={C.primary} />
+              <Icon name="cloud-upload-outline" size={scale(30)} color={C.primary} />
               <Text style={styles.certificatePlaceholderText}>Upload FSSAI Certificate</Text>
             </View>
           )}
@@ -451,14 +452,14 @@ export default function RestaurantEditScreen({ navigation, route }) {
               <ActivityIndicator color={C.card} />
             ) : (
               <>
-                <Icon name="checkmark" size={20} color={C.card} />
+                <Icon name="checkmark" size={scale(20)} color={C.card} />
                 <Text style={styles.saveButtonText}>Save Changes</Text>
               </>
             )}
           </TouchableOpacity>
         </View>
 
-        <View style={{ height: 40 }} />
+        <View style={{ height: scale(40) }} />
       </ScrollView>
 
       {/* State Picker Modal */}
@@ -468,7 +469,7 @@ export default function RestaurantEditScreen({ navigation, route }) {
             <View style={styles.pickerHeader}>
               <Text style={styles.pickerTitle}>Select State</Text>
               <TouchableOpacity onPress={() => setShowStatePicker(false)}>
-                <Icon name="close" size={24} color={C.ink} />
+                <Icon name="close" size={scale(24)} color={C.ink} />
               </TouchableOpacity>
             </View>
             <ScrollView style={styles.pickerList}>
@@ -487,7 +488,7 @@ export default function RestaurantEditScreen({ navigation, route }) {
                   <Text style={[styles.pickerItemText, selectedStateId === state.id && styles.pickerItemTextActive]}>
                     {state.name}
                   </Text>
-                  {selectedStateId === state.id && <Icon name="checkmark" size={20} color={C.primary} />}
+                  {selectedStateId === state.id && <Icon name="checkmark" size={scale(20)} color={C.primary} />}
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -502,7 +503,7 @@ export default function RestaurantEditScreen({ navigation, route }) {
             <View style={styles.pickerHeader}>
               <Text style={styles.pickerTitle}>Select City</Text>
               <TouchableOpacity onPress={() => setShowCityPicker(false)}>
-                <Icon name="close" size={24} color={C.ink} />
+                <Icon name="close" size={scale(24)} color={C.ink} />
               </TouchableOpacity>
             </View>
             <ScrollView style={styles.pickerList}>
@@ -518,7 +519,7 @@ export default function RestaurantEditScreen({ navigation, route }) {
                   <Text style={[styles.pickerItemText, form.city === city.name && styles.pickerItemTextActive]}>
                     {city.name}
                   </Text>
-                  {form.city === city.name && <Icon name="checkmark" size={20} color={C.primary} />}
+                  {form.city === city.name && <Icon name="checkmark" size={scale(20)} color={C.primary} />}
                 </TouchableOpacity>
               ))}
               {cities.length === 0 && (
@@ -541,17 +542,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(12),
     backgroundColor: C.card,
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
   backBtn: {
-    width: 40,
+    width: scale(40),
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: moderateScale(18),
     fontWeight: '700',
     color: C.ink,
   },
@@ -559,7 +560,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
+    padding: scale(16),
   },
   loadingContainer: {
     flex: 1,
@@ -567,20 +568,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: C.muted,
-    marginTop: 12,
+    marginTop: scale(12),
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: '700',
     color: C.ink,
-    marginBottom: 12,
-    marginTop: 8,
+    marginBottom: scale(12),
+    marginTop: scale(8),
   },
   imageUploadBtn: {
-    marginBottom: 16,
-    borderRadius: 12,
+    marginBottom: scale(16),
+    borderRadius: scale(12),
     overflow: 'hidden',
   },
   imagePreviewContainer: {
@@ -588,38 +589,38 @@ const styles = StyleSheet.create({
   },
   imagePreview: {
     width: '100%',
-    height: 180,
-    borderRadius: 12,
+    height: scale(180),
+    borderRadius: scale(12),
   },
   certificatePreview: {
     width: '100%',
-    height: 120,
-    borderRadius: 12,
+    height: scale(120),
+    borderRadius: scale(12),
     resizeMode: 'contain',
     backgroundColor: C.card,
   },
   changeImageBtn: {
     position: 'absolute',
-    bottom: 8,
-    right: 8,
+    bottom: scale(8),
+    right: scale(8),
     backgroundColor: C.primary,
-    borderRadius: 20,
-    padding: 8,
+    borderRadius: scale(20),
+    padding: scale(8),
   },
   imagePlaceholder: {
     backgroundColor: C.card,
     borderWidth: 2,
     borderColor: C.border,
     borderStyle: 'dashed',
-    borderRadius: 12,
-    height: 140,
+    borderRadius: scale(12),
+    height: scale(140),
     justifyContent: 'center',
     alignItems: 'center',
   },
   imagePlaceholderText: {
-    marginTop: 10,
+    marginTop: scale(10),
     color: C.text,
-    fontSize: 15,
+    fontSize: moderateScale(15),
     fontWeight: '600',
   },
   certificatePlaceholder: {
@@ -627,16 +628,16 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: C.primary,
     borderStyle: 'dashed',
-    borderRadius: 12,
-    height: 80,
+    borderRadius: scale(12),
+    height: scale(80),
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 8,
+    gap: scale(8),
   },
   certificatePlaceholderText: {
     color: C.primary,
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '600',
   },
   inputBox: {
@@ -645,28 +646,28 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.border,
     backgroundColor: C.card,
-    borderRadius: 12,
-    paddingHorizontal: 14,
+    borderRadius: scale(12),
+    paddingHorizontal: scale(14),
     paddingVertical: Platform.OS === 'ios' ? 12 : 10,
-    marginBottom: 12,
+    marginBottom: scale(12),
   },
   inputIcon: {
-    marginRight: 10,
+    marginRight: scale(10),
   },
   input: {
     flex: 1,
     color: C.text,
-    fontSize: 15,
+    fontSize: moderateScale(15),
   },
   buttonContainer: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 24,
+    gap: scale(12),
+    marginTop: scale(24),
   },
   cancelButton: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingVertical: scale(14),
+    borderRadius: scale(12),
     backgroundColor: C.card,
     borderWidth: 1,
     borderColor: C.border,
@@ -674,32 +675,32 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     color: C.text,
-    fontSize: 15,
+    fontSize: moderateScale(15),
     fontWeight: '600',
   },
   saveButton: {
     flex: 1,
     flexDirection: 'row',
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingVertical: scale(14),
+    borderRadius: scale(12),
     backgroundColor: C.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: scale(6),
   },
   saveButtonDisabled: {
     opacity: 0.7,
   },
   saveButtonText: {
     color: C.card,
-    fontSize: 15,
+    fontSize: moderateScale(15),
     fontWeight: '600',
   },
   pickerLabel: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     fontWeight: '600',
     color: C.ink,
-    marginBottom: 6,
+    marginBottom: scale(6),
   },
   pickerBtn: {
     flexDirection: 'row',
@@ -707,13 +708,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.border,
     backgroundColor: C.card,
-    borderRadius: 12,
-    paddingHorizontal: 14,
+    borderRadius: scale(12),
+    paddingHorizontal: scale(14),
     paddingVertical: Platform.OS === 'ios' ? 14 : 12,
-    marginBottom: 12,
+    marginBottom: scale(12),
   },
-  pickerBtnText: { flex: 1, fontSize: 15, color: C.text },
-  pickerBtnPlaceholder: { flex: 1, fontSize: 15, color: C.muted },
+  pickerBtnText: { flex: 1, fontSize: moderateScale(15), color: C.text },
+  pickerBtnPlaceholder: { flex: 1, fontSize: moderateScale(15), color: C.muted },
   pickerOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -721,32 +722,32 @@ const styles = StyleSheet.create({
   },
   pickerContainer: {
     backgroundColor: C.card,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: scale(20),
+    borderTopRightRadius: scale(20),
     maxHeight: '50%',
   },
   pickerHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: scale(20),
+    paddingVertical: scale(16),
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
-  pickerTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
-  pickerList: { paddingHorizontal: 8 },
+  pickerTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink },
+  pickerList: { paddingHorizontal: scale(8) },
   pickerItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(14),
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
   pickerItemActive: { backgroundColor: '#FEE2E2' },
-  pickerItemText: { fontSize: 15, color: C.ink },
+  pickerItemText: { fontSize: moderateScale(15), color: C.ink },
   pickerItemTextActive: { color: C.primary, fontWeight: '600' },
-  pickerEmpty: { fontSize: 14, color: C.muted, textAlign: 'center', paddingVertical: 20 },
+  pickerEmpty: { fontSize: moderateScale(14), color: C.muted, textAlign: 'center', paddingVertical: scale(20) },
 });

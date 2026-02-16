@@ -17,6 +17,7 @@ import { api } from '../api/client';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
+import { scale, moderateScale } from '../utils/responsive';
 const C = {
   primary: '#EF3A3A',
   ink: '#1D2254',
@@ -38,8 +39,8 @@ export default function PaymentUploadScreen({ route, navigation }) {
     const result = await launchImageLibrary({
       mediaType: 'photo',
       quality: 0.8,
-      maxWidth: 1920,
-      maxHeight: 1920,
+      maxWidth: scale(1920),
+      maxHeight: scale(1920),
     });
 
     if (!result.didCancel && result.assets?.[0]) {
@@ -96,11 +97,11 @@ export default function PaymentUploadScreen({ route, navigation }) {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Icon name="arrow-back" size={24} color={C.ink} />
+          <Icon name="arrow-back" size={scale(24)} color={C.ink} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Upload Payment Proof</Text>
-        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
-          <Icon name="menu" size={22} color="#1D2254" />
+        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
+          <Icon name="menu" size={scale(22)} color="#1D2254" />
         </TouchableOpacity>
       </View>
 
@@ -133,7 +134,7 @@ export default function PaymentUploadScreen({ route, navigation }) {
             onPress={handleSelectImage}
             disabled={!!paymentUrl}
           >
-            <Icon name="image-outline" size={24} color={paymentUrl ? C.muted : C.primary} />
+            <Icon name="image-outline" size={scale(24)} color={paymentUrl ? C.muted : C.primary} />
             <Text style={[styles.uploadButtonText, paymentUrl && styles.uploadButtonTextDisabled]}>
               Select Image
             </Text>
@@ -147,7 +148,7 @@ export default function PaymentUploadScreen({ route, navigation }) {
                 style={styles.removeImageBtn}
                 onPress={() => setImageUri(null)}
               >
-                <Icon name="close-circle" size={24} color={C.danger} />
+                <Icon name="close-circle" size={scale(24)} color={C.danger} />
               </TouchableOpacity>
             </View>
           )}
@@ -155,7 +156,7 @@ export default function PaymentUploadScreen({ route, navigation }) {
 
         {/* Info Box */}
         <View style={styles.infoBox}>
-          <Icon name="information-circle-outline" size={20} color={C.primary} />
+          <Icon name="information-circle-outline" size={scale(20)} color={C.primary} />
           <Text style={styles.infoText}>
             Upload clear image of payment confirmation to help verify your booking faster.
           </Text>
@@ -171,7 +172,7 @@ export default function PaymentUploadScreen({ route, navigation }) {
             <ActivityIndicator color="#FFF" />
           ) : (
             <>
-              <Icon name="cloud-upload-outline" size={20} color="#FFF" />
+              <Icon name="cloud-upload-outline" size={scale(20)} color="#FFF" />
               <Text style={styles.submitButtonText}>Upload Payment Proof</Text>
             </>
           )}
@@ -192,52 +193,52 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(12),
     backgroundColor: C.card,
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
   backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(12),
     backgroundColor: C.bg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: moderateScale(18),
     fontWeight: '700',
     color: C.ink,
   },
   content: {
     flex: 1,
-    padding: 16,
+    padding: scale(16),
   },
   section: {
-    marginBottom: 24,
+    marginBottom: scale(24),
   },
   label: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '600',
     color: C.text,
-    marginBottom: 8,
+    marginBottom: scale(8),
   },
   input: {
     backgroundColor: C.card,
     borderWidth: 1,
     borderColor: C.border,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 15,
+    borderRadius: scale(12),
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(12),
+    fontSize: moderateScale(15),
     color: C.text,
   },
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 24,
+    marginVertical: scale(24),
   },
   dividerLine: {
     flex: 1,
@@ -245,8 +246,8 @@ const styles = StyleSheet.create({
     backgroundColor: C.border,
   },
   dividerText: {
-    paddingHorizontal: 16,
-    fontSize: 14,
+    paddingHorizontal: scale(16),
+    fontSize: moderateScale(14),
     fontWeight: '600',
     color: C.muted,
   },
@@ -254,16 +255,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: scale(8),
     backgroundColor: C.card,
     borderWidth: 2,
     borderColor: C.primary,
     borderStyle: 'dashed',
-    borderRadius: 12,
-    paddingVertical: 24,
+    borderRadius: scale(12),
+    paddingVertical: scale(24),
   },
   uploadButtonText: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: '600',
     color: C.primary,
   },
@@ -271,52 +272,52 @@ const styles = StyleSheet.create({
     color: C.muted,
   },
   previewContainer: {
-    marginTop: 16,
+    marginTop: scale(16),
     position: 'relative',
   },
   preview: {
     width: '100%',
-    height: 300,
-    borderRadius: 12,
+    height: scale(300),
+    borderRadius: scale(12),
     resizeMode: 'cover',
   },
   removeImageBtn: {
     position: 'absolute',
-    top: 8,
-    right: 8,
+    top: scale(8),
+    right: scale(8),
     backgroundColor: C.card,
-    borderRadius: 12,
+    borderRadius: scale(12),
   },
   infoBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 12,
+    gap: scale(12),
     backgroundColor: '#FEF2F2',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 24,
+    padding: scale(16),
+    borderRadius: scale(12),
+    marginBottom: scale(24),
   },
   infoText: {
     flex: 1,
-    fontSize: 13,
+    fontSize: moderateScale(13),
     color: C.text,
-    lineHeight: 18,
+    lineHeight: moderateScale(18),
   },
   submitButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: scale(8),
     backgroundColor: C.primary,
-    borderRadius: 12,
-    paddingVertical: 16,
-    marginBottom: 32,
+    borderRadius: scale(12),
+    paddingVertical: scale(16),
+    marginBottom: scale(32),
   },
   submitButtonDisabled: {
     opacity: 0.5,
   },
   submitButtonText: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: '700',
     color: '#FFF',
   },

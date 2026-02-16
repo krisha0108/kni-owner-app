@@ -10,6 +10,7 @@ import { api, IMAGE_BASE_URL } from '../api/client';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
+import { scale, moderateScale } from '../utils/responsive';
 /* ---------- THEME ---------- */
 const C = {
   primary: '#EF3A3A', ink: '#0F172A', bg: '#F5F7FA', card: '#FFFFFF',
@@ -84,34 +85,34 @@ function OrderCard({ order, onPress }) {
           <Image source={{ uri: imageUrl }} style={st.cardImage} />
         ) : (
           <View style={[st.cardImage, st.cardImagePlaceholder]}>
-            <Icon name="cube-outline" size={24} color={C.muted} />
+            <Icon name="cube-outline" size={scale(24)} color={C.muted} />
           </View>
         )}
         <View style={st.cardContent}>
           <View style={st.cardHeader}>
             <Text style={st.orderId}>{order.order_id}</Text>
             <View style={[st.statusBadge, { backgroundColor: status.bg }]}>
-              <Icon name={status.icon} size={12} color={status.fg} />
+              <Icon name={status.icon} size={scale(12)} color={status.fg} />
               <Text style={[st.statusText, { color: status.fg }]}>{status.label}</Text>
             </View>
           </View>
           <Text style={st.productName} numberOfLines={1}>{order.product_name}</Text>
           <View style={st.cardMeta}>
-            <Icon name="location-outline" size={14} color={C.muted} />
+            <Icon name="location-outline" size={scale(14)} color={C.muted} />
             <Text style={st.metaText} numberOfLines={1}>{order.restaurant_name || order.location}</Text>
           </View>
           <View style={st.cardMeta}>
-            <Icon name="calendar-outline" size={14} color={C.muted} />
+            <Icon name="calendar-outline" size={scale(14)} color={C.muted} />
             <Text style={st.metaText}>{formatDate(order.service_date || order.created_at)}</Text>
           </View>
           {order.engineer && (
             <View style={st.cardMeta}>
-              <Icon name="person-outline" size={14} color={C.indigo} />
+              <Icon name="person-outline" size={scale(14)} color={C.indigo} />
               <Text style={[st.metaText, { color: C.indigo }]}>{order.engineer.name}</Text>
             </View>
           )}
         </View>
-        <Icon name="chevron-forward" size={20} color={C.muted} />
+        <Icon name="chevron-forward" size={scale(20)} color={C.muted} />
       </View>
     </TouchableOpacity>
   );
@@ -124,7 +125,7 @@ function EmptyState({ type }) {
     <View style={st.empty}>
       <Icon
         name={isActive ? 'clipboard-outline' : 'checkmark-done-circle-outline'}
-        size={64}
+        size={scale(64)}
         color={C.muted}
       />
       <Text style={st.emptyTitle}>
@@ -215,11 +216,11 @@ export default function OrdersListScreen({ navigation }) {
       {/* Header */}
       <View style={st.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={st.hBtn}>
-          <Icon name="chevron-back" size={20} color={C.ink} />
+          <Icon name="chevron-back" size={scale(20)} color={C.ink} />
         </TouchableOpacity>
         <Text style={st.hTitle}>My Orders</Text>
-        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
-          <Icon name="menu" size={22} color="#1D2254" />
+        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
+          <Icon name="menu" size={scale(22)} color="#1D2254" />
         </TouchableOpacity>
       </View>
 
@@ -251,8 +252,8 @@ export default function OrdersListScreen({ navigation }) {
           keyExtractor={(item) => String(item.id)}
           renderItem={renderItem}
           contentContainerStyle={{
-            paddingHorizontal: 16,
-            paddingTop: 8,
+            paddingHorizontal: scale(16),
+            paddingTop: scale(8),
             paddingBottom: insets.bottom + 20
           }}
           ListEmptyComponent={<EmptyState type={activeTab} />}
@@ -264,7 +265,7 @@ export default function OrdersListScreen({ navigation }) {
               tintColor={C.primary}
             />
           }
-          ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+          ItemSeparatorComponent={() => <View style={{ height: scale(12) }} />}
           showsVerticalScrollIndicator={false}
         />
       )}
@@ -277,16 +278,16 @@ export default function OrdersListScreen({ navigation }) {
 /* ---------- STYLES ---------- */
 const st = StyleSheet.create({
   header: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(12),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between'
   },
   hBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(12),
     borderWidth: 1,
     borderColor: '#EEF2F7',
     backgroundColor: '#fff',
@@ -295,24 +296,24 @@ const st = StyleSheet.create({
   },
   hTitle: {
     color: C.ink,
-    fontSize: 20,
+    fontSize: moderateScale(20),
     fontWeight: '800'
   },
 
   tabs: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    gap: 12,
-    marginBottom: 8
+    paddingHorizontal: scale(16),
+    gap: scale(12),
+    marginBottom: scale(8)
   },
   tabBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    borderRadius: 14,
+    gap: scale(8),
+    paddingVertical: scale(12),
+    borderRadius: scale(14),
     backgroundColor: '#fff',
     borderWidth: 1,
     borderColor: C.border
@@ -322,7 +323,7 @@ const st = StyleSheet.create({
     borderColor: C.primary
   },
   tabLabel: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '700',
     color: C.muted
   },
@@ -330,16 +331,16 @@ const st = StyleSheet.create({
     color: '#fff'
   },
   tabBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
+    paddingHorizontal: scale(8),
+    paddingVertical: scale(2),
+    borderRadius: scale(10),
     backgroundColor: '#F3F4F6'
   },
   tabBadgeActive: {
     backgroundColor: 'rgba(255,255,255,0.25)'
   },
   tabBadgeText: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     fontWeight: '700',
     color: C.muted
   },
@@ -353,9 +354,9 @@ const st = StyleSheet.create({
     justifyContent: 'center'
   },
   loaderText: {
-    marginTop: 12,
+    marginTop: scale(12),
     color: C.muted,
-    fontSize: 14
+    fontSize: moderateScale(14)
   },
 
   card: {
@@ -363,17 +364,17 @@ const st = StyleSheet.create({
     borderRadius: R,
     borderWidth: 1,
     borderColor: '#EEF2F7',
-    padding: 14
+    padding: scale(14)
   },
   cardRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12
+    gap: scale(12)
   },
   cardImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 12,
+    width: scale(60),
+    height: scale(60),
+    borderRadius: scale(12),
     backgroundColor: '#F3F4F6'
   },
   cardImagePlaceholder: {
@@ -382,43 +383,43 @@ const st = StyleSheet.create({
   },
   cardContent: {
     flex: 1,
-    gap: 4
+    gap: scale(4)
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 8
+    gap: scale(8)
   },
   orderId: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     fontWeight: '600',
     color: C.muted
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8
+    gap: scale(4),
+    paddingHorizontal: scale(8),
+    paddingVertical: scale(3),
+    borderRadius: scale(8)
   },
   statusText: {
-    fontSize: 11,
+    fontSize: moderateScale(11),
     fontWeight: '700'
   },
   productName: {
-    fontSize: 15,
+    fontSize: moderateScale(15),
     fontWeight: '700',
     color: C.text
   },
   cardMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6
+    gap: scale(6)
   },
   metaText: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     color: C.muted,
     flex: 1
   },
@@ -426,19 +427,19 @@ const st = StyleSheet.create({
   empty: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 60
+    paddingVertical: scale(60)
   },
   emptyTitle: {
-    marginTop: 16,
-    fontSize: 18,
+    marginTop: scale(16),
+    fontSize: moderateScale(18),
     fontWeight: '700',
     color: C.ink
   },
   emptyText: {
-    marginTop: 8,
-    fontSize: 14,
+    marginTop: scale(8),
+    fontSize: moderateScale(14),
     color: C.muted,
     textAlign: 'center',
-    paddingHorizontal: 40
+    paddingHorizontal: scale(40)
   }
 });

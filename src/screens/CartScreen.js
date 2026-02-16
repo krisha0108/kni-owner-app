@@ -16,6 +16,7 @@ import { api } from '../api/client';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
+import { scale, moderateScale } from '../utils/responsive';
 const C = {
   primary: '#EF3A3A',
   ink: '#1D2254',
@@ -207,7 +208,7 @@ export default function CartScreen({ navigation }) {
         <View style={[styles.itemIcon, { backgroundColor: color + '15' }]}>
           <Icon
             name={isService ? 'construct-outline' : 'hardware-chip-outline'}
-            size={20}
+            size={scale(20)}
             color={color}
           />
         </View>
@@ -229,7 +230,7 @@ export default function CartScreen({ navigation }) {
             >
               <Icon
                 name="remove-circle-outline"
-                size={24}
+                size={scale(24)}
                 color={details.qty <= 1 ? C.muted : C.primary}
               />
             </TouchableOpacity>
@@ -239,12 +240,12 @@ export default function CartScreen({ navigation }) {
               disabled={updating === details.id}
               style={styles.quantityBtn}
             >
-              <Icon name="add-circle-outline" size={24} color={C.ok} />
+              <Icon name="add-circle-outline" size={scale(24)} color={C.ok} />
             </TouchableOpacity>
           </View>
 
           <TouchableOpacity onPress={() => handleRemove(details.id)} style={styles.removeBtn}>
-            <Icon name="trash-outline" size={18} color={C.danger} />
+            <Icon name="trash-outline" size={scale(18)} color={C.danger} />
           </TouchableOpacity>
         </View>
       </View>
@@ -265,7 +266,7 @@ export default function CartScreen({ navigation }) {
         {/* Category Header */}
         <View style={styles.categoryHeader}>
           <View style={styles.categoryTitleRow}>
-            <Icon name="grid-outline" size={20} color={C.ink} />
+            <Icon name="grid-outline" size={scale(20)} color={C.ink} />
             <Text style={styles.categoryName}>{categoryName}</Text>
           </View>
           <View style={styles.categoryMeta}>
@@ -278,7 +279,7 @@ export default function CartScreen({ navigation }) {
         {services.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Icon name="construct" size={16} color={C.serviceColor} />
+              <Icon name="construct" size={scale(16)} color={C.serviceColor} />
               <Text style={[styles.sectionTitle, { color: C.serviceColor }]}>
                 Services ({services.length})
               </Text>
@@ -291,7 +292,7 @@ export default function CartScreen({ navigation }) {
         {parts.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Icon name="hardware-chip" size={16} color={C.partColor} />
+              <Icon name="hardware-chip" size={scale(16)} color={C.partColor} />
               <Text style={[styles.sectionTitle, { color: C.partColor }]}>
                 Parts ({parts.length})
               </Text>
@@ -308,11 +309,11 @@ export default function CartScreen({ navigation }) {
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Icon name="arrow-back" size={24} color={C.ink} />
+            <Icon name="arrow-back" size={scale(24)} color={C.ink} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Cart</Text>
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
-            <Icon name="menu" size={22} color="#1D2254" />
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
+            <Icon name="menu" size={scale(22)} color="#1D2254" />
           </TouchableOpacity>
         </View>
         <View style={styles.loadingContainer}>
@@ -328,7 +329,7 @@ export default function CartScreen({ navigation }) {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Icon name="arrow-back" size={24} color={C.ink} />
+          <Icon name="arrow-back" size={scale(24)} color={C.ink} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Cart ({totalItems})</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -356,10 +357,10 @@ export default function CartScreen({ navigation }) {
             }}
             disabled={cart.length === 0}
           >
-            <Icon name="trash-outline" size={20} color={cart.length > 0 ? C.danger : C.muted} />
+            <Icon name="trash-outline" size={scale(20)} color={cart.length > 0 ? C.danger : C.muted} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
-            <Icon name="menu" size={22} color="#1D2254" />
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
+            <Icon name="menu" size={scale(22)} color="#1D2254" />
           </TouchableOpacity>
         </View>
       </View>
@@ -370,7 +371,7 @@ export default function CartScreen({ navigation }) {
           categories.map(renderCategoryCard)
         ) : (
           <View style={styles.emptyBox}>
-            <Icon name="cart-outline" size={80} color={C.muted} />
+            <Icon name="cart-outline" size={scale(80)} color={C.muted} />
             <Text style={styles.emptyTitle}>Your cart is empty</Text>
             <Text style={styles.emptyText}>Add items to get started</Text>
             <TouchableOpacity
@@ -398,7 +399,7 @@ export default function CartScreen({ navigation }) {
             onPress={handleProceedToBooking}
           >
             <Text style={styles.checkoutButtonText}>Proceed to Booking</Text>
-            <Icon name="arrow-forward" size={20} color="#FFF" />
+            <Icon name="arrow-forward" size={scale(20)} color="#FFF" />
           </TouchableOpacity>
         </View>
       )}
@@ -417,22 +418,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(12),
     backgroundColor: C.card,
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
   backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(12),
     backgroundColor: C.bg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: moderateScale(18),
     fontWeight: '700',
     color: C.ink,
   },
@@ -442,13 +443,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   scrollContent: {
-    padding: 16,
+    padding: scale(16),
     flexGrow: 1,
   },
   categoryCard: {
     backgroundColor: C.card,
-    borderRadius: 16,
-    marginBottom: 16,
+    borderRadius: scale(16),
+    marginBottom: scale(16),
     borderWidth: 1,
     borderColor: C.border,
     overflow: 'hidden',
@@ -457,7 +458,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    padding: scale(16),
     backgroundColor: C.bg,
     borderBottomWidth: 1,
     borderBottomColor: C.border,
@@ -465,10 +466,10 @@ const styles = StyleSheet.create({
   categoryTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: scale(8),
   },
   categoryName: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: '700',
     color: C.ink,
   },
@@ -476,115 +477,115 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   categoryItemCount: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     color: C.muted,
   },
   categoryTotal: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '700',
     color: C.primary,
   },
   section: {
-    padding: 12,
+    padding: scale(12),
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 12,
-    paddingBottom: 8,
+    gap: scale(6),
+    marginBottom: scale(12),
+    paddingBottom: scale(8),
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
   sectionTitle: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     fontWeight: '600',
     textTransform: 'uppercase',
   },
   itemRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: scale(10),
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
   itemIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(10),
     alignItems: 'center',
     justifyContent: 'center',
   },
   itemInfo: {
     flex: 1,
-    marginLeft: 12,
+    marginLeft: scale(12),
   },
   itemName: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '600',
     color: C.text,
   },
   itemSubCategory: {
-    fontSize: 11,
+    fontSize: moderateScale(11),
     color: C.muted,
-    marginTop: 2,
+    marginTop: scale(2),
   },
   itemPrice: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '700',
-    marginTop: 4,
+    marginTop: scale(4),
   },
   itemActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: scale(8),
   },
   quantityRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: scale(4),
   },
   quantityBtn: {
-    padding: 2,
+    padding: scale(2),
   },
   quantity: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '700',
     color: C.text,
-    minWidth: 24,
+    minWidth: scale(24),
     textAlign: 'center',
   },
   removeBtn: {
-    padding: 6,
+    padding: scale(6),
   },
   emptyBox: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 80,
+    paddingVertical: scale(80),
   },
   emptyTitle: {
-    fontSize: 20,
+    fontSize: moderateScale(20),
     fontWeight: '700',
     color: C.text,
-    marginTop: 16,
+    marginTop: scale(16),
   },
   emptyText: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: C.muted,
-    marginTop: 8,
-    marginBottom: 24,
+    marginTop: scale(8),
+    marginBottom: scale(24),
   },
   browseButton: {
     backgroundColor: C.primary,
-    borderRadius: 12,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+    borderRadius: scale(12),
+    paddingHorizontal: scale(24),
+    paddingVertical: scale(12),
   },
   browseButtonText: {
-    fontSize: 15,
+    fontSize: moderateScale(15),
     fontWeight: '600',
     color: '#FFF',
   },
@@ -592,41 +593,41 @@ const styles = StyleSheet.create({
     backgroundColor: C.card,
     borderTopWidth: 1,
     borderTopColor: C.border,
-    padding: 16,
+    padding: scale(16),
   },
   totalSection: {
-    marginBottom: 12,
+    marginBottom: scale(12),
   },
   totalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: scale(4),
   },
   totalLabel: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: C.muted,
   },
   totalValue: {
-    fontSize: 20,
+    fontSize: moderateScale(20),
     fontWeight: '700',
     color: C.text,
   },
   categoryCount: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     color: C.muted,
   },
   checkoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: scale(8),
     backgroundColor: C.primary,
-    borderRadius: 12,
-    paddingVertical: 16,
+    borderRadius: scale(12),
+    paddingVertical: scale(16),
   },
   checkoutButtonText: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: '700',
     color: '#FFF',
   },

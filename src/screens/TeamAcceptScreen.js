@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { api } from '../api/client';
 
+import { scale, moderateScale } from '../utils/responsive';
 const C = {
   primary: '#EF3A3A',
   ink: '#1D2254',
@@ -121,7 +122,7 @@ export default function TeamAcceptScreen({ navigation, route }) {
       <SafeAreaView style={styles.container}>
         <View style={styles.centerContent}>
           <View style={styles.errorIconContainer}>
-            <Icon name="close-circle" size={64} color={C.danger} />
+            <Icon name="close-circle" size={scale(64)} color={C.danger} />
           </View>
           <Text style={styles.errorTitle}>Invalid Invitation</Text>
           <Text style={styles.errorDesc}>
@@ -163,7 +164,7 @@ export default function TeamAcceptScreen({ navigation, route }) {
         >
           <View style={styles.header}>
             <View style={styles.iconContainer}>
-              <Icon name="business" size={40} color={C.primary} />
+              <Icon name="business" size={scale(40)} color={C.primary} />
             </View>
             <Text style={styles.title}>Join Restaurant Team</Text>
             <Text style={styles.subtitle}>
@@ -192,7 +193,7 @@ export default function TeamAcceptScreen({ navigation, route }) {
                     >
                       <Icon
                         name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                        size={20}
+                        size={scale(20)}
                         color={C.muted}
                       />
                     </TouchableOpacity>
@@ -218,7 +219,7 @@ export default function TeamAcceptScreen({ navigation, route }) {
                     >
                       <Icon
                         name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
-                        size={20}
+                        size={scale(20)}
                         color={C.muted}
                       />
                     </TouchableOpacity>
@@ -236,7 +237,7 @@ export default function TeamAcceptScreen({ navigation, route }) {
                 <ActivityIndicator color="#fff" size="small" />
               ) : (
                 <>
-                  <Icon name="checkmark-circle" size={20} color="#fff" />
+                  <Icon name="checkmark-circle" size={scale(20)} color="#fff" />
                   <Text style={styles.primaryBtnText}>Accept Invitation</Text>
                 </>
               )}
@@ -258,69 +259,69 @@ export default function TeamAcceptScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
   keyboardView: { flex: 1 },
-  scrollContent: { flexGrow: 1, padding: 24 },
+  scrollContent: { flexGrow: 1, padding: scale(24) },
   centerContent: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    padding: scale(24),
   },
 
-  errorIconContainer: { marginBottom: 16 },
-  errorTitle: { fontSize: 22, fontWeight: '700', color: C.ink, marginBottom: 8, textAlign: 'center' },
-  errorDesc: { fontSize: 14, color: C.muted, textAlign: 'center', marginBottom: 24, lineHeight: 20 },
+  errorIconContainer: { marginBottom: scale(16) },
+  errorTitle: { fontSize: moderateScale(22), fontWeight: '700', color: C.ink, marginBottom: scale(8), textAlign: 'center' },
+  errorDesc: { fontSize: moderateScale(14), color: C.muted, textAlign: 'center', marginBottom: scale(24), lineHeight: moderateScale(20) },
 
-  loadingTitle: { fontSize: 20, fontWeight: '700', color: C.ink, marginTop: 16, textAlign: 'center' },
-  loadingDesc: { fontSize: 14, color: C.muted, textAlign: 'center', marginTop: 8 },
+  loadingTitle: { fontSize: moderateScale(20), fontWeight: '700', color: C.ink, marginTop: scale(16), textAlign: 'center' },
+  loadingDesc: { fontSize: moderateScale(14), color: C.muted, textAlign: 'center', marginTop: scale(8) },
 
-  header: { alignItems: 'center', marginBottom: 32, marginTop: 40 },
+  header: { alignItems: 'center', marginBottom: scale(32), marginTop: scale(40) },
   iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: scale(80),
+    height: scale(80),
+    borderRadius: scale(40),
     backgroundColor: '#FEF2F2',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: scale(20),
   },
-  title: { fontSize: 24, fontWeight: '700', color: C.ink, marginBottom: 8, textAlign: 'center' },
-  subtitle: { fontSize: 14, color: C.muted, textAlign: 'center', lineHeight: 20, paddingHorizontal: 20 },
+  title: { fontSize: moderateScale(24), fontWeight: '700', color: C.ink, marginBottom: scale(8), textAlign: 'center' },
+  subtitle: { fontSize: moderateScale(14), color: C.muted, textAlign: 'center', lineHeight: moderateScale(20), paddingHorizontal: scale(20) },
 
-  form: { backgroundColor: C.card, borderRadius: 16, padding: 20 },
-  inputGroup: { marginBottom: 16 },
-  label: { fontSize: 14, fontWeight: '600', color: C.ink, marginBottom: 8 },
+  form: { backgroundColor: C.card, borderRadius: scale(16), padding: scale(20) },
+  inputGroup: { marginBottom: scale(16) },
+  label: { fontSize: moderateScale(14), fontWeight: '600', color: C.ink, marginBottom: scale(8) },
   passwordContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: C.bg,
-    borderRadius: 12,
+    borderRadius: scale(12),
     borderWidth: 1,
     borderColor: C.border,
   },
   passwordInput: {
     flex: 1,
-    height: 48,
-    paddingHorizontal: 14,
-    fontSize: 15,
+    height: scale(48),
+    paddingHorizontal: scale(14),
+    fontSize: moderateScale(15),
     color: C.text,
   },
-  eyeBtn: { padding: 12 },
-  hint: { fontSize: 12, color: C.muted, marginTop: 4 },
+  eyeBtn: { padding: scale(12) },
+  hint: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(4) },
 
   primaryBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: scale(8),
     backgroundColor: C.primary,
-    borderRadius: 12,
-    height: 50,
-    marginTop: 8,
+    borderRadius: scale(12),
+    height: scale(50),
+    marginTop: scale(8),
   },
   disabledBtn: { opacity: 0.7 },
-  primaryBtnText: { fontSize: 16, fontWeight: '700', color: '#fff' },
+  primaryBtnText: { fontSize: moderateScale(16), fontWeight: '700', color: '#fff' },
 
-  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 20 },
-  footerText: { fontSize: 14, color: C.muted },
-  footerLink: { fontSize: 14, fontWeight: '600', color: C.primary },
+  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: scale(20) },
+  footerText: { fontSize: moderateScale(14), color: C.muted },
+  footerLink: { fontSize: moderateScale(14), fontWeight: '600', color: C.primary },
 });

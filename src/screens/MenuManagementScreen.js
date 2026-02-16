@@ -18,6 +18,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
+import { scale, moderateScale } from '../utils/responsive';
 const C = {
   primary: '#EF3A3A',
   ink: '#1D2254',
@@ -167,7 +168,7 @@ export default function MenuManagementScreen({ navigation }) {
         style={styles.addBtn}
         onPress={() => navigation.navigate('Cart', { addItem: item, itemType: activeTab === 'services' ? 'SERVICE' : 'PART' })}
       >
-        <Icon name="add" size={20} color="#fff" />
+        <Icon name="add" size={scale(20)} color="#fff" />
       </TouchableOpacity>
     </TouchableOpacity>
   );
@@ -177,10 +178,10 @@ export default function MenuManagementScreen({ navigation }) {
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Icon name="arrow-back" size={22} color={C.ink} />
+            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Service Menu</Text>
-          <View style={{ width: 40 }} />
+          <View style={{ width: scale(40) }} />
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={C.primary} />
@@ -193,18 +194,18 @@ export default function MenuManagementScreen({ navigation }) {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Icon name="arrow-back" size={22} color={C.ink} />
+          <Icon name="arrow-back" size={scale(22)} color={C.ink} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Service Menu</Text>
-        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
-          <Icon name="menu" size={22} color="#1D2254" />
+        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
+          <Icon name="menu" size={scale(22)} color="#1D2254" />
         </TouchableOpacity>
       </View>
 
       {/* Search Bar */}
       <View style={styles.searchContainer}>
         <View style={styles.searchBox}>
-          <Icon name="search-outline" size={18} color={C.muted} />
+          <Icon name="search-outline" size={scale(18)} color={C.muted} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search services or parts..."
@@ -214,7 +215,7 @@ export default function MenuManagementScreen({ navigation }) {
           />
           {search.length > 0 && (
             <TouchableOpacity onPress={() => setSearch('')}>
-              <Icon name="close-circle" size={18} color={C.muted} />
+              <Icon name="close-circle" size={scale(18)} color={C.muted} />
             </TouchableOpacity>
           )}
         </View>
@@ -238,7 +239,7 @@ export default function MenuManagementScreen({ navigation }) {
         >
           <Icon
             name="construct-outline"
-            size={16}
+            size={scale(16)}
             color={activeTab === 'services' ? C.primary : C.muted}
           />
           <Text style={[styles.tabText, activeTab === 'services' && styles.tabTextActive]}>
@@ -251,7 +252,7 @@ export default function MenuManagementScreen({ navigation }) {
         >
           <Icon
             name="hardware-chip-outline"
-            size={16}
+            size={scale(16)}
             color={activeTab === 'parts' ? C.primary : C.muted}
           />
           <Text style={[styles.tabText, activeTab === 'parts' && styles.tabTextActive]}>
@@ -287,14 +288,14 @@ export default function MenuManagementScreen({ navigation }) {
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Icon name="cube-outline" size={64} color={C.muted} />
+            <Icon name="cube-outline" size={scale(64)} color={C.muted} />
             <Text style={styles.emptyTitle}>No Items Found</Text>
             <Text style={styles.emptyText}>
               {search ? 'Try a different search term' : `No ${activeTab} available in this category`}
             </Text>
           </View>
         }
-        ListFooterComponent={<View style={{ height: 100 }} />}
+        ListFooterComponent={<View style={{ height: scale(100) }} />}
       />
 
       {/* Request New Category Button */}
@@ -302,7 +303,7 @@ export default function MenuManagementScreen({ navigation }) {
         style={styles.requestBtn}
         onPress={() => navigation.navigate('CategoryRequest')}
       >
-        <Icon name="add-circle" size={20} color="#fff" />
+        <Icon name="add-circle" size={scale(20)} color="#fff" />
         <Text style={styles.requestBtnText}>Request New Category</Text>
       </TouchableOpacity>
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
@@ -317,147 +318,147 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(12),
     backgroundColor: C.card,
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
   backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(12),
     backgroundColor: C.bg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cartBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(12),
     backgroundColor: C.bg,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
+  headerTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
-  searchContainer: { paddingHorizontal: 16, paddingTop: 12 },
+  searchContainer: { paddingHorizontal: scale(16), paddingTop: scale(12) },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: C.card,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 44,
+    borderRadius: scale(12),
+    paddingHorizontal: scale(12),
+    height: scale(44),
     borderWidth: 1,
     borderColor: C.border,
   },
-  searchInput: { flex: 1, marginLeft: 8, fontSize: 14, color: C.text },
+  searchInput: { flex: 1, marginLeft: scale(8), fontSize: moderateScale(14), color: C.text },
 
-  categoryScroll: { maxHeight: 56, marginTop: 12 },
-  categoryScrollContent: { paddingHorizontal: 16, gap: 8 },
+  categoryScroll: { maxHeight: scale(56), marginTop: scale(12) },
+  categoryScrollContent: { paddingHorizontal: scale(16), gap: scale(8) },
   categoryChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 20,
+    gap: scale(6),
+    paddingHorizontal: scale(14),
+    paddingVertical: scale(10),
+    borderRadius: scale(20),
     backgroundColor: C.card,
     borderWidth: 1,
     borderColor: C.border,
-    marginRight: 8,
+    marginRight: scale(8),
   },
   categoryChipActive: { backgroundColor: C.primary, borderColor: C.primary },
-  categoryIcon: { width: 20, height: 20, borderRadius: 4 },
-  categoryText: { fontSize: 13, fontWeight: '600', color: C.ink },
+  categoryIcon: { width: scale(20), height: scale(20), borderRadius: scale(4) },
+  categoryText: { fontSize: moderateScale(13), fontWeight: '600', color: C.ink },
   categoryTextActive: { color: '#fff' },
 
   tabContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 12,
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(12),
+    gap: scale(12),
   },
   tab: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
+    gap: scale(6),
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(10),
+    borderRadius: scale(12),
     backgroundColor: C.card,
     borderWidth: 1,
     borderColor: C.border,
   },
   tabActive: { backgroundColor: '#FFF0F0', borderColor: C.primary },
-  tabText: { fontSize: 14, fontWeight: '600', color: C.muted },
+  tabText: { fontSize: moderateScale(14), fontWeight: '600', color: C.muted },
   tabTextActive: { color: C.primary },
 
-  subcategoryScroll: { maxHeight: 40 },
-  subcategoryScrollContent: { paddingHorizontal: 16, gap: 8 },
+  subcategoryScroll: { maxHeight: scale(40) },
+  subcategoryScrollContent: { paddingHorizontal: scale(16), gap: scale(8) },
   subcategoryChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: scale(12),
+    paddingVertical: scale(6),
+    borderRadius: scale(16),
     backgroundColor: '#EFF6FF',
-    marginRight: 8,
+    marginRight: scale(8),
   },
-  subcategoryText: { fontSize: 12, fontWeight: '600', color: C.info },
+  subcategoryText: { fontSize: moderateScale(12), fontWeight: '600', color: C.info },
 
-  listContent: { padding: 16 },
+  listContent: { padding: scale(16) },
   itemCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: C.card,
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 12,
+    borderRadius: scale(16),
+    padding: scale(14),
+    marginBottom: scale(12),
     borderWidth: 1,
     borderColor: C.border,
   },
   itemInfo: { flex: 1 },
-  itemName: { fontSize: 15, fontWeight: '700', color: C.ink },
-  itemDesc: { fontSize: 13, color: C.muted, marginTop: 4 },
-  itemFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 },
-  itemPrice: { fontSize: 16, fontWeight: '800', color: C.primary },
+  itemName: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink },
+  itemDesc: { fontSize: moderateScale(13), color: C.muted, marginTop: scale(4) },
+  itemFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: scale(8) },
+  itemPrice: { fontSize: moderateScale(16), fontWeight: '800', color: C.primary },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    gap: scale(4),
+    paddingHorizontal: scale(8),
+    paddingVertical: scale(4),
+    borderRadius: scale(12),
   },
-  statusDot: { width: 6, height: 6, borderRadius: 3 },
-  statusText: { fontSize: 11, fontWeight: '600' },
+  statusDot: { width: scale(6), height: scale(6), borderRadius: scale(3) },
+  statusText: { fontSize: moderateScale(11), fontWeight: '600' },
   addBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(12),
     backgroundColor: C.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 12,
+    marginLeft: scale(12),
   },
 
-  emptyContainer: { alignItems: 'center', paddingTop: 60 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: C.ink, marginTop: 16 },
-  emptyText: { fontSize: 14, color: C.muted, textAlign: 'center', marginTop: 8 },
+  emptyContainer: { alignItems: 'center', paddingTop: scale(60) },
+  emptyTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink, marginTop: scale(16) },
+  emptyText: { fontSize: moderateScale(14), color: C.muted, textAlign: 'center', marginTop: scale(8) },
 
   requestBtn: {
     position: 'absolute',
-    left: 16,
-    right: 16,
-    bottom: 24,
+    left: scale(16),
+    right: scale(16),
+    bottom: scale(24),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: 12,
+    gap: scale(8),
+    paddingVertical: scale(14),
+    borderRadius: scale(12),
     backgroundColor: C.ink,
   },
-  requestBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  requestBtnText: { fontSize: moderateScale(15), fontWeight: '700', color: '#fff' },
 });

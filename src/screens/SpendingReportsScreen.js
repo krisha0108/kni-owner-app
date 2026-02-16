@@ -13,6 +13,7 @@ import { RestaurantSelectorBar } from '../components/RestaurantSelector';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
+import { scale, moderateScale } from '../utils/responsive';
 const C = {
   primary: '#EF3A3A',
   ink: '#1D2254',
@@ -153,10 +154,10 @@ export default function SpendingReportsScreen({ navigation }) {
       <SafeAreaView style={st.container} edges={['top']}>
         <View style={st.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
-            <Icon name="arrow-back" size={22} color={C.ink} />
+            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
           </TouchableOpacity>
           <Text style={st.headerTitle}>Spending Reports</Text>
-          <View style={{ width: 40 }} />
+          <View style={{ width: scale(40) }} />
         </View>
         <View style={st.loadingBox}>
           <ActivityIndicator size="large" color={C.primary} />
@@ -172,13 +173,13 @@ export default function SpendingReportsScreen({ navigation }) {
       <SafeAreaView style={st.container} edges={['top']}>
         <View style={st.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
-            <Icon name="arrow-back" size={22} color={C.ink} />
+            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
           </TouchableOpacity>
           <Text style={st.headerTitle}>Spending Reports</Text>
-          <View style={{ width: 40 }} />
+          <View style={{ width: scale(40) }} />
         </View>
         <View style={st.emptyState}>
-          <Icon name="restaurant-outline" size={64} color={C.muted} />
+          <Icon name="restaurant-outline" size={scale(64)} color={C.muted} />
           <Text style={st.emptyTitle}>No Restaurant Found</Text>
           <Text style={st.emptyText}>Please add a restaurant first</Text>
         </View>
@@ -196,7 +197,7 @@ export default function SpendingReportsScreen({ navigation }) {
       {/* Header */}
       <View style={st.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
-          <Icon name="arrow-back" size={22} color={C.ink} />
+          <Icon name="arrow-back" size={scale(22)} color={C.ink} />
         </TouchableOpacity>
         <Text style={st.headerTitle}>Spending Reports</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -208,11 +209,11 @@ export default function SpendingReportsScreen({ navigation }) {
             {exporting ? (
               <ActivityIndicator size="small" color={C.primary} />
             ) : (
-              <Icon name="download-outline" size={22} color={C.primary} />
+              <Icon name="download-outline" size={scale(22)} color={C.primary} />
             )}
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
-            <Icon name="menu" size={22} color="#1D2254" />
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
+            <Icon name="menu" size={scale(22)} color="#1D2254" />
           </TouchableOpacity>
         </View>
       </View>
@@ -256,19 +257,19 @@ export default function SpendingReportsScreen({ navigation }) {
         {/* Summary Cards */}
         <View style={st.summaryRow}>
           <View style={[st.summaryCard, { backgroundColor: '#FEF2F2' }]}>
-            <Icon name="wallet-outline" size={24} color={C.primary} />
+            <Icon name="wallet-outline" size={scale(24)} color={C.primary} />
             <Text style={st.summaryValue}>
               {summary?.total_spent > 0 ? `₹${summary.total_spent.toLocaleString()}` : '₹0'}
             </Text>
             <Text style={st.summaryLabel}>Total Spent</Text>
           </View>
           <View style={[st.summaryCard, { backgroundColor: '#EFF6FF' }]}>
-            <Icon name="construct-outline" size={24} color={C.info} />
+            <Icon name="construct-outline" size={scale(24)} color={C.info} />
             <Text style={st.summaryValue}>{summary?.total_services || 0}</Text>
             <Text style={st.summaryLabel}>Services</Text>
           </View>
           <View style={[st.summaryCard, { backgroundColor: '#ECFDF5' }]}>
-            <Icon name="calculator-outline" size={24} color={C.ok} />
+            <Icon name="calculator-outline" size={scale(24)} color={C.ok} />
             <Text style={st.summaryValue}>
               {summary?.avg_per_service > 0 ? `₹${Math.round(summary.avg_per_service)}` : '₹0'}
             </Text>
@@ -298,7 +299,7 @@ export default function SpendingReportsScreen({ navigation }) {
               <View style={st.changeRow}>
                 <Icon
                   name={summary?.month_change >= 0 ? 'trending-up' : 'trending-down'}
-                  size={16}
+                  size={scale(16)}
                   color={summary?.month_change >= 0 ? C.danger : C.ok}
                 />
                 <Text style={[
@@ -318,14 +319,14 @@ export default function SpendingReportsScreen({ navigation }) {
             style={[st.tab, activeTab === 'overview' && st.tabActive]}
             onPress={() => setActiveTab('overview')}
           >
-            <Icon name="bar-chart-outline" size={18} color={activeTab === 'overview' ? C.primary : C.muted} />
+            <Icon name="bar-chart-outline" size={scale(18)} color={activeTab === 'overview' ? C.primary : C.muted} />
             <Text style={[st.tabText, activeTab === 'overview' && st.tabTextActive]}>Monthly</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[st.tab, activeTab === 'equipment' && st.tabActive]}
             onPress={() => setActiveTab('equipment')}
           >
-            <Icon name="hardware-chip-outline" size={18} color={activeTab === 'equipment' ? C.primary : C.muted} />
+            <Icon name="hardware-chip-outline" size={scale(18)} color={activeTab === 'equipment' ? C.primary : C.muted} />
             <Text style={[st.tabText, activeTab === 'equipment' && st.tabTextActive]}>By Equipment</Text>
           </TouchableOpacity>
         </View>
@@ -349,11 +350,11 @@ export default function SpendingReportsScreen({ navigation }) {
                       decimalPlaces: 0,
                       color: (opacity = 1) => `rgba(239, 58, 58, ${opacity})`,
                       labelColor: () => C.muted,
-                      style: { borderRadius: 16 },
+                      style: { borderRadius: scale(16) },
                       barPercentage: 0.6,
-                      propsForLabels: { fontSize: 10 },
+                      propsForLabels: { fontSize: moderateScale(10) },
                     }}
-                    style={{ borderRadius: 16 }}
+                    style={{ borderRadius: scale(16) }}
                     showValuesOnTopOfBars
                     fromZero
                   />
@@ -361,7 +362,7 @@ export default function SpendingReportsScreen({ navigation }) {
               </View>
             ) : (
               <View style={st.noDataCard}>
-                <Icon name="bar-chart-outline" size={40} color={C.muted} />
+                <Icon name="bar-chart-outline" size={scale(40)} color={C.muted} />
                 <Text style={st.noDataText}>No spending data for {selectedYear}</Text>
               </View>
             )}
@@ -411,7 +412,7 @@ export default function SpendingReportsScreen({ navigation }) {
               </View>
             ) : (
               <View style={st.noDataCard}>
-                <Icon name="pie-chart-outline" size={40} color={C.muted} />
+                <Icon name="pie-chart-outline" size={scale(40)} color={C.muted} />
                 <Text style={st.noDataText}>No equipment spending data</Text>
               </View>
             )}
@@ -447,7 +448,7 @@ export default function SpendingReportsScreen({ navigation }) {
           </View>
         )}
 
-        <View style={{ height: 100 }} />
+        <View style={{ height: scale(100) }} />
       </ScrollView>
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
       <KniBottomNav navigation={navigation} />
@@ -458,118 +459,118 @@ export default function SpendingReportsScreen({ navigation }) {
 const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  loadingText: { marginTop: 12, fontSize: 14, color: C.muted },
+  loadingText: { marginTop: scale(12), fontSize: moderateScale(14), color: C.muted },
 
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 12, backgroundColor: C.card,
+    paddingHorizontal: scale(16), paddingVertical: scale(12), backgroundColor: C.card,
     borderBottomWidth: 1, borderBottomColor: C.border
   },
-  backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '900', color: C.ink },
-  exportBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
+  backBtn: { width: scale(40), height: scale(40), borderRadius: scale(12), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { fontSize: moderateScale(18), fontWeight: '900', color: C.ink },
+  exportBtn: { width: scale(40), height: scale(40), borderRadius: scale(12), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
 
-  scrollContent: { paddingBottom: 32 },
+  scrollContent: { paddingBottom: scale(32) },
 
   // Empty state
-  emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: C.ink, marginTop: 16 },
-  emptyText: { fontSize: 14, color: C.muted, marginTop: 8 },
+  emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: scale(40) },
+  emptyTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink, marginTop: scale(16) },
+  emptyText: { fontSize: moderateScale(14), color: C.muted, marginTop: scale(8) },
 
   yearSelector: {
-    flexDirection: 'row', justifyContent: 'center', gap: 8,
-    paddingVertical: 16, paddingHorizontal: 16
+    flexDirection: 'row', justifyContent: 'center', gap: scale(8),
+    paddingVertical: scale(16), paddingHorizontal: scale(16)
   },
   yearBtn: {
-    paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12,
+    paddingHorizontal: scale(20), paddingVertical: scale(10), borderRadius: scale(12),
     backgroundColor: C.card, borderWidth: 1, borderColor: C.border
   },
   yearBtnActive: { backgroundColor: C.primary, borderColor: C.primary },
-  yearText: { fontSize: 14, fontWeight: '700', color: C.ink },
+  yearText: { fontSize: moderateScale(14), fontWeight: '700', color: C.ink },
   yearTextActive: { color: '#fff' },
 
-  monthScroll: { marginBottom: 12 },
-  monthScrollContent: { paddingHorizontal: 16 },
+  monthScroll: { marginBottom: scale(12) },
+  monthScrollContent: { paddingHorizontal: scale(16) },
   monthBtn: {
-    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10,
-    backgroundColor: C.card, borderWidth: 1, borderColor: C.border, marginRight: 8
+    paddingHorizontal: scale(14), paddingVertical: scale(8), borderRadius: scale(10),
+    backgroundColor: C.card, borderWidth: 1, borderColor: C.border, marginRight: scale(8)
   },
   monthBtnActive: { backgroundColor: C.info, borderColor: C.info },
-  monthText: { fontSize: 12, fontWeight: '600', color: C.muted },
+  monthText: { fontSize: moderateScale(12), fontWeight: '600', color: C.muted },
   monthTextActive: { color: '#fff' },
 
-  summaryRow: { flexDirection: 'row', paddingHorizontal: 16, gap: 10 },
+  summaryRow: { flexDirection: 'row', paddingHorizontal: scale(16), gap: scale(10) },
   summaryCard: {
-    flex: 1, alignItems: 'center', padding: 16, borderRadius: 16
+    flex: 1, alignItems: 'center', padding: scale(16), borderRadius: scale(16)
   },
-  summaryValue: { fontSize: 18, fontWeight: '900', color: C.ink, marginTop: 8 },
-  summaryLabel: { fontSize: 11, color: C.muted, marginTop: 4 },
+  summaryValue: { fontSize: moderateScale(18), fontWeight: '900', color: C.ink, marginTop: scale(8) },
+  summaryLabel: { fontSize: moderateScale(11), color: C.muted, marginTop: scale(4) },
 
   comparisonCard: {
-    margin: 16, backgroundColor: C.card, borderRadius: 16,
-    padding: 16, borderWidth: 1, borderColor: C.border
+    margin: scale(16), backgroundColor: C.card, borderRadius: scale(16),
+    padding: scale(16), borderWidth: 1, borderColor: C.border
   },
   comparisonRow: { flexDirection: 'row', alignItems: 'center' },
   comparisonItem: { flex: 1, alignItems: 'center' },
-  comparisonDivider: { width: 1, height: 40, backgroundColor: C.border },
-  comparisonLabel: { fontSize: 11, color: C.muted },
-  comparisonValue: { fontSize: 16, fontWeight: '700', color: C.ink, marginTop: 4 },
-  changeRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
-  changeValue: { fontSize: 16, fontWeight: '700' },
+  comparisonDivider: { width: 1, height: scale(40), backgroundColor: C.border },
+  comparisonLabel: { fontSize: moderateScale(11), color: C.muted },
+  comparisonValue: { fontSize: moderateScale(16), fontWeight: '700', color: C.ink, marginTop: scale(4) },
+  changeRow: { flexDirection: 'row', alignItems: 'center', gap: scale(4), marginTop: scale(4) },
+  changeValue: { fontSize: moderateScale(16), fontWeight: '700' },
 
   tabBar: {
-    flexDirection: 'row', marginHorizontal: 16, backgroundColor: C.card,
-    borderRadius: 12, padding: 4
+    flexDirection: 'row', marginHorizontal: scale(16), backgroundColor: C.card,
+    borderRadius: scale(12), padding: scale(4)
   },
   tab: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 6, paddingVertical: 10, borderRadius: 10
+    gap: scale(6), paddingVertical: scale(10), borderRadius: scale(10)
   },
   tabActive: { backgroundColor: C.bg },
-  tabText: { fontSize: 13, fontWeight: '600', color: C.muted },
+  tabText: { fontSize: moderateScale(13), fontWeight: '600', color: C.muted },
   tabTextActive: { color: C.primary },
 
-  section: { padding: 16 },
+  section: { padding: scale(16) },
 
   // Chart Card
   chartCard: {
-    backgroundColor: C.card, borderRadius: 16, padding: 16,
-    marginBottom: 16, borderWidth: 1, borderColor: C.border
+    backgroundColor: C.card, borderRadius: scale(16), padding: scale(16),
+    marginBottom: scale(16), borderWidth: 1, borderColor: C.border
   },
-  chartTitle: { fontSize: 16, fontWeight: '700', color: C.ink, marginBottom: 12 },
+  chartTitle: { fontSize: moderateScale(16), fontWeight: '700', color: C.ink, marginBottom: scale(12) },
 
   // No Data
   noDataCard: {
-    backgroundColor: C.card, borderRadius: 16, padding: 32,
-    marginBottom: 16, borderWidth: 1, borderColor: C.border, alignItems: 'center'
+    backgroundColor: C.card, borderRadius: scale(16), padding: scale(32),
+    marginBottom: scale(16), borderWidth: 1, borderColor: C.border, alignItems: 'center'
   },
-  noDataText: { fontSize: 14, color: C.muted, marginTop: 12 },
+  noDataText: { fontSize: moderateScale(14), color: C.muted, marginTop: scale(12) },
 
   // List Card
   listCard: {
-    backgroundColor: C.card, borderRadius: 16, borderWidth: 1, borderColor: C.border, overflow: 'hidden'
+    backgroundColor: C.card, borderRadius: scale(16), borderWidth: 1, borderColor: C.border, overflow: 'hidden'
   },
-  listCardTitle: { fontSize: 14, fontWeight: '700', color: C.ink, padding: 14, borderBottomWidth: 1, borderBottomColor: C.border },
+  listCardTitle: { fontSize: moderateScale(14), fontWeight: '700', color: C.ink, padding: scale(14), borderBottomWidth: 1, borderBottomColor: C.border },
   listItem: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    padding: 14, borderTopWidth: 1, borderTopColor: C.border
+    padding: scale(14), borderTopWidth: 1, borderTopColor: C.border
   },
   listItemLeft: {},
-  listItemMonth: { fontSize: 14, fontWeight: '600', color: C.ink },
-  listItemCount: { fontSize: 12, color: C.muted, marginTop: 2 },
-  listItemAmount: { fontSize: 15, fontWeight: '700', color: C.primary },
+  listItemMonth: { fontSize: moderateScale(14), fontWeight: '600', color: C.ink },
+  listItemCount: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(2) },
+  listItemAmount: { fontSize: moderateScale(15), fontWeight: '700', color: C.primary },
 
   // Equipment Item
-  equipmentItem: { padding: 14, borderBottomWidth: 1, borderBottomColor: C.border },
+  equipmentItem: { padding: scale(14), borderBottomWidth: 1, borderBottomColor: C.border },
   equipmentHeader: { flexDirection: 'row', alignItems: 'center' },
-  equipmentDot: { width: 10, height: 10, borderRadius: 5, marginRight: 10 },
-  equipmentName: { fontSize: 14, fontWeight: '600', color: C.ink, flex: 1, marginRight: 12 },
-  equipmentAmount: { fontSize: 14, fontWeight: '700', color: C.primary },
-  progressBar: { height: 6, backgroundColor: C.bg, borderRadius: 3, marginTop: 10, overflow: 'hidden' },
-  progressFill: { height: '100%', borderRadius: 3 },
-  equipmentCount: { fontSize: 11, color: C.muted, marginTop: 6 },
+  equipmentDot: { width: scale(10), height: scale(10), borderRadius: scale(5), marginRight: scale(10) },
+  equipmentName: { fontSize: moderateScale(14), fontWeight: '600', color: C.ink, flex: 1, marginRight: scale(12) },
+  equipmentAmount: { fontSize: moderateScale(14), fontWeight: '700', color: C.primary },
+  progressBar: { height: scale(6), backgroundColor: C.bg, borderRadius: scale(3), marginTop: scale(10), overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: scale(3) },
+  equipmentCount: { fontSize: moderateScale(11), color: C.muted, marginTop: scale(6) },
 
   // Empty List
-  emptyList: { padding: 32, alignItems: 'center' },
-  emptyListText: { fontSize: 14, color: C.muted },
+  emptyList: { padding: scale(32), alignItems: 'center' },
+  emptyListText: { fontSize: moderateScale(14), color: C.muted },
 });

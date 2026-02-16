@@ -10,6 +10,7 @@ import { api, getImageUrl } from '../api/client';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
+import { scale, moderateScale } from '../utils/responsive';
 const C = {
   primary: '#EF3A3A',
   ink: '#1D2254',
@@ -383,13 +384,13 @@ export default function EquipmentProfileScreen({ navigation, route }) {
       <SafeAreaView style={st.container} edges={['top']}>
         <View style={st.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
-            <Icon name="arrow-back" size={22} color={C.ink} />
+            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
           </TouchableOpacity>
           <Text style={st.headerTitle}>Equipment Profile</Text>
-          <View style={{ width: 40 }} />
+          <View style={{ width: scale(40) }} />
         </View>
         <View style={st.emptyBox}>
-          <Icon name="alert-circle-outline" size={64} color={C.muted} />
+          <Icon name="alert-circle-outline" size={scale(64)} color={C.muted} />
           <Text style={st.emptyTitle}>Equipment Not Found</Text>
         </View>
       </SafeAreaView>
@@ -408,7 +409,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
       {/* Header */}
       <View style={st.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
-          <Icon name="arrow-back" size={22} color={C.ink} />
+          <Icon name="arrow-back" size={scale(22)} color={C.ink} />
         </TouchableOpacity>
         <Text style={st.headerTitle} numberOfLines={1}>{equipment.name}</Text>
         <TouchableOpacity
@@ -431,10 +432,10 @@ export default function EquipmentProfileScreen({ navigation, route }) {
           }}
           style={st.serviceBtn}
         >
-          <Icon name="construct" size={20} color="#fff" />
+          <Icon name="construct" size={scale(20)} color="#fff" />
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
-          <Icon name="menu" size={22} color="#1D2254" />
+        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
+          <Icon name="menu" size={scale(22)} color="#1D2254" />
         </TouchableOpacity>
       </View>
 
@@ -455,7 +456,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
               {photoUrls.length > 0 ? (
                 <Image source={{ uri: getImageUrl(photoUrls[0]) }} style={st.equipImage} />
               ) : (
-                <Icon name="hardware-chip-outline" size={32} color={C.primary} />
+                <Icon name="hardware-chip-outline" size={scale(32)} color={C.primary} />
               )}
             </View>
             <View style={st.infoMain}>
@@ -479,21 +480,21 @@ export default function EquipmentProfileScreen({ navigation, route }) {
           <View style={st.statsGrid}>
             <View style={st.statCard}>
               <View style={[st.statIcon, { backgroundColor: '#EFF6FF' }]}>
-                <Icon name="time-outline" size={20} color={C.info} />
+                <Icon name="time-outline" size={scale(20)} color={C.info} />
               </View>
               <Text style={st.statValue}>{serviceHistory.length}</Text>
               <Text style={st.statLabel}>Total Services</Text>
             </View>
             <View style={st.statCard}>
               <View style={[st.statIcon, { backgroundColor: '#ECFDF5' }]}>
-                <Icon name="checkmark-circle-outline" size={20} color={C.ok} />
+                <Icon name="checkmark-circle-outline" size={scale(20)} color={C.ok} />
               </View>
               <Text style={st.statValue}>{equipment.completedServicesCount || 0}</Text>
               <Text style={st.statLabel}>Completed</Text>
             </View>
             <View style={st.statCard}>
               <View style={[st.statIcon, { backgroundColor: '#FFF7ED' }]}>
-                <Icon name="cash-outline" size={20} color="#F97316" />
+                <Icon name="cash-outline" size={scale(20)} color="#F97316" />
               </View>
               <Text style={st.statValue}>
                 {equipment.totalSpend > 0 ? `₹${equipment.totalSpend.toLocaleString()}` : '₹0'}
@@ -566,7 +567,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
                     >
                       <Image source={{ uri: getImageUrl(equipment.billImageUrl) }} style={st.docImage} />
                       <View style={st.docOverlay}>
-                        <Icon name="document-text" size={24} color="#fff" />
+                        <Icon name="document-text" size={scale(24)} color="#fff" />
                       </View>
                       <Text style={st.docLabel}>Purchase Bill</Text>
                     </TouchableOpacity>
@@ -578,7 +579,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
                     >
                       <Image source={{ uri: getImageUrl(equipment.warrantyCardUrl) }} style={st.docImage} />
                       <View style={st.docOverlay}>
-                        <Icon name="shield-checkmark" size={24} color="#fff" />
+                        <Icon name="shield-checkmark" size={scale(24)} color="#fff" />
                       </View>
                       <Text style={st.docLabel}>Warranty Card</Text>
                     </TouchableOpacity>
@@ -609,7 +610,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
             ) : (
               !equipment.billImageUrl && !equipment.warrantyCardUrl && (
                 <View style={st.emptySection}>
-                  <Icon name="images-outline" size={48} color={C.muted} />
+                  <Icon name="images-outline" size={scale(48)} color={C.muted} />
                   <Text style={st.emptySectionText}>No images uploaded</Text>
                 </View>
               )
@@ -634,7 +635,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
                           {formatDate(service.slotStartDateTime || service.createdAt)}
                         </Text>
                         <View style={[st.historyStatus, { backgroundColor: statusStyle.bg }]}>
-                          <Icon name={statusStyle.icon} size={12} color={statusStyle.color} />
+                          <Icon name={statusStyle.icon} size={scale(12)} color={statusStyle.color} />
                           <Text style={[st.historyStatusText, { color: statusStyle.color }]}>
                             {service.status?.replace('_', ' ')}
                           </Text>
@@ -655,7 +656,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
               })
             ) : (
               <View style={st.emptySection}>
-                <Icon name="construct-outline" size={48} color={C.muted} />
+                <Icon name="construct-outline" size={scale(48)} color={C.muted} />
                 <Text style={st.emptySectionText}>No service history yet</Text>
                 <TouchableOpacity
                   style={st.emptyBtn}
@@ -676,7 +677,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
                     });
                   }}
                 >
-                  <Icon name="add" size={18} color="#fff" />
+                  <Icon name="add" size={scale(18)} color="#fff" />
                   <Text style={st.emptyBtnText}>Request First Service</Text>
                 </TouchableOpacity>
               </View>
@@ -691,7 +692,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
               <View style={st.amcActiveCard}>
                 <View style={st.amcActiveHeader}>
                   <View style={st.amcActiveBadge}>
-                    <Icon name="checkmark-circle" size={16} color={C.ok} />
+                    <Icon name="checkmark-circle" size={scale(16)} color={C.ok} />
                     <Text style={st.amcActiveLabel}>Active AMC</Text>
                   </View>
                 </View>
@@ -747,7 +748,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
                     <Text style={st.featuresTitle}>Features</Text>
                     {activeAmc.featuresJson.map((feature, index) => (
                       <View key={index} style={st.featureItem}>
-                        <Icon name="checkmark" size={14} color={C.ok} />
+                        <Icon name="checkmark" size={scale(14)} color={C.ok} />
                         <Text style={st.featureText}>{feature}</Text>
                       </View>
                     ))}
@@ -774,11 +775,11 @@ export default function EquipmentProfileScreen({ navigation, route }) {
               </View>
             ) : (
               <View style={st.noAmcCard}>
-                <Icon name="shield-outline" size={48} color={C.muted} />
+                <Icon name="shield-outline" size={scale(48)} color={C.muted} />
                 <Text style={st.noAmcTitle}>No Active AMC</Text>
                 <Text style={st.noAmcText}>Create a maintenance plan for this equipment</Text>
                 <TouchableOpacity style={st.createAmcBtn} onPress={() => setShowAmcModal(true)}>
-                  <Icon name="add" size={18} color="#fff" />
+                  <Icon name="add" size={scale(18)} color="#fff" />
                   <Text style={st.createAmcText}>Create AMC Plan</Text>
                 </TouchableOpacity>
               </View>
@@ -820,7 +821,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
       <Modal visible={!!selectedImage} animationType="fade" transparent>
         <View style={st.imageModal}>
           <TouchableOpacity style={st.imageModalClose} onPress={() => setSelectedImage(null)}>
-            <Icon name="close" size={28} color="#fff" />
+            <Icon name="close" size={scale(28)} color="#fff" />
           </TouchableOpacity>
           {selectedImage && (
             <Image source={{ uri: selectedImage }} style={st.imageModalImage} resizeMode="contain" />
@@ -835,11 +836,11 @@ export default function EquipmentProfileScreen({ navigation, route }) {
             <View style={st.modalHeader}>
               <Text style={st.modalTitle}>Create AMC Plan</Text>
               <TouchableOpacity onPress={() => setShowAmcModal(false)}>
-                <Icon name="close" size={24} color={C.ink} />
+                <Icon name="close" size={scale(24)} color={C.ink} />
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={st.modalBody} contentContainerStyle={{ padding: 16, paddingBottom: 30 }} nestedScrollEnabled keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator bounces>
+            <ScrollView style={st.modalBody} contentContainerStyle={{ padding: scale(16), paddingBottom: scale(30) }} nestedScrollEnabled keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator bounces>
               <Text style={st.label}>Plan Name *</Text>
               <TextInput
                 style={st.input}
@@ -851,7 +852,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
 
               <Text style={st.label}>Description</Text>
               <TextInput
-                style={[st.input, { height: 80, textAlignVertical: 'top' }]}
+                style={[st.input, { height: scale(80), textAlignVertical: 'top' }]}
                 placeholder="Describe what's included..."
                 placeholderTextColor={C.muted}
                 multiline
@@ -865,7 +866,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
                 onPress={() => setDurationPickerVisible(true)}
               >
                 <Text style={st.pickerText}>{getDurationLabel(amcForm.duration)}</Text>
-                <Icon name="chevron-down" size={18} color={C.muted} />
+                <Icon name="chevron-down" size={scale(18)} color={C.muted} />
               </TouchableOpacity>
 
               <Text style={st.label}>Service Limit *</Text>
@@ -898,7 +899,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
                   onChangeText={setFeatureInput}
                 />
                 <TouchableOpacity style={st.addFeatureBtn} onPress={handleAddFeature}>
-                  <Icon name="add" size={20} color="#fff" />
+                  <Icon name="add" size={scale(20)} color="#fff" />
                 </TouchableOpacity>
               </View>
               {amcForm.featuresJson.length > 0 && (
@@ -907,7 +908,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
                     <View key={index} style={st.featureBadge}>
                       <Text style={st.featureBadgeText}>{feature}</Text>
                       <TouchableOpacity onPress={() => handleRemoveFeature(index)}>
-                        <Icon name="close-circle" size={16} color={C.muted} />
+                        <Icon name="close-circle" size={scale(16)} color={C.muted} />
                       </TouchableOpacity>
                     </View>
                   ))}
@@ -919,10 +920,10 @@ export default function EquipmentProfileScreen({ navigation, route }) {
                 style={st.pickerBtn}
                 onPress={() => setShowStartDatePicker(true)}
               >
-                <Text style={amcForm.startDate ? st.pickerText : { fontSize: 14, color: C.muted }}>
+                <Text style={amcForm.startDate ? st.pickerText : { fontSize: moderateScale(14), color: C.muted }}>
                   {amcForm.startDate || 'Select start date'}
                 </Text>
-                <Icon name="calendar-outline" size={18} color={C.muted} />
+                <Icon name="calendar-outline" size={scale(18)} color={C.muted} />
               </TouchableOpacity>
               {showStartDatePicker && (
                 <DateTimePicker
@@ -968,7 +969,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
             <View style={st.modalHeader}>
               <Text style={st.modalTitle}>Select Duration</Text>
               <TouchableOpacity onPress={() => setDurationPickerVisible(false)}>
-                <Icon name="close" size={24} color={C.ink} />
+                <Icon name="close" size={scale(24)} color={C.ink} />
               </TouchableOpacity>
             </View>
             <View style={st.pickerList}>
@@ -985,7 +986,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
                     {opt.label}
                   </Text>
                   {amcForm.duration === opt.key && (
-                    <Icon name="checkmark-circle" size={20} color={C.primary} />
+                    <Icon name="checkmark-circle" size={scale(20)} color={C.primary} />
                   )}
                 </TouchableOpacity>
               ))}
@@ -1001,11 +1002,11 @@ export default function EquipmentProfileScreen({ navigation, route }) {
             <View style={st.modalHeader}>
               <Text style={st.modalTitle}>Request Service</Text>
               <TouchableOpacity onPress={() => setShowServiceModal(false)}>
-                <Icon name="close" size={24} color={C.ink} />
+                <Icon name="close" size={scale(24)} color={C.ink} />
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={st.modalBody} contentContainerStyle={{ padding: 16, paddingBottom: 30 }} nestedScrollEnabled keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator bounces>
+            <ScrollView style={st.modalBody} contentContainerStyle={{ padding: scale(16), paddingBottom: scale(30) }} nestedScrollEnabled keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator bounces>
               {/* Service Templates */}
               {equipment.equipmentType?.serviceTemplates?.length > 0 && (
                 <>
@@ -1021,9 +1022,9 @@ export default function EquipmentProfileScreen({ navigation, route }) {
                     >
                       <View style={st.serviceCheckbox}>
                         {selectedServices.includes(service.id) ? (
-                          <Icon name="checkmark-circle" size={22} color={C.primary} />
+                          <Icon name="checkmark-circle" size={scale(22)} color={C.primary} />
                         ) : (
-                          <Icon name="ellipse-outline" size={22} color={C.muted} />
+                          <Icon name="ellipse-outline" size={scale(22)} color={C.muted} />
                         )}
                       </View>
                       <View style={st.serviceInfo}>
@@ -1089,7 +1090,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
                     >
                       <Icon
                         name="time-outline"
-                        size={14}
+                        size={scale(14)}
                         color={isSelected ? '#fff' : C.muted}
                       />
                       <Text style={[st.quickTimeText, isSelected && st.quickTimeTextActive]}>
@@ -1109,7 +1110,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
 
               <Text style={st.label}>Problem Description</Text>
               <TextInput
-                style={[st.input, { height: 100, textAlignVertical: 'top' }]}
+                style={[st.input, { height: scale(100), textAlignVertical: 'top' }]}
                 placeholder="Describe the issue or maintenance needed..."
                 placeholderTextColor={C.muted}
                 multiline
@@ -1144,240 +1145,240 @@ const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   emptyBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: C.ink, marginTop: 16 },
+  emptyTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink, marginTop: scale(16) },
 
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 12, backgroundColor: C.card,
+    paddingHorizontal: scale(16), paddingVertical: scale(12), backgroundColor: C.card,
     borderBottomWidth: 1, borderBottomColor: C.border
   },
-  backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '900', color: C.ink, flex: 1, textAlign: 'center' },
-  serviceBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' },
+  backBtn: { width: scale(40), height: scale(40), borderRadius: scale(12), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { fontSize: moderateScale(18), fontWeight: '900', color: C.ink, flex: 1, textAlign: 'center' },
+  serviceBtn: { width: scale(40), height: scale(40), borderRadius: scale(12), backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' },
 
-  scrollContent: { paddingBottom: 100 },
+  scrollContent: { paddingBottom: scale(100) },
 
   infoCard: {
-    backgroundColor: C.card, margin: 16, borderRadius: 16,
-    padding: 16, borderWidth: 1, borderColor: C.border
+    backgroundColor: C.card, margin: scale(16), borderRadius: scale(16),
+    padding: scale(16), borderWidth: 1, borderColor: C.border
   },
-  infoHeader: { flexDirection: 'row', gap: 12 },
+  infoHeader: { flexDirection: 'row', gap: scale(12) },
   iconBox: {
-    width: 64, height: 64, borderRadius: 16, backgroundColor: '#FFE8E8',
+    width: scale(64), height: scale(64), borderRadius: scale(16), backgroundColor: '#FFE8E8',
     alignItems: 'center', justifyContent: 'center', overflow: 'hidden'
   },
-  equipImage: { width: 64, height: 64, borderRadius: 16 },
+  equipImage: { width: scale(64), height: scale(64), borderRadius: scale(16) },
   infoMain: { flex: 1 },
-  equipName: { fontSize: 20, fontWeight: '900', color: C.ink },
-  equipCategory: { fontSize: 14, color: C.muted, marginTop: 2 },
-  badgeRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
-  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  badgeText: { fontSize: 11, fontWeight: '700' },
+  equipName: { fontSize: moderateScale(20), fontWeight: '900', color: C.ink },
+  equipCategory: { fontSize: moderateScale(14), color: C.muted, marginTop: scale(2) },
+  badgeRow: { flexDirection: 'row', gap: scale(8), marginTop: scale(8) },
+  badge: { paddingHorizontal: scale(10), paddingVertical: scale(4), borderRadius: scale(8) },
+  badgeText: { fontSize: moderateScale(11), fontWeight: '700' },
 
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 16 },
-  statCard: { flex: 1, minWidth: '45%', alignItems: 'center', padding: 12, backgroundColor: C.bg, borderRadius: 12 },
-  statIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
-  statValue: { fontSize: 16, fontWeight: '900', color: C.ink },
-  statLabel: { fontSize: 11, color: C.muted, marginTop: 2 },
+  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: scale(8), marginTop: scale(16) },
+  statCard: { flex: 1, minWidth: '45%', alignItems: 'center', padding: scale(12), backgroundColor: C.bg, borderRadius: scale(12) },
+  statIcon: { width: scale(40), height: scale(40), borderRadius: scale(12), alignItems: 'center', justifyContent: 'center', marginBottom: scale(8) },
+  statValue: { fontSize: moderateScale(16), fontWeight: '900', color: C.ink },
+  statLabel: { fontSize: moderateScale(11), color: C.muted, marginTop: scale(2) },
 
-  tabBar: { flexDirection: 'row', marginHorizontal: 16, backgroundColor: C.card, borderRadius: 12, padding: 4 },
-  tab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 10 },
+  tabBar: { flexDirection: 'row', marginHorizontal: scale(16), backgroundColor: C.card, borderRadius: scale(12), padding: scale(4) },
+  tab: { flex: 1, paddingVertical: scale(10), alignItems: 'center', borderRadius: scale(10) },
   tabActive: { backgroundColor: C.bg },
-  tabText: { fontSize: 13, fontWeight: '600', color: C.muted },
+  tabText: { fontSize: moderateScale(13), fontWeight: '600', color: C.muted },
   tabTextActive: { color: C.primary },
 
-  section: { padding: 16 },
-  sectionTitle: { fontSize: 16, fontWeight: '900', color: C.ink, marginBottom: 12 },
+  section: { padding: scale(16) },
+  sectionTitle: { fontSize: moderateScale(16), fontWeight: '900', color: C.ink, marginBottom: scale(12) },
 
-  detailsCard: { backgroundColor: C.card, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: C.border },
-  detailRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: C.border },
-  detailLabel: { fontSize: 13, color: C.muted },
-  detailValue: { fontSize: 13, fontWeight: '600', color: C.ink, textAlign: 'right', flex: 1, marginLeft: 16 },
+  detailsCard: { backgroundColor: C.card, borderRadius: scale(12), padding: scale(12), borderWidth: 1, borderColor: C.border },
+  detailRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: scale(10), borderBottomWidth: 1, borderBottomColor: C.border },
+  detailLabel: { fontSize: moderateScale(13), color: C.muted },
+  detailValue: { fontSize: moderateScale(13), fontWeight: '600', color: C.ink, textAlign: 'right', flex: 1, marginLeft: scale(16) },
 
-  imagesSection: { marginBottom: 24 },
-  docsGrid: { flexDirection: 'row', gap: 12 },
+  imagesSection: { marginBottom: scale(24) },
+  docsGrid: { flexDirection: 'row', gap: scale(12) },
   docCard: { flex: 1, position: 'relative' },
-  docImage: { width: '100%', aspectRatio: 16 / 9, borderRadius: 12, backgroundColor: C.bg },
+  docImage: { width: '100%', aspectRatio: 16 / 9, borderRadius: scale(12), backgroundColor: C.bg },
   docOverlay: {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 12, alignItems: 'center', justifyContent: 'center'
+    backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: scale(12), alignItems: 'center', justifyContent: 'center'
   },
-  docLabel: { fontSize: 12, fontWeight: '600', color: C.ink, marginTop: 6, textAlign: 'center' },
+  docLabel: { fontSize: moderateScale(12), fontWeight: '600', color: C.ink, marginTop: scale(6), textAlign: 'center' },
 
-  photosGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  photosGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: scale(12) },
   photoCard: { position: 'relative' },
-  photoImage: { width: 100, height: 100, borderRadius: 12, backgroundColor: C.bg },
+  photoImage: { width: scale(100), height: scale(100), borderRadius: scale(12), backgroundColor: C.bg },
   photoIndex: {
-    position: 'absolute', top: 6, left: 6,
-    backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2
+    position: 'absolute', top: scale(6), left: scale(6),
+    backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: scale(4), paddingHorizontal: scale(6), paddingVertical: scale(2)
   },
-  photoIndexText: { fontSize: 10, fontWeight: '700', color: '#fff' },
+  photoIndexText: { fontSize: moderateScale(10), fontWeight: '700', color: '#fff' },
 
-  emptySection: { alignItems: 'center', paddingVertical: 32 },
-  emptySectionText: { fontSize: 14, color: C.muted, marginTop: 8 },
+  emptySection: { alignItems: 'center', paddingVertical: scale(32) },
+  emptySectionText: { fontSize: moderateScale(14), color: C.muted, marginTop: scale(8) },
   emptyBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 16,
-    paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, backgroundColor: C.primary
+    flexDirection: 'row', alignItems: 'center', gap: scale(6), marginTop: scale(16),
+    paddingHorizontal: scale(16), paddingVertical: scale(10), borderRadius: scale(10), backgroundColor: C.primary
   },
-  emptyBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
+  emptyBtnText: { fontSize: moderateScale(13), fontWeight: '700', color: '#fff' },
 
-  historyCard: { flexDirection: 'row', marginBottom: 4 },
-  historyTimeline: { width: 24, alignItems: 'center' },
-  timelineDot: { width: 10, height: 10, borderRadius: 5 },
-  timelineLine: { width: 2, flex: 1, backgroundColor: C.border, marginTop: 4 },
+  historyCard: { flexDirection: 'row', marginBottom: scale(4) },
+  historyTimeline: { width: scale(24), alignItems: 'center' },
+  timelineDot: { width: scale(10), height: scale(10), borderRadius: scale(5) },
+  timelineLine: { width: scale(2), flex: 1, backgroundColor: C.border, marginTop: scale(4) },
   historyContent: {
-    flex: 1, backgroundColor: C.card, borderRadius: 12, padding: 12,
-    marginLeft: 8, marginBottom: 12, borderWidth: 1, borderColor: C.border
+    flex: 1, backgroundColor: C.card, borderRadius: scale(12), padding: scale(12),
+    marginLeft: scale(8), marginBottom: scale(12), borderWidth: 1, borderColor: C.border
   },
   historyHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  historyDate: { fontSize: 12, fontWeight: '700', color: C.ink },
-  historyStatus: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  historyStatusText: { fontSize: 10, fontWeight: '700', textTransform: 'capitalize' },
-  historyDesc: { fontSize: 13, color: C.muted, marginTop: 6 },
-  historyFooter: { marginTop: 8 },
-  historyCost: { fontSize: 13, fontWeight: '700', color: C.ink },
+  historyDate: { fontSize: moderateScale(12), fontWeight: '700', color: C.ink },
+  historyStatus: { flexDirection: 'row', alignItems: 'center', gap: scale(4), paddingHorizontal: scale(8), paddingVertical: scale(3), borderRadius: scale(6) },
+  historyStatusText: { fontSize: moderateScale(10), fontWeight: '700', textTransform: 'capitalize' },
+  historyDesc: { fontSize: moderateScale(13), color: C.muted, marginTop: scale(6) },
+  historyFooter: { marginTop: scale(8) },
+  historyCost: { fontSize: moderateScale(13), fontWeight: '700', color: C.ink },
 
   // AMC Styles
   amcActiveCard: {
-    backgroundColor: C.card, borderRadius: 16, padding: 16,
+    backgroundColor: C.card, borderRadius: scale(16), padding: scale(16),
     borderWidth: 2, borderColor: C.ok
   },
-  amcActiveHeader: { marginBottom: 8 },
-  amcActiveBadge: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  amcActiveLabel: { fontSize: 13, fontWeight: '700', color: C.ok },
-  amcPlanName: { fontSize: 18, fontWeight: '900', color: C.ink },
-  amcDescription: { fontSize: 13, color: C.muted, marginTop: 4 },
-  amcDetails: { marginTop: 16, gap: 12 },
+  amcActiveHeader: { marginBottom: scale(8) },
+  amcActiveBadge: { flexDirection: 'row', alignItems: 'center', gap: scale(6) },
+  amcActiveLabel: { fontSize: moderateScale(13), fontWeight: '700', color: C.ok },
+  amcPlanName: { fontSize: moderateScale(18), fontWeight: '900', color: C.ink },
+  amcDescription: { fontSize: moderateScale(13), color: C.muted, marginTop: scale(4) },
+  amcDetails: { marginTop: scale(16), gap: scale(12) },
   amcDetailItem: { flexDirection: 'row', justifyContent: 'space-between' },
-  amcDetailLabel: { fontSize: 13, color: C.muted },
-  amcDetailValue: { fontSize: 13, fontWeight: '600', color: C.ink },
-  usageBox: { marginTop: 16, padding: 12, backgroundColor: C.bg, borderRadius: 12 },
-  usageHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  usageLabel: { fontSize: 12, fontWeight: '600', color: C.muted },
-  usageText: { fontSize: 12, fontWeight: '700', color: C.ink },
-  progressBar: { height: 6, backgroundColor: C.border, borderRadius: 3, overflow: 'hidden' },
-  progressFill: { height: '100%', borderRadius: 3 },
-  usageRemaining: { fontSize: 11, color: C.muted, marginTop: 6, textAlign: 'center' },
-  featuresBox: { marginTop: 16 },
-  featuresTitle: { fontSize: 13, fontWeight: '700', color: C.ink, marginBottom: 8 },
-  featureItem: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
-  featureText: { fontSize: 13, color: C.text },
-  autoRenewRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: C.border },
-  autoRenewLabel: { fontSize: 14, fontWeight: '600', color: C.ink },
-  cancelAmcBtn: { marginTop: 16, paddingVertical: 12, borderRadius: 10, backgroundColor: '#FEF2F2', alignItems: 'center' },
-  cancelAmcText: { fontSize: 14, fontWeight: '700', color: C.danger },
+  amcDetailLabel: { fontSize: moderateScale(13), color: C.muted },
+  amcDetailValue: { fontSize: moderateScale(13), fontWeight: '600', color: C.ink },
+  usageBox: { marginTop: scale(16), padding: scale(12), backgroundColor: C.bg, borderRadius: scale(12) },
+  usageHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: scale(8) },
+  usageLabel: { fontSize: moderateScale(12), fontWeight: '600', color: C.muted },
+  usageText: { fontSize: moderateScale(12), fontWeight: '700', color: C.ink },
+  progressBar: { height: scale(6), backgroundColor: C.border, borderRadius: scale(3), overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: scale(3) },
+  usageRemaining: { fontSize: moderateScale(11), color: C.muted, marginTop: scale(6), textAlign: 'center' },
+  featuresBox: { marginTop: scale(16) },
+  featuresTitle: { fontSize: moderateScale(13), fontWeight: '700', color: C.ink, marginBottom: scale(8) },
+  featureItem: { flexDirection: 'row', alignItems: 'center', gap: scale(8), marginBottom: scale(6) },
+  featureText: { fontSize: moderateScale(13), color: C.text },
+  autoRenewRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: scale(16), paddingTop: scale(16), borderTopWidth: 1, borderTopColor: C.border },
+  autoRenewLabel: { fontSize: moderateScale(14), fontWeight: '600', color: C.ink },
+  cancelAmcBtn: { marginTop: scale(16), paddingVertical: scale(12), borderRadius: scale(10), backgroundColor: '#FEF2F2', alignItems: 'center' },
+  cancelAmcText: { fontSize: moderateScale(14), fontWeight: '700', color: C.danger },
 
   noAmcCard: {
-    backgroundColor: C.card, borderRadius: 16, padding: 24,
+    backgroundColor: C.card, borderRadius: scale(16), padding: scale(24),
     alignItems: 'center', borderWidth: 1, borderColor: C.border
   },
-  noAmcTitle: { fontSize: 18, fontWeight: '900', color: C.ink, marginTop: 12 },
-  noAmcText: { fontSize: 14, color: C.muted, marginTop: 4, textAlign: 'center' },
+  noAmcTitle: { fontSize: moderateScale(18), fontWeight: '900', color: C.ink, marginTop: scale(12) },
+  noAmcText: { fontSize: moderateScale(14), color: C.muted, marginTop: scale(4), textAlign: 'center' },
   createAmcBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 16,
-    paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12, backgroundColor: C.primary
+    flexDirection: 'row', alignItems: 'center', gap: scale(6), marginTop: scale(16),
+    paddingHorizontal: scale(20), paddingVertical: scale(12), borderRadius: scale(12), backgroundColor: C.primary
   },
-  createAmcText: { fontSize: 14, fontWeight: '700', color: '#fff' },
+  createAmcText: { fontSize: moderateScale(14), fontWeight: '700', color: '#fff' },
 
-  amcHistorySection: { marginTop: 24 },
-  amcHistoryCard: { backgroundColor: C.card, borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: C.border },
+  amcHistorySection: { marginTop: scale(24) },
+  amcHistoryCard: { backgroundColor: C.card, borderRadius: scale(12), padding: scale(12), marginBottom: scale(12), borderWidth: 1, borderColor: C.border },
   amcHistoryHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  amcHistoryName: { fontSize: 14, fontWeight: '700', color: C.ink },
-  amcHistoryBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  amcHistoryStatus: { fontSize: 10, fontWeight: '700' },
-  amcHistoryDuration: { fontSize: 12, color: C.muted, marginTop: 4 },
-  amcHistoryPeriod: { fontSize: 12, color: C.muted, marginTop: 2 },
-  amcHistoryUsage: { fontSize: 12, fontWeight: '600', color: C.ink, marginTop: 4 },
+  amcHistoryName: { fontSize: moderateScale(14), fontWeight: '700', color: C.ink },
+  amcHistoryBadge: { paddingHorizontal: scale(8), paddingVertical: scale(3), borderRadius: scale(6) },
+  amcHistoryStatus: { fontSize: moderateScale(10), fontWeight: '700' },
+  amcHistoryDuration: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(4) },
+  amcHistoryPeriod: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(2) },
+  amcHistoryUsage: { fontSize: moderateScale(12), fontWeight: '600', color: C.ink, marginTop: scale(4) },
 
-  footer: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, backgroundColor: C.card, borderTopWidth: 1, borderTopColor: C.border },
+  footer: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: scale(16), backgroundColor: C.card, borderTopWidth: 1, borderTopColor: C.border },
   requestBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: C.primary, paddingVertical: 14, borderRadius: 12
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: scale(8),
+    backgroundColor: C.primary, paddingVertical: scale(14), borderRadius: scale(12)
   },
-  requestBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  requestBtnText: { fontSize: moderateScale(15), fontWeight: '700', color: '#fff' },
 
   // Modal Styles
   imageModal: { flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', alignItems: 'center' },
-  imageModalClose: { position: 'absolute', top: 50, right: 20, zIndex: 10 },
+  imageModalClose: { position: 'absolute', top: scale(50), right: scale(20), zIndex: 10 },
   imageModalImage: { width: '100%', height: '80%' },
 
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: C.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, height: '85%' },
+  modalContent: { backgroundColor: C.card, borderTopLeftRadius: scale(24), borderTopRightRadius: scale(24), height: '85%' },
   modalHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    padding: 16, borderBottomWidth: 1, borderBottomColor: C.border
+    padding: scale(16), borderBottomWidth: 1, borderBottomColor: C.border
   },
-  modalTitle: { fontSize: 18, fontWeight: '900', color: C.ink },
+  modalTitle: { fontSize: moderateScale(18), fontWeight: '900', color: C.ink },
   modalBody: { flex: 1 },
-  modalFooter: { flexDirection: 'row', gap: 12, padding: 16, borderTopWidth: 1, borderTopColor: C.border },
+  modalFooter: { flexDirection: 'row', gap: scale(12), padding: scale(16), borderTopWidth: 1, borderTopColor: C.border },
 
-  label: { fontSize: 12, fontWeight: '700', color: C.muted, marginBottom: 6, marginTop: 12 },
+  label: { fontSize: moderateScale(12), fontWeight: '700', color: C.muted, marginBottom: scale(6), marginTop: scale(12) },
   input: {
-    backgroundColor: C.bg, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12,
-    fontSize: 14, color: C.text, borderWidth: 1, borderColor: C.border
+    backgroundColor: C.bg, borderRadius: scale(12), paddingHorizontal: scale(14), paddingVertical: scale(12),
+    fontSize: moderateScale(14), color: C.text, borderWidth: 1, borderColor: C.border
   },
   pickerBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: C.bg, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 14,
+    backgroundColor: C.bg, borderRadius: scale(12), paddingHorizontal: scale(14), paddingVertical: scale(14),
     borderWidth: 1, borderColor: C.border
   },
-  pickerText: { fontSize: 14, color: C.text },
+  pickerText: { fontSize: moderateScale(14), color: C.text },
 
-  featureInputRow: { flexDirection: 'row', gap: 8 },
-  addFeatureBtn: { width: 48, height: 48, borderRadius: 12, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' },
-  featuresList: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
-  featureBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: C.bg, borderRadius: 8 },
-  featureBadgeText: { fontSize: 12, color: C.ink },
+  featureInputRow: { flexDirection: 'row', gap: scale(8) },
+  addFeatureBtn: { width: scale(48), height: scale(48), borderRadius: scale(12), backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' },
+  featuresList: { flexDirection: 'row', flexWrap: 'wrap', gap: scale(8), marginTop: scale(8) },
+  featureBadge: { flexDirection: 'row', alignItems: 'center', gap: scale(6), paddingHorizontal: scale(10), paddingVertical: scale(6), backgroundColor: C.bg, borderRadius: scale(8) },
+  featureBadgeText: { fontSize: moderateScale(12), color: C.ink },
 
-  switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 },
-  switchLabel: { fontSize: 14, color: C.ink },
+  switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: scale(16) },
+  switchLabel: { fontSize: moderateScale(14), color: C.ink },
 
-  cancelBtn: { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: C.bg, alignItems: 'center' },
-  cancelText: { fontSize: 14, fontWeight: '700', color: C.ink },
+  cancelBtn: { flex: 1, paddingVertical: scale(14), borderRadius: scale(12), backgroundColor: C.bg, alignItems: 'center' },
+  cancelText: { fontSize: moderateScale(14), fontWeight: '700', color: C.ink },
   saveBtn: {
-    flex: 1, flexDirection: 'row', paddingVertical: 14, borderRadius: 12,
-    backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center', gap: 6
+    flex: 1, flexDirection: 'row', paddingVertical: scale(14), borderRadius: scale(12),
+    backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center', gap: scale(6)
   },
-  saveText: { fontSize: 14, fontWeight: '700', color: '#fff' },
+  saveText: { fontSize: moderateScale(14), fontWeight: '700', color: '#fff' },
 
-  pickerModal: { backgroundColor: C.card, borderTopLeftRadius: 24, borderTopRightRadius: 24 },
-  pickerList: { padding: 16 },
+  pickerModal: { backgroundColor: C.card, borderTopLeftRadius: scale(24), borderTopRightRadius: scale(24) },
+  pickerList: { padding: scale(16) },
   pickerItem: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: C.border
+    paddingVertical: scale(14), borderBottomWidth: 1, borderBottomColor: C.border
   },
   pickerItemActive: { backgroundColor: '#FFF5F5' },
-  pickerItemText: { fontSize: 15, fontWeight: '600', color: C.ink },
+  pickerItemText: { fontSize: moderateScale(15), fontWeight: '600', color: C.ink },
 
   serviceCard: {
-    flexDirection: 'row', alignItems: 'center', padding: 12,
-    backgroundColor: C.card, borderRadius: 12, marginBottom: 8,
+    flexDirection: 'row', alignItems: 'center', padding: scale(12),
+    backgroundColor: C.card, borderRadius: scale(12), marginBottom: scale(8),
     borderWidth: 1, borderColor: C.border
   },
   serviceCardActive: { borderColor: C.primary, backgroundColor: '#FFF5F5' },
-  serviceCheckbox: { marginRight: 12 },
+  serviceCheckbox: { marginRight: scale(12) },
   serviceInfo: { flex: 1 },
-  serviceName: { fontSize: 14, fontWeight: '600', color: C.ink },
-  serviceDesc: { fontSize: 12, color: C.muted, marginTop: 2 },
-  servicePrice: { fontSize: 14, fontWeight: '700', color: C.ink },
+  serviceName: { fontSize: moderateScale(14), fontWeight: '600', color: C.ink },
+  serviceDesc: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(2) },
+  servicePrice: { fontSize: moderateScale(14), fontWeight: '700', color: C.ink },
 
   // Quick Date/Time Selection Styles
-  quickDateRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
+  quickDateRow: { flexDirection: 'row', flexWrap: 'wrap', gap: scale(8), marginBottom: scale(8) },
   quickDateChip: {
-    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8,
+    paddingHorizontal: scale(12), paddingVertical: scale(8), borderRadius: scale(8),
     backgroundColor: C.bg, borderWidth: 1, borderColor: C.border,
   },
   quickDateChipActive: { backgroundColor: C.primary, borderColor: C.primary },
-  quickDateText: { fontSize: 12, fontWeight: '600', color: C.ink },
+  quickDateText: { fontSize: moderateScale(12), fontWeight: '600', color: C.ink },
   quickDateTextActive: { color: '#fff' },
 
-  quickTimeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
+  quickTimeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: scale(8), marginBottom: scale(8) },
   quickTimeChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8,
+    flexDirection: 'row', alignItems: 'center', gap: scale(4),
+    paddingHorizontal: scale(10), paddingVertical: scale(8), borderRadius: scale(8),
     backgroundColor: C.bg, borderWidth: 1, borderColor: C.border,
   },
   quickTimeChipActive: { backgroundColor: C.info, borderColor: C.info },
-  quickTimeText: { fontSize: 12, fontWeight: '600', color: C.ink },
+  quickTimeText: { fontSize: moderateScale(12), fontWeight: '600', color: C.ink },
   quickTimeTextActive: { color: '#fff' },
 });

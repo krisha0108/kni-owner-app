@@ -16,6 +16,7 @@ import { api } from '../api/client';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
+import { scale, moderateScale } from '../utils/responsive';
 const CART_STORAGE_KEY = '@marketplace_cart';
 
 const C = {
@@ -118,15 +119,15 @@ export default function MarketplaceProductScreen({ navigation, route }) {
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Icon name="arrow-back" size={22} color={C.ink} />
+            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Product Details</Text>
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
-            <Icon name="menu" size={22} color="#1D2254" />
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
+            <Icon name="menu" size={scale(22)} color="#1D2254" />
           </TouchableOpacity>
         </View>
         <View style={styles.emptyContainer}>
-          <Icon name="cube-outline" size={64} color={C.muted} />
+          <Icon name="cube-outline" size={scale(64)} color={C.muted} />
           <Text style={styles.emptyTitle}>Product Not Found</Text>
           <Text style={styles.emptyText}>This product may no longer be available</Text>
         </View>
@@ -139,15 +140,15 @@ export default function MarketplaceProductScreen({ navigation, route }) {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Icon name="arrow-back" size={22} color={C.ink} />
+          <Icon name="arrow-back" size={scale(22)} color={C.ink} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Product Details</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <TouchableOpacity onPress={() => navigation.navigate('Cart')} style={styles.cartBtn}>
-            <Icon name="cart-outline" size={22} color={C.ink} />
+            <Icon name="cart-outline" size={scale(22)} color={C.ink} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
-            <Icon name="menu" size={22} color="#1D2254" />
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
+            <Icon name="menu" size={scale(22)} color="#1D2254" />
           </TouchableOpacity>
         </View>
       </View>
@@ -158,7 +159,7 @@ export default function MarketplaceProductScreen({ navigation, route }) {
           <Image source={{ uri: product.image }} style={styles.productImage} resizeMode="cover" />
         ) : (
           <View style={styles.noImage}>
-            <Icon name="image-outline" size={48} color={C.muted} />
+            <Icon name="image-outline" size={scale(48)} color={C.muted} />
           </View>
         )}
 
@@ -168,7 +169,7 @@ export default function MarketplaceProductScreen({ navigation, route }) {
 
           {product.vendor && (
             <View style={styles.vendorRow}>
-              <Icon name="business-outline" size={16} color={C.muted} />
+              <Icon name="business-outline" size={scale(16)} color={C.muted} />
               <Text style={styles.vendorText}>
                 {typeof product.vendor === 'object' ? product.vendor.name : product.vendor}
               </Text>
@@ -179,12 +180,12 @@ export default function MarketplaceProductScreen({ navigation, route }) {
             <Text style={styles.price}>₹{product.price}</Text>
             {product.inStock ? (
               <View style={styles.stockBadge}>
-                <Icon name="checkmark-circle" size={16} color={C.ok} />
+                <Icon name="checkmark-circle" size={scale(16)} color={C.ok} />
                 <Text style={styles.stockText}>In Stock</Text>
               </View>
             ) : (
               <View style={[styles.stockBadge, styles.outOfStock]}>
-                <Icon name="close-circle" size={16} color={C.danger} />
+                <Icon name="close-circle" size={scale(16)} color={C.danger} />
                 <Text style={[styles.stockText, { color: C.danger }]}>Out of Stock</Text>
               </View>
             )}
@@ -214,7 +215,7 @@ export default function MarketplaceProductScreen({ navigation, route }) {
           )}
         </View>
 
-        <View style={{ height: 120 }} />
+        <View style={{ height: scale(120) }} />
       </ScrollView>
 
       {/* Bottom Bar */}
@@ -222,11 +223,11 @@ export default function MarketplaceProductScreen({ navigation, route }) {
         <View style={styles.bottomBar}>
           <View style={styles.quantityControl}>
             <TouchableOpacity style={styles.qtyBtn} onPress={decreaseQuantity}>
-              <Icon name="remove" size={20} color={C.ink} />
+              <Icon name="remove" size={scale(20)} color={C.ink} />
             </TouchableOpacity>
             <Text style={styles.qtyText}>{quantity}</Text>
             <TouchableOpacity style={styles.qtyBtn} onPress={increaseQuantity}>
-              <Icon name="add" size={20} color={C.ink} />
+              <Icon name="add" size={scale(20)} color={C.ink} />
             </TouchableOpacity>
           </View>
           <TouchableOpacity
@@ -238,7 +239,7 @@ export default function MarketplaceProductScreen({ navigation, route }) {
               <ActivityIndicator size="small" color="#fff" />
             ) : (
               <>
-                <Icon name="cart" size={20} color="#fff" />
+                <Icon name="cart" size={scale(20)} color="#fff" />
                 <Text style={styles.addToCartText}>Add to Cart</Text>
               </>
             )}
@@ -257,76 +258,76 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(12),
     backgroundColor: C.card,
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
   backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(12),
     backgroundColor: C.bg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cartBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(12),
     backgroundColor: C.bg,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
+  headerTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: C.ink, marginTop: 16 },
-  emptyText: { fontSize: 14, color: C.muted, textAlign: 'center', marginTop: 8 },
+  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: scale(32) },
+  emptyTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink, marginTop: scale(16) },
+  emptyText: { fontSize: moderateScale(14), color: C.muted, textAlign: 'center', marginTop: scale(8) },
 
   content: { flex: 1 },
-  productImage: { width: '100%', height: 250, backgroundColor: C.card },
+  productImage: { width: '100%', height: scale(250), backgroundColor: C.card },
   noImage: {
     width: '100%',
-    height: 200,
+    height: scale(200),
     backgroundColor: C.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
-  infoContainer: { padding: 16 },
-  productName: { fontSize: 22, fontWeight: '800', color: C.ink, marginBottom: 8 },
-  vendorRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 },
-  vendorText: { fontSize: 14, color: C.muted },
+  infoContainer: { padding: scale(16) },
+  productName: { fontSize: moderateScale(22), fontWeight: '800', color: C.ink, marginBottom: scale(8) },
+  vendorRow: { flexDirection: 'row', alignItems: 'center', gap: scale(6), marginBottom: scale(12) },
+  vendorText: { fontSize: moderateScale(14), color: C.muted },
 
-  priceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
-  price: { fontSize: 28, fontWeight: '900', color: C.primary },
+  priceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: scale(16) },
+  price: { fontSize: moderateScale(28), fontWeight: '900', color: C.primary },
   stockBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 20,
+    gap: scale(4),
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(6),
+    borderRadius: scale(20),
     backgroundColor: '#ECFDF5',
   },
   outOfStock: { backgroundColor: '#FEF2F2' },
-  stockText: { fontSize: 13, fontWeight: '600', color: C.ok },
+  stockText: { fontSize: moderateScale(13), fontWeight: '600', color: C.ok },
 
-  section: { marginBottom: 16 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: C.ink, marginBottom: 8 },
-  description: { fontSize: 14, color: C.text, lineHeight: 22 },
+  section: { marginBottom: scale(16) },
+  sectionTitle: { fontSize: moderateScale(16), fontWeight: '700', color: C.ink, marginBottom: scale(8) },
+  description: { fontSize: moderateScale(14), color: C.text, lineHeight: moderateScale(22) },
 
   detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 12,
+    paddingVertical: scale(12),
     borderTopWidth: 1,
     borderTopColor: C.border,
   },
-  detailLabel: { fontSize: 14, color: C.muted },
-  detailValue: { fontSize: 14, fontWeight: '600', color: C.ink },
+  detailLabel: { fontSize: moderateScale(14), color: C.muted },
+  detailValue: { fontSize: moderateScale(14), fontWeight: '600', color: C.ink },
 
   bottomBar: {
     position: 'absolute',
@@ -335,10 +336,10 @@ const styles = StyleSheet.create({
     bottom: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    paddingBottom: 24,
+    gap: scale(12),
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(12),
+    paddingBottom: scale(24),
     backgroundColor: C.card,
     borderTopWidth: 1,
     borderTopColor: C.border,
@@ -347,21 +348,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: C.bg,
-    borderRadius: 12,
+    borderRadius: scale(12),
     borderWidth: 1,
     borderColor: C.border,
   },
-  qtyBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  qtyText: { fontSize: 16, fontWeight: '700', color: C.ink, minWidth: 30, textAlign: 'center' },
+  qtyBtn: { width: scale(40), height: scale(40), alignItems: 'center', justifyContent: 'center' },
+  qtyText: { fontSize: moderateScale(16), fontWeight: '700', color: C.ink, minWidth: scale(30), textAlign: 'center' },
   addToCartBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: 12,
+    gap: scale(8),
+    paddingVertical: scale(14),
+    borderRadius: scale(12),
     backgroundColor: C.primary,
   },
-  addToCartText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  addToCartText: { fontSize: moderateScale(15), fontWeight: '700', color: '#fff' },
 });

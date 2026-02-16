@@ -17,6 +17,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import { api } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
 
+import { scale, moderateScale } from '../utils/responsive';
 const { width } = Dimensions.get('window');
 
 const C = {
@@ -231,7 +232,7 @@ export default function PendingApprovalScreen({ navigation }) {
               colors={typeConfig.gradient}
               style={styles.typeIconBox}
             >
-              <Icon name={typeConfig.icon} size={18} color="#fff" />
+              <Icon name={typeConfig.icon} size={scale(18)} color="#fff" />
             </LinearGradient>
 
             <View style={styles.itemHeaderInfo}>
@@ -255,7 +256,7 @@ export default function PendingApprovalScreen({ navigation }) {
           {/* Footer */}
           <View style={styles.itemFooter}>
             <View style={[styles.statusChip, { backgroundColor: statusConfig.bg }]}>
-              <Icon name={statusConfig.icon} size={13} color={statusConfig.color} />
+              <Icon name={statusConfig.icon} size={scale(13)} color={statusConfig.color} />
               <Text style={[styles.statusChipText, { color: statusConfig.color }]}>
                 {statusConfig.label}
               </Text>
@@ -270,11 +271,11 @@ export default function PendingApprovalScreen({ navigation }) {
               onPress={() => handleViewAction(item)}
               activeOpacity={0.7}
             >
-              <Icon name="eye-outline" size={16} color={C.info} />
+              <Icon name="eye-outline" size={scale(16)} color={C.info} />
               <Text style={styles.actionButtonText}>
                 {item.type === 'RESTAURANT' ? 'View Status' : item.type === 'TEAM_INVITE' ? 'View Team' : 'View Booking'}
               </Text>
-              <Icon name="chevron-forward" size={14} color={C.info} />
+              <Icon name="chevron-forward" size={scale(14)} color={C.info} />
             </TouchableOpacity>
           )}
         </View>
@@ -288,12 +289,12 @@ export default function PendingApprovalScreen({ navigation }) {
         colors={['#F0FDF4', '#DCFCE7']}
         style={styles.emptyIconCircle}
       >
-        <Icon name="checkmark-done-circle" size={56} color="#22C55E" />
+        <Icon name="checkmark-done-circle" size={scale(56)} color="#22C55E" />
       </LinearGradient>
       <Text style={styles.emptyTitle}>All Caught Up!</Text>
       <Text style={styles.emptySubtitle}>No pending items to review right now</Text>
       <TouchableOpacity style={styles.emptyRefreshBtn} onPress={onRefresh}>
-        <Icon name="refresh" size={16} color={C.primary} />
+        <Icon name="refresh" size={scale(16)} color={C.primary} />
         <Text style={styles.emptyRefreshText}>Refresh</Text>
       </TouchableOpacity>
     </View>
@@ -306,7 +307,7 @@ export default function PendingApprovalScreen({ navigation }) {
         style={styles.helpGradient}
       >
         <View style={styles.helpIconBox}>
-          <Icon name="help-circle" size={24} color="#3B82F6" />
+          <Icon name="help-circle" size={scale(24)} color="#3B82F6" />
         </View>
         <Text style={styles.helpTitle}>Need Help?</Text>
         <Text style={styles.helpText}>
@@ -316,7 +317,7 @@ export default function PendingApprovalScreen({ navigation }) {
           style={styles.helpBtn}
           onPress={() => navigation.navigate('SupportCenter')}
         >
-          <Icon name="chatbubbles" size={16} color="#fff" />
+          <Icon name="chatbubbles" size={scale(16)} color="#fff" />
           <Text style={styles.helpBtnText}>Contact Support</Text>
         </TouchableOpacity>
       </LinearGradient>
@@ -328,10 +329,10 @@ export default function PendingApprovalScreen({ navigation }) {
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Icon name="arrow-back" size={22} color="#fff" />
+            <Icon name="arrow-back" size={scale(22)} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Pending Approvals</Text>
-          <View style={{ width: 40 }} />
+          <View style={{ width: scale(40) }} />
         </View>
         <View style={styles.loadingBox}>
           <ActivityIndicator size="large" color={C.primary} />
@@ -351,7 +352,7 @@ export default function PendingApprovalScreen({ navigation }) {
         style={styles.header}
       >
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Icon name="arrow-back" size={22} color="#fff" />
+          <Icon name="arrow-back" size={scale(22)} color="#fff" />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>Pending Approvals</Text>
@@ -362,7 +363,7 @@ export default function PendingApprovalScreen({ navigation }) {
           )}
         </View>
         <TouchableOpacity onPress={onRefresh} style={styles.backBtn}>
-          <Icon name="refresh" size={20} color="#fff" />
+          <Icon name="refresh" size={scale(20)} color="#fff" />
         </TouchableOpacity>
       </LinearGradient>
 
@@ -374,14 +375,14 @@ export default function PendingApprovalScreen({ navigation }) {
           activeOpacity={restaurants.length > 1 ? 0.7 : 1}
         >
           <View style={styles.restaurantIconBox}>
-            <Icon name="restaurant" size={16} color={C.primary} />
+            <Icon name="restaurant" size={scale(16)} color={C.primary} />
           </View>
           <Text style={styles.restaurantName} numberOfLines={1}>
             {currentRestaurant.name}
           </Text>
           {restaurants.length > 1 && (
             <View style={styles.switchPill}>
-              <Icon name="swap-horizontal" size={14} color={C.primary} />
+              <Icon name="swap-horizontal" size={scale(14)} color={C.primary} />
               <Text style={styles.switchText}>Switch</Text>
             </View>
           )}
@@ -399,7 +400,7 @@ export default function PendingApprovalScreen({ navigation }) {
               colors={['#FEF3C7', '#FDE68A']}
               style={styles.summaryIconCircle}
             >
-              <Icon name="time" size={18} color="#D97706" />
+              <Icon name="time" size={scale(18)} color="#D97706" />
             </LinearGradient>
             <Text style={styles.summaryCount}>{pendingCount}</Text>
             <Text style={styles.summaryLabel}>Pending</Text>
@@ -413,7 +414,7 @@ export default function PendingApprovalScreen({ navigation }) {
               colors={['#D1FAE5', '#A7F3D0']}
               style={styles.summaryIconCircle}
             >
-              <Icon name="checkmark-circle" size={18} color="#059669" />
+              <Icon name="checkmark-circle" size={scale(18)} color="#059669" />
             </LinearGradient>
             <Text style={styles.summaryCount}>{approvedCount}</Text>
             <Text style={styles.summaryLabel}>Approved</Text>
@@ -427,7 +428,7 @@ export default function PendingApprovalScreen({ navigation }) {
               colors={['#FEE2E2', '#FECACA']}
               style={styles.summaryIconCircle}
             >
-              <Icon name="close-circle" size={18} color="#DC2626" />
+              <Icon name="close-circle" size={scale(18)} color="#DC2626" />
             </LinearGradient>
             <Text style={styles.summaryCount}>{rejectedCount}</Text>
             <Text style={styles.summaryLabel}>Rejected</Text>
@@ -441,7 +442,7 @@ export default function PendingApprovalScreen({ navigation }) {
               colors={['#E0E7FF', '#C7D2FE']}
               style={styles.summaryIconCircle}
             >
-              <Icon name="documents" size={18} color="#4F46E5" />
+              <Icon name="documents" size={scale(18)} color="#4F46E5" />
             </LinearGradient>
             <Text style={styles.summaryCount}>{items.length}</Text>
             <Text style={styles.summaryLabel}>Total</Text>
@@ -467,9 +468,9 @@ export default function PendingApprovalScreen({ navigation }) {
               >
                 <Icon
                   name={tab.icon}
-                  size={14}
+                  size={scale(14)}
                   color={isActive ? '#fff' : C.muted}
-                  style={{ marginRight: 5 }}
+                  style={{ marginRight: scale(5) }}
                 />
                 <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
                   {tab.label}
@@ -530,13 +531,13 @@ export default function PendingApprovalScreen({ navigation }) {
                 onPress={() => setRestaurantPickerVisible(false)}
                 style={styles.modalCloseBtn}
               >
-                <Icon name="close" size={20} color={C.muted} />
+                <Icon name="close" size={scale(20)} color={C.muted} />
               </TouchableOpacity>
             </View>
 
             <ScrollView
               style={styles.pickerBody}
-              contentContainerStyle={{ paddingBottom: 30 }}
+              contentContainerStyle={{ paddingBottom: scale(30) }}
               showsVerticalScrollIndicator={false}
             >
               {restaurants.map((restaurant) => {
@@ -557,7 +558,7 @@ export default function PendingApprovalScreen({ navigation }) {
                     >
                       <Icon
                         name="restaurant"
-                        size={20}
+                        size={scale(20)}
                         color={isSelected ? '#fff' : C.primary}
                       />
                     </LinearGradient>
@@ -573,13 +574,13 @@ export default function PendingApprovalScreen({ navigation }) {
                       </Text>
                       {restaurant.address && (
                         <Text style={styles.restaurantOptionAddress} numberOfLines={1}>
-                          <Icon name="location-outline" size={11} color={C.muted} /> {restaurant.address}
+                          <Icon name="location-outline" size={scale(11)} color={C.muted} /> {restaurant.address}
                         </Text>
                       )}
                     </View>
                     {isSelected && (
                       <View style={styles.selectedCheck}>
-                        <Icon name="checkmark" size={16} color="#fff" />
+                        <Icon name="checkmark" size={scale(16)} color="#fff" />
                       </View>
                     )}
                   </TouchableOpacity>
@@ -604,13 +605,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(14),
   },
   backBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+    width: scale(38),
+    height: scale(38),
+    borderRadius: scale(12),
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -618,21 +619,21 @@ const styles = StyleSheet.create({
   headerCenter: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: scale(8),
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: moderateScale(18),
     fontWeight: '800',
     color: '#fff',
   },
   countBadge: {
     backgroundColor: '#fff',
-    paddingHorizontal: 9,
-    paddingVertical: 3,
-    borderRadius: 12,
+    paddingHorizontal: scale(9),
+    paddingVertical: scale(3),
+    borderRadius: scale(12),
   },
   countBadgeText: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     fontWeight: '800',
     color: C.primary,
   },
@@ -643,8 +644,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   loadingText: {
-    marginTop: 12,
-    fontSize: 14,
+    marginTop: scale(12),
+    fontSize: moderateScale(14),
     color: C.muted,
   },
 
@@ -652,66 +653,66 @@ const styles = StyleSheet.create({
   restaurantBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    gap: scale(10),
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(10),
     backgroundColor: '#FFF5F5',
     borderBottomWidth: 1,
     borderBottomColor: '#FEE2E2',
   },
   restaurantIconBox: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
+    width: scale(32),
+    height: scale(32),
+    borderRadius: scale(10),
     backgroundColor: '#FEE2E2',
     alignItems: 'center',
     justifyContent: 'center',
   },
   restaurantName: {
     flex: 1,
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '700',
     color: C.ink,
   },
   switchPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    gap: scale(4),
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(5),
     backgroundColor: '#fff',
-    borderRadius: 16,
+    borderRadius: scale(16),
     borderWidth: 1.5,
     borderColor: C.primary,
   },
   switchText: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     fontWeight: '700',
     color: C.primary,
   },
 
   // Summary Section
   summarySection: {
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 6,
+    paddingHorizontal: scale(16),
+    paddingTop: scale(14),
+    paddingBottom: scale(6),
   },
   summaryGrid: {
     flexDirection: 'row',
-    gap: 8,
+    gap: scale(8),
   },
   summaryCard: {
     flex: 1,
     backgroundColor: C.card,
-    borderRadius: 14,
-    padding: 10,
+    borderRadius: scale(14),
+    padding: scale(10),
     alignItems: 'center',
     borderWidth: 1,
     borderColor: C.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
-    shadowRadius: 4,
+    shadowRadius: scale(4),
     elevation: 1,
   },
   summaryCardActive: {
@@ -719,44 +720,44 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   summaryIconCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+    width: scale(34),
+    height: scale(34),
+    borderRadius: scale(10),
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 6,
+    marginBottom: scale(6),
   },
   summaryCount: {
-    fontSize: 18,
+    fontSize: moderateScale(18),
     fontWeight: '800',
     color: C.ink,
   },
   summaryLabel: {
-    fontSize: 10,
+    fontSize: moderateScale(10),
     fontWeight: '600',
     color: C.muted,
-    marginTop: 2,
+    marginTop: scale(2),
     textTransform: 'uppercase',
     letterSpacing: 0.3,
   },
 
   // Tabs
   tabsWrapper: {
-    paddingTop: 8,
-    paddingBottom: 4,
+    paddingTop: scale(8),
+    paddingBottom: scale(4),
     borderBottomWidth: 1,
     borderBottomColor: '#EEEFF2',
   },
   tabsContent: {
-    paddingHorizontal: 16,
-    gap: 8,
+    paddingHorizontal: scale(16),
+    gap: scale(8),
   },
   tab: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingHorizontal: scale(14),
+    paddingVertical: scale(8),
+    borderRadius: scale(20),
     backgroundColor: C.card,
     borderWidth: 1.5,
     borderColor: C.border,
@@ -766,7 +767,7 @@ const styles = StyleSheet.create({
     borderColor: C.primary,
   },
   tabText: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     fontWeight: '600',
     color: C.muted,
   },
@@ -774,17 +775,17 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   tabBadge: {
-    marginLeft: 6,
+    marginLeft: scale(6),
     backgroundColor: '#FEF3C7',
-    paddingHorizontal: 6,
+    paddingHorizontal: scale(6),
     paddingVertical: 1,
-    borderRadius: 8,
+    borderRadius: scale(8),
   },
   tabBadgeActive: {
     backgroundColor: 'rgba(255,255,255,0.3)',
   },
   tabBadgeText: {
-    fontSize: 10,
+    fontSize: moderateScale(10),
     fontWeight: '700',
     color: '#D97706',
   },
@@ -797,60 +798,60 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 6,
+    paddingHorizontal: scale(16),
+    paddingTop: scale(12),
+    paddingBottom: scale(6),
   },
   listTitle: {
-    fontSize: 15,
+    fontSize: moderateScale(15),
     fontWeight: '700',
     color: C.ink,
   },
   listCount: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     fontWeight: '600',
     color: C.muted,
     backgroundColor: '#F1F5F9',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
+    paddingHorizontal: scale(8),
+    paddingVertical: scale(3),
+    borderRadius: scale(8),
   },
 
   // List Content
   listContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 30,
+    paddingHorizontal: scale(16),
+    paddingBottom: scale(30),
   },
 
   // Item Card
   itemCard: {
     backgroundColor: C.card,
-    borderRadius: 16,
-    marginBottom: 12,
+    borderRadius: scale(16),
+    marginBottom: scale(12),
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: C.border,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: scale(2) },
     shadowOpacity: 0.05,
-    shadowRadius: 8,
+    shadowRadius: scale(8),
     elevation: 2,
   },
   itemAccent: {
-    height: 3,
+    height: scale(3),
   },
   itemBody: {
-    padding: 14,
+    padding: scale(14),
   },
   itemHeaderRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: scale(12),
     alignItems: 'flex-start',
   },
   typeIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(12),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -858,75 +859,75 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   itemTitle: {
-    fontSize: 15,
+    fontSize: moderateScale(15),
     fontWeight: '700',
     color: C.ink,
-    marginBottom: 4,
+    marginBottom: scale(4),
   },
   itemMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: scale(8),
   },
   typePill: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
+    paddingHorizontal: scale(8),
+    paddingVertical: scale(2),
+    borderRadius: scale(6),
   },
   typePillText: {
-    fontSize: 10,
+    fontSize: moderateScale(10),
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.3,
   },
   timeAgoText: {
-    fontSize: 11,
+    fontSize: moderateScale(11),
     color: C.muted,
   },
   itemDesc: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     color: C.muted,
-    lineHeight: 19,
-    marginTop: 10,
-    paddingLeft: 52,
+    lineHeight: moderateScale(19),
+    marginTop: scale(10),
+    paddingLeft: scale(52),
   },
   itemFooter: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 12,
-    paddingLeft: 52,
+    marginTop: scale(12),
+    paddingLeft: scale(52),
   },
   statusChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
+    gap: scale(5),
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(5),
+    borderRadius: scale(8),
   },
   statusChipText: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     fontWeight: '700',
   },
   itemDateText: {
-    fontSize: 11,
+    fontSize: moderateScale(11),
     color: C.muted,
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    marginTop: 12,
-    paddingVertical: 10,
+    gap: scale(6),
+    marginTop: scale(12),
+    paddingVertical: scale(10),
     backgroundColor: '#EFF6FF',
-    borderRadius: 10,
+    borderRadius: scale(10),
     borderWidth: 1,
     borderColor: '#BFDBFE',
   },
   actionButtonText: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     fontWeight: '700',
     color: C.info,
   },
@@ -934,87 +935,87 @@ const styles = StyleSheet.create({
   // Empty State
   emptyBox: {
     alignItems: 'center',
-    paddingVertical: 50,
+    paddingVertical: scale(50),
   },
   emptyIconCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: scale(100),
+    height: scale(100),
+    borderRadius: scale(50),
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: scale(20),
   },
   emptyTitle: {
-    fontSize: 20,
+    fontSize: moderateScale(20),
     fontWeight: '800',
     color: C.ink,
-    marginBottom: 6,
+    marginBottom: scale(6),
   },
   emptySubtitle: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: C.muted,
-    marginBottom: 20,
+    marginBottom: scale(20),
   },
   emptyRefreshBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
+    gap: scale(6),
+    paddingHorizontal: scale(20),
+    paddingVertical: scale(10),
+    borderRadius: scale(20),
     borderWidth: 1.5,
     borderColor: C.primary,
   },
   emptyRefreshText: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '600',
     color: C.primary,
   },
 
   // Help Card
   helpCard: {
-    marginTop: 16,
-    borderRadius: 16,
+    marginTop: scale(16),
+    borderRadius: scale(16),
     overflow: 'hidden',
   },
   helpGradient: {
-    padding: 20,
+    padding: scale(20),
     alignItems: 'center',
-    borderRadius: 16,
+    borderRadius: scale(16),
   },
   helpIconBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: scale(48),
+    height: scale(48),
+    borderRadius: scale(24),
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: scale(12),
   },
   helpTitle: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: '800',
     color: C.ink,
-    marginBottom: 6,
+    marginBottom: scale(6),
   },
   helpText: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     color: C.muted,
     textAlign: 'center',
-    lineHeight: 19,
-    marginBottom: 16,
+    lineHeight: moderateScale(19),
+    marginBottom: scale(16),
   },
   helpBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
+    gap: scale(6),
+    paddingHorizontal: scale(20),
+    paddingVertical: scale(10),
+    borderRadius: scale(20),
     backgroundColor: C.info,
   },
   helpBtnText: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     fontWeight: '700',
     color: '#fff',
   },
@@ -1027,56 +1028,56 @@ const styles = StyleSheet.create({
   },
   pickerSheet: {
     backgroundColor: C.card,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    borderTopLeftRadius: scale(28),
+    borderTopRightRadius: scale(28),
     maxHeight: '70%',
   },
   modalDragBar: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
+    width: scale(40),
+    height: scale(4),
+    borderRadius: scale(2),
     backgroundColor: '#D1D5DB',
     alignSelf: 'center',
-    marginTop: 12,
+    marginTop: scale(12),
   },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 14,
+    paddingHorizontal: scale(20),
+    paddingTop: scale(16),
+    paddingBottom: scale(14),
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: moderateScale(18),
     fontWeight: '800',
     color: C.ink,
   },
   modalSubtitle: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     color: C.muted,
-    marginTop: 2,
+    marginTop: scale(2),
   },
   modalCloseBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: scale(36),
+    height: scale(36),
+    borderRadius: scale(18),
     backgroundColor: '#F3F4F6',
     alignItems: 'center',
     justifyContent: 'center',
   },
   pickerBody: {
-    padding: 16,
+    padding: scale(16),
   },
   restaurantOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    padding: 14,
-    marginBottom: 10,
-    borderRadius: 14,
+    gap: scale(12),
+    padding: scale(14),
+    marginBottom: scale(10),
+    borderRadius: scale(14),
     borderWidth: 2,
     borderColor: C.border,
     backgroundColor: '#FAFBFC',
@@ -1086,9 +1087,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF5F5',
   },
   restaurantOptionIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: scale(44),
+    height: scale(44),
+    borderRadius: scale(14),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1096,7 +1097,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   restaurantOptionName: {
-    fontSize: 15,
+    fontSize: moderateScale(15),
     fontWeight: '700',
     color: C.ink,
   },
@@ -1104,14 +1105,14 @@ const styles = StyleSheet.create({
     color: C.primary,
   },
   restaurantOptionAddress: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     color: C.muted,
-    marginTop: 3,
+    marginTop: scale(3),
   },
   selectedCheck: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: scale(28),
+    height: scale(28),
+    borderRadius: scale(14),
     backgroundColor: C.primary,
     alignItems: 'center',
     justifyContent: 'center',

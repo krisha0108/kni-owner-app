@@ -27,6 +27,7 @@ import { RestaurantSelectorBar } from '../components/RestaurantSelector';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
+import { scale, moderateScale } from '../utils/responsive';
 // Premium Color Palette
 const C = {
   primary: '#EF3A3A',
@@ -261,7 +262,7 @@ export default function StaffSalaryScreen({ navigation }) {
         <StatusBar barStyle="dark-content" backgroundColor={C.card} />
         <View style={st.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
-            <Icon name="arrow-back" size={22} color={C.ink} />
+            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
           </TouchableOpacity>
           <View style={st.headerCenter}>
             <Text style={st.headerTitle}>Staff Salary</Text>
@@ -269,7 +270,7 @@ export default function StaffSalaryScreen({ navigation }) {
           </View>
           <View style={st.headerActions}>
             <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
-              <Icon name="menu" size={20} color={C.ink} />
+              <Icon name="menu" size={scale(20)} color={C.ink} />
             </TouchableOpacity>
           </View>
         </View>
@@ -293,7 +294,7 @@ export default function StaffSalaryScreen({ navigation }) {
         <View style={st.cardHeader}>
           <View style={st.staffInfo}>
             <View style={st.staffAvatar}>
-              <Icon name="person" size={20} color={C.primary} />
+              <Icon name="person" size={scale(20)} color={C.primary} />
             </View>
             <View style={st.staffDetails}>
               <Text style={st.staffName}>{item.staff?.name || 'Staff'}</Text>
@@ -301,7 +302,7 @@ export default function StaffSalaryScreen({ navigation }) {
             </View>
           </View>
           <View style={[st.statusBadge, { backgroundColor: statusConfig.bg }]}>
-            <Icon name={statusConfig.icon} size={12} color={statusConfig.color} />
+            <Icon name={statusConfig.icon} size={scale(12)} color={statusConfig.color} />
             <Text style={[st.statusText, { color: statusConfig.color }]}>{statusConfig.label}</Text>
           </View>
         </View>
@@ -337,13 +338,13 @@ export default function StaffSalaryScreen({ navigation }) {
           <View style={st.extraRow}>
             {item.allowances > 0 && (
               <View style={st.extraItem}>
-                <Icon name="add-circle" size={14} color={C.success} />
+                <Icon name="add-circle" size={scale(14)} color={C.success} />
                 <Text style={st.extraText}>+{formatPrice(item.allowances)}</Text>
               </View>
             )}
             {item.deductions > 0 && (
               <View style={st.extraItem}>
-                <Icon name="remove-circle" size={14} color={C.danger} />
+                <Icon name="remove-circle" size={scale(14)} color={C.danger} />
                 <Text style={st.extraText}>-{formatPrice(item.deductions)}</Text>
               </View>
             )}
@@ -353,20 +354,20 @@ export default function StaffSalaryScreen({ navigation }) {
         {/* Actions */}
         <View style={st.cardActions}>
           <TouchableOpacity style={st.detailBtn} onPress={() => setDetailModal(item)}>
-            <Icon name="eye-outline" size={16} color={C.info} />
+            <Icon name="eye-outline" size={scale(16)} color={C.info} />
             <Text style={[st.actionBtnText, { color: C.info }]}>Details</Text>
           </TouchableOpacity>
 
           {item.status !== 'PAID' && (
             <TouchableOpacity style={st.payBtn} onPress={() => openPaymentDialog(item)}>
-              <Icon name="cash" size={16} color="#fff" />
+              <Icon name="cash" size={scale(16)} color="#fff" />
               <Text style={st.payBtnText}>Pay {formatPrice(remaining)}</Text>
             </TouchableOpacity>
           )}
 
           {item.totalPaid === 0 && (
             <TouchableOpacity style={st.deleteBtn} onPress={() => handleDeleteRecord(item)}>
-              <Icon name="trash-outline" size={16} color={C.danger} />
+              <Icon name="trash-outline" size={scale(16)} color={C.danger} />
             </TouchableOpacity>
           )}
         </View>
@@ -382,7 +383,7 @@ export default function StaffSalaryScreen({ navigation }) {
       {/* Header */}
       <View style={st.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
-          <Icon name="arrow-back" size={22} color={C.ink} />
+          <Icon name="arrow-back" size={scale(22)} color={C.ink} />
         </TouchableOpacity>
         <View style={st.headerCenter}>
           <Text style={st.headerTitle}>Staff Salary</Text>
@@ -398,12 +399,12 @@ export default function StaffSalaryScreen({ navigation }) {
               {generating ? (
                 <ActivityIndicator size="small" color={C.primary} />
               ) : (
-                <Icon name="add" size={20} color={C.primary} />
+                <Icon name="add" size={scale(20)} color={C.primary} />
               )}
             </TouchableOpacity>
           )}
           <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
-            <Icon name="menu" size={20} color={C.ink} />
+            <Icon name="menu" size={scale(20)} color={C.ink} />
           </TouchableOpacity>
         </View>
       </View>
@@ -420,14 +421,14 @@ export default function StaffSalaryScreen({ navigation }) {
         {/* Month Selector */}
         <View style={st.monthSelector}>
           <TouchableOpacity style={st.monthBtn} onPress={() => changeMonth(-1)}>
-            <Icon name="chevron-back" size={20} color={C.ink} />
+            <Icon name="chevron-back" size={scale(20)} color={C.ink} />
           </TouchableOpacity>
           <View style={st.monthBox}>
-            <Icon name="calendar" size={20} color={C.primary} />
+            <Icon name="calendar" size={scale(20)} color={C.primary} />
             <Text style={st.monthText}>{monthNames[selectedMonth - 1]} {selectedYear}</Text>
           </View>
           <TouchableOpacity style={st.monthBtn} onPress={() => changeMonth(1)}>
-            <Icon name="chevron-forward" size={20} color={C.ink} />
+            <Icon name="chevron-forward" size={scale(20)} color={C.ink} />
           </TouchableOpacity>
         </View>
 
@@ -435,22 +436,22 @@ export default function StaffSalaryScreen({ navigation }) {
         {salaries.length > 0 && (
           <View style={st.statsRow}>
             <View style={[st.statCard, { backgroundColor: C.infoLight }]}>
-              <Icon name="people" size={20} color={C.info} />
+              <Icon name="people" size={scale(20)} color={C.info} />
               <Text style={[st.statValue, { color: C.info }]}>{staffCount}</Text>
               <Text style={st.statLabel}>Staff</Text>
             </View>
             <View style={[st.statCard, { backgroundColor: C.primaryLight }]}>
-              <Icon name="wallet" size={20} color={C.primary} />
+              <Icon name="wallet" size={scale(20)} color={C.primary} />
               <Text style={[st.statValue, { color: C.primary }]}>{formatPrice(totalPayable)}</Text>
               <Text style={st.statLabel}>Payable</Text>
             </View>
             <View style={[st.statCard, { backgroundColor: C.successLight }]}>
-              <Icon name="checkmark-done" size={20} color={C.success} />
+              <Icon name="checkmark-done" size={scale(20)} color={C.success} />
               <Text style={[st.statValue, { color: C.success }]}>{formatPrice(totalPaid)}</Text>
               <Text style={st.statLabel}>Paid</Text>
             </View>
             <View style={[st.statCard, { backgroundColor: C.warningLight }]}>
-              <Icon name="time" size={20} color={C.warning} />
+              <Icon name="time" size={scale(20)} color={C.warning} />
               <Text style={[st.statValue, { color: C.warning }]}>{formatPrice(totalPending)}</Text>
               <Text style={st.statLabel}>Pending</Text>
             </View>
@@ -461,7 +462,7 @@ export default function StaffSalaryScreen({ navigation }) {
         {salaries.length === 0 ? (
           <View style={st.emptyState}>
             <View style={st.emptyIcon}>
-              <Icon name="cash-outline" size={64} color={C.muted} />
+              <Icon name="cash-outline" size={scale(64)} color={C.muted} />
             </View>
             <Text style={st.emptyTitle}>No Salaries Generated</Text>
             <Text style={st.emptySubtitle}>
@@ -476,7 +477,7 @@ export default function StaffSalaryScreen({ navigation }) {
                 <ActivityIndicator size="small" color="#fff" />
               ) : (
                 <>
-                  <Icon name="add-circle" size={18} color="#fff" />
+                  <Icon name="add-circle" size={scale(18)} color="#fff" />
                   <Text style={st.generateBtnText}>Generate Salary</Text>
                 </>
               )}
@@ -488,7 +489,7 @@ export default function StaffSalaryScreen({ navigation }) {
           </View>
         )}
 
-        <View style={{ height: 120 }} />
+        <View style={{ height: scale(120) }} />
       </ScrollView>
 
       {/* Detail Modal */}
@@ -498,7 +499,7 @@ export default function StaffSalaryScreen({ navigation }) {
             <View style={st.modalHeader}>
               <Text style={st.modalTitle}>Salary Details</Text>
               <TouchableOpacity onPress={() => setDetailModal(null)} style={st.modalClose}>
-                <Icon name="close" size={24} color={C.ink} />
+                <Icon name="close" size={scale(24)} color={C.ink} />
               </TouchableOpacity>
             </View>
 
@@ -561,7 +562,7 @@ export default function StaffSalaryScreen({ navigation }) {
                   <View style={[st.statusBadge, { backgroundColor: getStatusConfig(detailModal?.status).bg }]}>
                     <Icon
                       name={getStatusConfig(detailModal?.status).icon}
-                      size={12}
+                      size={scale(12)}
                       color={getStatusConfig(detailModal?.status).color}
                     />
                     <Text style={[st.statusText, { color: getStatusConfig(detailModal?.status).color }]}>
@@ -581,7 +582,7 @@ export default function StaffSalaryScreen({ navigation }) {
                     openPaymentDialog(detailModal);
                   }}
                 >
-                  <Icon name="cash" size={20} color="#fff" />
+                  <Icon name="cash" size={scale(20)} color="#fff" />
                   <Text style={st.modalPayBtnText}>Record Payment</Text>
                 </TouchableOpacity>
               </View>
@@ -600,7 +601,7 @@ export default function StaffSalaryScreen({ navigation }) {
                 onPress={() => { setPaymentModal(null); setPaymentAmount(''); }}
                 style={st.modalClose}
               >
-                <Icon name="close" size={24} color={C.ink} />
+                <Icon name="close" size={scale(24)} color={C.ink} />
               </TouchableOpacity>
             </View>
 
@@ -633,7 +634,7 @@ export default function StaffSalaryScreen({ navigation }) {
               <View style={st.inputGroup}>
                 <Text style={st.inputLabel}>Payment Amount (₹)</Text>
                 <View style={st.inputBox}>
-                  <Icon name="cash-outline" size={20} color={C.muted} />
+                  <Icon name="cash-outline" size={scale(20)} color={C.muted} />
                   <TextInput
                     style={st.input}
                     value={paymentAmount}
@@ -664,7 +665,7 @@ export default function StaffSalaryScreen({ navigation }) {
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
                   <>
-                    <Icon name="checkmark-circle" size={18} color="#fff" />
+                    <Icon name="checkmark-circle" size={scale(18)} color="#fff" />
                     <Text style={st.confirmPayBtnText}>Record Payment</Text>
                   </>
                 )}
@@ -688,215 +689,215 @@ const st = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(12),
     backgroundColor: C.card,
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
   backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(10),
     backgroundColor: C.bg,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerCenter: { flex: 1, marginLeft: 12 },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
-  headerSubtitle: { fontSize: 12, color: C.muted, marginTop: 2 },
+  headerCenter: { flex: 1, marginLeft: scale(12) },
+  headerTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink },
+  headerSubtitle: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(2) },
   headerActions: { flexDirection: 'row' },
   headerIconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(10),
     backgroundColor: C.bg,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 8,
+    marginLeft: scale(8),
   },
 
   content: { flex: 1 },
   scrollContent: { flexGrow: 1 },
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  loadingText: { marginTop: 16, fontSize: 15, color: C.muted },
+  loadingText: { marginTop: scale(16), fontSize: moderateScale(15), color: C.muted },
 
   // Month Selector
   monthSelector: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(14),
     backgroundColor: C.card,
-    marginHorizontal: 16,
-    marginTop: 16,
-    borderRadius: 14,
+    marginHorizontal: scale(16),
+    marginTop: scale(16),
+    borderRadius: scale(14),
     borderWidth: 1,
     borderColor: C.border,
   },
   monthBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(10),
     backgroundColor: C.bg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   monthBox: { flexDirection: 'row', alignItems: 'center' },
-  monthText: { fontSize: 15, fontWeight: '700', color: C.ink, marginLeft: 8 },
+  monthText: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink, marginLeft: scale(8) },
 
   // Stats
-  statsRow: { flexDirection: 'row', paddingHorizontal: 16, paddingTop: 16 },
+  statsRow: { flexDirection: 'row', paddingHorizontal: scale(16), paddingTop: scale(16) },
   statCard: {
     flex: 1,
     alignItems: 'center',
-    padding: 10,
-    borderRadius: 12,
-    marginHorizontal: 3,
+    padding: scale(10),
+    borderRadius: scale(12),
+    marginHorizontal: scale(3),
   },
-  statValue: { fontSize: 14, fontWeight: '800', marginTop: 4 },
-  statLabel: { fontSize: 9, fontWeight: '600', color: C.muted, marginTop: 2 },
+  statValue: { fontSize: moderateScale(14), fontWeight: '800', marginTop: scale(4) },
+  statLabel: { fontSize: moderateScale(9), fontWeight: '600', color: C.muted, marginTop: scale(2) },
 
   // Card List
-  cardList: { paddingHorizontal: 16, paddingTop: 16 },
+  cardList: { paddingHorizontal: scale(16), paddingTop: scale(16) },
   cardListTablet: { flexDirection: 'row', flexWrap: 'wrap' },
 
   // Salary Card
   card: {
     backgroundColor: C.card,
-    padding: 16,
-    borderRadius: 14,
-    marginBottom: 12,
+    padding: scale(16),
+    borderRadius: scale(14),
+    marginBottom: scale(12),
     borderWidth: 1,
     borderColor: C.border,
   },
   cardTablet: { width: '48%', marginHorizontal: '1%' },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: scale(12) },
   staffInfo: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   staffAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: scale(44),
+    height: scale(44),
+    borderRadius: scale(12),
     backgroundColor: C.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  staffDetails: { flex: 1, marginLeft: 12 },
-  staffName: { fontSize: 15, fontWeight: '700', color: C.ink },
-  staffRole: { fontSize: 12, color: C.muted, marginTop: 2 },
+  staffDetails: { flex: 1, marginLeft: scale(12) },
+  staffName: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink },
+  staffRole: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(2) },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(5),
+    borderRadius: scale(8),
   },
-  statusText: { fontSize: 11, fontWeight: '600', marginLeft: 4 },
+  statusText: { fontSize: moderateScale(11), fontWeight: '600', marginLeft: scale(4) },
 
   // Amount Row
-  amountRow: { flexDirection: 'row', marginBottom: 12 },
-  amountItem: { flex: 1, backgroundColor: C.bg, padding: 10, borderRadius: 8, marginHorizontal: 2 },
-  amountLabel: { fontSize: 10, color: C.muted, marginBottom: 2 },
-  amountValue: { fontSize: 13, fontWeight: '700', color: C.ink },
+  amountRow: { flexDirection: 'row', marginBottom: scale(12) },
+  amountItem: { flex: 1, backgroundColor: C.bg, padding: scale(10), borderRadius: scale(8), marginHorizontal: scale(2) },
+  amountLabel: { fontSize: moderateScale(10), color: C.muted, marginBottom: scale(2) },
+  amountValue: { fontSize: moderateScale(13), fontWeight: '700', color: C.ink },
 
   // Progress
-  progressContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  progressBar: { flex: 1, height: 6, backgroundColor: C.border, borderRadius: 3, overflow: 'hidden', marginRight: 10 },
-  progressFill: { height: '100%', backgroundColor: C.success, borderRadius: 3 },
-  progressText: { fontSize: 11, color: C.muted, fontWeight: '600' },
+  progressContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: scale(12) },
+  progressBar: { flex: 1, height: scale(6), backgroundColor: C.border, borderRadius: scale(3), overflow: 'hidden', marginRight: scale(10) },
+  progressFill: { height: '100%', backgroundColor: C.success, borderRadius: scale(3) },
+  progressText: { fontSize: moderateScale(11), color: C.muted, fontWeight: '600' },
 
   // Extra Row (Allowances/Deductions)
-  extraRow: { flexDirection: 'row', marginBottom: 12 },
-  extraItem: { flexDirection: 'row', alignItems: 'center', marginRight: 16 },
-  extraText: { fontSize: 12, color: C.text, marginLeft: 4 },
+  extraRow: { flexDirection: 'row', marginBottom: scale(12) },
+  extraItem: { flexDirection: 'row', alignItems: 'center', marginRight: scale(16) },
+  extraText: { fontSize: moderateScale(12), color: C.text, marginLeft: scale(4) },
 
   // Card Actions
-  cardActions: { flexDirection: 'row', marginTop: 4 },
+  cardActions: { flexDirection: 'row', marginTop: scale(4) },
   detailBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
-    borderRadius: 10,
+    paddingVertical: scale(10),
+    borderRadius: scale(10),
     backgroundColor: C.infoLight,
-    marginRight: 8,
+    marginRight: scale(8),
   },
-  actionBtnText: { fontSize: 12, fontWeight: '600', marginLeft: 4 },
+  actionBtnText: { fontSize: moderateScale(12), fontWeight: '600', marginLeft: scale(4) },
   payBtn: {
     flex: 2,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
-    borderRadius: 10,
+    paddingVertical: scale(10),
+    borderRadius: scale(10),
     backgroundColor: C.success,
-    marginRight: 8,
+    marginRight: scale(8),
   },
-  payBtnText: { fontSize: 12, fontWeight: '700', color: '#fff', marginLeft: 4 },
+  payBtnText: { fontSize: moderateScale(12), fontWeight: '700', color: '#fff', marginLeft: scale(4) },
   deleteBtn: {
-    width: 40,
+    width: scale(40),
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
-    borderRadius: 10,
+    paddingVertical: scale(10),
+    borderRadius: scale(10),
     backgroundColor: C.dangerLight,
   },
 
   // Empty State
-  emptyState: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 40 },
+  emptyState: { alignItems: 'center', paddingTop: scale(60), paddingHorizontal: scale(40) },
   emptyIcon: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: scale(120),
+    height: scale(120),
+    borderRadius: scale(60),
     backgroundColor: C.border,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: scale(20),
   },
-  emptyTitle: { fontSize: 20, fontWeight: '700', color: C.ink, marginBottom: 8 },
-  emptySubtitle: { fontSize: 14, color: C.muted, textAlign: 'center' },
+  emptyTitle: { fontSize: moderateScale(20), fontWeight: '700', color: C.ink, marginBottom: scale(8) },
+  emptySubtitle: { fontSize: moderateScale(14), color: C.muted, textAlign: 'center' },
   generateBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 24,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
+    marginTop: scale(24),
+    paddingHorizontal: scale(24),
+    paddingVertical: scale(14),
     backgroundColor: C.primary,
-    borderRadius: 14,
+    borderRadius: scale(14),
   },
-  generateBtnText: { fontSize: 15, fontWeight: '700', color: '#fff', marginLeft: 8 },
+  generateBtnText: { fontSize: moderateScale(15), fontWeight: '700', color: '#fff', marginLeft: scale(8) },
 
   // Modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalContent: {
     backgroundColor: C.card,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: scale(24),
+    borderTopRightRadius: scale(24),
     maxHeight: '85%',
   },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 20,
+    padding: scale(20),
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
+  modalTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink },
   modalClose: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: scale(36),
+    height: scale(36),
+    borderRadius: scale(18),
     backgroundColor: C.bg,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  modalBody: { padding: 20 },
+  modalBody: { padding: scale(20) },
   modalFooter: {
     flexDirection: 'row',
-    padding: 20,
+    padding: scale(20),
     borderTopWidth: 1,
     borderTopColor: C.border,
   },
@@ -904,29 +905,29 @@ const st = StyleSheet.create({
   // Detail Card
   detailCard: {
     backgroundColor: C.bg,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    borderRadius: scale(12),
+    padding: scale(16),
+    marginBottom: scale(16),
   },
   detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: scale(10),
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
-  detailLabel: { fontSize: 13, color: C.muted },
-  detailValue: { fontSize: 14, fontWeight: '600', color: C.ink },
+  detailLabel: { fontSize: moderateScale(13), color: C.muted },
+  detailValue: { fontSize: moderateScale(14), fontWeight: '600', color: C.ink },
   totalRow: {
     backgroundColor: C.card,
-    marginTop: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
+    marginTop: scale(8),
+    paddingHorizontal: scale(12),
+    borderRadius: scale(8),
     borderBottomWidth: 0,
   },
-  totalLabel: { fontSize: 14, fontWeight: '700', color: C.ink },
-  totalValue: { fontSize: 18, fontWeight: '800', color: C.primary },
+  totalLabel: { fontSize: moderateScale(14), fontWeight: '700', color: C.ink },
+  totalValue: { fontSize: moderateScale(18), fontWeight: '800', color: C.primary },
 
   modalPayBtn: {
     flex: 1,
@@ -934,57 +935,57 @@ const st = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: C.success,
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingVertical: scale(14),
+    borderRadius: scale(12),
   },
-  modalPayBtnText: { fontSize: 15, fontWeight: '700', color: '#fff', marginLeft: 8 },
+  modalPayBtnText: { fontSize: moderateScale(15), fontWeight: '700', color: '#fff', marginLeft: scale(8) },
 
   // Payment Modal
-  paymentSubtitle: { fontSize: 14, color: C.muted, marginBottom: 16 },
-  paymentSummary: { flexDirection: 'row', marginBottom: 20 },
+  paymentSubtitle: { fontSize: moderateScale(14), color: C.muted, marginBottom: scale(16) },
+  paymentSummary: { flexDirection: 'row', marginBottom: scale(20) },
   paymentSummaryItem: {
     flex: 1,
     backgroundColor: C.bg,
-    padding: 12,
-    borderRadius: 10,
-    marginHorizontal: 3,
+    padding: scale(12),
+    borderRadius: scale(10),
+    marginHorizontal: scale(3),
   },
-  paymentSummaryLabel: { fontSize: 11, color: C.muted, marginBottom: 4 },
-  paymentSummaryValue: { fontSize: 14, fontWeight: '700', color: C.ink },
+  paymentSummaryLabel: { fontSize: moderateScale(11), color: C.muted, marginBottom: scale(4) },
+  paymentSummaryValue: { fontSize: moderateScale(14), fontWeight: '700', color: C.ink },
 
-  inputGroup: { marginBottom: 16 },
-  inputLabel: { fontSize: 14, fontWeight: '600', color: C.text, marginBottom: 8 },
+  inputGroup: { marginBottom: scale(16) },
+  inputLabel: { fontSize: moderateScale(14), fontWeight: '600', color: C.text, marginBottom: scale(8) },
   inputBox: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1.5,
     borderColor: C.border,
     backgroundColor: C.bg,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    borderRadius: scale(12),
+    paddingHorizontal: scale(14),
+    paddingVertical: scale(12),
   },
-  input: { flex: 1, color: C.text, fontSize: 16, marginLeft: 10 },
-  inputHint: { fontSize: 12, color: C.muted, marginTop: 6 },
+  input: { flex: 1, color: C.text, fontSize: moderateScale(16), marginLeft: scale(10) },
+  inputHint: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(6) },
 
   cancelBtn: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingVertical: scale(14),
+    borderRadius: scale(12),
     backgroundColor: C.bg,
-    marginRight: 8,
+    marginRight: scale(8),
   },
-  cancelBtnText: { fontSize: 15, fontWeight: '700', color: C.ink },
+  cancelBtnText: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink },
   confirmPayBtn: {
     flex: 2,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingVertical: scale(14),
+    borderRadius: scale(12),
     backgroundColor: C.success,
   },
-  confirmPayBtnText: { fontSize: 15, fontWeight: '700', color: '#fff', marginLeft: 8 },
+  confirmPayBtnText: { fontSize: moderateScale(15), fontWeight: '700', color: '#fff', marginLeft: scale(8) },
 });

@@ -27,6 +27,7 @@ import { RestaurantSelectorBar } from '../components/RestaurantSelector';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
+import { scale, moderateScale } from '../utils/responsive';
 // Premium Color Palette
 const C = {
   primary: '#EF3A3A',
@@ -300,7 +301,7 @@ export default function StaffAttendanceScreen({ navigation }) {
       <SafeAreaView style={st.container}>
         <View style={st.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
-            <Icon name="arrow-back" size={22} color={C.ink} />
+            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
           </TouchableOpacity>
           <View style={st.headerCenter}>
             <Text style={st.headerTitle}>Staff Attendance</Text>
@@ -308,7 +309,7 @@ export default function StaffAttendanceScreen({ navigation }) {
           </View>
           <View style={st.headerActions}>
             <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
-              <Icon name="menu" size={20} color={C.ink} />
+              <Icon name="menu" size={scale(20)} color={C.ink} />
             </TouchableOpacity>
           </View>
         </View>
@@ -332,7 +333,7 @@ export default function StaffAttendanceScreen({ navigation }) {
         <View style={st.staffHeader}>
           <View style={st.staffInfo}>
             <View style={st.staffAvatar}>
-              <Icon name="person" size={20} color={C.primary} />
+              <Icon name="person" size={scale(20)} color={C.primary} />
             </View>
             <View style={st.staffDetails}>
               <Text style={st.staffName}>{member.name}</Text>
@@ -345,13 +346,13 @@ export default function StaffAttendanceScreen({ navigation }) {
               style={[st.statusBadge, { backgroundColor: statusConfig.bg }]}
               onPress={() => openStatusPicker(member)}
             >
-              <Icon name={statusConfig.icon} size={14} color={statusConfig.color} />
+              <Icon name={statusConfig.icon} size={scale(14)} color={statusConfig.color} />
               <Text style={[st.statusBadgeText, { color: statusConfig.color }]}>{statusConfig.label}</Text>
-              <Icon name="pencil" size={12} color={statusConfig.color} />
+              <Icon name="pencil" size={scale(12)} color={statusConfig.color} />
             </TouchableOpacity>
           ) : (
             <TouchableOpacity style={st.markBtn} onPress={() => openStatusPicker(member)}>
-              <Icon name="add-circle" size={18} color={C.primary} />
+              <Icon name="add-circle" size={scale(18)} color={C.primary} />
               <Text style={st.markBtnText}>Mark</Text>
             </TouchableOpacity>
           )}
@@ -361,18 +362,18 @@ export default function StaffAttendanceScreen({ navigation }) {
         {isMarked && (status === 'PRESENT' || status === 'HALF_DAY') && (
           <View style={st.timeRow}>
             <View style={st.timeItem}>
-              <Icon name="log-in-outline" size={14} color={C.muted} />
+              <Icon name="log-in-outline" size={scale(14)} color={C.muted} />
               <Text style={st.timeLabel}>In:</Text>
               <Text style={st.timeValue}>{formatTime(data?.checkInTime)}</Text>
             </View>
             <View style={st.timeItem}>
-              <Icon name="log-out-outline" size={14} color={C.muted} />
+              <Icon name="log-out-outline" size={scale(14)} color={C.muted} />
               <Text style={st.timeLabel}>Out:</Text>
               <Text style={st.timeValue}>{formatTime(data?.checkOutTime)}</Text>
             </View>
             {data?.workHours > 0 && (
               <View style={st.timeItem}>
-                <Icon name="time-outline" size={14} color={C.muted} />
+                <Icon name="time-outline" size={scale(14)} color={C.muted} />
                 <Text style={st.timeLabel}>Hours:</Text>
                 <Text style={st.timeValue}>{(data.workHours / 60).toFixed(1)}h</Text>
               </View>
@@ -389,7 +390,7 @@ export default function StaffAttendanceScreen({ navigation }) {
       {/* Header */}
       <View style={st.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
-          <Icon name="arrow-back" size={22} color={C.ink} />
+          <Icon name="arrow-back" size={scale(22)} color={C.ink} />
         </TouchableOpacity>
         <View style={st.headerCenter}>
           <Text style={st.headerTitle}>Staff Attendance</Text>
@@ -397,7 +398,7 @@ export default function StaffAttendanceScreen({ navigation }) {
         </View>
         <View style={st.headerActions}>
           <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
-            <Icon name="menu" size={20} color={C.ink} />
+            <Icon name="menu" size={scale(20)} color={C.ink} />
           </TouchableOpacity>
         </View>
       </View>
@@ -413,10 +414,10 @@ export default function StaffAttendanceScreen({ navigation }) {
         {/* Date Selector */}
         <View style={st.dateSelector}>
           <TouchableOpacity style={st.dateBtn} onPress={() => changeDate(-1)}>
-            <Icon name="chevron-back" size={20} color={C.ink} />
+            <Icon name="chevron-back" size={scale(20)} color={C.ink} />
           </TouchableOpacity>
           <View style={st.dateBox}>
-            <Icon name="calendar" size={20} color={C.primary} />
+            <Icon name="calendar" size={scale(20)} color={C.primary} />
             <Text style={st.dateText}>
               {isToday ? 'Today, ' : ''}
               {new Date(selectedDate).toLocaleDateString('en-IN', {
@@ -431,7 +432,7 @@ export default function StaffAttendanceScreen({ navigation }) {
             onPress={() => changeDate(1)}
             disabled={isToday}
           >
-            <Icon name="chevron-forward" size={20} color={C.ink} />
+            <Icon name="chevron-forward" size={scale(20)} color={C.ink} />
           </TouchableOpacity>
         </View>
 
@@ -440,22 +441,22 @@ export default function StaffAttendanceScreen({ navigation }) {
             {/* Summary Stats */}
             <View style={st.statsRow}>
               <View style={[st.statCard, { backgroundColor: C.successLight }]}>
-                <Icon name="checkmark-circle" size={22} color={C.success} />
+                <Icon name="checkmark-circle" size={scale(22)} color={C.success} />
                 <Text style={[st.statValue, { color: C.success }]}>{presentCount}</Text>
                 <Text style={st.statLabel}>Present</Text>
               </View>
               <View style={[st.statCard, { backgroundColor: C.dangerLight }]}>
-                <Icon name="close-circle" size={22} color={C.danger} />
+                <Icon name="close-circle" size={scale(22)} color={C.danger} />
                 <Text style={[st.statValue, { color: C.danger }]}>{absentCount}</Text>
                 <Text style={st.statLabel}>Absent</Text>
               </View>
               <View style={[st.statCard, { backgroundColor: C.warningLight }]}>
-                <Icon name="time" size={22} color={C.warning} />
+                <Icon name="time" size={scale(22)} color={C.warning} />
                 <Text style={[st.statValue, { color: C.warning }]}>{halfDayCount}</Text>
                 <Text style={st.statLabel}>Half Day</Text>
               </View>
               <View style={[st.statCard, { backgroundColor: C.bg }]}>
-                <Icon name="help-circle" size={22} color={C.muted} />
+                <Icon name="help-circle" size={scale(22)} color={C.muted} />
                 <Text style={[st.statValue, { color: C.muted }]}>{unmarkedCount}</Text>
                 <Text style={st.statLabel}>Pending</Text>
               </View>
@@ -480,7 +481,7 @@ export default function StaffAttendanceScreen({ navigation }) {
                   onPress={() => handleBulkMark('PRESENT')}
                   disabled={saving}
                 >
-                  <Icon name="checkmark-circle" size={16} color={C.success} />
+                  <Icon name="checkmark-circle" size={scale(16)} color={C.success} />
                   <Text style={[st.bulkBtnText, { color: C.success }]}>All Present ({unmarkedCount})</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -488,7 +489,7 @@ export default function StaffAttendanceScreen({ navigation }) {
                   onPress={() => handleBulkMark('WEEKLY_OFF')}
                   disabled={saving}
                 >
-                  <Icon name="cafe" size={16} color="#64748B" />
+                  <Icon name="cafe" size={scale(16)} color="#64748B" />
                   <Text style={[st.bulkBtnText, { color: '#64748B' }]}>All Off ({unmarkedCount})</Text>
                 </TouchableOpacity>
               </View>
@@ -497,7 +498,7 @@ export default function StaffAttendanceScreen({ navigation }) {
             {/* All Marked Message */}
             {unmarkedCount === 0 && staff.length > 0 && (
               <View style={st.allMarkedBox}>
-                <Icon name="checkmark-done-circle" size={20} color={C.success} />
+                <Icon name="checkmark-done-circle" size={scale(20)} color={C.success} />
                 <Text style={st.allMarkedText}>All attendance marked for today!</Text>
               </View>
             )}
@@ -508,12 +509,12 @@ export default function StaffAttendanceScreen({ navigation }) {
         {staff.length === 0 ? (
           <View style={st.emptyState}>
             <View style={st.emptyIcon}>
-              <Icon name="people-outline" size={64} color={C.muted} />
+              <Icon name="people-outline" size={scale(64)} color={C.muted} />
             </View>
             <Text style={st.emptyTitle}>No Active Staff</Text>
             <Text style={st.emptySubtitle}>Add staff members to mark attendance</Text>
             <TouchableOpacity style={st.emptyBtn} onPress={() => navigation.navigate('Staff')}>
-              <Icon name="add" size={18} color="#fff" />
+              <Icon name="add" size={scale(18)} color="#fff" />
               <Text style={st.emptyBtnText}>Add Staff</Text>
             </TouchableOpacity>
           </View>
@@ -523,7 +524,7 @@ export default function StaffAttendanceScreen({ navigation }) {
           </View>
         )}
 
-        <View style={{ height: 120 }} />
+        <View style={{ height: scale(120) }} />
       </ScrollView>
 
       {/* Status Picker Modal */}
@@ -533,7 +534,7 @@ export default function StaffAttendanceScreen({ navigation }) {
             <View style={st.modalHeader}>
               <Text style={st.modalTitle}>Mark Attendance</Text>
               <TouchableOpacity onPress={() => setStatusModal(null)} style={st.modalClose}>
-                <Icon name="close" size={24} color={C.ink} />
+                <Icon name="close" size={scale(24)} color={C.ink} />
               </TouchableOpacity>
             </View>
             <Text style={st.modalSubtitle}>Select status for {statusModal?.name}</Text>
@@ -545,7 +546,7 @@ export default function StaffAttendanceScreen({ navigation }) {
                   style={[st.statusOption, { backgroundColor: status.bg }]}
                   onPress={() => markAttendance(statusModal.id, status.value)}
                 >
-                  <Icon name={status.icon} size={24} color={status.color} />
+                  <Icon name={status.icon} size={scale(24)} color={status.color} />
                   <Text style={[st.statusOptionText, { color: status.color }]}>{status.label}</Text>
                 </TouchableOpacity>
               ))}
@@ -561,7 +562,7 @@ export default function StaffAttendanceScreen({ navigation }) {
             <View style={st.modalHeader}>
               <Text style={st.modalTitle}>Set Time</Text>
               <TouchableOpacity onPress={() => setTimeModal(null)} style={st.modalClose}>
-                <Icon name="close" size={24} color={C.ink} />
+                <Icon name="close" size={scale(24)} color={C.ink} />
               </TouchableOpacity>
             </View>
             <Text style={st.modalSubtitle}>
@@ -572,7 +573,7 @@ export default function StaffAttendanceScreen({ navigation }) {
               <View style={st.timeInputGroup}>
                 <Text style={st.timeInputLabel}>Check In Time</Text>
                 <View style={st.timeInputBox}>
-                  <Icon name="log-in-outline" size={20} color={C.success} />
+                  <Icon name="log-in-outline" size={scale(20)} color={C.success} />
                   <TextInput
                     style={st.timeInput}
                     value={checkInTime}
@@ -586,7 +587,7 @@ export default function StaffAttendanceScreen({ navigation }) {
               <View style={st.timeInputGroup}>
                 <Text style={st.timeInputLabel}>Check Out Time</Text>
                 <View style={st.timeInputBox}>
-                  <Icon name="log-out-outline" size={20} color={C.danger} />
+                  <Icon name="log-out-outline" size={scale(20)} color={C.danger} />
                   <TextInput
                     style={st.timeInput}
                     value={checkOutTime}
@@ -611,7 +612,7 @@ export default function StaffAttendanceScreen({ navigation }) {
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
                   <>
-                    <Icon name="checkmark" size={18} color="#fff" />
+                    <Icon name="checkmark" size={scale(18)} color="#fff" />
                     <Text style={st.saveBtnText}>Save</Text>
                   </>
                 )}
@@ -632,99 +633,99 @@ const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
 
   // Header
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border },
-  backBtn: { width: 40, height: 40, borderRadius: 10, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
-  headerCenter: { flex: 1, marginLeft: 12 },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
-  headerSubtitle: { fontSize: 12, color: C.muted, marginTop: 2 },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(16), paddingVertical: scale(12), backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border },
+  backBtn: { width: scale(40), height: scale(40), borderRadius: scale(10), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
+  headerCenter: { flex: 1, marginLeft: scale(12) },
+  headerTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink },
+  headerSubtitle: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(2) },
   headerActions: { flexDirection: 'row' },
-  headerIconBtn: { width: 40, height: 40, borderRadius: 10, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', marginLeft: 8 },
+  headerIconBtn: { width: scale(40), height: scale(40), borderRadius: scale(10), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', marginLeft: scale(8) },
 
   content: { flex: 1 },
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  loadingText: { marginTop: 16, fontSize: 15, color: C.muted },
+  loadingText: { marginTop: scale(16), fontSize: moderateScale(15), color: C.muted },
 
   // Date Selector
-  dateSelector: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, backgroundColor: C.card, marginHorizontal: 16, marginTop: 16, borderRadius: 14, borderWidth: 1, borderColor: C.border },
-  dateBtn: { width: 40, height: 40, borderRadius: 10, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
+  dateSelector: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: scale(16), paddingVertical: scale(14), backgroundColor: C.card, marginHorizontal: scale(16), marginTop: scale(16), borderRadius: scale(14), borderWidth: 1, borderColor: C.border },
+  dateBtn: { width: scale(40), height: scale(40), borderRadius: scale(10), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
   dateBox: { flexDirection: 'row', alignItems: 'center' },
-  dateText: { fontSize: 15, fontWeight: '700', color: C.ink, marginLeft: 8 },
+  dateText: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink, marginLeft: scale(8) },
 
   // Stats
-  statsRow: { flexDirection: 'row', paddingHorizontal: 16, paddingTop: 16 },
-  statCard: { flex: 1, alignItems: 'center', padding: 10, borderRadius: 12, marginHorizontal: 3 },
-  statValue: { fontSize: 20, fontWeight: '800', marginTop: 4 },
-  statLabel: { fontSize: 10, fontWeight: '600', color: C.muted, marginTop: 2 },
+  statsRow: { flexDirection: 'row', paddingHorizontal: scale(16), paddingTop: scale(16) },
+  statCard: { flex: 1, alignItems: 'center', padding: scale(10), borderRadius: scale(12), marginHorizontal: scale(3) },
+  statValue: { fontSize: moderateScale(20), fontWeight: '800', marginTop: scale(4) },
+  statLabel: { fontSize: moderateScale(10), fontWeight: '600', color: C.muted, marginTop: scale(2) },
 
   // Progress
-  progressContainer: { paddingHorizontal: 16, paddingTop: 14 },
-  progressHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
-  progressText: { fontSize: 12, color: C.muted },
-  progressPercent: { fontSize: 12, fontWeight: '700', color: C.success },
-  progressBar: { height: 6, backgroundColor: C.border, borderRadius: 3, overflow: 'hidden' },
-  progressFill: { height: '100%', backgroundColor: C.success, borderRadius: 3 },
+  progressContainer: { paddingHorizontal: scale(16), paddingTop: scale(14) },
+  progressHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: scale(6) },
+  progressText: { fontSize: moderateScale(12), color: C.muted },
+  progressPercent: { fontSize: moderateScale(12), fontWeight: '700', color: C.success },
+  progressBar: { height: scale(6), backgroundColor: C.border, borderRadius: scale(3), overflow: 'hidden' },
+  progressFill: { height: '100%', backgroundColor: C.success, borderRadius: scale(3) },
 
   // Bulk Actions
-  bulkActions: { flexDirection: 'row', paddingHorizontal: 16, paddingTop: 12 },
-  bulkBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 10, borderWidth: 1.5, marginHorizontal: 4 },
-  bulkBtnText: { fontSize: 12, fontWeight: '700', marginLeft: 6 },
+  bulkActions: { flexDirection: 'row', paddingHorizontal: scale(16), paddingTop: scale(12) },
+  bulkBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: scale(10), borderRadius: scale(10), borderWidth: 1.5, marginHorizontal: scale(4) },
+  bulkBtnText: { fontSize: moderateScale(12), fontWeight: '700', marginLeft: scale(6) },
 
   // All Marked
-  allMarkedBox: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginHorizontal: 16, marginTop: 12, padding: 12, backgroundColor: C.successLight, borderRadius: 10 },
-  allMarkedText: { fontSize: 13, fontWeight: '600', color: C.success, marginLeft: 8 },
+  allMarkedBox: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginHorizontal: scale(16), marginTop: scale(12), padding: scale(12), backgroundColor: C.successLight, borderRadius: scale(10) },
+  allMarkedText: { fontSize: moderateScale(13), fontWeight: '600', color: C.success, marginLeft: scale(8) },
 
   // Staff List
-  staffList: { paddingHorizontal: 16, paddingTop: 12 },
+  staffList: { paddingHorizontal: scale(16), paddingTop: scale(12) },
   staffListTablet: { flexDirection: 'row', flexWrap: 'wrap' },
-  staffCard: { backgroundColor: C.card, padding: 14, borderRadius: 12, marginBottom: 10, borderWidth: 1, borderColor: C.border },
+  staffCard: { backgroundColor: C.card, padding: scale(14), borderRadius: scale(12), marginBottom: scale(10), borderWidth: 1, borderColor: C.border },
   staffCardTablet: { width: '48%', marginHorizontal: '1%' },
   staffHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   staffInfo: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  staffAvatar: { width: 40, height: 40, borderRadius: 10, backgroundColor: C.primaryLight, alignItems: 'center', justifyContent: 'center' },
-  staffDetails: { flex: 1, marginLeft: 10 },
-  staffName: { fontSize: 14, fontWeight: '700', color: C.ink },
-  staffRole: { fontSize: 11, color: C.muted, marginTop: 1 },
+  staffAvatar: { width: scale(40), height: scale(40), borderRadius: scale(10), backgroundColor: C.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  staffDetails: { flex: 1, marginLeft: scale(10) },
+  staffName: { fontSize: moderateScale(14), fontWeight: '700', color: C.ink },
+  staffRole: { fontSize: moderateScale(11), color: C.muted, marginTop: 1 },
 
-  statusBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10 },
-  statusBadgeText: { fontSize: 11, fontWeight: '700', marginHorizontal: 4 },
+  statusBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(10), paddingVertical: scale(6), borderRadius: scale(10) },
+  statusBadgeText: { fontSize: moderateScale(11), fontWeight: '700', marginHorizontal: scale(4) },
 
-  markBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, backgroundColor: C.primaryLight },
-  markBtnText: { fontSize: 13, fontWeight: '600', color: C.primary, marginLeft: 4 },
+  markBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(12), paddingVertical: scale(8), borderRadius: scale(8), backgroundColor: C.primaryLight },
+  markBtnText: { fontSize: moderateScale(13), fontWeight: '600', color: C.primary, marginLeft: scale(4) },
 
-  timeRow: { flexDirection: 'row', marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: C.border },
-  timeItem: { flexDirection: 'row', alignItems: 'center', marginRight: 14 },
-  timeLabel: { fontSize: 11, color: C.muted, marginLeft: 3 },
-  timeValue: { fontSize: 11, fontWeight: '600', color: C.text, marginLeft: 2 },
+  timeRow: { flexDirection: 'row', marginTop: scale(10), paddingTop: scale(10), borderTopWidth: 1, borderTopColor: C.border },
+  timeItem: { flexDirection: 'row', alignItems: 'center', marginRight: scale(14) },
+  timeLabel: { fontSize: moderateScale(11), color: C.muted, marginLeft: scale(3) },
+  timeValue: { fontSize: moderateScale(11), fontWeight: '600', color: C.text, marginLeft: scale(2) },
 
   // Empty
-  emptyState: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 40 },
-  emptyIcon: { width: 120, height: 120, borderRadius: 60, backgroundColor: C.border, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
-  emptyTitle: { fontSize: 20, fontWeight: '700', color: C.ink, marginBottom: 8 },
-  emptySubtitle: { fontSize: 14, color: C.muted, textAlign: 'center' },
-  emptyBtn: { flexDirection: 'row', alignItems: 'center', marginTop: 24, paddingHorizontal: 24, paddingVertical: 14, backgroundColor: C.primary, borderRadius: 14 },
-  emptyBtnText: { fontSize: 15, fontWeight: '700', color: '#fff', marginLeft: 8 },
+  emptyState: { alignItems: 'center', paddingTop: scale(60), paddingHorizontal: scale(40) },
+  emptyIcon: { width: scale(120), height: scale(120), borderRadius: scale(60), backgroundColor: C.border, alignItems: 'center', justifyContent: 'center', marginBottom: scale(20) },
+  emptyTitle: { fontSize: moderateScale(20), fontWeight: '700', color: C.ink, marginBottom: scale(8) },
+  emptySubtitle: { fontSize: moderateScale(14), color: C.muted, textAlign: 'center' },
+  emptyBtn: { flexDirection: 'row', alignItems: 'center', marginTop: scale(24), paddingHorizontal: scale(24), paddingVertical: scale(14), backgroundColor: C.primary, borderRadius: scale(14) },
+  emptyBtnText: { fontSize: moderateScale(15), fontWeight: '700', color: '#fff', marginLeft: scale(8) },
 
   // Modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: C.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: 30 },
-  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, borderBottomWidth: 1, borderBottomColor: C.border },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
-  modalClose: { width: 36, height: 36, borderRadius: 18, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
-  modalSubtitle: { fontSize: 14, color: C.muted, paddingHorizontal: 20, marginTop: 10 },
+  modalContent: { backgroundColor: C.card, borderTopLeftRadius: scale(24), borderTopRightRadius: scale(24), paddingBottom: scale(30) },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: scale(20), borderBottomWidth: 1, borderBottomColor: C.border },
+  modalTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink },
+  modalClose: { width: scale(36), height: scale(36), borderRadius: scale(18), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
+  modalSubtitle: { fontSize: moderateScale(14), color: C.muted, paddingHorizontal: scale(20), marginTop: scale(10) },
 
-  statusGrid: { flexDirection: 'row', flexWrap: 'wrap', padding: 16 },
-  statusOption: { width: '31%', alignItems: 'center', paddingVertical: 16, borderRadius: 12, margin: '1%' },
-  statusOptionText: { fontSize: 11, fontWeight: '700', marginTop: 6 },
+  statusGrid: { flexDirection: 'row', flexWrap: 'wrap', padding: scale(16) },
+  statusOption: { width: '31%', alignItems: 'center', paddingVertical: scale(16), borderRadius: scale(12), margin: '1%' },
+  statusOptionText: { fontSize: moderateScale(11), fontWeight: '700', marginTop: scale(6) },
 
-  timeInputs: { padding: 20 },
-  timeInputGroup: { marginBottom: 16 },
-  timeInputLabel: { fontSize: 13, fontWeight: '600', color: C.text, marginBottom: 8 },
-  timeInputBox: { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderColor: C.border, backgroundColor: C.bg, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12 },
-  timeInput: { flex: 1, color: C.text, fontSize: 16, marginLeft: 10 },
+  timeInputs: { padding: scale(20) },
+  timeInputGroup: { marginBottom: scale(16) },
+  timeInputLabel: { fontSize: moderateScale(13), fontWeight: '600', color: C.text, marginBottom: scale(8) },
+  timeInputBox: { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderColor: C.border, backgroundColor: C.bg, borderRadius: scale(12), paddingHorizontal: scale(14), paddingVertical: scale(12) },
+  timeInput: { flex: 1, color: C.text, fontSize: moderateScale(16), marginLeft: scale(10) },
 
-  modalActions: { flexDirection: 'row', paddingHorizontal: 20 },
-  cancelBtn: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 12, backgroundColor: C.bg, marginRight: 8 },
-  cancelBtnText: { fontSize: 15, fontWeight: '700', color: C.ink },
-  saveBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 12, backgroundColor: C.success, marginLeft: 8 },
-  saveBtnText: { fontSize: 15, fontWeight: '700', color: '#fff', marginLeft: 8 },
+  modalActions: { flexDirection: 'row', paddingHorizontal: scale(20) },
+  cancelBtn: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: scale(14), borderRadius: scale(12), backgroundColor: C.bg, marginRight: scale(8) },
+  cancelBtnText: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink },
+  saveBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: scale(14), borderRadius: scale(12), backgroundColor: C.success, marginLeft: scale(8) },
+  saveBtnText: { fontSize: moderateScale(15), fontWeight: '700', color: '#fff', marginLeft: scale(8) },
 });

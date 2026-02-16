@@ -18,6 +18,7 @@ import { useRestaurant } from '../context/RestaurantContext';
 import { RestaurantSelectorBar } from '../components/RestaurantSelector';
 import KniBottomNav from '../components/KniBottomNav';
 
+import { scale, moderateScale } from '../utils/responsive';
 const C = {
   primary: '#EF3A3A',
   ink: '#1D2254',
@@ -94,10 +95,10 @@ export default function DashboardScreen({ navigation }) {
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
-            <Icon name="menu" size={24} color={C.ink} />
+            <Icon name="menu" size={scale(24)} color={C.ink} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Dashboard</Text>
-          <View style={{ width: 40 }} />
+          <View style={{ width: scale(40) }} />
         </View>
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>Loading analytics...</Text>
@@ -111,13 +112,13 @@ export default function DashboardScreen({ navigation }) {
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
-            <Icon name="menu" size={24} color={C.ink} />
+            <Icon name="menu" size={scale(24)} color={C.ink} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Dashboard</Text>
-          <View style={{ width: 40 }} />
+          <View style={{ width: scale(40) }} />
         </View>
         <View style={styles.emptyContainer}>
-          <Icon name="restaurant-outline" size={80} color={C.muted} />
+          <Icon name="restaurant-outline" size={scale(80)} color={C.muted} />
           <Text style={styles.emptyTitle}>No Restaurant Found</Text>
           <Text style={styles.emptyText}>Please add a restaurant to view your dashboard</Text>
           <TouchableOpacity
@@ -138,11 +139,11 @@ export default function DashboardScreen({ navigation }) {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
-          <Icon name="menu" size={24} color={C.ink} />
+          <Icon name="menu" size={scale(24)} color={C.ink} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Dashboard</Text>
         <TouchableOpacity onPress={() => navigation.navigate('Notifications')}>
-          <Icon name="notifications-outline" size={24} color={C.ink} />
+          <Icon name="notifications-outline" size={scale(24)} color={C.ink} />
         </TouchableOpacity>
       </View>
 
@@ -171,13 +172,13 @@ export default function DashboardScreen({ navigation }) {
         {/* Summary Cards */}
         <View style={styles.summaryGrid}>
           <View style={[styles.summaryCard, { borderLeftColor: C.primary }]}>
-            <Icon name="calendar" size={24} color={C.primary} />
+            <Icon name="calendar" size={scale(24)} color={C.primary} />
             <Text style={styles.summaryValue}>₹{summary.bookings?.revenue || 0}</Text>
             <Text style={styles.summaryLabel}>{summary.bookings?.count || 0} Bookings</Text>
           </View>
 
           <View style={[styles.summaryCard, { borderLeftColor: C.warn }]}>
-            <Icon name="cash" size={24} color={C.warn} />
+            <Icon name="cash" size={scale(24)} color={C.warn} />
             <Text style={styles.summaryValue}>₹{summary.expenses?.total || 0}</Text>
             <Text style={styles.summaryLabel}>{summary.expenses?.count || 0} Expenses</Text>
           </View>
@@ -185,7 +186,7 @@ export default function DashboardScreen({ navigation }) {
 
         <View style={styles.summaryGrid}>
           <View style={[styles.summaryCard, { borderLeftColor: C.ok }]}>
-            <Icon name="hardware-chip" size={24} color={C.ok} />
+            <Icon name="hardware-chip" size={scale(24)} color={C.ok} />
             <Text style={styles.summaryValue}>{summary.equipment?.count || 0}</Text>
             <Text style={styles.summaryLabel}>Equipment</Text>
           </View>
@@ -196,7 +197,7 @@ export default function DashboardScreen({ navigation }) {
           <View style={styles.netRevenueHeader}>
             <Icon
               name={summary.netRevenue >= 0 ? 'trending-up' : 'trending-down'}
-              size={28}
+              size={scale(28)}
               color={C.card}
             />
             <Text style={styles.netRevenueLabel}>Net Revenue</Text>
@@ -219,7 +220,7 @@ export default function DashboardScreen({ navigation }) {
             {recent.bookings.map((booking) => (
               <View key={booking.id} style={styles.recentItem}>
                 <View style={styles.recentItemLeft}>
-                  <Icon name="calendar-outline" size={20} color={C.primary} />
+                  <Icon name="calendar-outline" size={scale(20)} color={C.primary} />
                   <View style={styles.recentItemText}>
                     <Text style={styles.recentItemTitle}>Booking #{booking.id.slice(0, 8)}</Text>
                     <Text style={styles.recentItemDate}>
@@ -250,7 +251,7 @@ export default function DashboardScreen({ navigation }) {
             {recent.expenses.map((expense) => (
               <View key={expense.id} style={styles.recentItem}>
                 <View style={styles.recentItemLeft}>
-                  <Icon name="cash-outline" size={20} color={C.warn} />
+                  <Icon name="cash-outline" size={scale(20)} color={C.warn} />
                   <View style={styles.recentItemText}>
                     <Text style={styles.recentItemTitle}>{expense.category}</Text>
                     <Text style={styles.recentItemDate}>
@@ -264,7 +265,7 @@ export default function DashboardScreen({ navigation }) {
           </View>
         )}
 
-        <View style={{ height: 100 }} />
+        <View style={{ height: scale(100) }} />
       </ScrollView>
 
       <NavigationMenu
@@ -286,17 +287,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(12),
     backgroundColor: C.card,
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
   menuBtn: {
-    width: 40,
+    width: scale(40),
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: moderateScale(18),
     fontWeight: '700',
     color: C.ink,
   },
@@ -309,48 +310,48 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: C.muted,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 32,
+    padding: scale(32),
   },
   emptyTitle: {
-    fontSize: 18,
+    fontSize: moderateScale(18),
     fontWeight: '700',
     color: C.ink,
-    marginTop: 16,
+    marginTop: scale(16),
   },
   emptyText: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: C.muted,
     textAlign: 'center',
-    marginTop: 8,
+    marginTop: scale(8),
   },
   addButton: {
     backgroundColor: C.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginTop: 24,
+    paddingHorizontal: scale(24),
+    paddingVertical: scale(12),
+    borderRadius: scale(8),
+    marginTop: scale(24),
   },
   addButtonText: {
     color: C.card,
-    fontSize: 15,
+    fontSize: moderateScale(15),
     fontWeight: '600',
   },
   periodSelector: {
     flexDirection: 'row',
-    padding: 16,
-    gap: 8,
+    padding: scale(16),
+    gap: scale(8),
   },
   periodButton: {
     flex: 1,
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingVertical: scale(8),
+    borderRadius: scale(8),
     borderWidth: 1,
     borderColor: C.border,
     backgroundColor: C.card,
@@ -361,7 +362,7 @@ const styles = StyleSheet.create({
     borderColor: C.primary,
   },
   periodText: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     color: C.text,
   },
   periodTextActive: {
@@ -370,33 +371,33 @@ const styles = StyleSheet.create({
   },
   summaryGrid: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    gap: 12,
-    marginBottom: 12,
+    paddingHorizontal: scale(16),
+    gap: scale(12),
+    marginBottom: scale(12),
   },
   summaryCard: {
     flex: 1,
     backgroundColor: C.card,
-    padding: 16,
-    borderRadius: 12,
+    padding: scale(16),
+    borderRadius: scale(12),
     borderLeftWidth: 4,
   },
   summaryValue: {
-    fontSize: 20,
+    fontSize: moderateScale(20),
     fontWeight: '700',
     color: C.ink,
-    marginTop: 8,
+    marginTop: scale(8),
   },
   summaryLabel: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     color: C.muted,
-    marginTop: 4,
+    marginTop: scale(4),
   },
   netRevenueCard: {
-    marginHorizontal: 16,
-    marginBottom: 16,
-    padding: 20,
-    borderRadius: 12,
+    marginHorizontal: scale(16),
+    marginBottom: scale(16),
+    padding: scale(20),
+    borderRadius: scale(12),
   },
   profit: {
     backgroundColor: C.ok,
@@ -407,43 +408,43 @@ const styles = StyleSheet.create({
   netRevenueHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: scale(8),
   },
   netRevenueLabel: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: C.card,
-    marginLeft: 8,
+    marginLeft: scale(8),
     fontWeight: '600',
   },
   netRevenueValue: {
-    fontSize: 32,
+    fontSize: moderateScale(32),
     fontWeight: '700',
     color: C.card,
   },
   netRevenueSubtext: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     color: C.card,
     opacity: 0.9,
-    marginTop: 4,
+    marginTop: scale(4),
   },
   section: {
-    marginTop: 8,
-    marginHorizontal: 16,
-    marginBottom: 16,
+    marginTop: scale(8),
+    marginHorizontal: scale(16),
+    marginBottom: scale(16),
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: scale(12),
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: '700',
     color: C.ink,
   },
   sectionLink: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: C.primary,
   },
   recentItem: {
@@ -451,9 +452,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: C.card,
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 8,
+    padding: scale(16),
+    borderRadius: scale(12),
+    marginBottom: scale(8),
   },
   recentItemLeft: {
     flexDirection: 'row',
@@ -461,28 +462,28 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   recentItemText: {
-    marginLeft: 12,
+    marginLeft: scale(12),
     flex: 1,
   },
   recentItemTitle: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '600',
     color: C.ink,
   },
   recentItemDate: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     color: C.muted,
-    marginTop: 2,
+    marginTop: scale(2),
   },
   recentItemAmount: {
-    fontSize: 15,
+    fontSize: moderateScale(15),
     fontWeight: '700',
     color: C.ink,
     textAlign: 'right',
   },
   recentItemStatus: {
-    fontSize: 11,
-    marginTop: 4,
+    fontSize: moderateScale(11),
+    marginTop: scale(4),
     textAlign: 'right',
   },
   statusPENDING_PAYMENT: {

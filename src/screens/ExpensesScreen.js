@@ -23,6 +23,7 @@ import { RestaurantSelectorBar } from '../components/RestaurantSelector';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
+import { scale, moderateScale } from '../utils/responsive';
 // Premium Color Palette
 const C = {
   primary: '#EF3A3A',
@@ -172,7 +173,7 @@ export default function ExpensesScreen({ navigation }) {
   };
 
   const pickReceipt = () => {
-    launchImageLibrary({ mediaType: 'photo', quality: 0.8, maxWidth: 1024, maxHeight: 1024 }, (response) => {
+    launchImageLibrary({ mediaType: 'photo', quality: 0.8, maxWidth: scale(1024), maxHeight: scale(1024) }, (response) => {
       if (response.assets && response.assets[0]) setReceiptImage(response.assets[0]);
     });
   };
@@ -249,11 +250,11 @@ export default function ExpensesScreen({ navigation }) {
   const renderExpenseCard = ({ item, index }) => {
     const cat = getCategoryConfig(item.category);
     return (
-      <View style={[st.card, isTablet && { marginHorizontal: 6 }]}>
+      <View style={[st.card, isTablet && { marginHorizontal: scale(6) }]}>
         <View style={st.cardRow}>
           {/* Category Icon */}
           <View style={[st.categoryIcon, { backgroundColor: cat.bg }]}>
-            <Icon name={cat.icon} size={24} color={cat.color} />
+            <Icon name={cat.icon} size={scale(24)} color={cat.color} />
           </View>
 
           {/* Info */}
@@ -261,7 +262,7 @@ export default function ExpensesScreen({ navigation }) {
             <Text style={st.cardTitle}>{cat.label}</Text>
             {item.description && <Text style={st.cardDesc} numberOfLines={2}>{item.description}</Text>}
             <View style={st.cardMeta}>
-              <Icon name="calendar-outline" size={12} color={C.muted} />
+              <Icon name="calendar-outline" size={scale(12)} color={C.muted} />
               <Text style={st.cardDate}>{formatDate(item.expenseDate)}</Text>
             </View>
           </View>
@@ -275,11 +276,11 @@ export default function ExpensesScreen({ navigation }) {
         {/* Actions */}
         <View style={st.cardActions}>
           <TouchableOpacity style={[st.actionBtn, { backgroundColor: C.infoLight }]} onPress={() => openForm(item)}>
-            <Icon name="pencil" size={16} color={C.info} />
+            <Icon name="pencil" size={scale(16)} color={C.info} />
             <Text style={[st.actionText, { color: C.info }]}>Edit</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[st.actionBtn, { backgroundColor: C.dangerLight }]} onPress={() => deleteExpense(item)}>
-            <Icon name="trash" size={16} color={C.danger} />
+            <Icon name="trash" size={scale(16)} color={C.danger} />
             <Text style={[st.actionText, { color: C.danger }]}>Delete</Text>
           </TouchableOpacity>
         </View>
@@ -295,14 +296,14 @@ export default function ExpensesScreen({ navigation }) {
         <View style={st.summaryCard}>
           <View style={st.summaryRow}>
             <View style={st.summaryLeft}>
-              <Icon name="wallet" size={24} color="#fff" />
+              <Icon name="wallet" size={scale(24)} color="#fff" />
               <Text style={st.summaryLabel}>Total Expenses</Text>
             </View>
             <TouchableOpacity
               style={st.reportsBtn}
               onPress={() => navigation.navigate('ExpenseReports')}
             >
-              <Icon name="bar-chart" size={16} color={C.warning} />
+              <Icon name="bar-chart" size={scale(16)} color={C.warning} />
               <Text style={st.reportsBtnText}>Reports</Text>
             </TouchableOpacity>
           </View>
@@ -330,7 +331,7 @@ export default function ExpensesScreen({ navigation }) {
                 style={[st.filterChip, isActive && { backgroundColor: cat.color, borderColor: cat.color }]}
                 onPress={() => setSelectedCategory(cat.value)}
               >
-                <Icon name={cat.icon} size={16} color={isActive ? '#fff' : cat.color} />
+                <Icon name={cat.icon} size={scale(16)} color={isActive ? '#fff' : cat.color} />
                 <Text style={[st.filterChipText, isActive && { color: '#fff' }]}>
                   {cat.label} ({count})
                 </Text>
@@ -345,7 +346,7 @@ export default function ExpensesScreen({ navigation }) {
         <Text style={st.resultsTitle}>{filtered.length} Expense{filtered.length !== 1 ? 's' : ''}</Text>
         {selectedCategory !== 'all' && (
           <TouchableOpacity style={st.clearBtn} onPress={() => setSelectedCategory('all')}>
-            <Icon name="close-circle" size={14} color={C.warning} />
+            <Icon name="close-circle" size={scale(14)} color={C.warning} />
             <Text style={st.clearBtnText}>Clear</Text>
           </TouchableOpacity>
         )}
@@ -360,7 +361,7 @@ export default function ExpensesScreen({ navigation }) {
         <StatusBar barStyle="dark-content" backgroundColor={C.card} />
         <View style={st.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={st.headerBackBtn}>
-            <Icon name="arrow-back" size={22} color={C.ink} />
+            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
           </TouchableOpacity>
           <View style={st.headerCenter}>
             <Text style={st.headerTitle}>Expenses</Text>
@@ -368,7 +369,7 @@ export default function ExpensesScreen({ navigation }) {
           </View>
           <View style={st.headerActions}>
             <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
-              <Icon name="menu" size={20} color={C.ink} />
+              <Icon name="menu" size={scale(20)} color={C.ink} />
             </TouchableOpacity>
           </View>
         </View>
@@ -388,7 +389,7 @@ export default function ExpensesScreen({ navigation }) {
         <StatusBar barStyle="dark-content" backgroundColor={C.card} />
         <View style={st.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={st.headerBackBtn}>
-            <Icon name="arrow-back" size={22} color={C.ink} />
+            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
           </TouchableOpacity>
           <View style={st.headerCenter}>
             <Text style={st.headerTitle}>Expenses</Text>
@@ -396,13 +397,13 @@ export default function ExpensesScreen({ navigation }) {
           </View>
           <View style={st.headerActions}>
             <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
-              <Icon name="menu" size={20} color={C.ink} />
+              <Icon name="menu" size={scale(20)} color={C.ink} />
             </TouchableOpacity>
           </View>
         </View>
         <View style={st.emptyState}>
           <View style={st.emptyIcon}>
-            <Icon name="restaurant-outline" size={64} color={C.muted} />
+            <Icon name="restaurant-outline" size={scale(64)} color={C.muted} />
           </View>
           <Text style={st.emptyTitle}>No Restaurant Found</Text>
           <Text style={st.emptySubtitle}>Please add a restaurant first</Text>
@@ -420,7 +421,7 @@ export default function ExpensesScreen({ navigation }) {
       {/* White Header */}
       <View style={st.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={st.headerBackBtn}>
-          <Icon name="arrow-back" size={22} color={C.ink} />
+          <Icon name="arrow-back" size={scale(22)} color={C.ink} />
         </TouchableOpacity>
         <View style={st.headerCenter}>
           <Text style={st.headerTitle}>Expenses</Text>
@@ -428,10 +429,10 @@ export default function ExpensesScreen({ navigation }) {
         </View>
         <View style={st.headerActions}>
           <TouchableOpacity style={st.headerIconBtn} onPress={() => openForm()}>
-            <Icon name="add" size={20} color={C.primary} />
+            <Icon name="add" size={scale(20)} color={C.primary} />
           </TouchableOpacity>
           <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
-            <Icon name="menu" size={20} color={C.ink} />
+            <Icon name="menu" size={scale(20)} color={C.ink} />
           </TouchableOpacity>
         </View>
       </View>
@@ -453,12 +454,12 @@ export default function ExpensesScreen({ navigation }) {
         ListEmptyComponent={
           <View style={st.emptyState}>
             <View style={st.emptyIcon}>
-              <Icon name="receipt-outline" size={64} color={C.muted} />
+              <Icon name="receipt-outline" size={scale(64)} color={C.muted} />
             </View>
             <Text style={st.emptyTitle}>No Expenses Yet</Text>
             <Text style={st.emptySubtitle}>Track your expenses to manage finances</Text>
             <TouchableOpacity style={st.emptyBtn} onPress={() => openForm()}>
-              <Icon name="add" size={18} color="#fff" />
+              <Icon name="add" size={scale(18)} color="#fff" />
               <Text style={st.emptyBtnText}>Add Expense</Text>
             </TouchableOpacity>
           </View>
@@ -472,11 +473,11 @@ export default function ExpensesScreen({ navigation }) {
             <LinearGradient colors={[C.gradient1, C.gradient2]} style={st.modalHeader}>
               <Text style={st.modalTitle}>{form.id ? 'Edit Expense' : 'Add Expense'}</Text>
               <TouchableOpacity onPress={() => setModalVisible(false)} style={st.modalClose}>
-                <Icon name="close" size={24} color="#fff" />
+                <Icon name="close" size={scale(24)} color="#fff" />
               </TouchableOpacity>
             </LinearGradient>
 
-            <ScrollView style={st.modalBody} contentContainerStyle={{ paddingBottom: 30 }} showsVerticalScrollIndicator={true} keyboardShouldPersistTaps="handled">
+            <ScrollView style={st.modalBody} contentContainerStyle={{ paddingBottom: scale(30) }} showsVerticalScrollIndicator={true} keyboardShouldPersistTaps="handled">
               {/* Category Selection */}
               <Text style={st.label}>Category *</Text>
               <View style={st.categoryGrid}>
@@ -488,7 +489,7 @@ export default function ExpensesScreen({ navigation }) {
                       style={[st.categoryChip, isActive && { backgroundColor: cat.color, borderColor: cat.color }]}
                       onPress={() => setForm(f => ({ ...f, category: cat.value }))}
                     >
-                      <Icon name={cat.icon} size={18} color={isActive ? '#fff' : cat.color} />
+                      <Icon name={cat.icon} size={scale(18)} color={isActive ? '#fff' : cat.color} />
                       <Text style={[st.categoryChipText, isActive && { color: '#fff' }]}>{cat.label}</Text>
                     </TouchableOpacity>
                   );
@@ -514,9 +515,9 @@ export default function ExpensesScreen({ navigation }) {
               {/* Date */}
               <Text style={st.label}>Date</Text>
               <TouchableOpacity style={st.dateBtn} onPress={() => setShowDatePicker(true)}>
-                <Icon name="calendar" size={20} color={C.warning} />
+                <Icon name="calendar" size={scale(20)} color={C.warning} />
                 <Text style={st.dateBtnText}>{form.expenseDate ? formatDate(form.expenseDate) : 'Select date'}</Text>
-                <Icon name="chevron-down" size={18} color={C.muted} />
+                <Icon name="chevron-down" size={scale(18)} color={C.muted} />
               </TouchableOpacity>
               {showDatePicker && (
                 <DateTimePicker
@@ -546,17 +547,17 @@ export default function ExpensesScreen({ navigation }) {
                 <View style={st.receiptPreview}>
                   <Image source={{ uri: receiptImage.uri }} style={st.receiptImage} resizeMode="cover" />
                   <TouchableOpacity style={st.receiptRemove} onPress={() => setReceiptImage(null)}>
-                    <Icon name="close" size={16} color="#fff" />
+                    <Icon name="close" size={scale(16)} color="#fff" />
                   </TouchableOpacity>
                   <TouchableOpacity style={st.receiptChange} onPress={pickReceipt}>
-                    <Icon name="camera" size={14} color={C.warning} />
+                    <Icon name="camera" size={scale(14)} color={C.warning} />
                     <Text style={st.receiptChangeText}>Change</Text>
                   </TouchableOpacity>
                 </View>
               ) : (
                 <TouchableOpacity style={st.receiptUpload} onPress={pickReceipt}>
                   <View style={st.receiptUploadIcon}>
-                    <Icon name="cloud-upload" size={28} color={C.muted} />
+                    <Icon name="cloud-upload" size={scale(28)} color={C.muted} />
                   </View>
                   <Text style={st.receiptUploadText}>Tap to upload receipt</Text>
                   <Text style={st.receiptUploadHint}>PNG, JPG up to 5MB</Text>
@@ -574,7 +575,7 @@ export default function ExpensesScreen({ navigation }) {
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
                   <>
-                    <Icon name={form.id ? 'checkmark' : 'add'} size={18} color="#fff" />
+                    <Icon name={form.id ? 'checkmark' : 'add'} size={scale(18)} color="#fff" />
                     <Text style={st.saveBtnText}>{form.id ? 'Update' : 'Add'}</Text>
                   </>
                 )}
@@ -594,110 +595,110 @@ const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
 
   // Header Section
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border },
-  headerBackBtn: { width: 40, height: 40, borderRadius: 10, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
-  headerCenter: { flex: 1, marginLeft: 12 },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
-  headerSubtitle: { fontSize: 12, color: C.muted, marginTop: 2 },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(16), paddingVertical: scale(12), backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border },
+  headerBackBtn: { width: scale(40), height: scale(40), borderRadius: scale(10), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
+  headerCenter: { flex: 1, marginLeft: scale(12) },
+  headerTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink },
+  headerSubtitle: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(2) },
   headerActions: { flexDirection: 'row' },
-  headerIconBtn: { width: 40, height: 40, borderRadius: 10, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', marginLeft: 8 },
+  headerIconBtn: { width: scale(40), height: scale(40), borderRadius: scale(10), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', marginLeft: scale(8) },
 
   // Hero Section (kept for modal header)
-  heroSection: { paddingTop: 8, paddingBottom: 16, borderBottomLeftRadius: 20, borderBottomRightRadius: 20 },
-  heroContent: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 },
-  backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  heroSection: { paddingTop: scale(8), paddingBottom: scale(16), borderBottomLeftRadius: scale(20), borderBottomRightRadius: scale(20) },
+  heroContent: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(16) },
+  backBtn: { width: scale(40), height: scale(40), borderRadius: scale(12), backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginRight: scale(12) },
   heroTextContainer: { flex: 1 },
-  heroTitle: { fontSize: 24, fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
-  heroSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.8)', marginTop: 2 },
+  heroTitle: { fontSize: moderateScale(24), fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
+  heroSubtitle: { fontSize: moderateScale(13), color: 'rgba(255,255,255,0.8)', marginTop: scale(2) },
   heroActions: { flexDirection: 'row' },
-  heroIconBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginLeft: 8 },
+  heroIconBtn: { width: scale(40), height: scale(40), borderRadius: scale(12), backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginLeft: scale(8) },
 
   // Summary Card
-  summaryCard: { backgroundColor: C.warning, marginHorizontal: 16, marginTop: 16, padding: 20, borderRadius: 16 },
-  summaryRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
-  summaryLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  summaryLabel: { fontSize: 14, color: '#fff', fontWeight: '600' },
-  reportsBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: '#fff', borderRadius: 20 },
-  reportsBtnText: { fontSize: 12, fontWeight: '700', color: C.warning },
-  summaryValue: { fontSize: 32, fontWeight: '800', color: '#fff' },
-  summaryCount: { fontSize: 13, color: 'rgba(255,255,255,0.85)', marginTop: 4 },
+  summaryCard: { backgroundColor: C.warning, marginHorizontal: scale(16), marginTop: scale(16), padding: scale(20), borderRadius: scale(16) },
+  summaryRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: scale(8) },
+  summaryLeft: { flexDirection: 'row', alignItems: 'center', gap: scale(8) },
+  summaryLabel: { fontSize: moderateScale(14), color: '#fff', fontWeight: '600' },
+  reportsBtn: { flexDirection: 'row', alignItems: 'center', gap: scale(6), paddingHorizontal: scale(12), paddingVertical: scale(6), backgroundColor: '#fff', borderRadius: scale(20) },
+  reportsBtnText: { fontSize: moderateScale(12), fontWeight: '700', color: C.warning },
+  summaryValue: { fontSize: moderateScale(32), fontWeight: '800', color: '#fff' },
+  summaryCount: { fontSize: moderateScale(13), color: 'rgba(255,255,255,0.85)', marginTop: scale(4) },
 
   // Filters
-  filterSection: { paddingVertical: 12, backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border, marginTop: 12 },
-  filterScroll: { paddingHorizontal: 16 },
-  filterChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 10, marginRight: 8, backgroundColor: C.card, borderRadius: 20, borderWidth: 1.5, borderColor: C.border },
-  filterChipText: { fontSize: 13, fontWeight: '600', color: C.ink },
+  filterSection: { paddingVertical: scale(12), backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border, marginTop: scale(12) },
+  filterScroll: { paddingHorizontal: scale(16) },
+  filterChip: { flexDirection: 'row', alignItems: 'center', gap: scale(6), paddingHorizontal: scale(14), paddingVertical: scale(10), marginRight: scale(8), backgroundColor: C.card, borderRadius: scale(20), borderWidth: 1.5, borderColor: C.border },
+  filterChipText: { fontSize: moderateScale(13), fontWeight: '600', color: C.ink },
 
   // Results Header
-  resultsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
-  resultsTitle: { fontSize: 15, fontWeight: '700', color: C.ink },
-  clearBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: C.warningLight, borderRadius: 8 },
-  clearBtnText: { fontSize: 12, fontWeight: '600', color: C.warning },
+  resultsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: scale(16), paddingVertical: scale(12) },
+  resultsTitle: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink },
+  clearBtn: { flexDirection: 'row', alignItems: 'center', gap: scale(4), paddingHorizontal: scale(10), paddingVertical: scale(6), backgroundColor: C.warningLight, borderRadius: scale(8) },
+  clearBtnText: { fontSize: moderateScale(12), fontWeight: '600', color: C.warning },
 
   // List
-  listContent: { paddingHorizontal: 16, paddingBottom: 120 },
+  listContent: { paddingHorizontal: scale(16), paddingBottom: scale(120) },
   columnWrapper: { justifyContent: 'space-between' },
 
   // Card
-  card: { flex: 1, backgroundColor: C.card, borderRadius: 16, marginBottom: 12, shadowColor: C.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3, overflow: 'hidden', padding: 16 },
-  cardRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  categoryIcon: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  card: { flex: 1, backgroundColor: C.card, borderRadius: scale(16), marginBottom: scale(12), shadowColor: C.shadow, shadowOffset: { width: 0, height: scale(2) }, shadowOpacity: 0.08, shadowRadius: scale(8), elevation: 3, overflow: 'hidden', padding: scale(16) },
+  cardRow: { flexDirection: 'row', alignItems: 'flex-start', gap: scale(12) },
+  categoryIcon: { width: scale(48), height: scale(48), borderRadius: scale(14), alignItems: 'center', justifyContent: 'center' },
   cardInfo: { flex: 1 },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: C.ink },
-  cardDesc: { fontSize: 13, color: C.text, marginTop: 4 },
-  cardMeta: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 },
-  cardDate: { fontSize: 12, color: C.muted },
+  cardTitle: { fontSize: moderateScale(16), fontWeight: '700', color: C.ink },
+  cardDesc: { fontSize: moderateScale(13), color: C.text, marginTop: scale(4) },
+  cardMeta: { flexDirection: 'row', alignItems: 'center', gap: scale(4), marginTop: scale(6) },
+  cardDate: { fontSize: moderateScale(12), color: C.muted },
   amountBox: { alignItems: 'flex-end' },
-  amountText: { fontSize: 18, fontWeight: '800' },
-  cardActions: { flexDirection: 'row', gap: 8, marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: C.border },
-  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 10 },
-  actionText: { fontSize: 13, fontWeight: '600' },
+  amountText: { fontSize: moderateScale(18), fontWeight: '800' },
+  cardActions: { flexDirection: 'row', gap: scale(8), marginTop: scale(14), paddingTop: scale(14), borderTopWidth: 1, borderTopColor: C.border },
+  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: scale(6), paddingVertical: scale(10), borderRadius: scale(10) },
+  actionText: { fontSize: moderateScale(13), fontWeight: '600' },
 
   // Loading & Empty
-  loadingHero: { paddingVertical: 24, paddingHorizontal: 20, borderBottomLeftRadius: 20, borderBottomRightRadius: 20 },
+  loadingHero: { paddingVertical: scale(24), paddingHorizontal: scale(20), borderBottomLeftRadius: scale(20), borderBottomRightRadius: scale(20) },
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  loadingText: { marginTop: 16, fontSize: 15, color: C.muted },
-  emptyState: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 40 },
-  emptyIcon: { width: 120, height: 120, borderRadius: 60, backgroundColor: C.border, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
-  emptyTitle: { fontSize: 20, fontWeight: '700', color: C.ink, marginBottom: 8 },
-  emptySubtitle: { fontSize: 14, color: C.muted, textAlign: 'center' },
-  emptyBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 24, paddingHorizontal: 24, paddingVertical: 14, backgroundColor: C.warning, borderRadius: 14 },
-  emptyBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  loadingText: { marginTop: scale(16), fontSize: moderateScale(15), color: C.muted },
+  emptyState: { alignItems: 'center', paddingTop: scale(60), paddingHorizontal: scale(40) },
+  emptyIcon: { width: scale(120), height: scale(120), borderRadius: scale(60), backgroundColor: C.border, alignItems: 'center', justifyContent: 'center', marginBottom: scale(20) },
+  emptyTitle: { fontSize: moderateScale(20), fontWeight: '700', color: C.ink, marginBottom: scale(8) },
+  emptySubtitle: { fontSize: moderateScale(14), color: C.muted, textAlign: 'center' },
+  emptyBtn: { flexDirection: 'row', alignItems: 'center', gap: scale(8), marginTop: scale(24), paddingHorizontal: scale(24), paddingVertical: scale(14), backgroundColor: C.warning, borderRadius: scale(14) },
+  emptyBtnText: { fontSize: moderateScale(15), fontWeight: '700', color: '#fff' },
 
   // Modal
-  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20 },
-  modalTitle: { fontSize: 20, fontWeight: '800', color: '#fff' },
-  modalClose: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
-  modalBody: { flex: 1, padding: 20 },
-  modalFooter: { flexDirection: 'row', gap: 12, padding: 20, borderTopWidth: 1, borderTopColor: C.border },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: scale(20) },
+  modalTitle: { fontSize: moderateScale(20), fontWeight: '800', color: '#fff' },
+  modalClose: { width: scale(36), height: scale(36), borderRadius: scale(18), backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
+  modalBody: { flex: 1, padding: scale(20) },
+  modalFooter: { flexDirection: 'row', gap: scale(12), padding: scale(20), borderTopWidth: 1, borderTopColor: C.border },
 
   // Form
-  label: { fontSize: 13, fontWeight: '700', color: C.text, marginBottom: 10, marginTop: 16 },
-  categoryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  categoryChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, backgroundColor: C.bg, borderWidth: 1.5, borderColor: C.border },
-  categoryChipText: { fontSize: 13, fontWeight: '600', color: C.ink },
-  inputRow: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, borderWidth: 1.5, borderColor: C.border, backgroundColor: C.bg, overflow: 'hidden' },
-  currencyBox: { width: 48, height: 48, backgroundColor: C.warningLight, alignItems: 'center', justifyContent: 'center' },
-  currencyText: { fontSize: 18, fontWeight: '700', color: C.warning },
-  amountInput: { flex: 1, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, fontWeight: '600', color: C.ink },
-  dateBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 14, borderRadius: 12, borderWidth: 1.5, borderColor: C.border, backgroundColor: C.bg },
-  dateBtnText: { flex: 1, fontSize: 14, fontWeight: '600', color: C.ink },
-  textArea: { backgroundColor: C.bg, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: C.text, borderWidth: 1.5, borderColor: C.border, minHeight: 80, textAlignVertical: 'top' },
+  label: { fontSize: moderateScale(13), fontWeight: '700', color: C.text, marginBottom: scale(10), marginTop: scale(16) },
+  categoryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: scale(10) },
+  categoryChip: { flexDirection: 'row', alignItems: 'center', gap: scale(6), paddingHorizontal: scale(14), paddingVertical: scale(10), borderRadius: scale(12), backgroundColor: C.bg, borderWidth: 1.5, borderColor: C.border },
+  categoryChipText: { fontSize: moderateScale(13), fontWeight: '600', color: C.ink },
+  inputRow: { flexDirection: 'row', alignItems: 'center', borderRadius: scale(12), borderWidth: 1.5, borderColor: C.border, backgroundColor: C.bg, overflow: 'hidden' },
+  currencyBox: { width: scale(48), height: scale(48), backgroundColor: C.warningLight, alignItems: 'center', justifyContent: 'center' },
+  currencyText: { fontSize: moderateScale(18), fontWeight: '700', color: C.warning },
+  amountInput: { flex: 1, paddingHorizontal: scale(14), paddingVertical: scale(12), fontSize: moderateScale(16), fontWeight: '600', color: C.ink },
+  dateBtn: { flexDirection: 'row', alignItems: 'center', gap: scale(10), paddingHorizontal: scale(14), paddingVertical: scale(14), borderRadius: scale(12), borderWidth: 1.5, borderColor: C.border, backgroundColor: C.bg },
+  dateBtnText: { flex: 1, fontSize: moderateScale(14), fontWeight: '600', color: C.ink },
+  textArea: { backgroundColor: C.bg, borderRadius: scale(12), paddingHorizontal: scale(14), paddingVertical: scale(12), fontSize: moderateScale(14), color: C.text, borderWidth: 1.5, borderColor: C.border, minHeight: scale(80), textAlignVertical: 'top' },
 
   // Receipt
-  receiptUpload: { alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.border, borderStyle: 'dashed', borderRadius: 14, paddingVertical: 28, backgroundColor: C.bg },
-  receiptUploadIcon: { width: 56, height: 56, borderRadius: 28, backgroundColor: C.card, alignItems: 'center', justifyContent: 'center', marginBottom: 10, shadowColor: C.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 },
-  receiptUploadText: { fontSize: 14, fontWeight: '600', color: C.ink },
-  receiptUploadHint: { fontSize: 12, color: C.muted, marginTop: 4 },
-  receiptPreview: { position: 'relative', borderRadius: 14, overflow: 'hidden' },
-  receiptImage: { width: '100%', height: 160, borderRadius: 14 },
-  receiptRemove: { position: 'absolute', top: 10, right: 10, width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' },
-  receiptChange: { position: 'absolute', bottom: 10, right: 10, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, backgroundColor: '#fff' },
-  receiptChangeText: { fontSize: 12, fontWeight: '600', color: C.warning },
+  receiptUpload: { alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.border, borderStyle: 'dashed', borderRadius: scale(14), paddingVertical: scale(28), backgroundColor: C.bg },
+  receiptUploadIcon: { width: scale(56), height: scale(56), borderRadius: scale(28), backgroundColor: C.card, alignItems: 'center', justifyContent: 'center', marginBottom: scale(10), shadowColor: C.shadow, shadowOffset: { width: 0, height: scale(2) }, shadowOpacity: 0.1, shadowRadius: scale(4), elevation: 2 },
+  receiptUploadText: { fontSize: moderateScale(14), fontWeight: '600', color: C.ink },
+  receiptUploadHint: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(4) },
+  receiptPreview: { position: 'relative', borderRadius: scale(14), overflow: 'hidden' },
+  receiptImage: { width: '100%', height: scale(160), borderRadius: scale(14) },
+  receiptRemove: { position: 'absolute', top: scale(10), right: scale(10), width: scale(32), height: scale(32), borderRadius: scale(16), backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' },
+  receiptChange: { position: 'absolute', bottom: scale(10), right: scale(10), flexDirection: 'row', alignItems: 'center', gap: scale(4), paddingHorizontal: scale(12), paddingVertical: scale(8), borderRadius: scale(20), backgroundColor: '#fff' },
+  receiptChangeText: { fontSize: moderateScale(12), fontWeight: '600', color: C.warning },
 
   // Buttons
-  cancelBtn: { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: C.bg, alignItems: 'center' },
-  cancelBtnText: { fontSize: 15, fontWeight: '700', color: C.ink },
-  saveBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderRadius: 12, backgroundColor: C.warning },
-  saveBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  cancelBtn: { flex: 1, paddingVertical: scale(14), borderRadius: scale(12), backgroundColor: C.bg, alignItems: 'center' },
+  cancelBtnText: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink },
+  saveBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: scale(8), paddingVertical: scale(14), borderRadius: scale(12), backgroundColor: C.warning },
+  saveBtnText: { fontSize: moderateScale(15), fontWeight: '700', color: '#fff' },
 });

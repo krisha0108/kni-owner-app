@@ -19,6 +19,7 @@ import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import notificationService from '../services/notificationService';
 
+import { scale, moderateScale } from '../utils/responsive';
 export default function RestaurantLogin({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -227,7 +228,7 @@ export default function RestaurantLogin({ navigation }) {
         <View style={styles.formContainer}>
           {/* Email Input */}
           <View style={styles.inputContainer}>
-            <Icon name="mail-outline" size={20} color="#666" style={styles.inputIcon} />
+            <Icon name="mail-outline" size={scale(20)} color="#666" style={styles.inputIcon} />
             <TextInput
               style={styles.input}
               placeholder="Email"
@@ -242,7 +243,7 @@ export default function RestaurantLogin({ navigation }) {
 
           {/* Password Input */}
           <View style={styles.inputContainer}>
-            <Icon name="lock-closed-outline" size={20} color="#666" style={styles.inputIcon} />
+            <Icon name="lock-closed-outline" size={scale(20)} color="#666" style={styles.inputIcon} />
             <TextInput
               style={styles.input}
               placeholder="Password"
@@ -258,7 +259,7 @@ export default function RestaurantLogin({ navigation }) {
             >
               <Icon
                 name={secureText ? 'eye-off-outline' : 'eye-outline'}
-                size={20}
+                size={scale(20)}
                 color="#666"
               />
             </TouchableOpacity>
@@ -302,7 +303,7 @@ export default function RestaurantLogin({ navigation }) {
               <ActivityIndicator color="#333" />
             ) : (
               <>
-                <Icon name="logo-google" size={20} color="#DB4437" style={styles.googleIcon} />
+                <Icon name="logo-google" size={scale(20)} color="#DB4437" style={styles.googleIcon} />
                 <Text style={styles.googleButtonText}>Continue with Google</Text>
               </>
             )}
@@ -328,26 +329,26 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingVertical: 40,
+    paddingHorizontal: scale(24),
+    paddingVertical: scale(40),
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: scale(40),
   },
   logo: {
-    width: 100,
-    height: 100,
-    marginBottom: 16,
+    width: scale(100),
+    height: scale(100),
+    marginBottom: scale(16),
   },
   title: {
-    fontSize: 28,
+    fontSize: moderateScale(28),
     fontWeight: 'bold',
     color: '#1A1A1A',
-    marginBottom: 8,
+    marginBottom: scale(8),
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: '#666',
   },
   formContainer: {
@@ -357,45 +358,45 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFF',
-    borderRadius: 12,
+    borderRadius: scale(12),
     borderWidth: 1,
     borderColor: '#E0E0E0',
-    paddingHorizontal: 16,
-    marginBottom: 16,
-    height: 56,
+    paddingHorizontal: scale(16),
+    marginBottom: scale(16),
+    height: scale(56),
   },
   inputIcon: {
-    marginRight: 12,
+    marginRight: scale(12),
   },
   input: {
     flex: 1,
-    fontSize: 16,
+    fontSize: moderateScale(16),
     color: '#1A1A1A',
   },
   eyeIcon: {
-    padding: 8,
+    padding: scale(8),
   },
   forgotPasswordContainer: {
     alignSelf: 'flex-end',
-    marginBottom: 8,
-    marginTop: -8,
+    marginBottom: scale(8),
+    marginTop: scale(-8),
   },
   forgotPasswordText: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: '#EF3A3A',
     fontWeight: '500',
   },
   loginButton: {
     backgroundColor: '#EF3A3A',
-    borderRadius: 12,
-    height: 56,
+    borderRadius: scale(12),
+    height: scale(56),
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: scale(8),
     shadowColor: '#EF3A3A',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: scale(4) },
     shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowRadius: scale(8),
     elevation: 4,
   },
   loginButtonDisabled: {
@@ -403,13 +404,13 @@ const styles = StyleSheet.create({
   },
   loginButtonText: {
     color: '#FFF',
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: '600',
   },
   dividerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 24,
+    marginVertical: scale(24),
   },
   divider: {
     flex: 1,
@@ -417,9 +418,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#E0E0E0',
   },
   dividerText: {
-    marginHorizontal: 16,
+    marginHorizontal: scale(16),
     color: '#999',
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '500',
   },
   googleButton: {
@@ -427,21 +428,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FFF',
-    borderRadius: 12,
+    borderRadius: scale(12),
     borderWidth: 1,
     borderColor: '#E0E0E0',
-    height: 56,
-    marginBottom: 24,
+    height: scale(56),
+    marginBottom: scale(24),
   },
   googleButtonDisabled: {
     opacity: 0.6,
   },
   googleIcon: {
-    marginRight: 12,
+    marginRight: scale(12),
   },
   googleButtonText: {
     color: '#333',
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: '600',
   },
   registerContainer: {
@@ -450,11 +451,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   registerText: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: '#666',
   },
   registerLink: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: '#EF3A3A',
     fontWeight: '600',
   },

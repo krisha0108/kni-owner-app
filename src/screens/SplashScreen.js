@@ -5,6 +5,7 @@ import {
 import LottieView from 'lottie-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { scale, moderateScale } from '../utils/responsive';
 const { width, height } = Dimensions.get('window');
 
 const SplashScreen = ({ navigation }) => {
@@ -114,12 +115,12 @@ const styles = StyleSheet.create({
   },
   tagline: {
     color: '#1D2254',
-    fontSize: 16,
-    marginTop: 25,
+    fontSize: moderateScale(16),
+    marginTop: scale(25),
     fontWeight: '600',
     zIndex: 2,
     textAlign: 'center',
-    paddingHorizontal: 30,
+    paddingHorizontal: scale(30),
   },
   gearContainer: {
     position: 'absolute',

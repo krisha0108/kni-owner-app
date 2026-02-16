@@ -10,6 +10,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api } from '../api/client';
 
+import { scale, moderateScale } from '../utils/responsive';
 const { width: W } = Dimensions.get('window');
 
 const C = {
@@ -109,7 +110,7 @@ const timeAgo = (ts) => {
 
 function SkeletonList({ pulse }) {
   return (
-    <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
+    <View style={{ paddingHorizontal: scale(16), paddingTop: scale(8) }}>
       {Array.from({ length: 6 }).map((_, i) => (
         <Animated.View key={i} style={[st.skelItem, { opacity: pulse }]} />
       ))}
@@ -246,7 +247,7 @@ export default function Notifications({ navigation }) {
           {/* Header Row */}
           <View style={st.itemHeaderRow}>
             <LinearGradient colors={tm.gradient} style={st.typeIconBox}>
-              <Icon name={tm.ic} size={18} color="#fff" />
+              <Icon name={tm.ic} size={scale(18)} color="#fff" />
             </LinearGradient>
             <View style={st.itemHeaderInfo}>
               <View style={st.itemTitleRow}>
@@ -267,15 +268,15 @@ export default function Notifications({ navigation }) {
 
           {/* Footer */}
           <View style={st.itemFooter}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Icon name="time-outline" size={12} color={C.muted} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(4) }}>
+              <Icon name="time-outline" size={scale(12)} color={C.muted} />
               <Text style={st.footerMeta}>
                 {new Date(item.ts).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
               </Text>
             </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(4) }}>
               <Text style={st.footerMeta}>View</Text>
-              <Icon name="chevron-forward" size={14} color={C.muted} />
+              <Icon name="chevron-forward" size={scale(14)} color={C.muted} />
             </View>
           </View>
         </View>
@@ -288,7 +289,7 @@ export default function Notifications({ navigation }) {
       {/* ─── Gradient Header ─── */}
       <LinearGradient colors={[C.primary, C.primaryDark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.header}>
         <TouchableOpacity onPress={() => navigation.goBack?.()} style={st.backBtn}>
-          <Icon name="arrow-back" size={22} color="#fff" />
+          <Icon name="arrow-back" size={scale(22)} color="#fff" />
         </TouchableOpacity>
         <View style={st.headerCenter}>
           <Text style={st.headerTitle}>Notifications</Text>
@@ -298,12 +299,12 @@ export default function Notifications({ navigation }) {
             </View>
           )}
         </View>
-        <View style={{ flexDirection: 'row', gap: 8 }}>
+        <View style={{ flexDirection: 'row', gap: scale(8) }}>
           <TouchableOpacity onPress={onRefresh} style={[st.backBtn, refreshing && { opacity: 0.5 }]} disabled={refreshing}>
-            <Icon name="refresh" size={18} color="#fff" />
+            <Icon name="refresh" size={scale(18)} color="#fff" />
           </TouchableOpacity>
           <TouchableOpacity onPress={markAllRead} style={st.backBtn}>
-            <Icon name="checkmark-done" size={18} color="#fff" />
+            <Icon name="checkmark-done" size={scale(18)} color="#fff" />
           </TouchableOpacity>
         </View>
       </LinearGradient>
@@ -316,7 +317,7 @@ export default function Notifications({ navigation }) {
             onPress={() => setFilter(filter === 'orders' ? 'all' : 'orders')}
           >
             <LinearGradient colors={['#DBEAFE', '#BFDBFE']} style={st.summaryIconCircle}>
-              <Icon name="cube" size={18} color="#2563EB" />
+              <Icon name="cube" size={scale(18)} color="#2563EB" />
             </LinearGradient>
             <Text style={st.summaryCount}>{filterCounts.orders}</Text>
             <Text style={st.summaryLabel}>Orders</Text>
@@ -327,7 +328,7 @@ export default function Notifications({ navigation }) {
             onPress={() => setFilter(filter === 'tickets' ? 'all' : 'tickets')}
           >
             <LinearGradient colors={['#FEF3C7', '#FDE68A']} style={st.summaryIconCircle}>
-              <Icon name="construct" size={18} color="#D97706" />
+              <Icon name="construct" size={scale(18)} color="#D97706" />
             </LinearGradient>
             <Text style={st.summaryCount}>{filterCounts.tickets}</Text>
             <Text style={st.summaryLabel}>Tickets</Text>
@@ -338,7 +339,7 @@ export default function Notifications({ navigation }) {
             onPress={() => setFilter(filter === 'restaurants' ? 'all' : 'restaurants')}
           >
             <LinearGradient colors={['#D1FAE5', '#A7F3D0']} style={st.summaryIconCircle}>
-              <Icon name="storefront" size={18} color="#059669" />
+              <Icon name="storefront" size={scale(18)} color="#059669" />
             </LinearGradient>
             <Text style={st.summaryCount}>{filterCounts.restaurants}</Text>
             <Text style={st.summaryLabel}>Restaurants</Text>
@@ -349,7 +350,7 @@ export default function Notifications({ navigation }) {
             onPress={() => setFilter('all')}
           >
             <LinearGradient colors={['#FEE2E2', '#FECACA']} style={st.summaryIconCircle}>
-              <Icon name="notifications" size={18} color={C.primary} />
+              <Icon name="notifications" size={scale(18)} color={C.primary} />
             </LinearGradient>
             <Text style={st.summaryCount}>{items.length}</Text>
             <Text style={st.summaryLabel}>Total</Text>
@@ -370,7 +371,7 @@ export default function Notifications({ navigation }) {
                 onPress={() => setFilter(tab.key)}
                 activeOpacity={0.7}
               >
-                <Icon name={tab.icon} size={14} color={isActive ? '#fff' : C.muted} style={{ marginRight: 5 }} />
+                <Icon name={tab.icon} size={scale(14)} color={isActive ? '#fff' : C.muted} style={{ marginRight: scale(5) }} />
                 <Text style={[st.tabText, isActive && st.tabTextActive]}>{tab.label}</Text>
                 {cnt !== null && cnt > 0 && (
                   <View style={[st.tabBadge, isActive && st.tabBadgeActive]}>
@@ -414,14 +415,14 @@ export default function Notifications({ navigation }) {
           ListEmptyComponent={
             <View style={st.emptyBox}>
               <LinearGradient colors={['#F0FDF4', '#DCFCE7']} style={st.emptyIconCircle}>
-                <Icon name="checkmark-done-circle" size={48} color="#22C55E" />
+                <Icon name="checkmark-done-circle" size={scale(48)} color="#22C55E" />
               </LinearGradient>
               <Text style={st.emptyTitle}>All Caught Up!</Text>
               <Text style={st.emptySubtitle}>
                 {filter !== 'all' ? 'No notifications in this category' : 'You have no notifications yet'}
               </Text>
               <TouchableOpacity style={st.emptyRefreshBtn} onPress={onRefresh}>
-                <Icon name="refresh" size={16} color={C.primary} />
+                <Icon name="refresh" size={scale(16)} color={C.primary} />
                 <Text style={st.emptyRefreshText}>Refresh</Text>
               </TouchableOpacity>
             </View>
@@ -441,13 +442,13 @@ const st = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(14),
   },
   backBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+    width: scale(38),
+    height: scale(38),
+    borderRadius: scale(12),
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -455,47 +456,47 @@ const st = StyleSheet.create({
   headerCenter: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: scale(8),
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: moderateScale(18),
     fontWeight: '800',
     color: '#fff',
   },
   countBadge: {
     backgroundColor: '#fff',
-    paddingHorizontal: 9,
-    paddingVertical: 3,
-    borderRadius: 12,
+    paddingHorizontal: scale(9),
+    paddingVertical: scale(3),
+    borderRadius: scale(12),
   },
   countBadgeText: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     fontWeight: '800',
     color: C.primary,
   },
 
   // ─── Summary Grid ───
   summarySection: {
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 6,
+    paddingHorizontal: scale(16),
+    paddingTop: scale(14),
+    paddingBottom: scale(6),
   },
   summaryGrid: {
     flexDirection: 'row',
-    gap: 8,
+    gap: scale(8),
   },
   summaryCard: {
     flex: 1,
     backgroundColor: C.card,
-    borderRadius: 14,
-    padding: 10,
+    borderRadius: scale(14),
+    padding: scale(10),
     alignItems: 'center',
     borderWidth: 1,
     borderColor: C.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
-    shadowRadius: 4,
+    shadowRadius: scale(4),
     elevation: 1,
   },
   summaryCardActive: {
@@ -503,44 +504,44 @@ const st = StyleSheet.create({
     borderWidth: 1.5,
   },
   summaryIconCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+    width: scale(34),
+    height: scale(34),
+    borderRadius: scale(10),
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 6,
+    marginBottom: scale(6),
   },
   summaryCount: {
-    fontSize: 18,
+    fontSize: moderateScale(18),
     fontWeight: '800',
     color: C.ink,
   },
   summaryLabel: {
-    fontSize: 9,
+    fontSize: moderateScale(9),
     fontWeight: '600',
     color: C.muted,
-    marginTop: 2,
+    marginTop: scale(2),
     textTransform: 'uppercase',
     letterSpacing: 0.3,
   },
 
   // ─── Filter Tabs ───
   tabsWrapper: {
-    paddingTop: 8,
-    paddingBottom: 4,
+    paddingTop: scale(8),
+    paddingBottom: scale(4),
     borderBottomWidth: 1,
     borderBottomColor: '#EEEFF2',
   },
   tabsContent: {
-    paddingHorizontal: 16,
-    gap: 8,
+    paddingHorizontal: scale(16),
+    gap: scale(8),
   },
   tab: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingHorizontal: scale(14),
+    paddingVertical: scale(8),
+    borderRadius: scale(20),
     backgroundColor: C.card,
     borderWidth: 1.5,
     borderColor: C.border,
@@ -550,7 +551,7 @@ const st = StyleSheet.create({
     borderColor: C.primary,
   },
   tabText: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     fontWeight: '600',
     color: C.muted,
   },
@@ -558,17 +559,17 @@ const st = StyleSheet.create({
     color: '#fff',
   },
   tabBadge: {
-    marginLeft: 6,
+    marginLeft: scale(6),
     backgroundColor: '#FEF3C7',
-    paddingHorizontal: 6,
+    paddingHorizontal: scale(6),
     paddingVertical: 1,
-    borderRadius: 8,
+    borderRadius: scale(8),
   },
   tabBadgeActive: {
     backgroundColor: 'rgba(255,255,255,0.3)',
   },
   tabBadgeText: {
-    fontSize: 10,
+    fontSize: moderateScale(10),
     fontWeight: '700',
     color: '#D97706',
   },
@@ -580,30 +581,30 @@ const st = StyleSheet.create({
   sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    marginTop: 14,
-    marginBottom: 8,
-    gap: 8,
+    paddingHorizontal: scale(16),
+    marginTop: scale(14),
+    marginBottom: scale(8),
+    gap: scale(8),
   },
   sectionDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: scale(6),
+    height: scale(6),
+    borderRadius: scale(3),
     backgroundColor: C.primary,
   },
   sectionTitle: {
     color: C.ink,
     fontWeight: '800',
-    fontSize: 13,
+    fontSize: moderateScale(13),
   },
   sectionCountPill: {
     backgroundColor: '#F1F5F9',
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 8,
+    paddingHorizontal: scale(7),
+    paddingVertical: scale(2),
+    borderRadius: scale(8),
   },
   sectionCountText: {
-    fontSize: 10,
+    fontSize: moderateScale(10),
     fontWeight: '700',
     color: C.muted,
   },
@@ -615,17 +616,17 @@ const st = StyleSheet.create({
 
   // ─── Notification Card ───
   itemCard: {
-    marginHorizontal: 16,
-    marginBottom: 10,
+    marginHorizontal: scale(16),
+    marginBottom: scale(10),
     backgroundColor: C.card,
-    borderRadius: 16,
+    borderRadius: scale(16),
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: C.border,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: scale(2) },
     shadowOpacity: 0.05,
-    shadowRadius: 8,
+    shadowRadius: scale(8),
     elevation: 2,
   },
   itemCardUnread: {
@@ -633,20 +634,20 @@ const st = StyleSheet.create({
     backgroundColor: '#FFFBF5',
   },
   itemAccent: {
-    height: 3,
+    height: scale(3),
   },
   itemBody: {
-    padding: 14,
+    padding: scale(14),
   },
   itemHeaderRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: scale(12),
     alignItems: 'flex-start',
   },
   typeIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(12),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -656,107 +657,107 @@ const st = StyleSheet.create({
   itemTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: scale(8),
   },
   itemTitle: {
-    fontSize: 15,
+    fontSize: moderateScale(15),
     fontWeight: '700',
     color: C.ink,
     flex: 1,
-    marginBottom: 4,
+    marginBottom: scale(4),
   },
   unreadDotSmall: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: scale(8),
+    height: scale(8),
+    borderRadius: scale(4),
     backgroundColor: C.primary,
   },
   itemMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: scale(8),
   },
   typePill: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
+    paddingHorizontal: scale(8),
+    paddingVertical: scale(2),
+    borderRadius: scale(6),
   },
   typePillText: {
-    fontSize: 10,
+    fontSize: moderateScale(10),
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.3,
   },
   timeAgoText: {
-    fontSize: 11,
+    fontSize: moderateScale(11),
     color: C.muted,
   },
   itemDesc: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     color: C.muted,
-    lineHeight: 19,
-    marginTop: 10,
-    paddingLeft: 52,
+    lineHeight: moderateScale(19),
+    marginTop: scale(10),
+    paddingLeft: scale(52),
   },
   itemFooter: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 12,
-    paddingLeft: 52,
+    marginTop: scale(12),
+    paddingLeft: scale(52),
   },
   footerMeta: {
-    fontSize: 11,
+    fontSize: moderateScale(11),
     color: C.muted,
   },
 
   // ─── Empty State ───
   emptyBox: {
     alignItems: 'center',
-    paddingVertical: 50,
-    paddingHorizontal: 32,
+    paddingVertical: scale(50),
+    paddingHorizontal: scale(32),
   },
   emptyIconCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: scale(100),
+    height: scale(100),
+    borderRadius: scale(50),
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: scale(20),
   },
   emptyTitle: {
-    fontSize: 20,
+    fontSize: moderateScale(20),
     fontWeight: '800',
     color: C.ink,
-    marginBottom: 6,
+    marginBottom: scale(6),
   },
   emptySubtitle: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: C.muted,
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: scale(20),
   },
   emptyRefreshBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
+    gap: scale(6),
+    paddingHorizontal: scale(20),
+    paddingVertical: scale(10),
+    borderRadius: scale(20),
     borderWidth: 1.5,
     borderColor: C.primary,
   },
   emptyRefreshText: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '600',
     color: C.primary,
   },
 
   // ─── Skeleton ───
   skelItem: {
-    height: 90,
+    height: scale(90),
     backgroundColor: '#E9EEF5',
-    borderRadius: 16,
-    marginTop: 10,
+    borderRadius: scale(16),
+    marginTop: scale(10),
   },
 });

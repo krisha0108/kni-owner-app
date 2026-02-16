@@ -16,6 +16,7 @@ import { api } from '../api/client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import notificationService from '../services/notificationService';
 
+import { scale, moderateScale } from '../utils/responsive';
 const C = {
   primary: '#EF3A3A',
   ink: '#1A1A1A',
@@ -171,7 +172,7 @@ export default function EmailVerificationScreen({ route, navigation }) {
         {/* Header icon */}
         <View style={styles.iconContainer}>
           <View style={styles.iconCircle}>
-            <Icon name="mail-outline" size={40} color={C.primary} />
+            <Icon name="mail-outline" size={scale(40)} color={C.primary} />
           </View>
         </View>
 
@@ -231,7 +232,7 @@ export default function EmailVerificationScreen({ route, navigation }) {
           style={styles.backButton}
           onPress={() => navigation.navigate('RestaurantLogin')}
         >
-          <Icon name="arrow-back" size={16} color={C.muted} />
+          <Icon name="arrow-back" size={scale(16)} color={C.muted} />
           <Text style={styles.backText}>Back to Login</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -246,34 +247,34 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingVertical: 60,
+    paddingHorizontal: scale(24),
+    paddingVertical: scale(60),
     alignItems: 'center',
   },
   iconContainer: {
-    marginBottom: 24,
+    marginBottom: scale(24),
   },
   iconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: scale(80),
+    height: scale(80),
+    borderRadius: scale(40),
     backgroundColor: `${C.primary}15`,
     justifyContent: 'center',
     alignItems: 'center',
   },
   title: {
-    fontSize: 28,
+    fontSize: moderateScale(28),
     fontWeight: 'bold',
     color: C.ink,
-    marginBottom: 12,
+    marginBottom: scale(12),
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 15,
+    fontSize: moderateScale(15),
     color: C.muted,
     textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 32,
+    lineHeight: moderateScale(22),
+    marginBottom: scale(32),
   },
   emailText: {
     fontWeight: '600',
@@ -282,17 +283,17 @@ const styles = StyleSheet.create({
   codeContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 10,
-    marginBottom: 32,
+    gap: scale(10),
+    marginBottom: scale(32),
   },
   codeInput: {
-    width: 48,
-    height: 56,
-    borderRadius: 12,
+    width: scale(48),
+    height: scale(56),
+    borderRadius: scale(12),
     borderWidth: 2,
     borderColor: C.border,
     backgroundColor: C.card,
-    fontSize: 24,
+    fontSize: moderateScale(24),
     fontWeight: 'bold',
     color: C.ink,
   },
@@ -302,15 +303,15 @@ const styles = StyleSheet.create({
   },
   verifyButton: {
     backgroundColor: C.primary,
-    borderRadius: 12,
-    height: 56,
+    borderRadius: scale(12),
+    height: scale(56),
     justifyContent: 'center',
     alignItems: 'center',
     width: '100%',
     shadowColor: C.primary,
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: scale(4) },
     shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowRadius: scale(8),
     elevation: 4,
   },
   buttonDisabled: {
@@ -318,20 +319,20 @@ const styles = StyleSheet.create({
   },
   verifyButtonText: {
     color: '#FFF',
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: '600',
   },
   resendContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 24,
+    marginTop: scale(24),
   },
   resendLabel: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: C.muted,
   },
   resendLink: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: C.primary,
     fontWeight: '600',
   },
@@ -342,11 +343,11 @@ const styles = StyleSheet.create({
   backButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 32,
-    gap: 6,
+    marginTop: scale(32),
+    gap: scale(6),
   },
   backText: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: C.muted,
   },
 });

@@ -30,6 +30,7 @@ import { RestaurantSelectorBar } from '../components/RestaurantSelector';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
+import { scale, moderateScale } from '../utils/responsive';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // App Theme Color Palette
@@ -223,7 +224,7 @@ export default function MarketplaceOrdersScreen({ navigation }) {
           end={{ x: 1, y: 0 }}
           style={styles.orderStatusStrip}
         >
-          <Icon name={statusStyle.icon} size={14} color="#fff" />
+          <Icon name={statusStyle.icon} size={scale(14)} color="#fff" />
           <Text style={styles.orderStatusText}>{statusStyle.label}</Text>
         </LinearGradient>
 
@@ -245,7 +246,7 @@ export default function MarketplaceOrdersScreen({ navigation }) {
           {vendorName && (
             <View style={styles.vendorSection}>
               <View style={styles.vendorIcon}>
-                <Icon name="storefront" size={16} color={C.primary} />
+                <Icon name="storefront" size={scale(16)} color={C.primary} />
               </View>
               <View style={styles.vendorInfo}>
                 <Text style={styles.vendorLabel}>Vendor</Text>
@@ -286,12 +287,12 @@ export default function MarketplaceOrdersScreen({ navigation }) {
                     openRatingModal(item);
                   }}
                 >
-                  <Icon name="star" size={16} color={C.warn} />
+                  <Icon name="star" size={scale(16)} color={C.warn} />
                 </TouchableOpacity>
               )}
               <View style={styles.viewDetailsBtn}>
                 <Text style={styles.viewDetailsText}>Details</Text>
-                <Icon name="chevron-forward" size={16} color={C.primary} />
+                <Icon name="chevron-forward" size={scale(16)} color={C.primary} />
               </View>
             </View>
           </View>
@@ -330,7 +331,7 @@ export default function MarketplaceOrdersScreen({ navigation }) {
         <View style={styles.heroContent}>
           <View style={styles.heroLeft}>
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-              <Icon name="arrow-back" size={22} color="#fff" />
+              <Icon name="arrow-back" size={scale(22)} color="#fff" />
             </TouchableOpacity>
             <View>
               <Text style={styles.heroTitle}>My Orders</Text>
@@ -344,13 +345,13 @@ export default function MarketplaceOrdersScreen({ navigation }) {
               style={styles.heroIconBtn}
               onPress={() => navigation.navigate('Marketplace')}
             >
-              <Icon name="bag-add-outline" size={22} color="#fff" />
+              <Icon name="bag-add-outline" size={scale(22)} color="#fff" />
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.heroIconBtn}
               onPress={() => setMenuVisible(true)}
             >
-              <Icon name="menu-outline" size={22} color="#fff" />
+              <Icon name="menu-outline" size={scale(22)} color="#fff" />
             </TouchableOpacity>
           </View>
         </View>
@@ -399,7 +400,7 @@ export default function MarketplaceOrdersScreen({ navigation }) {
                 onPress={() => setActiveStatusTab(status.value)}
                 activeOpacity={0.7}
               >
-                <Icon name={config.icon} size={14} color={isActive ? config.color : C.muted} />
+                <Icon name={config.icon} size={scale(14)} color={isActive ? config.color : C.muted} />
                 <Text style={[styles.filterChipText, isActive && { color: config.color }]}>
                   {status.label}
                 </Text>
@@ -431,7 +432,7 @@ export default function MarketplaceOrdersScreen({ navigation }) {
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <View style={styles.emptyIconContainer}>
-              <Icon name="receipt-outline" size={64} color={C.muted} />
+              <Icon name="receipt-outline" size={scale(64)} color={C.muted} />
             </View>
             <Text style={styles.emptyTitle}>No Orders Yet</Text>
             <Text style={styles.emptySubtitle}>
@@ -449,7 +450,7 @@ export default function MarketplaceOrdersScreen({ navigation }) {
                 end={{ x: 1, y: 0 }}
                 style={styles.emptyActionGradient}
               >
-                <Icon name="bag-add" size={20} color="#fff" />
+                <Icon name="bag-add" size={scale(20)} color="#fff" />
                 <Text style={styles.emptyActionText}>Browse Marketplace</Text>
               </LinearGradient>
             </TouchableOpacity>
@@ -475,7 +476,7 @@ export default function MarketplaceOrdersScreen({ navigation }) {
                       #{selectedOrder.id?.slice(0, 8).toUpperCase()}
                     </Text>
                     <View style={styles.detailModalStatusRow}>
-                      <Icon name={getStatusStyle(selectedOrder.status).icon} size={16} color="#fff" />
+                      <Icon name={getStatusStyle(selectedOrder.status).icon} size={scale(16)} color="#fff" />
                       <Text style={styles.detailModalStatus}>
                         {getStatusStyle(selectedOrder.status).label}
                       </Text>
@@ -485,11 +486,11 @@ export default function MarketplaceOrdersScreen({ navigation }) {
                     style={styles.detailModalCloseBtn}
                     onPress={() => setDetailModalVisible(false)}
                   >
-                    <Icon name="close" size={22} color="#fff" />
+                    <Icon name="close" size={scale(22)} color="#fff" />
                   </TouchableOpacity>
                 </View>
                 <View style={styles.detailModalDateRow}>
-                  <Icon name="calendar-outline" size={14} color="rgba(255,255,255,0.8)" />
+                  <Icon name="calendar-outline" size={scale(14)} color="rgba(255,255,255,0.8)" />
                   <Text style={styles.detailModalDate}>
                     {formatDate(selectedOrder.createdAt)} • {formatTime(selectedOrder.createdAt)}
                   </Text>
@@ -507,7 +508,7 @@ export default function MarketplaceOrdersScreen({ navigation }) {
                 {/* Vendor Card */}
                 <View style={styles.detailCard}>
                   <View style={styles.detailCardIcon}>
-                    <Icon name="storefront" size={20} color={C.primary} />
+                    <Icon name="storefront" size={scale(20)} color={C.primary} />
                   </View>
                   <View style={styles.detailCardContent}>
                     <Text style={styles.detailCardLabel}>Vendor</Text>
@@ -520,7 +521,7 @@ export default function MarketplaceOrdersScreen({ navigation }) {
                 {/* Delivery Address Card */}
                 <View style={styles.detailCard}>
                   <View style={[styles.detailCardIcon, { backgroundColor: '#E0F2FE' }]}>
-                    <Icon name="location" size={20} color="#0284C7" />
+                    <Icon name="location" size={scale(20)} color="#0284C7" />
                   </View>
                   <View style={styles.detailCardContent}>
                     <Text style={styles.detailCardLabel}>Delivery Address</Text>
@@ -534,7 +535,7 @@ export default function MarketplaceOrdersScreen({ navigation }) {
                 {selectedOrder.notes && (
                   <View style={styles.detailCard}>
                     <View style={[styles.detailCardIcon, { backgroundColor: C.successLight }]}>
-                      <Icon name="document-text" size={20} color={C.success} />
+                      <Icon name="document-text" size={scale(20)} color={C.success} />
                     </View>
                     <View style={styles.detailCardContent}>
                       <Text style={styles.detailCardLabel}>Notes</Text>
@@ -553,7 +554,7 @@ export default function MarketplaceOrdersScreen({ navigation }) {
                     <View key={idx} style={styles.detailItemCard}>
                       <View style={styles.detailItemLeft}>
                         <View style={styles.detailItemImagePlaceholder}>
-                          <Icon name="cube" size={18} color={C.muted} />
+                          <Icon name="cube" size={scale(18)} color={C.muted} />
                         </View>
                         <View style={styles.detailItemInfo}>
                           <Text style={styles.detailItemName} numberOfLines={2}>
@@ -591,7 +592,7 @@ export default function MarketplaceOrdersScreen({ navigation }) {
                 {/* Status Message */}
                 {selectedOrder.status === 'PLACED' && (
                   <View style={styles.detailStatusMsg}>
-                    <Icon name="time-outline" size={18} color={C.primary} />
+                    <Icon name="time-outline" size={scale(18)} color={C.primary} />
                     <Text style={styles.detailStatusMsgText}>
                       Awaiting vendor confirmation. You'll be notified when status updates.
                     </Text>
@@ -600,7 +601,7 @@ export default function MarketplaceOrdersScreen({ navigation }) {
 
                 {selectedOrder.status === 'DELIVERED' && (
                   <View style={[styles.detailStatusMsg, { backgroundColor: C.successLight }]}>
-                    <Icon name="checkmark-circle" size={18} color={C.success} />
+                    <Icon name="checkmark-circle" size={scale(18)} color={C.success} />
                     <Text style={[styles.detailStatusMsgText, { color: C.success }]}>
                       Order delivered successfully!
                     </Text>
@@ -609,7 +610,7 @@ export default function MarketplaceOrdersScreen({ navigation }) {
 
                 {selectedOrder.status === 'CANCELLED' && (
                   <View style={[styles.detailStatusMsg, { backgroundColor: C.dangerLight }]}>
-                    <Icon name="close-circle" size={18} color={C.danger} />
+                    <Icon name="close-circle" size={scale(18)} color={C.danger} />
                     <Text style={[styles.detailStatusMsgText, { color: C.danger }]}>
                       This order was cancelled.
                     </Text>
@@ -623,7 +624,7 @@ export default function MarketplaceOrdersScreen({ navigation }) {
               {selectedOrder?.status === 'DELIVERED' && (
                 selectedOrder?.rating ? (
                   <View style={styles.detailRatedBadge}>
-                    <Icon name="star" size={16} color="#F59E0B" />
+                    <Icon name="star" size={scale(16)} color="#F59E0B" />
                     <Text style={styles.detailRatedText}>Rated {selectedOrder.rating?.overallRating || 0}/5</Text>
                   </View>
                 ) : (
@@ -634,7 +635,7 @@ export default function MarketplaceOrdersScreen({ navigation }) {
                       openRatingModal(selectedOrder);
                     }}
                   >
-                    <Icon name="star" size={18} color="#fff" />
+                    <Icon name="star" size={scale(18)} color="#fff" />
                     <Text style={styles.detailRateBtnText}>Rate Vendor</Text>
                   </TouchableOpacity>
                 )
@@ -662,7 +663,7 @@ export default function MarketplaceOrdersScreen({ navigation }) {
             <View style={styles.ratingSheetHeader}>
               <Text style={styles.ratingSheetTitle}>Rate Vendor</Text>
               <TouchableOpacity onPress={() => setRatingModalVisible(false)}>
-                <Icon name="close-circle" size={28} color={C.muted} />
+                <Icon name="close-circle" size={scale(28)} color={C.muted} />
               </TouchableOpacity>
             </View>
 
@@ -677,7 +678,7 @@ export default function MarketplaceOrdersScreen({ navigation }) {
                 <TouchableOpacity key={star} onPress={() => setRating(star)} activeOpacity={0.7}>
                   <Icon
                     name={star <= rating ? 'star' : 'star-outline'}
-                    size={40}
+                    size={scale(40)}
                     color={star <= rating ? '#F59E0B' : '#D1D5DB'}
                   />
                 </TouchableOpacity>
@@ -731,47 +732,47 @@ const styles = StyleSheet.create({
 
   // Hero Section
   heroSection: {
-    paddingTop: 8,
-    paddingBottom: 16,
+    paddingTop: scale(8),
+    paddingBottom: scale(16),
   },
   heroContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: scale(16),
   },
   heroLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: scale(12),
   },
   backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(12),
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   heroTitle: {
-    fontSize: 24,
+    fontSize: moderateScale(24),
     fontWeight: '800',
     color: '#fff',
     letterSpacing: -0.5,
   },
   heroSubtitle: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     color: 'rgba(255,255,255,0.8)',
-    marginTop: 2,
+    marginTop: scale(2),
   },
   heroActions: {
     flexDirection: 'row',
-    gap: 8,
+    gap: scale(8),
   },
   heroIconBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: scale(44),
+    height: scale(44),
+    borderRadius: scale(12),
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -782,33 +783,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 16,
-    paddingHorizontal: 40,
+    marginTop: scale(16),
+    paddingHorizontal: scale(40),
   },
   statItem: {
     alignItems: 'center',
     flex: 1,
   },
   statNumber: {
-    fontSize: 24,
+    fontSize: moderateScale(24),
     fontWeight: '800',
     color: '#fff',
   },
   statLabel: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     color: 'rgba(255,255,255,0.8)',
-    marginTop: 2,
+    marginTop: scale(2),
   },
   statDivider: {
     width: 1,
-    height: 30,
+    height: scale(30),
     backgroundColor: 'rgba(255,255,255,0.3)',
   },
 
   // Loading State
   loadingHero: {
-    paddingVertical: 24,
-    paddingHorizontal: 20,
+    paddingVertical: scale(24),
+    paddingHorizontal: scale(20),
   },
   loadingContainer: {
     flex: 1,
@@ -816,142 +817,142 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
+    marginTop: scale(16),
+    fontSize: moderateScale(16),
     color: C.muted,
   },
 
   // Filter Tabs - Premium Style
   filterWrapper: {
     backgroundColor: C.card,
-    paddingVertical: 10,
+    paddingVertical: scale(10),
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
   filterContainer: {
-    paddingHorizontal: 12,
+    paddingHorizontal: scale(12),
   },
   filterChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    marginHorizontal: 4,
+    paddingHorizontal: scale(14),
+    paddingVertical: scale(10),
+    marginHorizontal: scale(4),
     backgroundColor: C.card,
-    borderRadius: 25,
+    borderRadius: scale(25),
     borderWidth: 1.5,
     borderColor: C.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
-    shadowRadius: 2,
+    shadowRadius: scale(2),
     elevation: 1,
   },
   filterChipText: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     fontWeight: '600',
     color: C.ink,
-    marginHorizontal: 6,
+    marginHorizontal: scale(6),
   },
   filterBadge: {
-    minWidth: 22,
-    height: 22,
-    borderRadius: 11,
+    minWidth: scale(22),
+    height: scale(22),
+    borderRadius: scale(11),
     backgroundColor: C.border,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 6,
-    marginLeft: 2,
+    paddingHorizontal: scale(6),
+    marginLeft: scale(2),
   },
   filterBadgeText: {
-    fontSize: 11,
+    fontSize: moderateScale(11),
     fontWeight: '700',
     color: C.ink,
   },
 
   // Orders List
   ordersList: {
-    paddingHorizontal: 16,
-    paddingBottom: 100,
+    paddingHorizontal: scale(16),
+    paddingBottom: scale(100),
   },
 
   // Order Card - Premium Design
   orderCard: {
     backgroundColor: C.card,
-    borderRadius: 16,
-    marginBottom: 12,
+    borderRadius: scale(16),
+    marginBottom: scale(12),
     overflow: 'hidden',
     shadowColor: C.shadow,
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: scale(4) },
     shadowOpacity: 0.08,
-    shadowRadius: 12,
+    shadowRadius: scale(12),
     elevation: 3,
   },
   orderStatusStrip: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 8,
+    gap: scale(6),
+    paddingVertical: scale(8),
   },
   orderStatusText: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     fontWeight: '700',
     color: '#fff',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   orderContent: {
-    padding: 16,
+    padding: scale(16),
   },
   orderHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: scale(12),
   },
   orderIdSection: {},
   orderIdLabel: {
-    fontSize: 10,
+    fontSize: moderateScale(10),
     fontWeight: '600',
     color: C.muted,
     letterSpacing: 0.5,
   },
   orderId: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: '800',
     color: C.ink,
-    marginTop: 2,
+    marginTop: scale(2),
   },
   orderDateSection: {
     alignItems: 'flex-end',
   },
   orderDateText: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     fontWeight: '600',
     color: C.text,
   },
   orderTimeText: {
-    fontSize: 11,
+    fontSize: moderateScale(11),
     color: C.muted,
-    marginTop: 2,
+    marginTop: scale(2),
   },
 
   // Vendor Section
   vendorSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    gap: scale(10),
+    paddingVertical: scale(10),
+    paddingHorizontal: scale(12),
     backgroundColor: C.primaryLight,
-    borderRadius: 10,
-    marginBottom: 12,
+    borderRadius: scale(10),
+    marginBottom: scale(12),
   },
   vendorIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: scale(36),
+    height: scale(36),
+    borderRadius: scale(10),
     backgroundColor: C.card,
     alignItems: 'center',
     justifyContent: 'center',
@@ -960,12 +961,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   vendorLabel: {
-    fontSize: 10,
+    fontSize: moderateScale(10),
     color: C.muted,
     fontWeight: '500',
   },
   vendorName: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '700',
     color: C.ink,
     marginTop: 1,
@@ -973,37 +974,37 @@ const styles = StyleSheet.create({
 
   // Items Preview
   itemsPreview: {
-    marginBottom: 12,
+    marginBottom: scale(12),
   },
   itemPreviewRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 4,
+    paddingVertical: scale(4),
   },
   itemDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: scale(6),
+    height: scale(6),
+    borderRadius: scale(3),
     backgroundColor: C.muted,
-    marginRight: 10,
+    marginRight: scale(10),
   },
   itemPreviewName: {
     flex: 1,
-    fontSize: 13,
+    fontSize: moderateScale(13),
     color: C.text,
   },
   itemPreviewQty: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     fontWeight: '600',
     color: C.muted,
-    marginLeft: 8,
+    marginLeft: scale(8),
   },
   moreItemsText: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     color: C.primary,
     fontWeight: '600',
-    marginTop: 4,
-    marginLeft: 16,
+    marginTop: scale(4),
+    marginLeft: scale(16),
   },
 
   // Order Footer
@@ -1011,30 +1012,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 12,
+    paddingTop: scale(12),
     borderTopWidth: 1,
     borderTopColor: C.border,
   },
   orderTotalSection: {},
   orderTotalLabel: {
-    fontSize: 11,
+    fontSize: moderateScale(11),
     color: C.muted,
   },
   orderTotalAmount: {
-    fontSize: 20,
+    fontSize: moderateScale(20),
     fontWeight: '800',
     color: C.ink,
-    marginTop: 2,
+    marginTop: scale(2),
   },
   orderActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: scale(8),
   },
   rateBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(12),
     backgroundColor: C.warnLight,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1042,14 +1043,14 @@ const styles = StyleSheet.create({
   viewDetailsBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    gap: scale(4),
+    paddingHorizontal: scale(14),
+    paddingVertical: scale(10),
     backgroundColor: C.primaryLight,
-    borderRadius: 10,
+    borderRadius: scale(10),
   },
   viewDetailsText: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     fontWeight: '700',
     color: C.primary,
   },
@@ -1057,44 +1058,44 @@ const styles = StyleSheet.create({
   // Empty State
   emptyState: {
     alignItems: 'center',
-    paddingTop: 60,
-    paddingHorizontal: 40,
+    paddingTop: scale(60),
+    paddingHorizontal: scale(40),
   },
   emptyIconContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: scale(120),
+    height: scale(120),
+    borderRadius: scale(60),
     backgroundColor: C.border,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: scale(20),
   },
   emptyTitle: {
-    fontSize: 20,
+    fontSize: moderateScale(20),
     fontWeight: '700',
     color: C.ink,
-    marginBottom: 8,
+    marginBottom: scale(8),
   },
   emptySubtitle: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: C.muted,
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: moderateScale(22),
   },
   emptyActionBtn: {
-    marginTop: 24,
-    borderRadius: 14,
+    marginTop: scale(24),
+    borderRadius: scale(14),
     overflow: 'hidden',
   },
   emptyActionGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
+    gap: scale(8),
+    paddingHorizontal: scale(24),
+    paddingVertical: scale(14),
   },
   emptyActionText: {
-    fontSize: 15,
+    fontSize: moderateScale(15),
     fontWeight: '700',
     color: '#fff',
   },
@@ -1109,16 +1110,16 @@ const styles = StyleSheet.create({
   // ========== ORDER DETAIL MODAL - PREMIUM ==========
   detailModalContainer: {
     backgroundColor: C.card,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: scale(24),
+    borderTopRightRadius: scale(24),
     maxHeight: '90%',
   },
   detailModalHeader: {
-    paddingTop: 20,
-    paddingBottom: 16,
-    paddingHorizontal: 20,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    paddingTop: scale(20),
+    paddingBottom: scale(16),
+    paddingHorizontal: scale(20),
+    borderTopLeftRadius: scale(24),
+    borderTopRightRadius: scale(24),
   },
   detailModalHeaderContent: {
     flexDirection: 'row',
@@ -1126,7 +1127,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   detailModalOrderId: {
-    fontSize: 20,
+    fontSize: moderateScale(20),
     fontWeight: '800',
     color: '#fff',
     letterSpacing: 0.5,
@@ -1134,18 +1135,18 @@ const styles = StyleSheet.create({
   detailModalStatusRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginTop: 6,
+    gap: scale(6),
+    marginTop: scale(6),
   },
   detailModalStatus: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '600',
     color: '#fff',
   },
   detailModalCloseBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: scale(36),
+    height: scale(36),
+    borderRadius: scale(18),
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1153,11 +1154,11 @@ const styles = StyleSheet.create({
   detailModalDateRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginTop: 12,
+    gap: scale(6),
+    marginTop: scale(12),
   },
   detailModalDate: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     color: 'rgba(255,255,255,0.8)',
   },
   detailModalBody: {
@@ -1165,61 +1166,61 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   detailModalBodyContent: {
-    padding: 16,
-    paddingBottom: 10,
+    padding: scale(16),
+    paddingBottom: scale(10),
   },
 
   // Detail Cards
   detailCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 14,
+    padding: scale(14),
     backgroundColor: C.bg,
-    borderRadius: 12,
-    marginBottom: 10,
+    borderRadius: scale(12),
+    marginBottom: scale(10),
   },
   detailCardIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: scale(44),
+    height: scale(44),
+    borderRadius: scale(12),
     backgroundColor: C.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: scale(12),
   },
   detailCardContent: {
     flex: 1,
   },
   detailCardLabel: {
-    fontSize: 11,
+    fontSize: moderateScale(11),
     fontWeight: '600',
     color: C.muted,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   detailCardValue: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '600',
     color: C.ink,
-    marginTop: 3,
+    marginTop: scale(3),
   },
 
   // Detail Items Section
   detailItemsSection: {
-    marginTop: 10,
-    marginBottom: 10,
+    marginTop: scale(10),
+    marginBottom: scale(10),
   },
   detailItemsTitle: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '700',
     color: C.ink,
-    marginBottom: 12,
+    marginBottom: scale(12),
   },
   detailItemCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
+    paddingVertical: scale(12),
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
@@ -1229,68 +1230,68 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   detailItemImagePlaceholder: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
+    width: scale(44),
+    height: scale(44),
+    borderRadius: scale(10),
     backgroundColor: C.bg,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: scale(12),
   },
   detailItemInfo: {
     flex: 1,
   },
   detailItemName: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '600',
     color: C.ink,
   },
   detailItemMeta: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     color: C.muted,
-    marginTop: 3,
+    marginTop: scale(3),
   },
   detailItemTotal: {
-    fontSize: 15,
+    fontSize: moderateScale(15),
     fontWeight: '700',
     color: C.ink,
-    marginLeft: 10,
+    marginLeft: scale(10),
   },
 
   // Detail Total Section
   detailTotalSection: {
     backgroundColor: C.bg,
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 10,
+    borderRadius: scale(12),
+    padding: scale(16),
+    marginTop: scale(10),
   },
   detailTotalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: scale(8),
   },
   detailTotalLabel: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: C.muted,
   },
   detailTotalValue: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '600',
     color: C.ink,
   },
   detailTotalDivider: {
     height: 1,
     backgroundColor: C.border,
-    marginVertical: 10,
+    marginVertical: scale(10),
   },
   detailGrandTotalLabel: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: '700',
     color: C.ink,
   },
   detailGrandTotalValue: {
-    fontSize: 20,
+    fontSize: moderateScale(20),
     fontWeight: '800',
     color: C.primary,
   },
@@ -1299,15 +1300,15 @@ const styles = StyleSheet.create({
   detailStatusMsg: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    padding: 14,
+    gap: scale(10),
+    padding: scale(14),
     backgroundColor: C.primaryLight,
-    borderRadius: 12,
-    marginTop: 12,
+    borderRadius: scale(12),
+    marginTop: scale(12),
   },
   detailStatusMsgText: {
     flex: 1,
-    fontSize: 13,
+    fontSize: moderateScale(13),
     color: C.primary,
     fontWeight: '500',
   },
@@ -1315,9 +1316,9 @@ const styles = StyleSheet.create({
   // Detail Modal Footer
   detailModalFooter: {
     flexDirection: 'row',
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    gap: scale(12),
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(16),
     borderTopWidth: 1,
     borderTopColor: C.border,
     backgroundColor: C.card,
@@ -1327,13 +1328,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 14,
+    gap: scale(8),
+    paddingVertical: scale(14),
     backgroundColor: C.warn,
-    borderRadius: 12,
+    borderRadius: scale(12),
   },
   detailRateBtnText: {
-    fontSize: 15,
+    fontSize: moderateScale(15),
     fontWeight: '700',
     color: '#fff',
   },
@@ -1342,27 +1343,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 14,
+    gap: scale(6),
+    paddingVertical: scale(14),
     backgroundColor: '#FEF3C7',
-    borderRadius: 12,
+    borderRadius: scale(12),
     borderWidth: 1,
     borderColor: '#F59E0B',
   },
   detailRatedText: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '700',
     color: '#D97706',
   },
   detailCloseBtn: {
     flex: 2,
-    paddingVertical: 14,
+    paddingVertical: scale(14),
     backgroundColor: C.primary,
-    borderRadius: 12,
+    borderRadius: scale(12),
     alignItems: 'center',
   },
   detailCloseBtnText: {
-    fontSize: 15,
+    fontSize: moderateScale(15),
     fontWeight: '700',
     color: '#fff',
   },
@@ -1375,102 +1376,102 @@ const styles = StyleSheet.create({
   },
   ratingSheet: {
     backgroundColor: C.card,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 20,
-    paddingBottom: 30,
+    borderTopLeftRadius: scale(24),
+    borderTopRightRadius: scale(24),
+    paddingHorizontal: scale(20),
+    paddingBottom: scale(30),
   },
   ratingHandle: {
-    width: 40,
-    height: 4,
+    width: scale(40),
+    height: scale(4),
     backgroundColor: C.border,
-    borderRadius: 2,
+    borderRadius: scale(2),
     alignSelf: 'center',
-    marginTop: 12,
-    marginBottom: 12,
+    marginTop: scale(12),
+    marginBottom: scale(12),
   },
   ratingSheetHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: scale(16),
   },
   ratingSheetTitle: {
-    fontSize: 18,
+    fontSize: moderateScale(18),
     fontWeight: '700',
     color: C.ink,
   },
   ratingVendorName: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: '600',
     color: C.text,
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: scale(16),
   },
   starsRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 10,
-    marginBottom: 4,
+    gap: scale(10),
+    marginBottom: scale(4),
   },
   ratingHint: {
     textAlign: 'center',
-    fontSize: 13,
+    fontSize: moderateScale(13),
     fontWeight: '600',
     color: '#F59E0B',
-    marginBottom: 16,
+    marginBottom: scale(16),
   },
   ratingTextArea: {
     backgroundColor: C.bg,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 15,
+    borderRadius: scale(12),
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(12),
+    fontSize: moderateScale(15),
     color: C.text,
     borderWidth: 1,
     borderColor: C.border,
-    minHeight: 80,
+    minHeight: scale(80),
     textAlignVertical: 'top',
-    marginBottom: 16,
+    marginBottom: scale(16),
   },
   ratingBtnRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: scale(12),
   },
   ratingCancelBtn: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: scale(14),
     backgroundColor: C.bg,
-    borderRadius: 12,
+    borderRadius: scale(12),
     alignItems: 'center',
     borderWidth: 1,
     borderColor: C.border,
   },
-  ratingCancelText: { fontSize: 15, fontWeight: '700', color: C.ink },
+  ratingCancelText: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink },
   ratingSubmitBtn: {
     flex: 2,
-    paddingVertical: 14,
+    paddingVertical: scale(14),
     backgroundColor: C.primary,
-    borderRadius: 12,
+    borderRadius: scale(12),
     alignItems: 'center',
   },
-  ratingSubmitText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  ratingSubmitText: { fontSize: moderateScale(15), fontWeight: '700', color: '#fff' },
 
   // Restaurant Picker
   pickerContent: {
     backgroundColor: C.card,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: scale(24),
+    borderTopRightRadius: scale(24),
     maxHeight: '70%',
   },
-  pickerBody: { padding: 16 },
+  pickerBody: { padding: scale(16) },
   restaurantOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    padding: 14,
-    marginBottom: 10,
-    borderRadius: 12,
+    gap: scale(12),
+    padding: scale(14),
+    marginBottom: scale(10),
+    borderRadius: scale(12),
     borderWidth: 2,
     borderColor: C.border,
     backgroundColor: C.bg,
@@ -1480,16 +1481,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF2F2',
   },
   restaurantIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: scale(44),
+    height: scale(44),
+    borderRadius: scale(12),
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FEE2E2',
   },
   restaurantIconSelected: { backgroundColor: C.primary },
   restaurantOptionInfo: { flex: 1 },
-  restaurantOptionName: { fontSize: 15, fontWeight: '700', color: C.ink },
+  restaurantOptionName: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink },
   restaurantOptionNameSelected: { color: C.primary },
-  restaurantOptionAddress: { fontSize: 12, color: C.muted, marginTop: 2 },
+  restaurantOptionAddress: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(2) },
 });

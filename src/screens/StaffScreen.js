@@ -30,6 +30,7 @@ import { RestaurantSelectorBar } from '../components/RestaurantSelector';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
+import { scale, moderateScale } from '../utils/responsive';
 // Premium Color Palette
 const C = {
   primary: '#EF3A3A',
@@ -277,7 +278,7 @@ export default function StaffScreen({ navigation }) {
         {/* Header */}
         <View style={st.cardHeader}>
           <View style={[st.avatar, { backgroundColor: roleConfig.bg }]}>
-            <Icon name={roleConfig.icon} size={24} color={roleConfig.color} />
+            <Icon name={roleConfig.icon} size={scale(24)} color={roleConfig.color} />
           </View>
           <View style={st.cardInfo}>
             <Text style={st.cardName}>{item.name}</Text>
@@ -293,13 +294,13 @@ export default function StaffScreen({ navigation }) {
         <View style={st.detailsGrid}>
           <View style={st.detailItem}>
             <View style={st.detailIconBox}>
-              <Icon name="call-outline" size={14} color={C.muted} />
+              <Icon name="call-outline" size={scale(14)} color={C.muted} />
             </View>
             <Text style={st.detailValue}>{item.phone || '-'}</Text>
           </View>
           <View style={st.detailItem}>
             <View style={st.detailIconBox}>
-              <Icon name="calendar-outline" size={14} color={C.muted} />
+              <Icon name="calendar-outline" size={scale(14)} color={C.muted} />
             </View>
             <Text style={st.detailValue}>{formatDate(item.joiningDate)}</Text>
           </View>
@@ -308,11 +309,11 @@ export default function StaffScreen({ navigation }) {
         {/* Salary & Type Row */}
         <View style={st.infoRow}>
           <View style={[st.infoChip, { backgroundColor: C.successLight }]}>
-            <Icon name="cash-outline" size={14} color={C.success} />
+            <Icon name="cash-outline" size={scale(14)} color={C.success} />
             <Text style={[st.infoChipText, { color: C.success }]}>{formatSalary(item)}</Text>
           </View>
           <View style={[st.infoChip, { backgroundColor: typeConfig.bg }]}>
-            <Icon name={typeConfig.icon} size={14} color={typeConfig.color} />
+            <Icon name={typeConfig.icon} size={scale(14)} color={typeConfig.color} />
             <Text style={[st.infoChipText, { color: typeConfig.color }]}>{typeConfig.label}</Text>
           </View>
         </View>
@@ -320,11 +321,11 @@ export default function StaffScreen({ navigation }) {
         {/* Actions */}
         <View style={st.cardActions}>
           <TouchableOpacity style={[st.actionBtn, { backgroundColor: C.infoLight }]} onPress={() => { setSelectedStaff(item); handleEdit(); }}>
-            <Icon name="pencil" size={16} color={C.info} />
+            <Icon name="pencil" size={scale(16)} color={C.info} />
             <Text style={[st.actionBtnText, { color: C.info }]}>Edit</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[st.actionBtn, { backgroundColor: C.bg }]} onPress={() => openActionModal(item)}>
-            <Icon name="ellipsis-horizontal" size={16} color={C.muted} />
+            <Icon name="ellipsis-horizontal" size={scale(16)} color={C.muted} />
             <Text style={[st.actionBtnText, { color: C.muted }]}>More</Text>
           </TouchableOpacity>
         </View>
@@ -338,17 +339,17 @@ export default function StaffScreen({ navigation }) {
       {/* Stats Summary */}
       <View style={st.statsContainer}>
         <View style={[st.statCard, { backgroundColor: C.primaryLight }]}>
-          <Icon name="people" size={24} color={C.primary} />
+          <Icon name="people" size={scale(24)} color={C.primary} />
           <Text style={[st.statValue, { color: C.primary }]}>{staff.length}</Text>
           <Text style={st.statLabel}>Total Staff</Text>
         </View>
         <View style={[st.statCard, { backgroundColor: C.successLight }]}>
-          <Icon name="checkmark-circle" size={24} color={C.success} />
+          <Icon name="checkmark-circle" size={scale(24)} color={C.success} />
           <Text style={[st.statValue, { color: C.success }]}>{statusCounts.ACTIVE}</Text>
           <Text style={st.statLabel}>Active</Text>
         </View>
         <View style={[st.statCard, { backgroundColor: C.warningLight }]}>
-          <Icon name="airplane" size={24} color={C.warning} />
+          <Icon name="airplane" size={scale(24)} color={C.warning} />
           <Text style={[st.statValue, { color: C.warning }]}>{statusCounts.ON_LEAVE}</Text>
           <Text style={st.statLabel}>On Leave</Text>
         </View>
@@ -370,7 +371,7 @@ export default function StaffScreen({ navigation }) {
                 style={[st.filterChip, isActive && { backgroundColor: config.color, borderColor: config.color }]}
                 onPress={() => setActiveStatusTab(statusKey)}
               >
-                <Icon name={config.icon} size={16} color={isActive ? '#fff' : config.color} />
+                <Icon name={config.icon} size={scale(16)} color={isActive ? '#fff' : config.color} />
                 <Text style={[st.filterChipText, isActive && { color: '#fff' }]}>{config.label} ({count})</Text>
               </TouchableOpacity>
             );
@@ -383,7 +384,7 @@ export default function StaffScreen({ navigation }) {
         <Text style={st.resultsText}>{filteredStaff.length} Staff Member{filteredStaff.length !== 1 ? 's' : ''}</Text>
         {activeStatusTab !== 'all' && (
           <TouchableOpacity style={st.clearBtn} onPress={() => setActiveStatusTab('all')}>
-            <Icon name="close-circle" size={14} color={C.primary} />
+            <Icon name="close-circle" size={scale(14)} color={C.primary} />
             <Text style={st.clearBtnText}>Clear</Text>
           </TouchableOpacity>
         )}
@@ -397,7 +398,7 @@ export default function StaffScreen({ navigation }) {
       <SafeAreaView style={st.container}>
         <View style={st.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
-            <Icon name="arrow-back" size={22} color={C.ink} />
+            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
           </TouchableOpacity>
           <View style={st.headerCenter}>
             <Text style={st.headerTitle}>Staff Management</Text>
@@ -405,7 +406,7 @@ export default function StaffScreen({ navigation }) {
           </View>
           <View style={st.headerActions}>
             <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
-              <Icon name="menu" size={20} color={C.ink} />
+              <Icon name="menu" size={scale(20)} color={C.ink} />
             </TouchableOpacity>
           </View>
         </View>
@@ -423,7 +424,7 @@ export default function StaffScreen({ navigation }) {
       <SafeAreaView style={st.container}>
         <View style={st.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
-            <Icon name="arrow-back" size={22} color={C.ink} />
+            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
           </TouchableOpacity>
           <View style={st.headerCenter}>
             <Text style={st.headerTitle}>Staff Management</Text>
@@ -431,13 +432,13 @@ export default function StaffScreen({ navigation }) {
           </View>
           <View style={st.headerActions}>
             <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
-              <Icon name="menu" size={20} color={C.ink} />
+              <Icon name="menu" size={scale(20)} color={C.ink} />
             </TouchableOpacity>
           </View>
         </View>
         <View style={st.emptyState}>
           <View style={st.emptyIcon}>
-            <Icon name="restaurant-outline" size={64} color={C.muted} />
+            <Icon name="restaurant-outline" size={scale(64)} color={C.muted} />
           </View>
           <Text style={st.emptyTitle}>No Restaurant Found</Text>
           <Text style={st.emptySubtitle}>Please add a restaurant first</Text>
@@ -452,7 +453,7 @@ export default function StaffScreen({ navigation }) {
       {/* Header */}
       <View style={st.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
-          <Icon name="arrow-back" size={22} color={C.ink} />
+          <Icon name="arrow-back" size={scale(22)} color={C.ink} />
         </TouchableOpacity>
         <View style={st.headerCenter}>
           <Text style={st.headerTitle}>Staff Management</Text>
@@ -460,10 +461,10 @@ export default function StaffScreen({ navigation }) {
         </View>
         <View style={st.headerActions}>
           <TouchableOpacity style={st.headerIconBtn} onPress={() => openForm()}>
-            <Icon name="person-add" size={20} color={C.primary} />
+            <Icon name="person-add" size={scale(20)} color={C.primary} />
           </TouchableOpacity>
           <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
-            <Icon name="menu" size={20} color={C.ink} />
+            <Icon name="menu" size={scale(20)} color={C.ink} />
           </TouchableOpacity>
         </View>
       </View>
@@ -486,7 +487,7 @@ export default function StaffScreen({ navigation }) {
         ListEmptyComponent={
           <View style={st.emptyState}>
             <View style={st.emptyIcon}>
-              <Icon name="people-outline" size={64} color={C.muted} />
+              <Icon name="people-outline" size={scale(64)} color={C.muted} />
             </View>
             <Text style={st.emptyTitle}>{staff.length === 0 ? 'No Staff Yet' : 'No Results'}</Text>
             <Text style={st.emptySubtitle}>
@@ -494,7 +495,7 @@ export default function StaffScreen({ navigation }) {
             </Text>
             {staff.length === 0 && (
               <TouchableOpacity style={st.emptyBtn} onPress={() => openForm()}>
-                <Icon name="add" size={18} color="#fff" />
+                <Icon name="add" size={scale(18)} color="#fff" />
                 <Text style={st.emptyBtnText}>Add Staff</Text>
               </TouchableOpacity>
             )}
@@ -509,7 +510,7 @@ export default function StaffScreen({ navigation }) {
             <View style={st.modalHeader}>
               <Text style={st.modalTitle}>{isEditMode ? 'Edit Staff' : 'Add Staff'}</Text>
               <TouchableOpacity onPress={() => setModalVisible(false)} style={st.modalClose}>
-                <Icon name="close" size={24} color={C.ink} />
+                <Icon name="close" size={scale(24)} color={C.ink} />
               </TouchableOpacity>
             </View>
 
@@ -522,7 +523,7 @@ export default function StaffScreen({ navigation }) {
               nestedScrollEnabled={true}
               bounces={true}
             >
-              <View style={{ minHeight: 650 }}>
+              <View style={{ minHeight: scale(650) }}>
               {/* Name */}
               <Text style={st.label}>Full Name *</Text>
               <TextInput
@@ -555,7 +556,7 @@ export default function StaffScreen({ navigation }) {
                       style={[st.roleChip, isSelected && { backgroundColor: role.color, borderColor: role.color }]}
                       onPress={() => setForm(f => ({ ...f, role: role.value }))}
                     >
-                      <Icon name={role.icon} size={16} color={isSelected ? '#fff' : role.color} />
+                      <Icon name={role.icon} size={scale(16)} color={isSelected ? '#fff' : role.color} />
                       <Text style={[st.roleChipText, isSelected && { color: '#fff' }]}>{role.value}</Text>
                     </TouchableOpacity>
                   );
@@ -573,7 +574,7 @@ export default function StaffScreen({ navigation }) {
                       style={[st.typeChip, isSelected && { backgroundColor: type.color, borderColor: type.color }]}
                       onPress={() => setForm(f => ({ ...f, staffType: type.value }))}
                     >
-                      <Icon name={type.icon} size={16} color={isSelected ? '#fff' : type.color} />
+                      <Icon name={type.icon} size={scale(16)} color={isSelected ? '#fff' : type.color} />
                       <Text style={[st.typeChipText, isSelected && { color: '#fff' }]}>{type.label}</Text>
                     </TouchableOpacity>
                   );
@@ -593,7 +594,7 @@ export default function StaffScreen({ navigation }) {
                           style={[st.statusChip, isSelected && { backgroundColor: s.color, borderColor: s.color }]}
                           onPress={() => setForm(f => ({ ...f, status: s.value }))}
                         >
-                          <Icon name={s.icon} size={14} color={isSelected ? '#fff' : s.color} />
+                          <Icon name={s.icon} size={scale(14)} color={isSelected ? '#fff' : s.color} />
                           <Text style={[st.statusChipText, isSelected && { color: '#fff' }]}>{s.label}</Text>
                         </TouchableOpacity>
                       );
@@ -605,9 +606,9 @@ export default function StaffScreen({ navigation }) {
               {/* Joining Date */}
               <Text style={st.label}>Joining Date</Text>
               <TouchableOpacity style={st.dateBtn} onPress={() => setShowDatePicker(true)}>
-                <Icon name="calendar" size={20} color={C.primary} />
+                <Icon name="calendar" size={scale(20)} color={C.primary} />
                 <Text style={st.dateBtnText}>{formatDate(form.joiningDate)}</Text>
-                <Icon name="chevron-down" size={18} color={C.muted} />
+                <Icon name="chevron-down" size={scale(18)} color={C.muted} />
               </TouchableOpacity>
               {showDatePicker && (
                 <DateTimePicker
@@ -635,7 +636,7 @@ export default function StaffScreen({ navigation }) {
                 />
               </View>
 
-              <View style={{ height: 30 }} />
+              <View style={{ height: scale(30) }} />
               </View>
             </ScrollView>
 
@@ -648,7 +649,7 @@ export default function StaffScreen({ navigation }) {
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
                   <>
-                    <Icon name={isEditMode ? 'checkmark' : 'add'} size={18} color="#fff" />
+                    <Icon name={isEditMode ? 'checkmark' : 'add'} size={scale(18)} color="#fff" />
                     <Text style={st.saveBtnText}>{isEditMode ? 'Update' : 'Add Staff'}</Text>
                   </>
                 )}
@@ -670,7 +671,7 @@ export default function StaffScreen({ navigation }) {
 
             {/* Edit Option */}
             <TouchableOpacity style={st.actionItem} onPress={handleEdit}>
-              <Icon name="pencil-outline" size={20} color={C.info} />
+              <Icon name="pencil-outline" size={scale(20)} color={C.info} />
               <Text style={st.actionItemText}>Edit Details</Text>
             </TouchableOpacity>
 
@@ -705,7 +706,7 @@ export default function StaffScreen({ navigation }) {
                 <ActivityIndicator size="small" color={C.danger} />
               ) : (
                 <>
-                  <Icon name="trash-outline" size={20} color={C.danger} />
+                  <Icon name="trash-outline" size={scale(20)} color={C.danger} />
                   <Text style={[st.actionItemText, { color: C.danger }]}>
                     {selectedStaff?.status === 'TERMINATED' ? 'Already Terminated' : 'Terminate Staff'}
                   </Text>
@@ -732,127 +733,127 @@ const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
 
   // Header
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border },
-  backBtn: { width: 40, height: 40, borderRadius: 10, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
-  headerCenter: { flex: 1, marginLeft: 12 },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
-  headerSubtitle: { fontSize: 12, color: C.muted, marginTop: 2 },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(16), paddingVertical: scale(12), backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border },
+  backBtn: { width: scale(40), height: scale(40), borderRadius: scale(10), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
+  headerCenter: { flex: 1, marginLeft: scale(12) },
+  headerTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink },
+  headerSubtitle: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(2) },
   headerActions: { flexDirection: 'row' },
-  headerIconBtn: { width: 40, height: 40, borderRadius: 10, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', marginLeft: 8 },
+  headerIconBtn: { width: scale(40), height: scale(40), borderRadius: scale(10), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', marginLeft: scale(8) },
 
   // Stats
-  statsContainer: { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 16 },
-  statCard: { flex: 1, alignItems: 'center', padding: 12, borderRadius: 12, marginHorizontal: 4 },
-  statValue: { fontSize: 24, fontWeight: '800', marginTop: 6 },
-  statLabel: { fontSize: 11, fontWeight: '600', color: C.muted, marginTop: 2 },
+  statsContainer: { flexDirection: 'row', paddingHorizontal: scale(16), paddingVertical: scale(16) },
+  statCard: { flex: 1, alignItems: 'center', padding: scale(12), borderRadius: scale(12), marginHorizontal: scale(4) },
+  statValue: { fontSize: moderateScale(24), fontWeight: '800', marginTop: scale(6) },
+  statLabel: { fontSize: moderateScale(11), fontWeight: '600', color: C.muted, marginTop: scale(2) },
 
   // Filters
-  filterContainer: { paddingVertical: 12, backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border },
-  filterScroll: { paddingHorizontal: 16 },
-  filterChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10, marginRight: 8, borderRadius: 20, backgroundColor: C.card, borderWidth: 1.5, borderColor: C.border },
-  filterChipText: { fontSize: 13, fontWeight: '600', color: C.ink, marginLeft: 6 },
+  filterContainer: { paddingVertical: scale(12), backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border },
+  filterScroll: { paddingHorizontal: scale(16) },
+  filterChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(14), paddingVertical: scale(10), marginRight: scale(8), borderRadius: scale(20), backgroundColor: C.card, borderWidth: 1.5, borderColor: C.border },
+  filterChipText: { fontSize: moderateScale(13), fontWeight: '600', color: C.ink, marginLeft: scale(6) },
 
   // Results
-  resultsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
-  resultsText: { fontSize: 15, fontWeight: '700', color: C.ink },
-  clearBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, backgroundColor: C.primaryLight, borderRadius: 8 },
-  clearBtnText: { fontSize: 12, fontWeight: '600', color: C.primary, marginLeft: 4 },
+  resultsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: scale(16), paddingVertical: scale(12) },
+  resultsText: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink },
+  clearBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(10), paddingVertical: scale(6), backgroundColor: C.primaryLight, borderRadius: scale(8) },
+  clearBtnText: { fontSize: moderateScale(12), fontWeight: '600', color: C.primary, marginLeft: scale(4) },
 
   // List
-  listContent: { paddingHorizontal: 16, paddingBottom: 120 },
+  listContent: { paddingHorizontal: scale(16), paddingBottom: scale(120) },
   columnWrapper: { justifyContent: 'space-between' },
 
   // Card
-  card: { backgroundColor: C.card, borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: C.border },
-  cardTablet: { flex: 1, marginHorizontal: 6, maxWidth: '48%' },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  avatar: { width: 52, height: 52, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  cardInfo: { flex: 1, marginLeft: 12 },
-  cardName: { fontSize: 16, fontWeight: '700', color: C.ink },
-  cardRole: { fontSize: 13, color: C.muted, marginTop: 2 },
-  statusBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
-  statusDot: { width: 6, height: 6, borderRadius: 3, marginRight: 6 },
-  statusText: { fontSize: 11, fontWeight: '700' },
+  card: { backgroundColor: C.card, borderRadius: scale(16), padding: scale(16), marginBottom: scale(12), borderWidth: 1, borderColor: C.border },
+  cardTablet: { flex: 1, marginHorizontal: scale(6), maxWidth: '48%' },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: scale(12) },
+  avatar: { width: scale(52), height: scale(52), borderRadius: scale(14), alignItems: 'center', justifyContent: 'center' },
+  cardInfo: { flex: 1, marginLeft: scale(12) },
+  cardName: { fontSize: moderateScale(16), fontWeight: '700', color: C.ink },
+  cardRole: { fontSize: moderateScale(13), color: C.muted, marginTop: scale(2) },
+  statusBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(10), paddingVertical: scale(5), borderRadius: scale(20) },
+  statusDot: { width: scale(6), height: scale(6), borderRadius: scale(3), marginRight: scale(6) },
+  statusText: { fontSize: moderateScale(11), fontWeight: '700' },
 
-  detailsGrid: { flexDirection: 'row', marginBottom: 12 },
+  detailsGrid: { flexDirection: 'row', marginBottom: scale(12) },
   detailItem: { flex: 1, flexDirection: 'row', alignItems: 'center' },
-  detailIconBox: { width: 28, height: 28, borderRadius: 8, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', marginRight: 8 },
-  detailValue: { fontSize: 13, fontWeight: '600', color: C.text },
+  detailIconBox: { width: scale(28), height: scale(28), borderRadius: scale(8), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', marginRight: scale(8) },
+  detailValue: { fontSize: moderateScale(13), fontWeight: '600', color: C.text },
 
-  infoRow: { flexDirection: 'row', marginBottom: 14 },
-  infoChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, marginRight: 8 },
-  infoChipText: { fontSize: 12, fontWeight: '700', marginLeft: 5 },
+  infoRow: { flexDirection: 'row', marginBottom: scale(14) },
+  infoChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(10), paddingVertical: scale(6), borderRadius: scale(8), marginRight: scale(8) },
+  infoChipText: { fontSize: moderateScale(12), fontWeight: '700', marginLeft: scale(5) },
 
-  cardActions: { flexDirection: 'row', paddingTop: 12, borderTopWidth: 1, borderTopColor: C.border },
-  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 10, marginHorizontal: 4 },
-  actionBtnText: { fontSize: 13, fontWeight: '600', marginLeft: 6 },
+  cardActions: { flexDirection: 'row', paddingTop: scale(12), borderTopWidth: 1, borderTopColor: C.border },
+  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: scale(10), borderRadius: scale(10), marginHorizontal: scale(4) },
+  actionBtnText: { fontSize: moderateScale(13), fontWeight: '600', marginLeft: scale(6) },
 
   // Empty & Loading
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  loadingText: { marginTop: 16, fontSize: 15, color: C.muted },
-  emptyState: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 40 },
-  emptyIcon: { width: 120, height: 120, borderRadius: 60, backgroundColor: C.border, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
-  emptyTitle: { fontSize: 20, fontWeight: '700', color: C.ink, marginBottom: 8 },
-  emptySubtitle: { fontSize: 14, color: C.muted, textAlign: 'center' },
-  emptyBtn: { flexDirection: 'row', alignItems: 'center', marginTop: 24, paddingHorizontal: 24, paddingVertical: 14, backgroundColor: C.primary, borderRadius: 14 },
-  emptyBtnText: { fontSize: 15, fontWeight: '700', color: '#fff', marginLeft: 8 },
+  loadingText: { marginTop: scale(16), fontSize: moderateScale(15), color: C.muted },
+  emptyState: { alignItems: 'center', paddingTop: scale(60), paddingHorizontal: scale(40) },
+  emptyIcon: { width: scale(120), height: scale(120), borderRadius: scale(60), backgroundColor: C.border, alignItems: 'center', justifyContent: 'center', marginBottom: scale(20) },
+  emptyTitle: { fontSize: moderateScale(20), fontWeight: '700', color: C.ink, marginBottom: scale(8) },
+  emptySubtitle: { fontSize: moderateScale(14), color: C.muted, textAlign: 'center' },
+  emptyBtn: { flexDirection: 'row', alignItems: 'center', marginTop: scale(24), paddingHorizontal: scale(24), paddingVertical: scale(14), backgroundColor: C.primary, borderRadius: scale(14) },
+  emptyBtnText: { fontSize: moderateScale(15), fontWeight: '700', color: '#fff', marginLeft: scale(8) },
 
   // Modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: C.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, height: '90%' },
-  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, borderBottomWidth: 1, borderBottomColor: C.border },
-  modalTitle: { fontSize: 20, fontWeight: '800', color: C.ink },
-  modalClose: { width: 40, height: 40, borderRadius: 20, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
+  modalContent: { backgroundColor: C.card, borderTopLeftRadius: scale(24), borderTopRightRadius: scale(24), height: '90%' },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: scale(20), borderBottomWidth: 1, borderBottomColor: C.border },
+  modalTitle: { fontSize: moderateScale(20), fontWeight: '800', color: C.ink },
+  modalClose: { width: scale(40), height: scale(40), borderRadius: scale(20), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
   modalBody: { flex: 1 },
-  modalBodyContent: { padding: 20, paddingBottom: 30 },
-  modalFooter: { flexDirection: 'row', padding: 20, borderTopWidth: 1, borderTopColor: C.border },
+  modalBodyContent: { padding: scale(20), paddingBottom: scale(30) },
+  modalFooter: { flexDirection: 'row', padding: scale(20), borderTopWidth: 1, borderTopColor: C.border },
 
   // Form
-  label: { fontSize: 13, fontWeight: '700', color: C.text, marginBottom: 10, marginTop: 16 },
-  input: { backgroundColor: C.bg, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: C.text, borderWidth: 1.5, borderColor: C.border },
+  label: { fontSize: moderateScale(13), fontWeight: '700', color: C.text, marginBottom: scale(10), marginTop: scale(16) },
+  input: { backgroundColor: C.bg, borderRadius: scale(12), paddingHorizontal: scale(16), paddingVertical: scale(14), fontSize: moderateScale(15), color: C.text, borderWidth: 1.5, borderColor: C.border },
 
-  roleGrid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 },
-  roleChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10, backgroundColor: C.bg, borderWidth: 1.5, borderColor: C.border, margin: 4 },
-  roleChipText: { fontSize: 12, fontWeight: '600', color: C.ink, marginLeft: 6 },
+  roleGrid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: scale(-4) },
+  roleChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(12), paddingVertical: scale(10), borderRadius: scale(10), backgroundColor: C.bg, borderWidth: 1.5, borderColor: C.border, margin: scale(4) },
+  roleChipText: { fontSize: moderateScale(12), fontWeight: '600', color: C.ink, marginLeft: scale(6) },
 
-  typeGrid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 },
-  typeChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10, backgroundColor: C.bg, borderWidth: 1.5, borderColor: C.border, margin: 4 },
-  typeChipText: { fontSize: 12, fontWeight: '600', color: C.ink, marginLeft: 6 },
+  typeGrid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: scale(-4) },
+  typeChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(12), paddingVertical: scale(10), borderRadius: scale(10), backgroundColor: C.bg, borderWidth: 1.5, borderColor: C.border, margin: scale(4) },
+  typeChipText: { fontSize: moderateScale(12), fontWeight: '600', color: C.ink, marginLeft: scale(6) },
 
-  statusGrid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 },
-  statusChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10, backgroundColor: C.bg, borderWidth: 1.5, borderColor: C.border, margin: 4 },
-  statusChipText: { fontSize: 12, fontWeight: '600', color: C.ink, marginLeft: 6 },
+  statusGrid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: scale(-4) },
+  statusChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(12), paddingVertical: scale(10), borderRadius: scale(10), backgroundColor: C.bg, borderWidth: 1.5, borderColor: C.border, margin: scale(4) },
+  statusChipText: { fontSize: moderateScale(12), fontWeight: '600', color: C.ink, marginLeft: scale(6) },
 
-  dateBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, borderRadius: 12, borderWidth: 1.5, borderColor: C.border, backgroundColor: C.bg },
-  dateBtnText: { flex: 1, fontSize: 15, fontWeight: '600', color: C.ink, marginLeft: 10 },
+  dateBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(16), paddingVertical: scale(14), borderRadius: scale(12), borderWidth: 1.5, borderColor: C.border, backgroundColor: C.bg },
+  dateBtnText: { flex: 1, fontSize: moderateScale(15), fontWeight: '600', color: C.ink, marginLeft: scale(10) },
 
-  salaryInputRow: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, borderWidth: 1.5, borderColor: C.border, backgroundColor: C.bg, overflow: 'hidden' },
-  currencyBox: { width: 50, height: 50, backgroundColor: C.successLight, alignItems: 'center', justifyContent: 'center' },
-  currencyText: { fontSize: 18, fontWeight: '700', color: C.success },
-  salaryInput: { flex: 1, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, fontWeight: '600', color: C.ink },
+  salaryInputRow: { flexDirection: 'row', alignItems: 'center', borderRadius: scale(12), borderWidth: 1.5, borderColor: C.border, backgroundColor: C.bg, overflow: 'hidden' },
+  currencyBox: { width: scale(50), height: scale(50), backgroundColor: C.successLight, alignItems: 'center', justifyContent: 'center' },
+  currencyText: { fontSize: moderateScale(18), fontWeight: '700', color: C.success },
+  salaryInput: { flex: 1, paddingHorizontal: scale(14), paddingVertical: scale(12), fontSize: moderateScale(15), fontWeight: '600', color: C.ink },
 
-  cancelBtn: { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: C.bg, alignItems: 'center', marginRight: 8 },
-  cancelBtnText: { fontSize: 15, fontWeight: '700', color: C.ink },
-  saveBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 12, backgroundColor: C.primary, marginLeft: 8 },
-  saveBtnText: { fontSize: 15, fontWeight: '700', color: '#fff', marginLeft: 8 },
+  cancelBtn: { flex: 1, paddingVertical: scale(14), borderRadius: scale(12), backgroundColor: C.bg, alignItems: 'center', marginRight: scale(8) },
+  cancelBtnText: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink },
+  saveBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: scale(14), borderRadius: scale(12), backgroundColor: C.primary, marginLeft: scale(8) },
+  saveBtnText: { fontSize: moderateScale(15), fontWeight: '700', color: '#fff', marginLeft: scale(8) },
 
   // Action Modal
   actionOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  actionContent: { backgroundColor: C.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 8, paddingBottom: 24 },
-  actionHeader: { alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: C.border, marginBottom: 8 },
-  actionTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
-  actionSubtitle: { fontSize: 14, color: C.muted, marginTop: 4 },
+  actionContent: { backgroundColor: C.card, borderTopLeftRadius: scale(24), borderTopRightRadius: scale(24), paddingTop: scale(8), paddingBottom: scale(24) },
+  actionHeader: { alignItems: 'center', paddingVertical: scale(16), borderBottomWidth: 1, borderBottomColor: C.border, marginBottom: scale(8) },
+  actionTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink },
+  actionSubtitle: { fontSize: moderateScale(14), color: C.muted, marginTop: scale(4) },
 
-  actionItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 20 },
-  actionItemText: { fontSize: 15, color: C.ink, marginLeft: 12 },
+  actionItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: scale(14), paddingHorizontal: scale(20) },
+  actionItemText: { fontSize: moderateScale(15), color: C.ink, marginLeft: scale(12) },
   actionItemDisabled: { opacity: 0.5 },
   actionItemTextDisabled: { color: C.muted },
-  actionItemDanger: { marginTop: 8 },
+  actionItemDanger: { marginTop: scale(8) },
 
-  actionDivider: { height: 1, backgroundColor: C.border, marginVertical: 8, marginHorizontal: 20 },
-  actionSectionTitle: { fontSize: 12, fontWeight: '600', color: C.muted, paddingHorizontal: 20, paddingVertical: 8, textTransform: 'uppercase' },
-  statusIndicator: { width: 10, height: 10, borderRadius: 5 },
+  actionDivider: { height: 1, backgroundColor: C.border, marginVertical: scale(8), marginHorizontal: scale(20) },
+  actionSectionTitle: { fontSize: moderateScale(12), fontWeight: '600', color: C.muted, paddingHorizontal: scale(20), paddingVertical: scale(8), textTransform: 'uppercase' },
+  statusIndicator: { width: scale(10), height: scale(10), borderRadius: scale(5) },
 
-  actionCancelBtn: { marginHorizontal: 20, marginTop: 16, paddingVertical: 14, borderRadius: 12, backgroundColor: C.bg, alignItems: 'center' },
-  actionCancelText: { fontSize: 15, fontWeight: '600', color: C.ink },
+  actionCancelBtn: { marginHorizontal: scale(20), marginTop: scale(16), paddingVertical: scale(14), borderRadius: scale(12), backgroundColor: C.bg, alignItems: 'center' },
+  actionCancelText: { fontSize: moderateScale(15), fontWeight: '600', color: C.ink },
 });

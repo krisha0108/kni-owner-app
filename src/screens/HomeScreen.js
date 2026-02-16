@@ -20,6 +20,7 @@ import LineChartCard from '../components/charts/LineChartCard';
 import PieChartCard from '../components/charts/PieChartCard';
 import BarChartCard from '../components/charts/BarChartCard';
 import { exportAnalyticsPDF, openPDF } from '../services/analyticsService';
+import { scale, moderateScale } from '../utils/responsive';
 
 const ION_GLYPHS = (Icon.getRawGlyphMap?.() ?? {});
 const hasIonicon = (name) => !!name && Object.prototype.hasOwnProperty.call(ION_GLYPHS, name);
@@ -36,7 +37,7 @@ const C = {
   muted: '#6B7280', bg: '#F5F7FA', card: '#FFFFFF', border: '#E5E7EB',
   ok: '#10B981', info: '#3B82F6', warn: '#F59E0B', danger: '#EF4444',
 };
-const { width: W } = Dimensions.get('window');
+// Width is now obtained dynamically from useWindowDimensions()
 
 /* ──────── HELPERS ──────── */
 const open = async (url) => { try { await Linking.openURL(url); } catch { } };
@@ -83,6 +84,7 @@ export default function HomeScreen({ navigation }) {
   const [showCharts, setShowCharts] = useState(false);
   const [exporting, setExporting] = useState(false);
 
+  const isFirstLoad = useRef(true);
   const showSkel = loading || refreshing;
 
   const PERIOD_OPTIONS = [
@@ -264,33 +266,33 @@ export default function HomeScreen({ navigation }) {
   }, [restaurantId, selectedPeriod]);
 
   /* ═══════════ LIFECYCLE ═══════════ */
-  useEffect(() => {
-    const loadAll = async () => {
-      setLoading(true);
-      await Promise.all([
-        fetchBanners(),
-        fetchFeed(),
-        fetchSponsored(),
-        fetchGuides(),
-      ]);
-      setLoading(false);
-    };
-    loadAll();
-  }, [fetchBanners, fetchFeed, fetchSponsored, fetchGuides]);
-
+  // Load all home data on screen focus (covers first mount + every tab switch)
   useFocusEffect(
     useCallback(() => {
+      const loadAll = async () => {
+        if (isFirstLoad.current) setLoading(true);
+        await Promise.all([
+          loadRestaurants(),
+          fetchBanners(),
+          fetchFeed(),
+          fetchSponsored(),
+          fetchGuides(),
+        ]);
+        if (isFirstLoad.current) {
+          setLoading(false);
+          isFirstLoad.current = false;
+        }
+      };
+      loadAll();
       calculateCartCount();
-      loadAnalytics();
-    }, [calculateCartCount, loadAnalytics])
+      if (restaurantId) loadAnalytics();
+    }, [loadRestaurants, fetchBanners, fetchFeed, fetchSponsored, fetchGuides, calculateCartCount, restaurantId, loadAnalytics])
   );
 
+  // Reload analytics when restaurant or period changes
   useEffect(() => {
-    if (restaurantId) {
-      loadAnalytics();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [restaurantId, selectedPeriod]);
+    if (restaurantId) loadAnalytics();
+  }, [restaurantId, selectedPeriod, loadAnalytics]);
 
   /* ═══════════ BANNER ANIMATION ═══════════ */
   const pulse = useRef(new Animated.Value(0.5)).current;
@@ -385,12 +387,12 @@ export default function HomeScreen({ navigation }) {
       >
         <View style={st.headerRow}>
           <TouchableOpacity onPress={() => setMenuVisible(true)} style={st.headerBtn}>
-            <Icon name="menu" size={22} color="#fff" />
+            <Icon name="menu" size={scale(22)} color="#fff" />
           </TouchableOpacity>
 
-          <View style={{ flex: 1, marginLeft: 14 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Icon name={greetIcon} size={15} color="#FFD700" />
+          <View style={{ flex: 1, marginLeft: scale(14) }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(6) }}>
+              <Icon name={greetIcon} size={scale(15)} color="#FFD700" />
               <Text style={st.greetText}>{greeting}</Text>
             </View>
             <Text style={st.headerRestName} numberOfLines={1}>
@@ -398,7 +400,7 @@ export default function HomeScreen({ navigation }) {
             </Text>
           </View>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(6) }}>
             <TouchableOpacity
               onPress={handleExportPDF}
               disabled={exporting || !restaurantId}
@@ -407,14 +409,14 @@ export default function HomeScreen({ navigation }) {
               {exporting ? (
                 <ActivityIndicator size="small" color="#fff" />
               ) : (
-                <Icon name="download-outline" size={18} color={restaurantId ? '#fff' : 'rgba(255,255,255,0.35)'} />
+                <Icon name="download-outline" size={scale(18)} color={restaurantId ? '#fff' : 'rgba(255,255,255,0.35)'} />
               )}
             </TouchableOpacity>
             <TouchableOpacity onPress={() => navigation.navigate?.('Notifications')} style={st.headerBtn}>
-              <Icon name="notifications-outline" size={18} color="#fff" />
+              <Icon name="notifications-outline" size={scale(18)} color="#fff" />
             </TouchableOpacity>
             <TouchableOpacity onPress={() => navigation.navigate?.('Cart')} style={st.headerBtn}>
-              <Icon name="cart-outline" size={18} color="#fff" />
+              <Icon name="cart-outline" size={scale(18)} color="#fff" />
               {cartCount > 0 && (
                 <View style={st.cartBadge}>
                   <Text style={st.cartBadgeTxt}>{cartCount > 99 ? '99+' : cartCount}</Text>
@@ -439,13 +441,13 @@ export default function HomeScreen({ navigation }) {
           <>
             {/* Restaurant Selector (for multi-restaurant owners) */}
             {hasMultipleRestaurants && (
-              <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
+              <View style={{ paddingHorizontal: scale(16), paddingTop: scale(12) }}>
                 <RestaurantSelectorCompact />
               </View>
             )}
 
             {/* ══════ HERO BANNER ══════ */}
-            <View style={{ paddingHorizontal: 16, marginTop: 14 }}>
+            <View style={{ paddingHorizontal: scale(16), marginTop: scale(14) }}>
               {banners.length ? (() => {
                 const rawUrl = banners[heroIdx]?.image_url || '';
                 const bannerImgUri = rawUrl.startsWith('http') ? rawUrl : `${IMAGE_BASE_URL}${rawUrl}`;
@@ -475,7 +477,7 @@ export default function HomeScreen({ navigation }) {
                       {!!banners[heroIdx]?.cta_text && !!banners[heroIdx]?.cta_link && (
                         <TouchableOpacity onPress={() => open(banners[heroIdx].cta_link)} style={st.bannerCta}>
                           <Text style={st.bannerCtaTxt}>{banners[heroIdx].cta_text}</Text>
-                          <Icon name="arrow-forward" size={14} color="#fff" />
+                          <Icon name="arrow-forward" size={scale(14)} color="#fff" />
                         </TouchableOpacity>
                       )}
                     </View>
@@ -502,8 +504,8 @@ export default function HomeScreen({ navigation }) {
                 );
               })() : (
                 <View style={st.bannerEmpty}>
-                  <Icon name="image-outline" size={36} color={C.muted} />
-                  <Text style={{ color: C.muted, fontWeight: '700', marginTop: 8 }}>No banners yet</Text>
+                  <Icon name="image-outline" size={scale(36)} color={C.muted} />
+                  <Text style={{ color: C.muted, fontWeight: '700', marginTop: scale(8) }}>No banners yet</Text>
                 </View>
               )}
             </View>
@@ -518,7 +520,7 @@ export default function HomeScreen({ navigation }) {
                   onPress={() => navigation.navigate(q.screen)}
                 >
                   <LinearGradient colors={q.grad} style={st.qaIcon}>
-                    <Icon name={q.icon} size={20} color="#fff" />
+                    <Icon name={q.icon} size={scale(20)} color="#fff" />
                   </LinearGradient>
                   <Text style={st.qaLabel}>{q.label}</Text>
                 </TouchableOpacity>
@@ -529,7 +531,7 @@ export default function HomeScreen({ navigation }) {
             <TouchableOpacity
               activeOpacity={0.9}
               onPress={() => navigation.navigate('AMCDashboard')}
-              style={{ paddingHorizontal: 16, marginTop: 14 }}
+              style={{ paddingHorizontal: scale(16), marginTop: scale(14) }}
             >
               <LinearGradient
                 colors={['#7C3AED', '#6D28D9', '#5B21B6']}
@@ -539,15 +541,15 @@ export default function HomeScreen({ navigation }) {
               >
                 <View style={st.amcBannerLeft}>
                   <View style={st.amcIconBg}>
-                    <Icon name="shield-checkmark" size={22} color="#7C3AED" />
+                    <Icon name="shield-checkmark" size={scale(22)} color="#7C3AED" />
                   </View>
-                  <View style={{ flex: 1, marginLeft: 12 }}>
+                  <View style={{ flex: 1, marginLeft: scale(12) }}>
                     <Text style={st.amcBannerTitle}>AMC Management</Text>
                     <Text style={st.amcBannerSub}>Annual maintenance contracts, visits & breakdowns</Text>
                   </View>
                 </View>
                 <View style={st.amcArrowBg}>
-                  <Icon name="chevron-forward" size={16} color="#fff" />
+                  <Icon name="chevron-forward" size={scale(16)} color="#fff" />
                 </View>
               </LinearGradient>
             </TouchableOpacity>
@@ -557,8 +559,8 @@ export default function HomeScreen({ navigation }) {
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 2 }}
-                style={{ marginTop: 16 }}
+                contentContainerStyle={{ paddingHorizontal: scale(16), paddingBottom: scale(2) }}
+                style={{ marginTop: scale(16) }}
               >
                 {feed.map(f => (
                   <View
@@ -573,7 +575,7 @@ export default function HomeScreen({ navigation }) {
                   >
                     <Icon
                       name={f.icon}
-                      size={14}
+                      size={scale(14)}
                       color={
                         f.tone === 'ok' ? C.ok :
                           f.tone === 'warn' ? C.warn :
@@ -593,13 +595,13 @@ export default function HomeScreen({ navigation }) {
                 onPress={() => setShowAnalytics(!showAnalytics)}
                 activeOpacity={0.7}
               >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(10) }}>
                   <LinearGradient colors={[C.primary, C.primaryDark]} style={st.sectionBadge}>
-                    <Icon name="analytics" size={15} color="#fff" />
+                    <Icon name="analytics" size={scale(15)} color="#fff" />
                   </LinearGradient>
                   <Text style={st.sectionTitle}>Analytics Overview</Text>
                 </View>
-                <Icon name={showAnalytics ? 'chevron-up' : 'chevron-down'} size={18} color={C.muted} />
+                <Icon name={showAnalytics ? 'chevron-up' : 'chevron-down'} size={scale(18)} color={C.muted} />
               </TouchableOpacity>
 
               {showAnalytics && (
@@ -620,23 +622,23 @@ export default function HomeScreen({ navigation }) {
                   </View>
 
                   {hasMultipleRestaurants && (
-                    <RestaurantSelectorChips style={{ marginBottom: 12 }} />
+                    <RestaurantSelectorChips style={{ marginBottom: scale(12) }} />
                   )}
 
                   {analyticsLoading ? (
-                    <View style={{ padding: 28, alignItems: 'center' }}>
+                    <View style={{ padding: scale(28), alignItems: 'center' }}>
                       <ActivityIndicator color={C.primary} />
                     </View>
                   ) : !restaurantId ? (
                     <View style={st.emptyAna}>
                       <LinearGradient colors={['#FEF2F2', '#FFE4E6']} style={st.emptyIconBg}>
-                        <Icon name="restaurant-outline" size={28} color={C.primary} />
+                        <Icon name="restaurant-outline" size={scale(28)} color={C.primary} />
                       </LinearGradient>
                       <Text style={st.emptyTitle}>No Restaurant Selected</Text>
                       <Text style={st.emptySubtitle}>Add a restaurant to view analytics</Text>
                       <TouchableOpacity activeOpacity={0.85} onPress={() => navigation.navigate('MyRestaurants')}>
                         <LinearGradient colors={[C.primary, C.primaryDark]} style={st.emptyBtn}>
-                          <Icon name="add" size={16} color="#fff" />
+                          <Icon name="add" size={scale(16)} color="#fff" />
                           <Text style={st.emptyBtnTxt}>Add Restaurant</Text>
                         </LinearGradient>
                       </TouchableOpacity>
@@ -680,7 +682,7 @@ export default function HomeScreen({ navigation }) {
                           <View style={st.netIconBg}>
                             <Icon
                               name={summary.netRevenue >= 0 ? 'trending-up' : 'trending-down'}
-                              size={20}
+                              size={scale(20)}
                               color="#fff"
                             />
                           </View>
@@ -707,17 +709,17 @@ export default function HomeScreen({ navigation }) {
                   onPress={() => setShowCharts(!showCharts)}
                   activeOpacity={0.7}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(10) }}>
                     <LinearGradient colors={['#818CF8', '#6366F1']} style={st.sectionBadge}>
-                      <Icon name="bar-chart" size={15} color="#fff" />
+                      <Icon name="bar-chart" size={scale(15)} color="#fff" />
                     </LinearGradient>
                     <Text style={st.sectionTitle}>Charts & Trends</Text>
                   </View>
-                  <Icon name={showCharts ? 'chevron-up' : 'chevron-down'} size={18} color={C.muted} />
+                  <Icon name={showCharts ? 'chevron-up' : 'chevron-down'} size={scale(18)} color={C.muted} />
                 </TouchableOpacity>
 
                 {showCharts && (
-                  <View style={{ marginTop: 12, marginHorizontal: -16, overflow: 'hidden' }}>
+                  <View style={{ marginTop: scale(12), marginHorizontal: scale(-16), overflow: 'hidden' }}>
                     {trends.bookingsByDay && trends.bookingsByDay.length > 0 && (
                       <LineChartCard
                         title="Booking Trends"
@@ -749,7 +751,7 @@ export default function HomeScreen({ navigation }) {
                         <Text style={st.catCardTitle}>Top Expense Categories</Text>
                         {topCategories.slice(0, 5).map((cat, idx) => (
                           <View key={idx} style={st.catRow}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(10) }}>
                               <View style={[st.catDot, { backgroundColor: getCategoryColor(idx) }]} />
                               <Text style={st.catName}>{cat.category}</Text>
                             </View>
@@ -766,17 +768,17 @@ export default function HomeScreen({ navigation }) {
             {/* ══════ RECENT ACTIVITY ══════ */}
             {(recent.bookings?.length > 0 || recent.expenses?.length > 0) && (
               <View style={st.section}>
-                <View style={[st.sectionHead, { marginBottom: 14 }]}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View style={[st.sectionHead, { marginBottom: scale(14) }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(10) }}>
                     <LinearGradient colors={['#60A5FA', '#3B82F6']} style={st.sectionBadge}>
-                      <Icon name="time" size={15} color="#fff" />
+                      <Icon name="time" size={scale(15)} color="#fff" />
                     </LinearGradient>
                     <Text style={st.sectionTitle}>Recent Activity</Text>
                   </View>
                 </View>
 
                 {recent.bookings?.length > 0 && (
-                  <View style={{ marginBottom: 16 }}>
+                  <View style={{ marginBottom: scale(16) }}>
                     <View style={st.recentSubHead}>
                       <Text style={st.recentSubTitle}>Bookings</Text>
                       <TouchableOpacity onPress={() => navigation.navigate('MyBookings')}>
@@ -786,9 +788,9 @@ export default function HomeScreen({ navigation }) {
                     {recent.bookings.slice(0, 3).map(b => (
                       <View key={b.id} style={st.recentItem}>
                         <LinearGradient colors={['#FEF2F2', '#FFE4E6']} style={st.recentIconBg}>
-                          <Icon name="calendar-outline" size={16} color={C.primary} />
+                          <Icon name="calendar-outline" size={scale(16)} color={C.primary} />
                         </LinearGradient>
-                        <View style={{ flex: 1, marginLeft: 12 }}>
+                        <View style={{ flex: 1, marginLeft: scale(12) }}>
                           <Text style={st.recentName}>Booking #{b.id.slice(0, 8)}</Text>
                           <Text style={st.recentDate}>
                             {new Date(b.createdAt).toLocaleDateString()}
@@ -818,9 +820,9 @@ export default function HomeScreen({ navigation }) {
                     {recent.expenses.slice(0, 3).map(e => (
                       <View key={e.id} style={st.recentItem}>
                         <LinearGradient colors={['#FFFBEB', '#FEF3C7']} style={st.recentIconBg}>
-                          <Icon name="cash-outline" size={16} color={C.warn} />
+                          <Icon name="cash-outline" size={scale(16)} color={C.warn} />
                         </LinearGradient>
-                        <View style={{ flex: 1, marginLeft: 12 }}>
+                        <View style={{ flex: 1, marginLeft: scale(12) }}>
                           <Text style={st.recentName}>{e.category}</Text>
                           <Text style={st.recentDate}>
                             {new Date(e.expenseDate).toLocaleDateString()}
@@ -836,7 +838,7 @@ export default function HomeScreen({ navigation }) {
 
             {/* ══════ SPONSORED ══════ */}
             {sponsoredData.length > 0 && (
-              <View style={{ marginTop: 20 }}>
+              <View style={{ marginTop: scale(20) }}>
                 <View style={st.sectionHdr}>
                   <Text style={st.sectionTitle}>Sponsored</Text>
                 </View>
@@ -845,19 +847,19 @@ export default function HomeScreen({ navigation }) {
                   data={sponsoredData}
                   keyExtractor={(item) => item.id.toString()}
                   showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={{ paddingHorizontal: 16 }}
+                  contentContainerStyle={{ paddingHorizontal: scale(16) }}
                   renderItem={({ item }) => (
                     <TouchableOpacity
                       onPress={() => Linking.openURL(item.link)}
                       activeOpacity={0.9}
-                      style={st.sponsorCard}
+                      style={[st.sponsorCard, { width: Math.min(scale(280), width * 0.75) }]}
                     >
                       <Image
                         source={{ uri: `${IMAGE_BASE_URL}/${item.image}` }}
                         style={st.sponsorImg}
                         resizeMode="cover"
                       />
-                      <View style={{ padding: 12 }}>
+                      <View style={{ padding: scale(12) }}>
                         <Text style={st.sponsorTitle} numberOfLines={1}>{item.title}</Text>
                         <Text style={st.sponsorDesc} numberOfLines={1}>{item.description}</Text>
                       </View>
@@ -869,7 +871,7 @@ export default function HomeScreen({ navigation }) {
 
             {/* ══════ QUICK GUIDES ══════ */}
             {guides.length > 0 && (
-              <View style={{ marginTop: 20 }}>
+              <View style={{ marginTop: scale(20) }}>
                 <View style={st.sectionHdr}>
                   <Text style={st.sectionTitle}>Quick Guides</Text>
                   <TouchableOpacity onPress={goGuide}>
@@ -881,9 +883,9 @@ export default function HomeScreen({ navigation }) {
                   data={guides}
                   showsHorizontalScrollIndicator={false}
                   keyExtractor={(i) => i.id}
-                  contentContainerStyle={{ paddingHorizontal: 16 }}
+                  contentContainerStyle={{ paddingHorizontal: scale(16) }}
                   renderItem={({ item }) => (
-                    <TouchableOpacity onPress={() => open(item.link)} style={st.guideCard}>
+                    <TouchableOpacity onPress={() => open(item.link)} style={[st.guideCard, { width: Math.min(scale(260), width * 0.68) }]}>
                       <ImageBackground
                         source={{ uri: item.thumb }}
                         style={st.guideImg}
@@ -894,13 +896,13 @@ export default function HomeScreen({ navigation }) {
                           style={StyleSheet.absoluteFill}
                         />
                         <View style={st.playBtn}>
-                          <Icon name="play" size={16} color="#fff" />
+                          <Icon name="play" size={scale(16)} color="#fff" />
                         </View>
                       </ImageBackground>
-                      <View style={{ padding: 12 }}>
+                      <View style={{ padding: scale(12) }}>
                         <Text style={st.guideTitle} numberOfLines={2}>{item.title}</Text>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 4 }}>
-                          <Icon name="time-outline" size={13} color={C.muted} />
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: scale(6), gap: scale(4) }}>
+                          <Icon name="time-outline" size={scale(13)} color={C.muted} />
                           <Text style={st.guideMeta}>{item.min} min</Text>
                         </View>
                       </View>
@@ -914,7 +916,7 @@ export default function HomeScreen({ navigation }) {
             <View style={st.sectionHdr}>
               <Text style={st.sectionTitle}>From KNI</Text>
             </View>
-            <View style={{ paddingHorizontal: 16 }}>
+            <View style={{ paddingHorizontal: scale(16) }}>
               <AnnCard
                 icon="rocket-outline"
                 grad={['#818CF8', '#6366F1']}
@@ -944,40 +946,40 @@ function SkeletonHome({ pulse }) {
   return (
     <>
       {/* Banner skeleton */}
-      <View style={{ paddingHorizontal: 16, marginTop: 14 }}>
-        <Bone style={{ height: 190, borderRadius: 20 }} />
+      <View style={{ paddingHorizontal: scale(16), marginTop: scale(14) }}>
+        <Bone style={{ height: scale(190), borderRadius: scale(20) }} />
       </View>
 
       {/* Quick actions skeleton */}
       <View style={st.qaRow}>
         {[0, 1, 2, 3].map(i => (
           <View key={i} style={st.qaItem}>
-            <Bone style={{ width: 48, height: 48, borderRadius: 16 }} />
-            <Bone style={{ width: 50, height: 10, borderRadius: 5, marginTop: 8 }} />
+            <Bone style={{ width: scale(48), height: scale(48), borderRadius: scale(16) }} />
+            <Bone style={{ width: scale(50), height: scale(10), borderRadius: scale(5), marginTop: scale(8) }} />
           </View>
         ))}
       </View>
 
       {/* Pills skeleton */}
-      <View style={{ flexDirection: 'row', paddingHorizontal: 16, marginTop: 16, gap: 8 }}>
+      <View style={{ flexDirection: 'row', paddingHorizontal: scale(16), marginTop: scale(16), gap: scale(8) }}>
         {[0, 1, 2].map(i => (
-          <Bone key={i} style={{ width: 140, height: 34, borderRadius: 999 }} />
+          <Bone key={i} style={{ width: scale(140), height: scale(34), borderRadius: 999 }} />
         ))}
       </View>
 
       {/* Analytics skeleton */}
-      <View style={[st.section, { marginTop: 16 }]}>
-        <Bone style={{ width: 180, height: 18, borderRadius: 8, marginBottom: 14 }} />
-        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
+      <View style={[st.section, { marginTop: scale(16) }]}>
+        <Bone style={{ width: scale(180), height: scale(18), borderRadius: scale(8), marginBottom: scale(14) }} />
+        <View style={{ flexDirection: 'row', gap: scale(8), marginBottom: scale(14) }}>
           {[0, 1, 2, 3].map(i => (
-            <Bone key={i} style={{ flex: 1, height: 36, borderRadius: 10 }} />
+            <Bone key={i} style={{ flex: 1, height: scale(36), borderRadius: scale(10) }} />
           ))}
         </View>
-        <View style={{ flexDirection: 'row', gap: 12 }}>
-          <Bone style={{ flex: 1, height: 100, borderRadius: 16 }} />
-          <Bone style={{ flex: 1, height: 100, borderRadius: 16 }} />
+        <View style={{ flexDirection: 'row', gap: scale(12) }}>
+          <Bone style={{ flex: 1, height: scale(100), borderRadius: scale(16) }} />
+          <Bone style={{ flex: 1, height: scale(100), borderRadius: scale(16) }} />
         </View>
-        <Bone style={{ height: 80, borderRadius: 16, marginTop: 12 }} />
+        <Bone style={{ height: scale(80), borderRadius: scale(16), marginTop: scale(12) }} />
       </View>
     </>
   );
@@ -987,7 +989,7 @@ function SkeletonHome({ pulse }) {
 const StatCard = ({ icon, gradColors, iconColor, value, label }) => (
   <View style={st.statCard}>
     <LinearGradient colors={gradColors} style={st.statIconBg}>
-      <Icon name={icon} size={16} color={iconColor} />
+      <Icon name={icon} size={scale(16)} color={iconColor} />
     </LinearGradient>
     <Text style={st.statValue}>{value}</Text>
     <Text style={st.statLabel}>{label}</Text>
@@ -997,7 +999,7 @@ const StatCard = ({ icon, gradColors, iconColor, value, label }) => (
 const AnnCard = ({ icon, grad, title, text }) => (
   <View style={st.annCard}>
     <LinearGradient colors={grad} style={st.annIconBg}>
-      <Icon name={icon} size={16} color="#fff" />
+      <Icon name={icon} size={scale(16)} color="#fff" />
     </LinearGradient>
     <View style={{ flex: 1 }}>
       <Text style={st.annTitle}>{title}</Text>
@@ -1012,150 +1014,150 @@ const AnnCard = ({ icon, grad, title, text }) => (
 const st = StyleSheet.create({
   /* ── Header ── */
   headerGrad: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingHorizontal: scale(16),
+    paddingBottom: scale(16),
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   headerBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 14,
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(14),
     backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   greetText: {
     color: 'rgba(255,255,255,0.85)',
-    fontSize: 12,
+    fontSize: moderateScale(12),
     fontWeight: '600',
   },
   headerRestName: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: '900',
-    marginTop: 2,
+    marginTop: scale(2),
   },
   cartBadge: {
     position: 'absolute',
-    top: 2,
-    right: 2,
+    top: scale(2),
+    right: scale(2),
     backgroundColor: '#FFD700',
-    borderRadius: 10,
-    minWidth: 16,
-    height: 16,
+    borderRadius: scale(10),
+    minWidth: scale(16),
+    height: scale(16),
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 4,
+    paddingHorizontal: scale(4),
   },
   cartBadgeTxt: {
     color: C.ink,
-    fontSize: 9,
+    fontSize: moderateScale(9),
     fontWeight: '800',
   },
 
   /* ── Banner ── */
   bannerWrap: {
-    borderRadius: 20,
+    borderRadius: scale(20),
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
+    shadowOffset: { width: 0, height: scale(6) },
     shadowOpacity: 0.12,
-    shadowRadius: 14,
+    shadowRadius: scale(14),
     elevation: 8,
   },
   bannerImg: {
     width: '100%',
-    height: 190,
+    height: scale(190),
     justifyContent: 'flex-end',
   },
   bannerOverlay: {
     ...StyleSheet.absoluteFillObject,
-    borderRadius: 20,
+    borderRadius: scale(20),
   },
   bannerBadge: {
     position: 'absolute',
-    left: 14,
-    top: 14,
+    left: scale(14),
+    top: scale(14),
     backgroundColor: 'rgba(255,255,255,0.92)',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(5),
     borderRadius: 999,
   },
   bannerBadgeTxt: {
     color: C.ink,
     fontWeight: '900',
-    fontSize: 11,
+    fontSize: moderateScale(11),
   },
   bannerContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 32,
+    paddingHorizontal: scale(16),
+    paddingBottom: scale(32),
   },
   bannerTitle: {
     color: '#fff',
     fontWeight: '900',
-    fontSize: 18,
-    lineHeight: 24,
+    fontSize: moderateScale(18),
+    lineHeight: moderateScale(24),
   },
   bannerSub: {
     color: '#E5E7EB',
-    marginTop: 3,
-    fontSize: 13,
+    marginTop: scale(3),
+    fontSize: moderateScale(13),
   },
   bannerCta: {
-    marginTop: 10,
+    marginTop: scale(10),
     alignSelf: 'flex-start',
     backgroundColor: C.primary,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
+    borderRadius: scale(10),
+    paddingHorizontal: scale(14),
+    paddingVertical: scale(7),
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: scale(6),
   },
   bannerCtaTxt: {
     color: '#fff',
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: moderateScale(13),
   },
   bannerBottom: {
     position: 'absolute',
-    left: 14,
-    right: 14,
-    bottom: 10,
-    gap: 6,
+    left: scale(14),
+    right: scale(14),
+    bottom: scale(10),
+    gap: scale(6),
   },
   dotsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: scale(5),
   },
   dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: scale(6),
+    height: scale(6),
+    borderRadius: scale(3),
     backgroundColor: 'rgba(255,255,255,0.4)',
   },
   dotActive: {
-    width: 20,
+    width: scale(20),
     backgroundColor: '#fff',
-    borderRadius: 4,
+    borderRadius: scale(4),
   },
   progWrap: {
-    height: 3,
+    height: scale(3),
     backgroundColor: 'rgba(255,255,255,0.25)',
-    borderRadius: 2,
+    borderRadius: scale(2),
     overflow: 'hidden',
   },
   progBar: {
-    height: 3,
+    height: scale(3),
     backgroundColor: '#fff',
   },
   bannerEmpty: {
-    height: 190,
-    borderRadius: 20,
+    height: scale(190),
+    borderRadius: scale(20),
     backgroundColor: '#E9EEF5',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1165,36 +1167,36 @@ const st = StyleSheet.create({
   qaRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    marginTop: 18,
-    gap: 10,
+    paddingHorizontal: scale(16),
+    marginTop: scale(18),
+    gap: scale(10),
   },
   qaItem: {
     flex: 1,
     backgroundColor: C.card,
-    borderRadius: 16,
-    paddingVertical: 14,
+    borderRadius: scale(16),
+    paddingVertical: scale(14),
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#EEF2F7',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: scale(2) },
     shadowOpacity: 0.04,
-    shadowRadius: 6,
+    shadowRadius: scale(6),
     elevation: 2,
   },
   qaIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
+    width: scale(48),
+    height: scale(48),
+    borderRadius: scale(16),
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: scale(8),
   },
   qaLabel: {
     color: C.ink,
     fontWeight: '700',
-    fontSize: 11,
+    fontSize: moderateScale(11),
   },
 
   /* ── AMC Banner ── */
@@ -1202,12 +1204,12 @@ const st = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: scale(16),
+    padding: scale(16),
     shadowColor: '#7C3AED',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: scale(4) },
     shadowOpacity: 0.25,
-    shadowRadius: 10,
+    shadowRadius: scale(10),
     elevation: 6,
   },
   amcBannerLeft: {
@@ -1216,9 +1218,9 @@ const st = StyleSheet.create({
     flex: 1,
   },
   amcIconBg: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: scale(44),
+    height: scale(44),
+    borderRadius: scale(14),
     backgroundColor: 'rgba(255,255,255,0.95)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1226,54 +1228,54 @@ const st = StyleSheet.create({
   amcBannerTitle: {
     color: '#fff',
     fontWeight: '900',
-    fontSize: 15,
+    fontSize: moderateScale(15),
   },
   amcBannerSub: {
     color: 'rgba(255,255,255,0.75)',
-    fontSize: 11,
+    fontSize: moderateScale(11),
     fontWeight: '500',
-    marginTop: 2,
+    marginTop: scale(2),
   },
   amcArrowBg: {
-    width: 30,
-    height: 30,
-    borderRadius: 10,
+    width: scale(30),
+    height: scale(30),
+    borderRadius: scale(10),
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 8,
+    marginLeft: scale(8),
   },
 
   /* ── Feed Pills ── */
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    gap: scale(6),
+    paddingHorizontal: scale(12),
+    paddingVertical: scale(8),
     borderRadius: 999,
     borderWidth: 1,
-    marginRight: 8,
+    marginRight: scale(8),
   },
   pillTxt: {
     color: C.ink,
     fontWeight: '600',
-    fontSize: 12,
+    fontSize: moderateScale(12),
   },
 
   /* ── Sections ── */
   section: {
     backgroundColor: C.card,
-    marginHorizontal: 16,
-    marginTop: 18,
-    borderRadius: 20,
-    padding: 16,
+    marginHorizontal: scale(16),
+    marginTop: scale(18),
+    borderRadius: scale(20),
+    padding: scale(16),
     borderWidth: 1,
     borderColor: '#EEF2F7',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
+    shadowOffset: { width: 0, height: scale(3) },
     shadowOpacity: 0.05,
-    shadowRadius: 10,
+    shadowRadius: scale(10),
     elevation: 3,
   },
   sectionHead: {
@@ -1282,20 +1284,20 @@ const st = StyleSheet.create({
     justifyContent: 'space-between',
   },
   sectionBadge: {
-    width: 30,
-    height: 30,
-    borderRadius: 10,
+    width: scale(30),
+    height: scale(30),
+    borderRadius: scale(10),
     alignItems: 'center',
     justifyContent: 'center',
   },
   sectionTitle: {
     color: C.ink,
     fontWeight: '900',
-    fontSize: 16,
+    fontSize: moderateScale(16),
   },
   sectionHdr: {
-    paddingHorizontal: 16,
-    marginBottom: 12,
+    paddingHorizontal: scale(16),
+    marginBottom: scale(12),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -1303,20 +1305,20 @@ const st = StyleSheet.create({
   link: {
     color: C.primary,
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: moderateScale(13),
   },
 
   /* ── Period selector ── */
   periodRow: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 14,
-    marginBottom: 14,
+    gap: scale(8),
+    marginTop: scale(14),
+    marginBottom: scale(14),
   },
   periodChip: {
     flex: 1,
-    paddingVertical: 9,
-    borderRadius: 10,
+    paddingVertical: scale(9),
+    borderRadius: scale(10),
     borderWidth: 1.2,
     borderColor: C.border,
     backgroundColor: C.bg,
@@ -1327,7 +1329,7 @@ const st = StyleSheet.create({
     borderColor: C.primary,
   },
   periodTxt: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     color: C.text,
     fontWeight: '700',
   },
@@ -1338,140 +1340,140 @@ const st = StyleSheet.create({
   /* ── Empty analytics ── */
   emptyAna: {
     alignItems: 'center',
-    paddingVertical: 28,
+    paddingVertical: scale(28),
   },
   emptyIconBg: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
+    width: scale(64),
+    height: scale(64),
+    borderRadius: scale(20),
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: scale(12),
   },
   emptyTitle: {
     color: C.ink,
     fontWeight: '800',
-    fontSize: 16,
-    marginBottom: 4,
+    fontSize: moderateScale(16),
+    marginBottom: scale(4),
   },
   emptySubtitle: {
     color: C.muted,
-    fontSize: 13,
-    marginBottom: 16,
+    fontSize: moderateScale(13),
+    marginBottom: scale(16),
   },
   emptyBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 12,
+    gap: scale(6),
+    paddingHorizontal: scale(18),
+    paddingVertical: scale(10),
+    borderRadius: scale(12),
   },
   emptyBtnTxt: {
     color: '#fff',
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: moderateScale(14),
   },
 
   /* ── Stats Cards ── */
   statsGrid: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 12,
+    gap: scale(12),
+    marginBottom: scale(12),
   },
   statCard: {
     flex: 1,
     backgroundColor: C.bg,
-    borderRadius: 16,
-    padding: 14,
+    borderRadius: scale(16),
+    padding: scale(14),
   },
   statIconBg: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+    width: scale(34),
+    height: scale(34),
+    borderRadius: scale(10),
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 10,
+    marginBottom: scale(10),
   },
   statValue: {
-    fontSize: 18,
+    fontSize: moderateScale(18),
     fontWeight: '800',
     color: C.ink,
   },
   statLabel: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     color: C.muted,
     fontWeight: '600',
-    marginTop: 2,
+    marginTop: scale(2),
   },
 
   /* ── Net Revenue ── */
   netCard: {
-    borderRadius: 16,
-    padding: 18,
+    borderRadius: scale(16),
+    padding: scale(18),
   },
   netTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginBottom: 8,
+    gap: scale(10),
+    marginBottom: scale(8),
   },
   netIconBg: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
+    width: scale(36),
+    height: scale(36),
+    borderRadius: scale(12),
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   netLabel: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: 'rgba(255,255,255,0.85)',
     fontWeight: '700',
   },
   netValue: {
-    fontSize: 30,
+    fontSize: moderateScale(28),
     fontWeight: '900',
     color: '#fff',
   },
   netSub: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     color: 'rgba(255,255,255,0.8)',
     fontWeight: '600',
-    marginTop: 4,
+    marginTop: scale(4),
   },
 
   /* ── Categories ── */
   catCard: {
     backgroundColor: C.bg,
-    padding: 14,
-    borderRadius: 14,
-    marginTop: 12,
+    padding: scale(14),
+    borderRadius: scale(14),
+    marginTop: scale(12),
   },
   catCardTitle: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '800',
     color: C.ink,
-    marginBottom: 12,
+    marginBottom: scale(12),
   },
   catRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: scale(10),
   },
   catDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: scale(10),
+    height: scale(10),
+    borderRadius: scale(5),
   },
   catName: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     color: C.text,
     fontWeight: '500',
   },
   catAmt: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '700',
     color: C.ink,
   },
@@ -1481,10 +1483,10 @@ const st = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: scale(10),
   },
   recentSubTitle: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     fontWeight: '700',
     color: C.ink,
   },
@@ -1492,98 +1494,96 @@ const st = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: C.bg,
-    borderRadius: 14,
-    padding: 12,
-    marginBottom: 8,
+    borderRadius: scale(14),
+    padding: scale(12),
+    marginBottom: scale(8),
   },
   recentIconBg: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+    width: scale(38),
+    height: scale(38),
+    borderRadius: scale(12),
     alignItems: 'center',
     justifyContent: 'center',
   },
   recentName: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     fontWeight: '700',
     color: C.ink,
   },
   recentDate: {
-    fontSize: 11,
+    fontSize: moderateScale(11),
     color: C.muted,
-    marginTop: 2,
+    marginTop: scale(2),
   },
   recentAmt: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '800',
     color: C.ink,
   },
   statusChip: {
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    marginTop: 3,
+    borderRadius: scale(6),
+    paddingHorizontal: scale(8),
+    paddingVertical: scale(2),
+    marginTop: scale(3),
   },
   statusChipTxt: {
-    fontSize: 9,
+    fontSize: moderateScale(9),
     fontWeight: '800',
   },
 
   /* ── Sponsored ── */
   sponsorCard: {
-    width: Math.min(280, W * 0.75),
-    marginRight: 12,
-    borderRadius: 16,
+    marginRight: scale(12),
+    borderRadius: scale(16),
     overflow: 'hidden',
     backgroundColor: C.card,
     borderWidth: 1,
     borderColor: '#EEF2F7',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: scale(2) },
     shadowOpacity: 0.05,
-    shadowRadius: 8,
+    shadowRadius: scale(8),
     elevation: 2,
   },
   sponsorImg: {
     width: '100%',
-    height: 120,
+    height: scale(120),
   },
   sponsorTitle: {
     color: C.ink,
     fontWeight: '800',
-    fontSize: 14,
+    fontSize: moderateScale(14),
   },
   sponsorDesc: {
     color: C.muted,
-    fontSize: 12,
-    marginTop: 3,
+    fontSize: moderateScale(12),
+    marginTop: scale(3),
   },
 
   /* ── Guides ── */
   guideCard: {
-    width: Math.min(260, W * 0.68),
     backgroundColor: C.card,
-    borderRadius: 16,
+    borderRadius: scale(16),
     borderWidth: 1,
     borderColor: '#EEF2F7',
-    marginRight: 12,
+    marginRight: scale(12),
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: scale(2) },
     shadowOpacity: 0.04,
-    shadowRadius: 6,
+    shadowRadius: scale(6),
     elevation: 2,
   },
   guideImg: {
     width: '100%',
-    height: 120,
+    height: scale(120),
     alignItems: 'center',
     justifyContent: 'center',
   },
   playBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(20),
     backgroundColor: 'rgba(0,0,0,0.5)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1593,48 +1593,48 @@ const st = StyleSheet.create({
   guideTitle: {
     color: C.ink,
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: moderateScale(13),
   },
   guideMeta: {
     color: C.muted,
     fontWeight: '600',
-    fontSize: 12,
+    fontSize: moderateScale(12),
   },
 
   /* ── Announcements ── */
   annCard: {
     backgroundColor: C.card,
-    borderRadius: 16,
+    borderRadius: scale(16),
     borderWidth: 1,
     borderColor: '#EEF2F7',
-    padding: 14,
+    padding: scale(14),
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 10,
+    gap: scale(12),
+    marginBottom: scale(10),
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: scale(2) },
     shadowOpacity: 0.04,
-    shadowRadius: 6,
+    shadowRadius: scale(6),
     elevation: 2,
   },
   annIconBg: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+    width: scale(38),
+    height: scale(38),
+    borderRadius: scale(12),
     alignItems: 'center',
     justifyContent: 'center',
   },
   annTitle: {
     color: C.ink,
     fontWeight: '800',
-    fontSize: 14,
+    fontSize: moderateScale(14),
   },
   annText: {
     color: C.muted,
-    marginTop: 2,
-    fontSize: 12,
-    lineHeight: 17,
+    marginTop: scale(2),
+    fontSize: moderateScale(12),
+    lineHeight: moderateScale(17),
   },
 });
 

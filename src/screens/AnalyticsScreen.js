@@ -23,6 +23,7 @@ import { RestaurantSelectorBar } from '../components/RestaurantSelector';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
+import { scale, moderateScale } from '../utils/responsive';
 const C = {
   primary: '#EF3A3A',
   ink: '#1D2254',
@@ -128,7 +129,7 @@ export default function AnalyticsScreen({ navigation }) {
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Icon name="arrow-back" size={22} color={C.ink} />
+            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>Analytics</Text>
@@ -136,7 +137,7 @@ export default function AnalyticsScreen({ navigation }) {
           </View>
           <View style={styles.headerActions}>
             <TouchableOpacity style={styles.headerIconBtn} onPress={() => setMenuVisible(true)}>
-              <Icon name="menu" size={20} color={C.ink} />
+              <Icon name="menu" size={scale(20)} color={C.ink} />
             </TouchableOpacity>
           </View>
         </View>
@@ -152,16 +153,16 @@ export default function AnalyticsScreen({ navigation }) {
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Icon name="arrow-back" size={22} color={C.ink} />
+            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>Analytics</Text>
             <Text style={styles.headerSubtitle}>Business insights & reports</Text>
           </View>
-          <View style={{ width: 48 }} />
+          <View style={{ width: scale(48) }} />
         </View>
         <View style={styles.emptyContainer}>
-          <Icon name="restaurant-outline" size={80} color={C.muted} />
+          <Icon name="restaurant-outline" size={scale(80)} color={C.muted} />
           <Text style={styles.emptyTitle}>No Restaurant Found</Text>
           <Text style={styles.emptyText}>Please add a restaurant first</Text>
         </View>
@@ -178,7 +179,7 @@ export default function AnalyticsScreen({ navigation }) {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Icon name="arrow-back" size={22} color={C.ink} />
+          <Icon name="arrow-back" size={scale(22)} color={C.ink} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>Analytics</Text>
@@ -193,11 +194,11 @@ export default function AnalyticsScreen({ navigation }) {
             {exporting ? (
               <ActivityIndicator size="small" color={C.primary} />
             ) : (
-              <Icon name="download-outline" size={20} color={C.primary} />
+              <Icon name="download-outline" size={scale(20)} color={C.primary} />
             )}
           </TouchableOpacity>
           <TouchableOpacity style={styles.headerIconBtn} onPress={() => setMenuVisible(true)}>
-            <Icon name="menu" size={20} color={C.ink} />
+            <Icon name="menu" size={scale(20)} color={C.ink} />
           </TouchableOpacity>
         </View>
       </View>
@@ -229,13 +230,13 @@ export default function AnalyticsScreen({ navigation }) {
           <Text style={styles.sectionTitle}>Overview</Text>
           <View style={styles.overviewGrid}>
             <View style={[styles.overviewCard, { borderLeftColor: C.primary }]}>
-              <Icon name="calendar" size={24} color={C.primary} />
+              <Icon name="calendar" size={scale(24)} color={C.primary} />
               <Text style={styles.overviewValue}>₹{summary.bookings?.revenue || 0}</Text>
               <Text style={styles.overviewLabel}>Revenue</Text>
             </View>
 
             <View style={[styles.overviewCard, { borderLeftColor: C.warn }]}>
-              <Icon name="cash" size={24} color={C.warn} />
+              <Icon name="cash" size={scale(24)} color={C.warn} />
               <Text style={styles.overviewValue}>₹{summary.expenses?.total || 0}</Text>
               <Text style={styles.overviewLabel}>Expenses</Text>
             </View>
@@ -243,13 +244,13 @@ export default function AnalyticsScreen({ navigation }) {
 
           <View style={styles.overviewGrid}>
             <View style={[styles.overviewCard, { borderLeftColor: C.ok }]}>
-              <Icon name="trending-up" size={24} color={C.ok} />
+              <Icon name="trending-up" size={scale(24)} color={C.ok} />
               <Text style={styles.overviewValue}>₹{summary.netRevenue || 0}</Text>
               <Text style={styles.overviewLabel}>Net Revenue</Text>
             </View>
 
             <View style={[styles.overviewCard, { borderLeftColor: C.info }]}>
-              <Icon name="receipt" size={24} color={C.info} />
+              <Icon name="receipt" size={scale(24)} color={C.info} />
               <Text style={styles.overviewValue}>{summary.bookings?.count || 0}</Text>
               <Text style={styles.overviewLabel}>Bookings</Text>
             </View>
@@ -300,21 +301,21 @@ export default function AnalyticsScreen({ navigation }) {
             <View style={styles.metricCard}>
               <View style={styles.metricRow}>
                 <View style={styles.metricLeft}>
-                  <Icon name="hardware-chip" size={20} color={C.primary} />
+                  <Icon name="hardware-chip" size={scale(20)} color={C.primary} />
                   <Text style={styles.metricLabel}>Total Equipment</Text>
                 </View>
                 <Text style={styles.metricValue}>{summary.equipment?.count || 0}</Text>
               </View>
               <View style={styles.metricRow}>
                 <View style={styles.metricLeft}>
-                  <Icon name="shield-checkmark" size={20} color={C.info} />
+                  <Icon name="shield-checkmark" size={scale(20)} color={C.info} />
                   <Text style={styles.metricLabel}>Active AMCs</Text>
                 </View>
                 <Text style={styles.metricValue}>{summary.amcSubscriptions?.count || 0}</Text>
               </View>
               <View style={styles.metricRow}>
                 <View style={styles.metricLeft}>
-                  <Icon name="cart-outline" size={20} color={C.ok} />
+                  <Icon name="cart-outline" size={scale(20)} color={C.ok} />
                   <Text style={styles.metricLabel}>Marketplace Orders</Text>
                 </View>
                 <Text style={styles.metricValue}>{summary.marketplaceOrders?.count || 0}</Text>
@@ -359,7 +360,7 @@ export default function AnalyticsScreen({ navigation }) {
           </View>
         )}
 
-        <View style={{ height: 100 }} />
+        <View style={{ height: scale(100) }} />
       </ScrollView>
       <KniBottomNav navigation={navigation} />
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
@@ -387,83 +388,83 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(12),
     backgroundColor: C.card,
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
-  backBtn: { width: 40, height: 40, borderRadius: 10, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
-  headerCenter: { flex: 1, marginLeft: 12 },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
-  headerSubtitle: { fontSize: 12, color: C.muted, marginTop: 2 },
+  backBtn: { width: scale(40), height: scale(40), borderRadius: scale(10), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
+  headerCenter: { flex: 1, marginLeft: scale(12) },
+  headerTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink },
+  headerSubtitle: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(2) },
   headerActions: { flexDirection: 'row' },
-  headerIconBtn: { width: 40, height: 40, borderRadius: 10, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', marginLeft: 8 },
+  headerIconBtn: { width: scale(40), height: scale(40), borderRadius: scale(10), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', marginLeft: scale(8) },
   content: { flex: 1 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: C.ink, marginTop: 16 },
-  emptyText: { fontSize: 14, color: C.muted, textAlign: 'center', marginTop: 8 },
+  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: scale(32) },
+  emptyTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink, marginTop: scale(16) },
+  emptyText: { fontSize: moderateScale(14), color: C.muted, textAlign: 'center', marginTop: scale(8) },
 
-  periodSelector: { flexDirection: 'row', padding: 16, gap: 8 },
+  periodSelector: { flexDirection: 'row', padding: scale(16), gap: scale(8) },
   periodButton: {
     flex: 1,
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingVertical: scale(8),
+    borderRadius: scale(8),
     borderWidth: 1,
     borderColor: C.border,
     backgroundColor: C.card,
     alignItems: 'center',
   },
   periodButtonActive: { backgroundColor: C.primary, borderColor: C.primary },
-  periodText: { fontSize: 13, color: C.text },
+  periodText: { fontSize: moderateScale(13), color: C.text },
   periodTextActive: { color: C.card, fontWeight: '600' },
 
-  filterRow: { paddingHorizontal: 16, marginBottom: 12 },
+  filterRow: { paddingHorizontal: scale(16), marginBottom: scale(12) },
   filterChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(8),
+    borderRadius: scale(20),
     backgroundColor: C.card,
     borderWidth: 1,
     borderColor: C.border,
-    marginRight: 8,
+    marginRight: scale(8),
   },
   filterChipActive: { backgroundColor: C.primary, borderColor: C.primary },
-  filterText: { fontSize: 13, fontWeight: '600', color: C.ink },
+  filterText: { fontSize: moderateScale(13), fontWeight: '600', color: C.ink },
   filterTextActive: { color: '#fff' },
 
-  section: { paddingHorizontal: 16, marginBottom: 24 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: C.ink, marginBottom: 12 },
+  section: { paddingHorizontal: scale(16), marginBottom: scale(24) },
+  sectionTitle: { fontSize: moderateScale(16), fontWeight: '700', color: C.ink, marginBottom: scale(12) },
 
-  overviewGrid: { flexDirection: 'row', gap: 12, marginBottom: 12 },
+  overviewGrid: { flexDirection: 'row', gap: scale(12), marginBottom: scale(12) },
   overviewCard: {
     flex: 1,
     backgroundColor: C.card,
-    padding: 16,
-    borderRadius: 12,
+    padding: scale(16),
+    borderRadius: scale(12),
     borderLeftWidth: 4,
   },
-  overviewValue: { fontSize: 20, fontWeight: '700', color: C.ink, marginTop: 8 },
-  overviewLabel: { fontSize: 12, color: C.muted, marginTop: 4 },
+  overviewValue: { fontSize: moderateScale(20), fontWeight: '700', color: C.ink, marginTop: scale(8) },
+  overviewLabel: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(4) },
   trendBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginTop: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    gap: scale(4),
+    marginTop: scale(8),
+    paddingHorizontal: scale(8),
+    paddingVertical: scale(4),
+    borderRadius: scale(8),
     alignSelf: 'flex-start',
   },
   trendUp: { backgroundColor: '#ECFDF5' },
   trendDown: { backgroundColor: '#FEF2F2' },
-  trendText: { fontSize: 11, fontWeight: '600' },
+  trendText: { fontSize: moderateScale(11), fontWeight: '600' },
 
   metricCard: {
     backgroundColor: C.card,
-    padding: 16,
-    borderRadius: 12,
+    padding: scale(16),
+    borderRadius: scale(12),
     borderWidth: 1,
     borderColor: C.border,
   },
@@ -471,18 +472,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: scale(12),
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
-  metricLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  metricLabel: { fontSize: 14, color: C.text },
-  metricValue: { fontSize: 16, fontWeight: '700', color: C.ink },
+  metricLeft: { flexDirection: 'row', alignItems: 'center', gap: scale(12) },
+  metricLabel: { fontSize: moderateScale(14), color: C.text },
+  metricValue: { fontSize: moderateScale(16), fontWeight: '700', color: C.ink },
 
   categoriesCard: {
     backgroundColor: C.card,
-    padding: 16,
-    borderRadius: 12,
+    padding: scale(16),
+    borderRadius: scale(12),
     borderWidth: 1,
     borderColor: C.border,
   },
@@ -490,22 +491,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: scale(12),
   },
-  categoryLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  categoryDot: { width: 12, height: 12, borderRadius: 6 },
-  categoryName: { fontSize: 14, color: C.text },
-  categoryAmount: { fontSize: 15, fontWeight: '700', color: C.ink },
-  categoryCount: { fontSize: 11, color: C.muted, marginTop: 2, textAlign: 'right' },
+  categoryLeft: { flexDirection: 'row', alignItems: 'center', gap: scale(12) },
+  categoryDot: { width: scale(12), height: scale(12), borderRadius: scale(6) },
+  categoryName: { fontSize: moderateScale(14), color: C.text },
+  categoryAmount: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink },
+  categoryCount: { fontSize: moderateScale(11), color: C.muted, marginTop: scale(2), textAlign: 'right' },
 
   insightCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: scale(12),
     backgroundColor: '#FFFBEB',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
+    padding: scale(16),
+    borderRadius: scale(12),
+    marginBottom: scale(12),
   },
-  insightText: { flex: 1, fontSize: 13, color: C.text, lineHeight: 18 },
+  insightText: { flex: 1, fontSize: moderateScale(13), color: C.text, lineHeight: moderateScale(18) },
 });

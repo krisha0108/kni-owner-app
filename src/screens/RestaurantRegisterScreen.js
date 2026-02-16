@@ -11,6 +11,7 @@ import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import messaging from '@react-native-firebase/messaging';
 
+import { scale, moderateScale } from '../utils/responsive';
 const C = {
   primary: '#EF3A3A',
   ink: '#1D2254',
@@ -267,7 +268,7 @@ export default function RestaurantRegisterScreen({ navigation }) {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: scale(40) }}>
       {/* Logo */}
       <Image
         source={require('../assets/images/kni-logo.png')}
@@ -286,7 +287,7 @@ export default function RestaurantRegisterScreen({ navigation }) {
           {googleLoading ? (
             <ActivityIndicator size="small" />
           ) : (
-            <Icon name="logo-google" size={18} color="#4285F4" />
+            <Icon name="logo-google" size={scale(18)} color="#4285F4" />
           )}
         </View>
         <Text style={styles.googleTxt}>Continue with Google</Text>
@@ -301,7 +302,7 @@ export default function RestaurantRegisterScreen({ navigation }) {
 
       {/* Name Field */}
       <View style={styles.inputWrapper}>
-        <Icon name="person-outline" size={20} color={C.muted} style={styles.icon} />
+        <Icon name="person-outline" size={scale(20)} color={C.muted} style={styles.icon} />
         <TextInput
           placeholder="Full Name"
           style={styles.input}
@@ -314,7 +315,7 @@ export default function RestaurantRegisterScreen({ navigation }) {
 
       {/* Email Field */}
       <View style={styles.inputWrapper}>
-        <Icon name="mail-outline" size={20} color={C.muted} style={styles.icon} />
+        <Icon name="mail-outline" size={scale(20)} color={C.muted} style={styles.icon} />
         <TextInput
           placeholder="Email Address"
           style={styles.input}
@@ -328,7 +329,7 @@ export default function RestaurantRegisterScreen({ navigation }) {
 
       {/* Phone Field (Optional) */}
       <View style={styles.inputWrapper}>
-        <Icon name="call-outline" size={20} color={C.muted} style={styles.icon} />
+        <Icon name="call-outline" size={scale(20)} color={C.muted} style={styles.icon} />
         <TextInput
           placeholder="Phone Number (optional)"
           style={styles.input}
@@ -341,7 +342,7 @@ export default function RestaurantRegisterScreen({ navigation }) {
 
       {/* Password Field */}
       <View style={styles.inputWrapper}>
-        <Icon name="lock-closed-outline" size={20} color={C.muted} style={styles.icon} />
+        <Icon name="lock-closed-outline" size={scale(20)} color={C.muted} style={styles.icon} />
         <TextInput
           placeholder="Password"
           style={styles.input}
@@ -354,7 +355,7 @@ export default function RestaurantRegisterScreen({ navigation }) {
         <TouchableOpacity onPress={() => setSecureText(!secureText)} style={styles.eyeIcon}>
           <Icon
             name={secureText ? 'eye-off-outline' : 'eye-outline'}
-            size={20}
+            size={scale(20)}
             color={C.muted}
           />
         </TouchableOpacity>
@@ -366,7 +367,7 @@ export default function RestaurantRegisterScreen({ navigation }) {
           <Text style={styles.hintTitle}>Password must have:</Text>
           {passwordErrors.map((error, index) => (
             <View key={index} style={styles.hintRow}>
-              <Icon name="close-circle" size={14} color={C.danger} />
+              <Icon name="close-circle" size={scale(14)} color={C.danger} />
               <Text style={styles.hintText}>{error}</Text>
             </View>
           ))}
@@ -376,7 +377,7 @@ export default function RestaurantRegisterScreen({ navigation }) {
       {form.password && passwordErrors.length === 0 && (
         <View style={[styles.passwordHints, { backgroundColor: '#ECFDF5' }]}>
           <View style={styles.hintRow}>
-            <Icon name="checkmark-circle" size={14} color={C.ok} />
+            <Icon name="checkmark-circle" size={scale(14)} color={C.ok} />
             <Text style={[styles.hintText, { color: C.ok }]}>Password meets all requirements</Text>
           </View>
         </View>
@@ -384,7 +385,7 @@ export default function RestaurantRegisterScreen({ navigation }) {
 
       {/* Confirm Password Field */}
       <View style={styles.inputWrapper}>
-        <Icon name="lock-closed-outline" size={20} color={C.muted} style={styles.icon} />
+        <Icon name="lock-closed-outline" size={scale(20)} color={C.muted} style={styles.icon} />
         <TextInput
           placeholder="Confirm Password"
           style={styles.input}
@@ -400,7 +401,7 @@ export default function RestaurantRegisterScreen({ navigation }) {
         >
           <Icon
             name={secureConfirmText ? 'eye-off-outline' : 'eye-outline'}
-            size={20}
+            size={scale(20)}
             color={C.muted}
           />
         </TouchableOpacity>
@@ -415,7 +416,7 @@ export default function RestaurantRegisterScreen({ navigation }) {
           <View style={styles.hintRow}>
             <Icon
               name={form.password === form.confirmPassword ? 'checkmark-circle' : 'close-circle'}
-              size={14}
+              size={scale(14)}
               color={form.password === form.confirmPassword ? C.ok : C.danger}
             />
             <Text style={[
@@ -459,63 +460,63 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: C.bg,
-    padding: 20
+    padding: scale(20)
   },
   logo: {
-    width: 100,
-    height: 100,
+    width: scale(100),
+    height: scale(100),
     alignSelf: 'center',
     resizeMode: 'contain',
-    marginTop: 20,
-    marginBottom: 12
+    marginTop: scale(20),
+    marginBottom: scale(12)
   },
   title: {
-    fontSize: 24,
+    fontSize: moderateScale(24),
     fontWeight: '700',
     color: C.ink,
     textAlign: 'center',
-    marginBottom: 8
+    marginBottom: scale(8)
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: C.muted,
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: scale(24),
   },
   googleBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: C.card,
-    borderRadius: 12,
+    borderRadius: scale(12),
     borderWidth: 1,
     borderColor: C.border,
-    paddingVertical: 14,
-    marginBottom: 16,
+    paddingVertical: scale(14),
+    marginBottom: scale(16),
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
-    shadowRadius: 2,
+    shadowRadius: scale(2),
     elevation: 1,
   },
   googleIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
+    width: scale(28),
+    height: scale(28),
+    borderRadius: scale(8),
     backgroundColor: '#F1F5FF',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
+    marginRight: scale(10),
   },
   googleTxt: {
     color: C.ink,
     fontWeight: '700',
-    fontSize: 15,
+    fontSize: moderateScale(15),
   },
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 20,
+    marginVertical: scale(20),
   },
   dividerLine: {
     flex: 1,
@@ -523,9 +524,9 @@ const styles = StyleSheet.create({
     backgroundColor: C.border,
   },
   dividerText: {
-    marginHorizontal: 12,
+    marginHorizontal: scale(12),
     color: C.muted,
-    fontSize: 13,
+    fontSize: moderateScale(13),
     fontWeight: '500',
   },
   inputWrapper: {
@@ -534,62 +535,62 @@ const styles = StyleSheet.create({
     backgroundColor: C.card,
     borderColor: C.border,
     borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 4,
-    marginBottom: 14,
+    borderRadius: scale(12),
+    paddingHorizontal: scale(14),
+    paddingVertical: scale(4),
+    marginBottom: scale(14),
   },
-  icon: { marginRight: 10 },
+  icon: { marginRight: scale(10) },
   input: {
     flex: 1,
-    fontSize: 15,
+    fontSize: moderateScale(15),
     color: C.text,
-    paddingVertical: 12
+    paddingVertical: scale(12)
   },
-  eyeIcon: { paddingLeft: 10 },
+  eyeIcon: { paddingLeft: scale(10) },
   passwordHints: {
     backgroundColor: '#FEF2F2',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 14,
+    borderRadius: scale(8),
+    padding: scale(12),
+    marginBottom: scale(14),
   },
   hintTitle: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     fontWeight: '600',
     color: C.text,
-    marginBottom: 6,
+    marginBottom: scale(6),
   },
   hintRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: scale(4),
   },
   hintText: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     color: C.danger,
-    marginLeft: 6,
+    marginLeft: scale(6),
   },
   registerButton: {
     backgroundColor: C.primary,
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: scale(16),
+    borderRadius: scale(12),
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: scale(8),
     shadowColor: C.primary,
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: scale(4) },
     shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowRadius: scale(8),
     elevation: 4,
   },
   registerText: {
     color: '#FFF',
     fontWeight: '700',
-    fontSize: 16
+    fontSize: moderateScale(16)
   },
   footerText: {
     textAlign: 'center',
-    marginTop: 24,
+    marginTop: scale(24),
     color: C.muted,
-    fontSize: 14
+    fontSize: moderateScale(14)
   },
 });

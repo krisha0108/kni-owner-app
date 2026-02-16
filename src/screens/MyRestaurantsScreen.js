@@ -17,6 +17,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
+import { scale, moderateScale } from '../utils/responsive';
 // Premium Color Palette (Consistent with other screens)
 const C = {
   primary: '#EF3A3A',
@@ -151,7 +152,7 @@ export default function MyRestaurantsScreen({ navigation }) {
 
     return (
       <TouchableOpacity
-        style={[st.card, isTablet && { marginHorizontal: 6 }]}
+        style={[st.card, isTablet && { marginHorizontal: scale(6) }]}
         activeOpacity={0.9}
         onPress={() => navigation.navigate('RestaurantView', { restaurantId: item.id })}
         disabled={isDeleting}
@@ -162,12 +163,12 @@ export default function MyRestaurantsScreen({ navigation }) {
             <Image source={{ uri: getImageUrl(item.restaurantImageUrl) }} style={st.cardImage} />
           ) : (
             <View style={st.cardImagePlaceholder}>
-              <Icon name="restaurant-outline" size={40} color={C.muted} />
+              <Icon name="restaurant-outline" size={scale(40)} color={C.muted} />
             </View>
           )}
           {/* Status Badge */}
           <View style={[st.statusBadge, { backgroundColor: statusStyle.bg }]}>
-            <Icon name={statusStyle.icon} size={12} color={statusStyle.text} />
+            <Icon name={statusStyle.icon} size={scale(12)} color={statusStyle.text} />
             <Text style={[st.statusBadgeText, { color: statusStyle.text }]}>{statusStyle.label}</Text>
           </View>
         </View>
@@ -178,21 +179,21 @@ export default function MyRestaurantsScreen({ navigation }) {
 
           {item.address && (
             <View style={st.infoRow}>
-              <Icon name="location" size={14} color={C.primary} />
+              <Icon name="location" size={scale(14)} color={C.primary} />
               <Text style={st.infoText} numberOfLines={1}>{item.address}</Text>
             </View>
           )}
 
           {item.city && (
             <View style={st.infoRow}>
-              <Icon name="business" size={14} color={C.muted} />
+              <Icon name="business" size={scale(14)} color={C.muted} />
               <Text style={st.infoTextMuted}>{item.city}{item.pincode ? ` - ${item.pincode}` : ''}</Text>
             </View>
           )}
 
           {item.fssaiNumber && (
             <View style={st.fssaiBadge}>
-              <Icon name="shield-checkmark" size={12} color={C.success} />
+              <Icon name="shield-checkmark" size={scale(12)} color={C.success} />
               <Text style={st.fssaiText}>FSSAI Verified</Text>
             </View>
           )}
@@ -205,7 +206,7 @@ export default function MyRestaurantsScreen({ navigation }) {
             onPress={() => navigation.navigate('RestaurantView', { restaurantId: item.id })}
             disabled={isDeleting}
           >
-            <Icon name="eye" size={16} color="#fff" />
+            <Icon name="eye" size={scale(16)} color="#fff" />
             <Text style={st.viewBtnText}>View</Text>
           </TouchableOpacity>
 
@@ -214,7 +215,7 @@ export default function MyRestaurantsScreen({ navigation }) {
             onPress={() => handleEdit(item)}
             disabled={isDeleting}
           >
-            <Icon name="pencil" size={18} color={C.info} />
+            <Icon name="pencil" size={scale(18)} color={C.info} />
           </TouchableOpacity>
 
           {canDelete(item) && (
@@ -226,7 +227,7 @@ export default function MyRestaurantsScreen({ navigation }) {
               {isDeleting ? (
                 <ActivityIndicator size="small" color={C.danger} />
               ) : (
-                <Icon name="trash" size={18} color={C.danger} />
+                <Icon name="trash" size={scale(18)} color={C.danger} />
               )}
             </TouchableOpacity>
           )}
@@ -254,7 +255,7 @@ export default function MyRestaurantsScreen({ navigation }) {
                 style={[st.filterChip, isActive && st.filterChipActive]}
                 onPress={() => setStatusFilter(filter.key)}
               >
-                <Icon name={filter.icon} size={16} color={isActive ? '#fff' : filter.color} />
+                <Icon name={filter.icon} size={scale(16)} color={isActive ? '#fff' : filter.color} />
                 <Text style={[st.filterChipText, isActive && st.filterChipTextActive]}>
                   {filter.label} ({count})
                 </Text>
@@ -269,7 +270,7 @@ export default function MyRestaurantsScreen({ navigation }) {
         <Text style={st.resultsTitle}>{filtered.length} Restaurant{filtered.length !== 1 ? 's' : ''}</Text>
         {statusFilter !== 'all' && (
           <TouchableOpacity style={st.clearFilterBtn} onPress={() => setStatusFilter('all')}>
-            <Icon name="close-circle" size={14} color={C.primary} />
+            <Icon name="close-circle" size={scale(14)} color={C.primary} />
             <Text style={st.clearFilterText}>Clear</Text>
           </TouchableOpacity>
         )}
@@ -308,7 +309,7 @@ export default function MyRestaurantsScreen({ navigation }) {
       >
         <View style={st.heroContent}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
-            <Icon name="arrow-back" size={22} color="#fff" />
+            <Icon name="arrow-back" size={scale(22)} color="#fff" />
           </TouchableOpacity>
           <View style={st.heroTextContainer}>
             <Text style={st.heroTitle}>My Restaurants</Text>
@@ -319,10 +320,10 @@ export default function MyRestaurantsScreen({ navigation }) {
               style={st.heroIconBtn}
               onPress={() => navigation.navigate('RestaurantOnboarding', { isFirstRestaurant: false })}
             >
-              <Icon name="add" size={22} color="#fff" />
+              <Icon name="add" size={scale(22)} color="#fff" />
             </TouchableOpacity>
             <TouchableOpacity style={st.heroIconBtn} onPress={() => setMenuVisible(true)}>
-              <Icon name="menu" size={22} color="#fff" />
+              <Icon name="menu" size={scale(22)} color="#fff" />
             </TouchableOpacity>
           </View>
         </View>
@@ -343,7 +344,7 @@ export default function MyRestaurantsScreen({ navigation }) {
         ListEmptyComponent={
           <View style={st.emptyState}>
             <View style={st.emptyIconContainer}>
-              <Icon name="restaurant-outline" size={64} color={C.muted} />
+              <Icon name="restaurant-outline" size={scale(64)} color={C.muted} />
             </View>
             <Text style={st.emptyTitle}>{restaurants.length === 0 ? 'No Restaurants Yet' : 'No Results'}</Text>
             <Text style={st.emptySubtitle}>
@@ -354,7 +355,7 @@ export default function MyRestaurantsScreen({ navigation }) {
                 style={st.emptyBtn}
                 onPress={() => navigation.navigate('RestaurantOnboarding', { isFirstRestaurant: false })}
               >
-                <Icon name="add" size={18} color="#fff" />
+                <Icon name="add" size={scale(18)} color="#fff" />
                 <Text style={st.emptyBtnText}>Add Restaurant</Text>
               </TouchableOpacity>
             )}
@@ -366,7 +367,7 @@ export default function MyRestaurantsScreen({ navigation }) {
               style={st.addMoreBtn}
               onPress={() => navigation.navigate('RestaurantOnboarding', { isFirstRestaurant: false })}
             >
-              <Icon name="add-circle-outline" size={24} color={C.primary} />
+              <Icon name="add-circle-outline" size={scale(24)} color={C.primary} />
               <Text style={st.addMoreText}>Add Another Restaurant</Text>
             </TouchableOpacity>
           ) : null
@@ -384,64 +385,64 @@ const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
 
   // Hero Section (Compact)
-  heroSection: { paddingTop: 8, paddingBottom: 16, borderBottomLeftRadius: 20, borderBottomRightRadius: 20 },
-  heroContent: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 },
-  backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  heroSection: { paddingTop: scale(8), paddingBottom: scale(16), borderBottomLeftRadius: scale(20), borderBottomRightRadius: scale(20) },
+  heroContent: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(16) },
+  backBtn: { width: scale(40), height: scale(40), borderRadius: scale(12), backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginRight: scale(12) },
   heroTextContainer: { flex: 1 },
-  heroTitle: { fontSize: 24, fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
-  heroSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.8)', marginTop: 2 },
-  heroActions: { flexDirection: 'row', gap: 8 },
-  heroIconBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
+  heroTitle: { fontSize: moderateScale(24), fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
+  heroSubtitle: { fontSize: moderateScale(13), color: 'rgba(255,255,255,0.8)', marginTop: scale(2) },
+  heroActions: { flexDirection: 'row', gap: scale(8) },
+  heroIconBtn: { width: scale(40), height: scale(40), borderRadius: scale(12), backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
 
   // Filters
-  filterSection: { paddingVertical: 12, backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border },
-  filterScroll: { paddingHorizontal: 16 },
-  filterChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 10, marginRight: 8, backgroundColor: C.card, borderRadius: 20, borderWidth: 1.5, borderColor: C.border },
+  filterSection: { paddingVertical: scale(12), backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border },
+  filterScroll: { paddingHorizontal: scale(16) },
+  filterChip: { flexDirection: 'row', alignItems: 'center', gap: scale(6), paddingHorizontal: scale(14), paddingVertical: scale(10), marginRight: scale(8), backgroundColor: C.card, borderRadius: scale(20), borderWidth: 1.5, borderColor: C.border },
   filterChipActive: { backgroundColor: C.primary, borderColor: C.primary },
-  filterChipText: { fontSize: 13, fontWeight: '600', color: C.ink },
+  filterChipText: { fontSize: moderateScale(13), fontWeight: '600', color: C.ink },
   filterChipTextActive: { color: '#fff' },
 
   // Results Header
-  resultsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
-  resultsTitle: { fontSize: 15, fontWeight: '700', color: C.ink },
-  clearFilterBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: C.primaryLight, borderRadius: 8 },
-  clearFilterText: { fontSize: 12, fontWeight: '600', color: C.primary },
+  resultsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: scale(16), paddingVertical: scale(12) },
+  resultsTitle: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink },
+  clearFilterBtn: { flexDirection: 'row', alignItems: 'center', gap: scale(4), paddingHorizontal: scale(10), paddingVertical: scale(6), backgroundColor: C.primaryLight, borderRadius: scale(8) },
+  clearFilterText: { fontSize: moderateScale(12), fontWeight: '600', color: C.primary },
 
   // List
-  listContent: { paddingHorizontal: 16, paddingBottom: 120 },
+  listContent: { paddingHorizontal: scale(16), paddingBottom: scale(120) },
   columnWrapper: { justifyContent: 'space-between' },
 
   // Card
-  card: { flex: 1, backgroundColor: C.card, borderRadius: 16, marginBottom: 12, shadowColor: C.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3, overflow: 'hidden' },
-  cardImageContainer: { height: 120, backgroundColor: C.bg, position: 'relative' },
+  card: { flex: 1, backgroundColor: C.card, borderRadius: scale(16), marginBottom: scale(12), shadowColor: C.shadow, shadowOffset: { width: 0, height: scale(2) }, shadowOpacity: 0.08, shadowRadius: scale(8), elevation: 3, overflow: 'hidden' },
+  cardImageContainer: { height: scale(120), backgroundColor: C.bg, position: 'relative' },
   cardImage: { width: '100%', height: '100%' },
   cardImagePlaceholder: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
-  statusBadge: { position: 'absolute', top: 10, left: 10, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10 },
-  statusBadgeText: { fontSize: 11, fontWeight: '700' },
-  cardInfo: { padding: 14 },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: C.ink, marginBottom: 8 },
-  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
-  infoText: { fontSize: 13, color: C.text, flex: 1 },
-  infoTextMuted: { fontSize: 12, color: C.muted },
-  fssaiBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8, paddingHorizontal: 10, paddingVertical: 5, backgroundColor: C.successLight, borderRadius: 8, alignSelf: 'flex-start' },
-  fssaiText: { fontSize: 11, fontWeight: '600', color: C.success },
-  cardActions: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 14, paddingTop: 0 },
-  viewBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, backgroundColor: C.primary, borderRadius: 10 },
-  viewBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
-  iconBtn: { width: 40, height: 40, borderRadius: 10, backgroundColor: C.infoLight, alignItems: 'center', justifyContent: 'center' },
+  statusBadge: { position: 'absolute', top: scale(10), left: scale(10), flexDirection: 'row', alignItems: 'center', gap: scale(4), paddingHorizontal: scale(10), paddingVertical: scale(5), borderRadius: scale(10) },
+  statusBadgeText: { fontSize: moderateScale(11), fontWeight: '700' },
+  cardInfo: { padding: scale(14) },
+  cardTitle: { fontSize: moderateScale(16), fontWeight: '700', color: C.ink, marginBottom: scale(8) },
+  infoRow: { flexDirection: 'row', alignItems: 'center', gap: scale(6), marginBottom: scale(4) },
+  infoText: { fontSize: moderateScale(13), color: C.text, flex: 1 },
+  infoTextMuted: { fontSize: moderateScale(12), color: C.muted },
+  fssaiBadge: { flexDirection: 'row', alignItems: 'center', gap: scale(4), marginTop: scale(8), paddingHorizontal: scale(10), paddingVertical: scale(5), backgroundColor: C.successLight, borderRadius: scale(8), alignSelf: 'flex-start' },
+  fssaiText: { fontSize: moderateScale(11), fontWeight: '600', color: C.success },
+  cardActions: { flexDirection: 'row', alignItems: 'center', gap: scale(8), padding: scale(14), paddingTop: 0 },
+  viewBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: scale(6), paddingVertical: scale(10), backgroundColor: C.primary, borderRadius: scale(10) },
+  viewBtnText: { fontSize: moderateScale(13), fontWeight: '700', color: '#fff' },
+  iconBtn: { width: scale(40), height: scale(40), borderRadius: scale(10), backgroundColor: C.infoLight, alignItems: 'center', justifyContent: 'center' },
 
   // Loading & Empty
-  loadingHero: { paddingVertical: 24, paddingHorizontal: 20, borderBottomLeftRadius: 20, borderBottomRightRadius: 20 },
+  loadingHero: { paddingVertical: scale(24), paddingHorizontal: scale(20), borderBottomLeftRadius: scale(20), borderBottomRightRadius: scale(20) },
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  loadingText: { marginTop: 16, fontSize: 15, color: C.muted },
-  emptyState: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 40 },
-  emptyIconContainer: { width: 120, height: 120, borderRadius: 60, backgroundColor: C.border, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
-  emptyTitle: { fontSize: 20, fontWeight: '700', color: C.ink, marginBottom: 8 },
-  emptySubtitle: { fontSize: 14, color: C.muted, textAlign: 'center' },
-  emptyBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 24, paddingHorizontal: 24, paddingVertical: 14, backgroundColor: C.primary, borderRadius: 14 },
-  emptyBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  loadingText: { marginTop: scale(16), fontSize: moderateScale(15), color: C.muted },
+  emptyState: { alignItems: 'center', paddingTop: scale(60), paddingHorizontal: scale(40) },
+  emptyIconContainer: { width: scale(120), height: scale(120), borderRadius: scale(60), backgroundColor: C.border, alignItems: 'center', justifyContent: 'center', marginBottom: scale(20) },
+  emptyTitle: { fontSize: moderateScale(20), fontWeight: '700', color: C.ink, marginBottom: scale(8) },
+  emptySubtitle: { fontSize: moderateScale(14), color: C.muted, textAlign: 'center' },
+  emptyBtn: { flexDirection: 'row', alignItems: 'center', gap: scale(8), marginTop: scale(24), paddingHorizontal: scale(24), paddingVertical: scale(14), backgroundColor: C.primary, borderRadius: scale(14) },
+  emptyBtnText: { fontSize: moderateScale(15), fontWeight: '700', color: '#fff' },
 
   // Add More Button
-  addMoreBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 8, marginBottom: 20, paddingVertical: 16, backgroundColor: C.card, borderRadius: 14, borderWidth: 2, borderColor: C.primary, borderStyle: 'dashed' },
-  addMoreText: { fontSize: 15, fontWeight: '700', color: C.primary },
+  addMoreBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: scale(10), marginTop: scale(8), marginBottom: scale(20), paddingVertical: scale(16), backgroundColor: C.card, borderRadius: scale(14), borderWidth: 2, borderColor: C.primary, borderStyle: 'dashed' },
+  addMoreText: { fontSize: moderateScale(15), fontWeight: '700', color: C.primary },
 });

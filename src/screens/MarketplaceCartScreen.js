@@ -16,6 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
+import { scale, moderateScale } from '../utils/responsive';
 const C = {
   primary: '#EF3A3A',
   ink: '#1D2254',
@@ -126,10 +127,10 @@ export default function MarketplaceCartScreen({ navigation }) {
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Icon name="arrow-back" size={24} color={C.ink} />
+            <Icon name="arrow-back" size={scale(24)} color={C.ink} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Marketplace Cart</Text>
-          <View style={{ width: 40 }} />
+          <View style={{ width: scale(40) }} />
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={C.primary} />
@@ -143,7 +144,7 @@ export default function MarketplaceCartScreen({ navigation }) {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Icon name="arrow-back" size={24} color={C.ink} />
+          <Icon name="arrow-back" size={scale(24)} color={C.ink} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Marketplace Cart ({totalItems})</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -151,10 +152,10 @@ export default function MarketplaceCartScreen({ navigation }) {
             onPress={handleClearCart}
             disabled={cart.length === 0}
           >
-            <Icon name="trash-outline" size={20} color={cart.length > 0 ? C.danger : C.muted} />
+            <Icon name="trash-outline" size={scale(20)} color={cart.length > 0 ? C.danger : C.muted} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
-            <Icon name="menu" size={22} color="#1D2254" />
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
+            <Icon name="menu" size={scale(22)} color="#1D2254" />
           </TouchableOpacity>
         </View>
       </View>
@@ -171,7 +172,7 @@ export default function MarketplaceCartScreen({ navigation }) {
               <Image source={{ uri: item.imageUrl }} style={styles.itemImage} />
             ) : (
               <View style={[styles.itemImage, styles.placeholderImage]}>
-                <Icon name="image-outline" size={32} color={C.muted} />
+                <Icon name="image-outline" size={scale(32)} color={C.muted} />
               </View>
             )}
 
@@ -198,7 +199,7 @@ export default function MarketplaceCartScreen({ navigation }) {
                 >
                   <Icon
                     name="remove-circle-outline"
-                    size={28}
+                    size={scale(28)}
                     color={item.quantity <= 1 ? C.muted : C.primary}
                   />
                 </TouchableOpacity>
@@ -207,7 +208,7 @@ export default function MarketplaceCartScreen({ navigation }) {
                   onPress={() => handleUpdateQuantity(item.productId, item.quantity + 1)}
                   style={styles.quantityBtn}
                 >
-                  <Icon name="add-circle-outline" size={28} color={C.ok} />
+                  <Icon name="add-circle-outline" size={scale(28)} color={C.ok} />
                 </TouchableOpacity>
               </View>
 
@@ -216,14 +217,14 @@ export default function MarketplaceCartScreen({ navigation }) {
                 onPress={() => handleRemove(item.productId)}
                 style={styles.removeBtn}
               >
-                <Icon name="trash-outline" size={20} color={C.danger} />
+                <Icon name="trash-outline" size={scale(20)} color={C.danger} />
               </TouchableOpacity>
             </View>
           </View>
         )}
         ListEmptyComponent={
           <View style={styles.emptyBox}>
-            <Icon name="cart-outline" size={80} color={C.muted} />
+            <Icon name="cart-outline" size={scale(80)} color={C.muted} />
             <Text style={styles.emptyTitle}>Your cart is empty</Text>
             <Text style={styles.emptyText}>Browse marketplace to add products</Text>
             <TouchableOpacity
@@ -250,7 +251,7 @@ export default function MarketplaceCartScreen({ navigation }) {
             onPress={handleProceedToOrder}
           >
             <Text style={styles.checkoutButtonText}>Proceed to Order</Text>
-            <Icon name="arrow-forward" size={20} color="#FFF" />
+            <Icon name="arrow-forward" size={scale(20)} color="#FFF" />
           </TouchableOpacity>
         </View>
       )}
@@ -269,22 +270,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(12),
     backgroundColor: C.card,
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
   backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(12),
     backgroundColor: C.bg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: moderateScale(18),
     fontWeight: '700',
     color: C.ink,
   },
@@ -294,22 +295,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   listContent: {
-    padding: 16,
+    padding: scale(16),
     flexGrow: 1,
   },
   cartItem: {
     flexDirection: 'row',
     backgroundColor: C.card,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
+    borderRadius: scale(12),
+    padding: scale(12),
+    marginBottom: scale(12),
     borderWidth: 1,
     borderColor: C.border,
   },
   itemImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
+    width: scale(80),
+    height: scale(80),
+    borderRadius: scale(8),
     resizeMode: 'cover',
   },
   placeholderImage: {
@@ -319,74 +320,74 @@ const styles = StyleSheet.create({
   },
   itemDetails: {
     flex: 1,
-    marginLeft: 12,
+    marginLeft: scale(12),
     justifyContent: 'center',
   },
   itemName: {
-    fontSize: 15,
+    fontSize: moderateScale(15),
     fontWeight: '600',
     color: C.text,
-    marginBottom: 4,
+    marginBottom: scale(4),
   },
   itemPrice: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: '700',
     color: C.primary,
-    marginBottom: 4,
+    marginBottom: scale(4),
   },
   vendorName: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     color: C.muted,
   },
   quantityControls: {
-    marginLeft: 8,
+    marginLeft: scale(8),
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   quantityRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: scale(8),
   },
   quantityBtn: {
-    padding: 2,
+    padding: scale(2),
   },
   quantity: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: '700',
     color: C.text,
-    minWidth: 24,
+    minWidth: scale(24),
     textAlign: 'center',
   },
   removeBtn: {
-    padding: 8,
+    padding: scale(8),
   },
   emptyBox: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 80,
+    paddingVertical: scale(80),
   },
   emptyTitle: {
-    fontSize: 20,
+    fontSize: moderateScale(20),
     fontWeight: '700',
     color: C.text,
-    marginTop: 16,
+    marginTop: scale(16),
   },
   emptyText: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: C.muted,
-    marginTop: 8,
-    marginBottom: 24,
+    marginTop: scale(8),
+    marginBottom: scale(24),
   },
   browseButton: {
     backgroundColor: C.primary,
-    borderRadius: 12,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+    borderRadius: scale(12),
+    paddingHorizontal: scale(24),
+    paddingVertical: scale(12),
   },
   browseButtonText: {
-    fontSize: 15,
+    fontSize: moderateScale(15),
     fontWeight: '600',
     color: '#FFF',
   },
@@ -394,23 +395,23 @@ const styles = StyleSheet.create({
     backgroundColor: C.card,
     borderTopWidth: 1,
     borderTopColor: C.border,
-    padding: 16,
+    padding: scale(16),
   },
   totalSection: {
-    marginBottom: 12,
+    marginBottom: scale(12),
   },
   totalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: scale(4),
   },
   totalLabel: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: C.muted,
   },
   totalValue: {
-    fontSize: 20,
+    fontSize: moderateScale(20),
     fontWeight: '700',
     color: C.text,
   },
@@ -418,13 +419,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: scale(8),
     backgroundColor: C.primary,
-    borderRadius: 12,
-    paddingVertical: 16,
+    borderRadius: scale(12),
+    paddingVertical: scale(16),
   },
   checkoutButtonText: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: '700',
     color: '#FFF',
   },

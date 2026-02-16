@@ -17,6 +17,7 @@ import { RestaurantSelectorBar } from '../components/RestaurantSelector';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
+import { scale, moderateScale } from '../utils/responsive';
 const { width: W } = Dimensions.get('window');
 
 const C = {
@@ -74,14 +75,14 @@ const fmtDate = (d) => {
 /* ─── Skeleton ─── */
 function SkeletonLoader({ pulse }) {
   return (
-    <View style={{ paddingHorizontal: 16, paddingTop: 16 }}>
+    <View style={{ paddingHorizontal: scale(16), paddingTop: scale(16) }}>
       <Animated.View style={[st.skelHero, { opacity: pulse }]} />
-      <View style={{ flexDirection: 'row', gap: 8, marginTop: 14 }}>
+      <View style={{ flexDirection: 'row', gap: scale(8), marginTop: scale(14) }}>
         {[1, 2, 3, 4].map(i => (
           <Animated.View key={i} style={[st.skelCard, { opacity: pulse }]} />
         ))}
       </View>
-      <View style={{ flexDirection: 'row', gap: 10, marginTop: 14 }}>
+      <View style={{ flexDirection: 'row', gap: scale(10), marginTop: scale(14) }}>
         {[1, 2].map(i => (
           <Animated.View key={i} style={[st.skelAction, { opacity: pulse }]} />
         ))}
@@ -243,7 +244,7 @@ export default function KhatabookScreen({ navigation }) {
       >
         <View style={st.heroContent}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
-            <Icon name="arrow-back" size={22} color="#fff" />
+            <Icon name="arrow-back" size={scale(22)} color="#fff" />
           </TouchableOpacity>
           <View style={st.heroTextContainer}>
             <Text style={st.heroTitle}>Khatabook</Text>
@@ -255,10 +256,10 @@ export default function KhatabookScreen({ navigation }) {
               style={[st.heroIconBtn, refreshing && { opacity: 0.5 }]}
               disabled={refreshing}
             >
-              <Icon name="refresh" size={20} color="#fff" />
+              <Icon name="refresh" size={scale(20)} color="#fff" />
             </TouchableOpacity>
             <TouchableOpacity style={st.heroIconBtn} onPress={() => setMenuVisible(true)}>
-              <Icon name="menu" size={20} color="#fff" />
+              <Icon name="menu" size={scale(20)} color="#fff" />
             </TouchableOpacity>
           </View>
         </View>
@@ -267,7 +268,7 @@ export default function KhatabookScreen({ navigation }) {
         <View style={st.heroSummaryCard}>
           <View style={st.heroSummaryLeft}>
             <View style={[st.heroSummaryIcon, { backgroundColor: isProfit ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)' }]}>
-              <Icon name={isProfit ? 'trending-up' : 'trending-down'} size={20} color={isProfit ? '#10B981' : '#EF4444'} />
+              <Icon name={isProfit ? 'trending-up' : 'trending-down'} size={scale(20)} color={isProfit ? '#10B981' : '#EF4444'} />
             </View>
             <View>
               <Text style={st.heroSummaryLabel}>Net Revenue</Text>
@@ -275,7 +276,7 @@ export default function KhatabookScreen({ navigation }) {
             </View>
           </View>
           <View style={[st.heroSummaryBadge, { backgroundColor: isProfit ? C.successLight : C.dangerLight }]}>
-            <Icon name={isProfit ? 'arrow-up' : 'arrow-down'} size={12} color={isProfit ? C.success : C.danger} />
+            <Icon name={isProfit ? 'arrow-up' : 'arrow-down'} size={scale(12)} color={isProfit ? C.success : C.danger} />
             <Text style={[st.heroSummaryBadgeText, { color: isProfit ? C.success : C.danger }]}>
               {isProfit ? 'Profit' : 'Loss'}
             </Text>
@@ -298,7 +299,7 @@ export default function KhatabookScreen({ navigation }) {
                 onPress={() => setSelectedPeriod(tab.key)}
                 activeOpacity={0.7}
               >
-                <Icon name={tab.icon} size={14} color={isActive ? '#fff' : C.muted} />
+                <Icon name={tab.icon} size={scale(14)} color={isActive ? '#fff' : C.muted} />
                 <Text style={[st.periodChipText, isActive && st.periodChipTextActive]}>{tab.label}</Text>
               </TouchableOpacity>
             );
@@ -316,7 +317,7 @@ export default function KhatabookScreen({ navigation }) {
         <View style={st.miniCardsRow}>
           <View style={st.miniCard}>
             <LinearGradient colors={['#D1FAE5', '#A7F3D0']} style={st.miniCardIcon}>
-              <Icon name="arrow-down-circle" size={18} color={C.success} />
+              <Icon name="arrow-down-circle" size={scale(18)} color={C.success} />
             </LinearGradient>
             <Text style={st.miniCardValue}>{fmt(data?.totalRevenue)}</Text>
             <Text style={st.miniCardLabel}>REVENUE</Text>
@@ -324,7 +325,7 @@ export default function KhatabookScreen({ navigation }) {
 
           <View style={st.miniCard}>
             <LinearGradient colors={['#FEE2E2', '#FECACA']} style={st.miniCardIcon}>
-              <Icon name="arrow-up-circle" size={18} color={C.danger} />
+              <Icon name="arrow-up-circle" size={scale(18)} color={C.danger} />
             </LinearGradient>
             <Text style={st.miniCardValue}>{fmt(data?.totalExpenses)}</Text>
             <Text style={st.miniCardLabel}>EXPENSES</Text>
@@ -332,7 +333,7 @@ export default function KhatabookScreen({ navigation }) {
 
           <View style={st.miniCard}>
             <LinearGradient colors={['#FEF3C7', '#FDE68A']} style={st.miniCardIcon}>
-              <Icon name="time" size={18} color={C.warning} />
+              <Icon name="time" size={scale(18)} color={C.warning} />
             </LinearGradient>
             <Text style={st.miniCardValue}>{fmt(data?.pendingDues)}</Text>
             <Text style={st.miniCardLabel}>DUES</Text>
@@ -340,7 +341,7 @@ export default function KhatabookScreen({ navigation }) {
 
           <View style={st.miniCard}>
             <LinearGradient colors={['#DBEAFE', '#BFDBFE']} style={st.miniCardIcon}>
-              <Icon name="wallet" size={18} color={C.info} />
+              <Icon name="wallet" size={scale(18)} color={C.info} />
             </LinearGradient>
             <Text style={st.miniCardValue}>{fmt(data?.cashBalance)}</Text>
             <Text style={st.miniCardLabel}>BALANCE</Text>
@@ -360,10 +361,10 @@ export default function KhatabookScreen({ navigation }) {
               activeOpacity={0.85}
             >
               <LinearGradient colors={action.gradient} style={st.actionIconBox}>
-                <Icon name={action.icon} size={22} color="#fff" />
+                <Icon name={action.icon} size={scale(22)} color="#fff" />
               </LinearGradient>
               <Text style={st.actionLabel}>{action.label}</Text>
-              <Icon name="chevron-forward" size={16} color={C.muted} />
+              <Icon name="chevron-forward" size={scale(16)} color={C.muted} />
             </TouchableOpacity>
           ))}
         </View>
@@ -388,7 +389,7 @@ export default function KhatabookScreen({ navigation }) {
               <View style={st.breakdownBody}>
                 <View style={st.breakdownHeader}>
                   <LinearGradient colors={section.gradient} style={st.breakdownHeaderIcon}>
-                    <Icon name={section.icon} size={16} color="#fff" />
+                    <Icon name={section.icon} size={scale(16)} color="#fff" />
                   </LinearGradient>
                   <Text style={st.breakdownHeaderTitle}>{section.title}</Text>
                 </View>
@@ -398,12 +399,12 @@ export default function KhatabookScreen({ navigation }) {
                     {ri > 0 && <View style={st.breakdownDivider} />}
                     <View style={st.breakdownRow}>
                       <View style={[st.breakdownRowIcon, { backgroundColor: row.color + '18' }]}>
-                        <Icon name={row.icon} size={14} color={row.color} />
+                        <Icon name={row.icon} size={scale(14)} color={row.color} />
                       </View>
                       <Text style={[st.breakdownRowLabel, row.bold && { fontWeight: '700', color: C.ink }]}>
                         {row.label}
                       </Text>
-                      <Text style={[st.breakdownRowValue, { color: row.color }, row.bold && { fontWeight: '800', fontSize: 15 }]}>
+                      <Text style={[st.breakdownRowValue, { color: row.color }, row.bold && { fontWeight: '800', fontSize: moderateScale(15) }]}>
                         {row.value}
                       </Text>
                     </View>
@@ -425,7 +426,7 @@ export default function KhatabookScreen({ navigation }) {
                 activeOpacity={0.7}
               >
                 <Text style={st.viewAllText}>View All</Text>
-                <Icon name="chevron-forward" size={14} color={C.primary} />
+                <Icon name="chevron-forward" size={scale(14)} color={C.primary} />
               </TouchableOpacity>
             </View>
 
@@ -435,7 +436,7 @@ export default function KhatabookScreen({ navigation }) {
                 <View key={idx} style={st.txnCard}>
                   <View style={st.txnRow}>
                     <View style={[st.txnIcon, { backgroundColor: isCredit ? C.successLight : C.dangerLight }]}>
-                      <Icon name={isCredit ? 'arrow-down-circle' : 'arrow-up-circle'} size={20} color={isCredit ? C.success : C.danger} />
+                      <Icon name={isCredit ? 'arrow-down-circle' : 'arrow-up-circle'} size={scale(20)} color={isCredit ? C.success : C.danger} />
                     </View>
                     <View style={st.txnInfo}>
                       <Text style={st.txnTitle} numberOfLines={1}>
@@ -464,7 +465,7 @@ export default function KhatabookScreen({ navigation }) {
         <View style={st.helpCard}>
           <LinearGradient colors={['#EFF6FF', '#DBEAFE']} style={st.helpGradient}>
             <View style={st.helpIconBox}>
-              <Icon name="help-circle" size={24} color={C.info} />
+              <Icon name="help-circle" size={scale(24)} color={C.info} />
             </View>
             <Text style={st.helpTitle}>Need Help?</Text>
             <Text style={st.helpText}>
@@ -475,7 +476,7 @@ export default function KhatabookScreen({ navigation }) {
               onPress={() => navigation.navigate('SupportCenter')}
               activeOpacity={0.85}
             >
-              <Icon name="chatbubbles" size={16} color="#fff" />
+              <Icon name="chatbubbles" size={scale(16)} color="#fff" />
               <Text style={st.helpBtnText}>Contact Support</Text>
             </TouchableOpacity>
           </LinearGradient>
@@ -485,14 +486,14 @@ export default function KhatabookScreen({ navigation }) {
         {!data && !loading && (
           <View style={st.emptyBox}>
             <View style={st.emptyIconCircle}>
-              <Icon name="wallet-outline" size={56} color={C.muted} />
+              <Icon name="wallet-outline" size={scale(56)} color={C.muted} />
             </View>
             <Text style={st.emptyTitle}>No Financial Data</Text>
             <Text style={st.emptySubtitle}>
               Start recording transactions to see your financial overview here
             </Text>
             <TouchableOpacity style={st.emptyBtn} onPress={onRefresh}>
-              <Icon name="refresh" size={18} color="#fff" />
+              <Icon name="refresh" size={scale(18)} color="#fff" />
               <Text style={st.emptyBtnText}>Refresh</Text>
             </TouchableOpacity>
           </View>
@@ -513,46 +514,46 @@ const st = StyleSheet.create({
 
   // ═══ Hero Section ═══
   heroSection: {
-    paddingTop: 8,
-    paddingBottom: 16,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    paddingTop: scale(8),
+    paddingBottom: scale(16),
+    borderBottomLeftRadius: scale(20),
+    borderBottomRightRadius: scale(20),
   },
   heroContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 14,
+    paddingHorizontal: scale(16),
+    marginBottom: scale(14),
   },
   backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(12),
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: scale(12),
   },
   heroTextContainer: { flex: 1 },
   heroTitle: {
-    fontSize: 24,
+    fontSize: moderateScale(24),
     fontWeight: '800',
     color: '#fff',
     letterSpacing: -0.5,
   },
   heroSubtitle: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     color: 'rgba(255,255,255,0.8)',
-    marginTop: 2,
+    marginTop: scale(2),
   },
   heroActions: {
     flexDirection: 'row',
-    gap: 8,
+    gap: scale(8),
   },
   heroIconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(12),
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -563,37 +564,37 @@ const st = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginHorizontal: 16,
+    marginHorizontal: scale(16),
     backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 14,
+    borderRadius: scale(16),
+    padding: scale(14),
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: scale(4) },
     shadowOpacity: 0.1,
-    shadowRadius: 12,
+    shadowRadius: scale(12),
     elevation: 5,
   },
   heroSummaryLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: scale(12),
   },
   heroSummaryIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
+    width: scale(42),
+    height: scale(42),
+    borderRadius: scale(12),
     alignItems: 'center',
     justifyContent: 'center',
   },
   heroSummaryLabel: {
-    fontSize: 11,
+    fontSize: moderateScale(11),
     fontWeight: '600',
     color: C.muted,
     textTransform: 'uppercase',
     letterSpacing: 0.3,
   },
   heroSummaryValue: {
-    fontSize: 22,
+    fontSize: moderateScale(22),
     fontWeight: '800',
     color: C.ink,
     letterSpacing: -0.3,
@@ -601,43 +602,43 @@ const st = StyleSheet.create({
   heroSummaryBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 20,
+    gap: scale(4),
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(5),
+    borderRadius: scale(20),
   },
   heroSummaryBadgeText: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     fontWeight: '700',
   },
 
   // Loading
   loadingHero: {
-    paddingVertical: 24,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    paddingVertical: scale(24),
+    paddingHorizontal: scale(20),
+    borderBottomLeftRadius: scale(20),
+    borderBottomRightRadius: scale(20),
   },
 
   // ═══ Period Chips ═══
   periodSection: {
-    paddingVertical: 10,
+    paddingVertical: scale(10),
     borderBottomWidth: 1,
     borderBottomColor: C.border,
     backgroundColor: C.card,
   },
   periodScroll: {
-    paddingHorizontal: 16,
-    gap: 8,
+    paddingHorizontal: scale(16),
+    gap: scale(8),
   },
   periodChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
+    gap: scale(6),
+    paddingHorizontal: scale(14),
+    paddingVertical: scale(9),
     backgroundColor: C.card,
-    borderRadius: 20,
+    borderRadius: scale(20),
     borderWidth: 1.5,
     borderColor: C.border,
   },
@@ -646,7 +647,7 @@ const st = StyleSheet.create({
     borderColor: C.primary,
   },
   periodChipText: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     fontWeight: '600',
     color: C.muted,
   },
@@ -657,42 +658,42 @@ const st = StyleSheet.create({
   // ═══ Mini Cards ═══
   miniCardsRow: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    gap: 8,
+    paddingHorizontal: scale(16),
+    paddingTop: scale(14),
+    gap: scale(8),
   },
   miniCard: {
     flex: 1,
     backgroundColor: C.card,
-    borderRadius: 14,
-    padding: 10,
+    borderRadius: scale(14),
+    padding: scale(10),
     alignItems: 'center',
     borderWidth: 1,
     borderColor: C.border,
     shadowColor: C.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
-    shadowRadius: 4,
+    shadowRadius: scale(4),
     elevation: 1,
   },
   miniCardIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+    width: scale(34),
+    height: scale(34),
+    borderRadius: scale(10),
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 6,
+    marginBottom: scale(6),
   },
   miniCardValue: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     fontWeight: '800',
     color: C.ink,
   },
   miniCardLabel: {
-    fontSize: 8,
+    fontSize: moderateScale(8),
     fontWeight: '700',
     color: C.muted,
-    marginTop: 2,
+    marginTop: scale(2),
     letterSpacing: 0.5,
   },
 
@@ -701,23 +702,23 @@ const st = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    marginTop: 20,
-    marginBottom: 10,
+    paddingHorizontal: scale(16),
+    marginTop: scale(20),
+    marginBottom: scale(10),
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: '700',
     color: C.ink,
   },
   sectionCountPill: {
     backgroundColor: '#F1F5F9',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
+    paddingHorizontal: scale(8),
+    paddingVertical: scale(3),
+    borderRadius: scale(10),
   },
   sectionCountText: {
-    fontSize: 11,
+    fontSize: moderateScale(11),
     fontWeight: '700',
     color: C.muted,
   },
@@ -726,219 +727,219 @@ const st = StyleSheet.create({
   actionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    paddingHorizontal: 16,
-    gap: 10,
+    paddingHorizontal: scale(16),
+    gap: scale(10),
   },
   actionCard: {
     width: (W - 42) / 2,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: scale(10),
     backgroundColor: C.card,
-    borderRadius: 14,
-    padding: 14,
+    borderRadius: scale(14),
+    padding: scale(14),
     borderWidth: 1,
     borderColor: C.border,
     shadowColor: C.shadow,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: scale(2) },
     shadowOpacity: 0.06,
-    shadowRadius: 6,
+    shadowRadius: scale(6),
     elevation: 2,
   },
   actionIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(12),
     alignItems: 'center',
     justifyContent: 'center',
   },
   actionLabel: {
     flex: 1,
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '700',
     color: C.ink,
   },
 
   // ═══ Breakdown Card ═══
   breakdownCard: {
-    marginHorizontal: 16,
+    marginHorizontal: scale(16),
     backgroundColor: C.card,
-    borderRadius: 16,
+    borderRadius: scale(16),
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: C.border,
     shadowColor: C.shadow,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: scale(2) },
     shadowOpacity: 0.06,
-    shadowRadius: 8,
+    shadowRadius: scale(8),
     elevation: 2,
   },
   breakdownAccent: {
-    height: 3,
+    height: scale(3),
   },
   breakdownBody: {
-    padding: 14,
+    padding: scale(14),
   },
   breakdownHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginBottom: 12,
+    gap: scale(10),
+    marginBottom: scale(12),
   },
   breakdownHeaderIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
+    width: scale(32),
+    height: scale(32),
+    borderRadius: scale(10),
     alignItems: 'center',
     justifyContent: 'center',
   },
   breakdownHeaderTitle: {
-    fontSize: 15,
+    fontSize: moderateScale(15),
     fontWeight: '700',
     color: C.ink,
   },
   breakdownRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingVertical: 7,
+    gap: scale(10),
+    paddingVertical: scale(7),
   },
   breakdownRowIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
+    width: scale(28),
+    height: scale(28),
+    borderRadius: scale(8),
     alignItems: 'center',
     justifyContent: 'center',
   },
   breakdownRowLabel: {
     flex: 1,
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '500',
     color: C.text,
   },
   breakdownRowValue: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '700',
   },
   breakdownDivider: {
     height: 1,
     backgroundColor: '#F1F5F9',
-    marginLeft: 38,
+    marginLeft: scale(38),
   },
 
   // ═══ Transactions ═══
   viewAllBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: scale(4),
   },
   viewAllText: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     fontWeight: '700',
     color: C.primary,
   },
   txnCard: {
-    marginHorizontal: 16,
-    marginBottom: 8,
+    marginHorizontal: scale(16),
+    marginBottom: scale(8),
     backgroundColor: C.card,
-    borderRadius: 14,
-    padding: 14,
+    borderRadius: scale(14),
+    padding: scale(14),
     borderWidth: 1,
     borderColor: C.border,
     shadowColor: C.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
-    shadowRadius: 4,
+    shadowRadius: scale(4),
     elevation: 1,
   },
   txnRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: scale(12),
   },
   txnIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
+    width: scale(42),
+    height: scale(42),
+    borderRadius: scale(12),
     alignItems: 'center',
     justifyContent: 'center',
   },
   txnInfo: { flex: 1 },
   txnTitle: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '600',
     color: C.ink,
-    marginBottom: 4,
+    marginBottom: scale(4),
   },
   txnMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: scale(8),
   },
   txnTypeBadge: {
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 6,
+    paddingHorizontal: scale(7),
+    paddingVertical: scale(2),
+    borderRadius: scale(6),
   },
   txnTypeText: {
-    fontSize: 9,
+    fontSize: moderateScale(9),
     fontWeight: '700',
     letterSpacing: 0.3,
   },
   txnDate: {
-    fontSize: 11,
+    fontSize: moderateScale(11),
     color: C.muted,
   },
   txnAmount: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: '800',
   },
 
   // ═══ Help Card ═══
   helpCard: {
-    marginHorizontal: 16,
-    marginTop: 24,
-    borderRadius: 16,
+    marginHorizontal: scale(16),
+    marginTop: scale(24),
+    borderRadius: scale(16),
     overflow: 'hidden',
   },
   helpGradient: {
-    padding: 20,
+    padding: scale(20),
     alignItems: 'center',
-    borderRadius: 16,
+    borderRadius: scale(16),
   },
   helpIconBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: scale(48),
+    height: scale(48),
+    borderRadius: scale(24),
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: scale(12),
   },
   helpTitle: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: '700',
     color: C.ink,
-    marginBottom: 6,
+    marginBottom: scale(6),
   },
   helpText: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     color: C.muted,
     textAlign: 'center',
-    lineHeight: 19,
-    marginBottom: 16,
+    lineHeight: moderateScale(19),
+    marginBottom: scale(16),
   },
   helpBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
+    gap: scale(6),
+    paddingHorizontal: scale(20),
+    paddingVertical: scale(10),
+    borderRadius: scale(20),
     backgroundColor: C.info,
   },
   helpBtnText: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     fontWeight: '700',
     color: '#fff',
   },
@@ -946,67 +947,67 @@ const st = StyleSheet.create({
   // ═══ Empty State ═══
   emptyBox: {
     alignItems: 'center',
-    paddingVertical: 50,
-    paddingHorizontal: 40,
+    paddingVertical: scale(50),
+    paddingHorizontal: scale(40),
   },
   emptyIconCircle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: scale(120),
+    height: scale(120),
+    borderRadius: scale(60),
     backgroundColor: C.border,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: scale(20),
   },
   emptyTitle: {
-    fontSize: 20,
+    fontSize: moderateScale(20),
     fontWeight: '700',
     color: C.ink,
-    marginBottom: 8,
+    marginBottom: scale(8),
   },
   emptySubtitle: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: C.muted,
     textAlign: 'center',
   },
   emptyBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginTop: 24,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
+    gap: scale(8),
+    marginTop: scale(24),
+    paddingHorizontal: scale(24),
+    paddingVertical: scale(14),
     backgroundColor: C.primary,
-    borderRadius: 14,
+    borderRadius: scale(14),
   },
   emptyBtnText: {
-    fontSize: 15,
+    fontSize: moderateScale(15),
     fontWeight: '700',
     color: '#fff',
   },
 
   // ═══ Skeleton ═══
   skelHero: {
-    height: 80,
+    height: scale(80),
     backgroundColor: '#E2E8F0',
-    borderRadius: 16,
+    borderRadius: scale(16),
   },
   skelCard: {
     flex: 1,
-    height: 80,
+    height: scale(80),
     backgroundColor: '#E2E8F0',
-    borderRadius: 14,
+    borderRadius: scale(14),
   },
   skelAction: {
     flex: 1,
-    height: 56,
+    height: scale(56),
     backgroundColor: '#E2E8F0',
-    borderRadius: 14,
+    borderRadius: scale(14),
   },
   skelItem: {
-    height: 90,
+    height: scale(90),
     backgroundColor: '#E2E8F0',
-    borderRadius: 14,
-    marginTop: 10,
+    borderRadius: scale(14),
+    marginTop: scale(10),
   },
 });

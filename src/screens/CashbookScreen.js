@@ -21,6 +21,7 @@ import { RestaurantSelectorBar } from '../components/RestaurantSelector';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
+import { scale, moderateScale } from '../utils/responsive';
 // Premium Color Palette
 const C = {
   primary: '#EF3A3A',
@@ -229,10 +230,10 @@ export default function CashbookScreen({ navigation }) {
     const isIncome = item.entryType.includes('IN');
 
     return (
-      <View style={[st.card, isTablet && { marginHorizontal: 6 }]}>
+      <View style={[st.card, isTablet && { marginHorizontal: scale(6) }]}>
         <View style={st.cardRow}>
           <View style={[st.entryIcon, { backgroundColor: config.bg }]}>
-            <Icon name={config.icon} size={24} color={config.color} />
+            <Icon name={config.icon} size={scale(24)} color={config.color} />
           </View>
           <View style={st.cardInfo}>
             <Text style={st.cardTitle} numberOfLines={1}>{item.description}</Text>
@@ -247,7 +248,7 @@ export default function CashbookScreen({ navigation }) {
               )}
             </View>
             <View style={st.cardMetaRow}>
-              <Icon name="calendar-outline" size={12} color={C.muted} />
+              <Icon name="calendar-outline" size={scale(12)} color={C.muted} />
               <Text style={st.cardMetaText}>{formatDate(item.entryDate)}</Text>
               <Text style={st.cardMetaDot}>•</Text>
               <Text style={st.cardMetaText}>{item.paymentMode?.replace('_', ' ')}</Text>
@@ -259,11 +260,11 @@ export default function CashbookScreen({ navigation }) {
         </View>
         <View style={st.cardActions}>
           <TouchableOpacity style={[st.actionBtn, { backgroundColor: C.infoLight }]} onPress={() => openForm(null, item)}>
-            <Icon name="pencil" size={16} color={C.info} />
+            <Icon name="pencil" size={scale(16)} color={C.info} />
             <Text style={[st.actionText, { color: C.info }]}>Edit</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[st.actionBtn, { backgroundColor: C.dangerLight }]} onPress={() => deleteEntry(item)}>
-            <Icon name="trash" size={16} color={C.danger} />
+            <Icon name="trash" size={scale(16)} color={C.danger} />
             <Text style={[st.actionText, { color: C.danger }]}>Delete</Text>
           </TouchableOpacity>
         </View>
@@ -281,7 +282,7 @@ export default function CashbookScreen({ navigation }) {
             {/* Cash Balance */}
             <LinearGradient colors={[C.success, '#059669']} style={st.balanceCard}>
               <View style={st.balanceIconBox}>
-                <Icon name="wallet" size={20} color="#fff" />
+                <Icon name="wallet" size={scale(20)} color="#fff" />
               </View>
               <Text style={st.balanceLabel}>Cash Balance</Text>
               <Text style={st.balanceValue}>{formatPrice(stats.cashBalance)}</Text>
@@ -294,7 +295,7 @@ export default function CashbookScreen({ navigation }) {
             {/* Bank Balance */}
             <LinearGradient colors={[C.info, '#2563EB']} style={st.balanceCard}>
               <View style={st.balanceIconBox}>
-                <Icon name="business" size={20} color="#fff" />
+                <Icon name="business" size={scale(20)} color="#fff" />
               </View>
               <Text style={st.balanceLabel}>Bank Balance</Text>
               <Text style={st.balanceValue}>{formatPrice(stats.bankBalance)}</Text>
@@ -307,7 +308,7 @@ export default function CashbookScreen({ navigation }) {
             {/* Total Balance */}
             <LinearGradient colors={[C.gradient1, C.gradient2]} style={st.balanceCard}>
               <View style={st.balanceIconBox}>
-                <Icon name="cash" size={20} color="#fff" />
+                <Icon name="cash" size={scale(20)} color="#fff" />
               </View>
               <Text style={st.balanceLabel}>Total Balance</Text>
               <Text style={st.balanceValue}>{formatPrice(stats.totalBalance)}</Text>
@@ -320,7 +321,7 @@ export default function CashbookScreen({ navigation }) {
       {/* Quick Actions - Premium Grid Design */}
       <View style={st.quickSection}>
         <View style={st.quickTitleRow}>
-          <Icon name="flash" size={18} color={C.warning} />
+          <Icon name="flash" size={scale(18)} color={C.warning} />
           <Text style={st.quickTitle}>Quick Add</Text>
         </View>
         <View style={st.quickGrid}>
@@ -330,7 +331,7 @@ export default function CashbookScreen({ navigation }) {
             activeOpacity={0.8}
           >
             <LinearGradient colors={[C.success, '#059669']} style={st.quickCardGradient}>
-              <Icon name="arrow-down-circle" size={28} color="#fff" />
+              <Icon name="arrow-down-circle" size={scale(28)} color="#fff" />
             </LinearGradient>
             <Text style={st.quickCardLabel}>Cash In</Text>
           </TouchableOpacity>
@@ -340,7 +341,7 @@ export default function CashbookScreen({ navigation }) {
             activeOpacity={0.8}
           >
             <LinearGradient colors={[C.danger, '#DC2626']} style={st.quickCardGradient}>
-              <Icon name="arrow-up-circle" size={28} color="#fff" />
+              <Icon name="arrow-up-circle" size={scale(28)} color="#fff" />
             </LinearGradient>
             <Text style={st.quickCardLabel}>Cash Out</Text>
           </TouchableOpacity>
@@ -350,7 +351,7 @@ export default function CashbookScreen({ navigation }) {
             activeOpacity={0.8}
           >
             <LinearGradient colors={[C.info, '#2563EB']} style={st.quickCardGradient}>
-              <Icon name="arrow-down-circle" size={28} color="#fff" />
+              <Icon name="arrow-down-circle" size={scale(28)} color="#fff" />
             </LinearGradient>
             <Text style={st.quickCardLabel}>Bank In</Text>
           </TouchableOpacity>
@@ -360,7 +361,7 @@ export default function CashbookScreen({ navigation }) {
             activeOpacity={0.8}
           >
             <LinearGradient colors={[C.warning, '#D97706']} style={st.quickCardGradient}>
-              <Icon name="arrow-up-circle" size={28} color="#fff" />
+              <Icon name="arrow-up-circle" size={scale(28)} color="#fff" />
             </LinearGradient>
             <Text style={st.quickCardLabel}>Bank Out</Text>
           </TouchableOpacity>
@@ -383,7 +384,7 @@ export default function CashbookScreen({ navigation }) {
                 style={[st.filterChip, isActive && { backgroundColor: filter.color || C.gradient1, borderColor: filter.color || C.gradient1 }]}
                 onPress={() => setFilterType(filter.value)}
               >
-                <Icon name={filter.icon} size={16} color={isActive ? '#fff' : filter.color || C.ink} />
+                <Icon name={filter.icon} size={scale(16)} color={isActive ? '#fff' : filter.color || C.ink} />
                 <Text style={[st.filterChipText, isActive && { color: '#fff' }]}>
                   {filter.label} ({count})
                 </Text>
@@ -398,7 +399,7 @@ export default function CashbookScreen({ navigation }) {
         <Text style={st.resultsTitle}>{filteredEntries.length} Entr{filteredEntries.length !== 1 ? 'ies' : 'y'}</Text>
         {filterType !== 'all' && (
           <TouchableOpacity style={st.clearBtn} onPress={() => setFilterType('all')}>
-            <Icon name="close-circle" size={14} color={C.gradient1} />
+            <Icon name="close-circle" size={scale(14)} color={C.gradient1} />
             <Text style={st.clearBtnText}>Clear</Text>
           </TouchableOpacity>
         )}
@@ -413,7 +414,7 @@ export default function CashbookScreen({ navigation }) {
         <StatusBar barStyle="dark-content" backgroundColor={C.card} />
         <View style={st.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={st.headerBackBtn}>
-            <Icon name="arrow-back" size={22} color={C.ink} />
+            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
           </TouchableOpacity>
           <View style={st.headerCenter}>
             <Text style={st.headerTitle}>Daily Cashbook</Text>
@@ -421,7 +422,7 @@ export default function CashbookScreen({ navigation }) {
           </View>
           <View style={st.headerActions}>
             <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
-              <Icon name="menu" size={20} color={C.ink} />
+              <Icon name="menu" size={scale(20)} color={C.ink} />
             </TouchableOpacity>
           </View>
         </View>
@@ -441,7 +442,7 @@ export default function CashbookScreen({ navigation }) {
         <StatusBar barStyle="dark-content" backgroundColor={C.card} />
         <View style={st.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={st.headerBackBtn}>
-            <Icon name="arrow-back" size={22} color={C.ink} />
+            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
           </TouchableOpacity>
           <View style={st.headerCenter}>
             <Text style={st.headerTitle}>Daily Cashbook</Text>
@@ -449,13 +450,13 @@ export default function CashbookScreen({ navigation }) {
           </View>
           <View style={st.headerActions}>
             <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
-              <Icon name="menu" size={20} color={C.ink} />
+              <Icon name="menu" size={scale(20)} color={C.ink} />
             </TouchableOpacity>
           </View>
         </View>
         <View style={st.emptyState}>
           <View style={st.emptyIcon}>
-            <Icon name="business-outline" size={64} color={C.muted} />
+            <Icon name="business-outline" size={scale(64)} color={C.muted} />
           </View>
           <Text style={st.emptyTitle}>No Restaurant Found</Text>
           <Text style={st.emptySubtitle}>Please add a restaurant first</Text>
@@ -473,7 +474,7 @@ export default function CashbookScreen({ navigation }) {
       {/* White Header */}
       <View style={st.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={st.headerBackBtn}>
-          <Icon name="arrow-back" size={22} color={C.ink} />
+          <Icon name="arrow-back" size={scale(22)} color={C.ink} />
         </TouchableOpacity>
         <View style={st.headerCenter}>
           <Text style={st.headerTitle}>Daily Cashbook</Text>
@@ -481,10 +482,10 @@ export default function CashbookScreen({ navigation }) {
         </View>
         <View style={st.headerActions}>
           <TouchableOpacity style={st.headerIconBtn} onPress={() => openForm()}>
-            <Icon name="add" size={20} color={C.primary} />
+            <Icon name="add" size={scale(20)} color={C.primary} />
           </TouchableOpacity>
           <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
-            <Icon name="menu" size={20} color={C.ink} />
+            <Icon name="menu" size={scale(20)} color={C.ink} />
           </TouchableOpacity>
         </View>
       </View>
@@ -507,12 +508,12 @@ export default function CashbookScreen({ navigation }) {
         ListEmptyComponent={
           <View style={st.emptyState}>
             <View style={st.emptyIcon}>
-              <Icon name="wallet-outline" size={64} color={C.muted} />
+              <Icon name="wallet-outline" size={scale(64)} color={C.muted} />
             </View>
             <Text style={st.emptyTitle}>No Entries Yet</Text>
             <Text style={st.emptySubtitle}>Start tracking your cash and bank transactions</Text>
             <TouchableOpacity style={st.emptyBtn} onPress={() => openForm()}>
-              <Icon name="add" size={18} color="#fff" />
+              <Icon name="add" size={scale(18)} color="#fff" />
               <Text style={st.emptyBtnText}>Add First Entry</Text>
             </TouchableOpacity>
           </View>
@@ -530,7 +531,7 @@ export default function CashbookScreen({ navigation }) {
             <LinearGradient colors={[C.gradient1, C.gradient2]} style={st.modalHeader}>
               <Text style={st.modalTitle}>{form.id ? 'Edit Entry' : 'Add Entry'}</Text>
               <TouchableOpacity onPress={() => setModalVisible(false)} style={st.modalClose}>
-                <Icon name="close" size={24} color="#fff" />
+                <Icon name="close" size={scale(24)} color="#fff" />
               </TouchableOpacity>
             </LinearGradient>
 
@@ -554,7 +555,7 @@ export default function CashbookScreen({ navigation }) {
                       style={[st.typeChip, isActive && { backgroundColor: type.color, borderColor: type.color }]}
                       onPress={() => setForm(f => ({ ...f, entryType: type.value }))}
                     >
-                      <Icon name={type.icon} size={16} color={isActive ? '#fff' : type.color} />
+                      <Icon name={type.icon} size={scale(16)} color={isActive ? '#fff' : type.color} />
                       <Text style={[st.typeChipText, isActive && { color: '#fff' }]}>{type.label}</Text>
                     </TouchableOpacity>
                   );
@@ -588,7 +589,7 @@ export default function CashbookScreen({ navigation }) {
                       style={[st.modeBtn, isActive && st.modeBtnActive]}
                       onPress={() => setForm(f => ({ ...f, paymentMode: mode.value }))}
                     >
-                      <Icon name={mode.icon} size={16} color={isActive ? '#fff' : C.ink} />
+                      <Icon name={mode.icon} size={scale(16)} color={isActive ? '#fff' : C.ink} />
                       <Text style={[st.modeBtnText, isActive && st.modeBtnTextActive]}>{mode.label}</Text>
                     </TouchableOpacity>
                   );
@@ -643,9 +644,9 @@ export default function CashbookScreen({ navigation }) {
               {/* Date */}
               <Text style={st.label}>Date</Text>
               <TouchableOpacity style={st.dateBtn} onPress={() => setShowDatePicker(true)}>
-                <Icon name="calendar" size={20} color={C.gradient1} />
+                <Icon name="calendar" size={scale(20)} color={C.gradient1} />
                 <Text style={st.dateBtnText}>{formatDate(form.entryDate)}</Text>
-                <Icon name="chevron-down" size={18} color={C.muted} />
+                <Icon name="chevron-down" size={scale(18)} color={C.muted} />
               </TouchableOpacity>
               {showDatePicker && (
                 <DateTimePicker
@@ -658,7 +659,7 @@ export default function CashbookScreen({ navigation }) {
               )}
 
               {/* Bottom spacing for scroll */}
-              <View style={{ height: 20 }} />
+              <View style={{ height: scale(20) }} />
             </ScrollView>
 
             {/* Fixed Footer */}
@@ -671,7 +672,7 @@ export default function CashbookScreen({ navigation }) {
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
                   <>
-                    <Icon name={form.id ? 'checkmark' : 'add'} size={18} color="#fff" />
+                    <Icon name={form.id ? 'checkmark' : 'add'} size={scale(18)} color="#fff" />
                     <Text style={st.saveBtnText}>{form.id ? 'Update' : 'Add'}</Text>
                   </>
                 )}
@@ -689,130 +690,130 @@ const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
 
   // Header Section
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border },
-  headerBackBtn: { width: 40, height: 40, borderRadius: 10, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
-  headerCenter: { flex: 1, marginLeft: 12 },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
-  headerSubtitle: { fontSize: 12, color: C.muted, marginTop: 2 },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(16), paddingVertical: scale(12), backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border },
+  headerBackBtn: { width: scale(40), height: scale(40), borderRadius: scale(10), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
+  headerCenter: { flex: 1, marginLeft: scale(12) },
+  headerTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink },
+  headerSubtitle: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(2) },
   headerActions: { flexDirection: 'row' },
-  headerIconBtn: { width: 40, height: 40, borderRadius: 10, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', marginLeft: 8 },
+  headerIconBtn: { width: scale(40), height: scale(40), borderRadius: scale(10), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', marginLeft: scale(8) },
 
   // Hero Section (kept for loading state)
-  heroSection: { paddingTop: 8, paddingBottom: 16, borderBottomLeftRadius: 20, borderBottomRightRadius: 20 },
-  heroContent: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 },
-  backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  heroSection: { paddingTop: scale(8), paddingBottom: scale(16), borderBottomLeftRadius: scale(20), borderBottomRightRadius: scale(20) },
+  heroContent: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(16) },
+  backBtn: { width: scale(40), height: scale(40), borderRadius: scale(12), backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginRight: scale(12) },
   heroTextContainer: { flex: 1 },
-  heroTitle: { fontSize: 24, fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
-  heroSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.8)', marginTop: 2 },
+  heroTitle: { fontSize: moderateScale(24), fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
+  heroSubtitle: { fontSize: moderateScale(13), color: 'rgba(255,255,255,0.8)', marginTop: scale(2) },
   heroActions: { flexDirection: 'row' },
-  heroIconBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginLeft: 8 },
+  heroIconBtn: { width: scale(40), height: scale(40), borderRadius: scale(12), backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginLeft: scale(8) },
 
   // Balance Section
-  balanceSection: { marginTop: 16 },
-  balanceScroll: { paddingHorizontal: 16 },
-  balanceCard: { width: 160, borderRadius: 16, padding: 16, marginRight: 12 },
-  balanceIconBox: { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
-  balanceLabel: { fontSize: 12, color: 'rgba(255,255,255,0.85)', fontWeight: '600' },
-  balanceValue: { fontSize: 22, fontWeight: '800', color: '#fff', marginTop: 4 },
-  balanceBreakdown: { flexDirection: 'row', marginTop: 8 },
-  balanceIn: { fontSize: 11, color: 'rgba(255,255,255,0.8)', marginRight: 12 },
-  balanceOut: { fontSize: 11, color: 'rgba(255,255,255,0.8)' },
-  balanceCount: { fontSize: 11, color: 'rgba(255,255,255,0.7)', marginTop: 8 },
+  balanceSection: { marginTop: scale(16) },
+  balanceScroll: { paddingHorizontal: scale(16) },
+  balanceCard: { width: scale(160), borderRadius: scale(16), padding: scale(16), marginRight: scale(12) },
+  balanceIconBox: { width: scale(36), height: scale(36), borderRadius: scale(10), backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginBottom: scale(10) },
+  balanceLabel: { fontSize: moderateScale(12), color: 'rgba(255,255,255,0.85)', fontWeight: '600' },
+  balanceValue: { fontSize: moderateScale(22), fontWeight: '800', color: '#fff', marginTop: scale(4) },
+  balanceBreakdown: { flexDirection: 'row', marginTop: scale(8) },
+  balanceIn: { fontSize: moderateScale(11), color: 'rgba(255,255,255,0.8)', marginRight: scale(12) },
+  balanceOut: { fontSize: moderateScale(11), color: 'rgba(255,255,255,0.8)' },
+  balanceCount: { fontSize: moderateScale(11), color: 'rgba(255,255,255,0.7)', marginTop: scale(8) },
 
   // Quick Section - Premium Grid
-  quickSection: { marginHorizontal: 16, marginTop: 16 },
-  quickTitleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  quickTitle: { fontSize: 16, fontWeight: '700', color: C.ink, marginLeft: 8 },
+  quickSection: { marginHorizontal: scale(16), marginTop: scale(16) },
+  quickTitleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: scale(12) },
+  quickTitle: { fontSize: moderateScale(16), fontWeight: '700', color: C.ink, marginLeft: scale(8) },
   quickGrid: { flexDirection: 'row', justifyContent: 'space-between' },
   quickCard: { width: '23%', alignItems: 'center' },
-  quickCardGradient: { width: 56, height: 56, borderRadius: 16, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 4 },
-  quickCardLabel: { fontSize: 11, fontWeight: '600', color: C.text, marginTop: 8, textAlign: 'center' },
+  quickCardGradient: { width: scale(56), height: scale(56), borderRadius: scale(16), alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: scale(4) }, shadowOpacity: 0.15, shadowRadius: scale(8), elevation: 4 },
+  quickCardLabel: { fontSize: moderateScale(11), fontWeight: '600', color: C.text, marginTop: scale(8), textAlign: 'center' },
 
   // Filters
-  filterSection: { paddingVertical: 12, backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border, marginTop: 12 },
-  filterScroll: { paddingHorizontal: 16 },
-  filterChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10, marginRight: 8, backgroundColor: C.card, borderRadius: 20, borderWidth: 1.5, borderColor: C.border },
-  filterChipText: { fontSize: 13, fontWeight: '600', color: C.ink, marginLeft: 6 },
+  filterSection: { paddingVertical: scale(12), backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border, marginTop: scale(12) },
+  filterScroll: { paddingHorizontal: scale(16) },
+  filterChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(14), paddingVertical: scale(10), marginRight: scale(8), backgroundColor: C.card, borderRadius: scale(20), borderWidth: 1.5, borderColor: C.border },
+  filterChipText: { fontSize: moderateScale(13), fontWeight: '600', color: C.ink, marginLeft: scale(6) },
 
   // Results
-  resultsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
-  resultsTitle: { fontSize: 15, fontWeight: '700', color: C.ink },
-  clearBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, backgroundColor: '#EEF2FF', borderRadius: 8 },
-  clearBtnText: { fontSize: 12, fontWeight: '600', color: C.gradient1, marginLeft: 4 },
+  resultsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: scale(16), paddingVertical: scale(12) },
+  resultsTitle: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink },
+  clearBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(10), paddingVertical: scale(6), backgroundColor: '#EEF2FF', borderRadius: scale(8) },
+  clearBtnText: { fontSize: moderateScale(12), fontWeight: '600', color: C.gradient1, marginLeft: scale(4) },
 
   // List
-  listContent: { paddingHorizontal: 16, paddingBottom: 120 },
+  listContent: { paddingHorizontal: scale(16), paddingBottom: scale(120) },
   columnWrapper: { justifyContent: 'space-between' },
 
   // Card
-  card: { flex: 1, backgroundColor: C.card, borderRadius: 16, marginBottom: 12, shadowColor: C.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3, padding: 16 },
+  card: { flex: 1, backgroundColor: C.card, borderRadius: scale(16), marginBottom: scale(12), shadowColor: C.shadow, shadowOffset: { width: 0, height: scale(2) }, shadowOpacity: 0.08, shadowRadius: scale(8), elevation: 3, padding: scale(16) },
   cardRow: { flexDirection: 'row', alignItems: 'flex-start' },
-  entryIcon: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
-  cardInfo: { flex: 1, marginRight: 8 },
-  cardTitle: { fontSize: 15, fontWeight: '700', color: C.ink },
-  cardMeta: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 6 },
-  typeBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, marginRight: 6, marginBottom: 4 },
-  typeBadgeText: { fontSize: 10, fontWeight: '700' },
-  categoryBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, backgroundColor: C.bg, marginBottom: 4 },
-  categoryBadgeText: { fontSize: 10, fontWeight: '600', color: C.muted },
-  cardMetaRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
-  cardMetaText: { fontSize: 11, color: C.muted, marginLeft: 4 },
-  cardMetaDot: { color: C.muted, marginHorizontal: 4 },
-  cardAmount: { fontSize: 16, fontWeight: '800' },
-  cardActions: { flexDirection: 'row', marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: C.border },
-  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 10, marginHorizontal: 4 },
-  actionText: { fontSize: 13, fontWeight: '600', marginLeft: 6 },
+  entryIcon: { width: scale(48), height: scale(48), borderRadius: scale(14), alignItems: 'center', justifyContent: 'center', marginRight: scale(12) },
+  cardInfo: { flex: 1, marginRight: scale(8) },
+  cardTitle: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink },
+  cardMeta: { flexDirection: 'row', flexWrap: 'wrap', marginTop: scale(6) },
+  typeBadge: { paddingHorizontal: scale(8), paddingVertical: scale(3), borderRadius: scale(6), marginRight: scale(6), marginBottom: scale(4) },
+  typeBadgeText: { fontSize: moderateScale(10), fontWeight: '700' },
+  categoryBadge: { paddingHorizontal: scale(8), paddingVertical: scale(3), borderRadius: scale(6), backgroundColor: C.bg, marginBottom: scale(4) },
+  categoryBadgeText: { fontSize: moderateScale(10), fontWeight: '600', color: C.muted },
+  cardMetaRow: { flexDirection: 'row', alignItems: 'center', marginTop: scale(6) },
+  cardMetaText: { fontSize: moderateScale(11), color: C.muted, marginLeft: scale(4) },
+  cardMetaDot: { color: C.muted, marginHorizontal: scale(4) },
+  cardAmount: { fontSize: moderateScale(16), fontWeight: '800' },
+  cardActions: { flexDirection: 'row', marginTop: scale(14), paddingTop: scale(14), borderTopWidth: 1, borderTopColor: C.border },
+  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: scale(10), borderRadius: scale(10), marginHorizontal: scale(4) },
+  actionText: { fontSize: moderateScale(13), fontWeight: '600', marginLeft: scale(6) },
 
   // Loading & Empty
-  loadingHero: { paddingVertical: 24, paddingHorizontal: 20, borderBottomLeftRadius: 20, borderBottomRightRadius: 20 },
+  loadingHero: { paddingVertical: scale(24), paddingHorizontal: scale(20), borderBottomLeftRadius: scale(20), borderBottomRightRadius: scale(20) },
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  loadingText: { marginTop: 16, fontSize: 15, color: C.muted },
-  emptyState: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 40 },
-  emptyIcon: { width: 120, height: 120, borderRadius: 60, backgroundColor: C.border, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
-  emptyTitle: { fontSize: 20, fontWeight: '700', color: C.ink, marginBottom: 8 },
-  emptySubtitle: { fontSize: 14, color: C.muted, textAlign: 'center' },
-  emptyBtn: { flexDirection: 'row', alignItems: 'center', marginTop: 24, paddingHorizontal: 24, paddingVertical: 14, backgroundColor: C.gradient1, borderRadius: 14 },
-  emptyBtnText: { fontSize: 15, fontWeight: '700', color: '#fff', marginLeft: 8 },
+  loadingText: { marginTop: scale(16), fontSize: moderateScale(15), color: C.muted },
+  emptyState: { alignItems: 'center', paddingTop: scale(60), paddingHorizontal: scale(40) },
+  emptyIcon: { width: scale(120), height: scale(120), borderRadius: scale(60), backgroundColor: C.border, alignItems: 'center', justifyContent: 'center', marginBottom: scale(20) },
+  emptyTitle: { fontSize: moderateScale(20), fontWeight: '700', color: C.ink, marginBottom: scale(8) },
+  emptySubtitle: { fontSize: moderateScale(14), color: C.muted, textAlign: 'center' },
+  emptyBtn: { flexDirection: 'row', alignItems: 'center', marginTop: scale(24), paddingHorizontal: scale(24), paddingVertical: scale(14), backgroundColor: C.gradient1, borderRadius: scale(14) },
+  emptyBtnText: { fontSize: moderateScale(15), fontWeight: '700', color: '#fff', marginLeft: scale(8) },
 
   // Modal - Fixed Scroll
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: C.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, height: '85%' },
-  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderTopLeftRadius: 24, borderTopRightRadius: 24 },
-  modalTitle: { fontSize: 18, fontWeight: '800', color: '#fff' },
-  modalClose: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
+  modalContent: { backgroundColor: C.card, borderTopLeftRadius: scale(24), borderTopRightRadius: scale(24), height: '85%' },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: scale(16), borderTopLeftRadius: scale(24), borderTopRightRadius: scale(24) },
+  modalTitle: { fontSize: moderateScale(18), fontWeight: '800', color: '#fff' },
+  modalClose: { width: scale(36), height: scale(36), borderRadius: scale(18), backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
   modalBody: { flex: 1 },
-  modalBodyContent: { padding: 16, paddingBottom: 30 },
-  modalFooter: { flexDirection: 'row', padding: 16, borderTopWidth: 1, borderTopColor: C.border },
+  modalBodyContent: { padding: scale(16), paddingBottom: scale(30) },
+  modalFooter: { flexDirection: 'row', padding: scale(16), borderTopWidth: 1, borderTopColor: C.border },
 
   // Form - Compact Layout
-  label: { fontSize: 12, fontWeight: '700', color: C.text, marginBottom: 8, marginTop: 14 },
-  typeRow: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 },
-  typeChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8, backgroundColor: C.bg, borderWidth: 1.5, borderColor: C.border, margin: 4 },
-  typeChipText: { fontSize: 11, fontWeight: '600', color: C.ink, marginLeft: 5 },
-  inputRow: { flexDirection: 'row', alignItems: 'center', borderRadius: 10, borderWidth: 1.5, borderColor: C.border, backgroundColor: C.bg, overflow: 'hidden' },
-  currencyBox: { width: 44, height: 44, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center' },
-  currencyText: { fontSize: 16, fontWeight: '700', color: C.gradient1 },
-  amountInput: { flex: 1, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, fontWeight: '600', color: C.ink },
-  input: { backgroundColor: C.bg, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, color: C.text, borderWidth: 1.5, borderColor: C.border },
-  textArea: { backgroundColor: C.bg, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, color: C.text, borderWidth: 1.5, borderColor: C.border, minHeight: 70, textAlignVertical: 'top' },
-  dateBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 12, borderRadius: 10, borderWidth: 1.5, borderColor: C.border, backgroundColor: C.bg },
-  dateBtnText: { flex: 1, fontSize: 13, fontWeight: '600', color: C.ink, marginLeft: 8 },
+  label: { fontSize: moderateScale(12), fontWeight: '700', color: C.text, marginBottom: scale(8), marginTop: scale(14) },
+  typeRow: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: scale(-4) },
+  typeChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(10), paddingVertical: scale(8), borderRadius: scale(8), backgroundColor: C.bg, borderWidth: 1.5, borderColor: C.border, margin: scale(4) },
+  typeChipText: { fontSize: moderateScale(11), fontWeight: '600', color: C.ink, marginLeft: scale(5) },
+  inputRow: { flexDirection: 'row', alignItems: 'center', borderRadius: scale(10), borderWidth: 1.5, borderColor: C.border, backgroundColor: C.bg, overflow: 'hidden' },
+  currencyBox: { width: scale(44), height: scale(44), backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center' },
+  currencyText: { fontSize: moderateScale(16), fontWeight: '700', color: C.gradient1 },
+  amountInput: { flex: 1, paddingHorizontal: scale(12), paddingVertical: scale(10), fontSize: moderateScale(15), fontWeight: '600', color: C.ink },
+  input: { backgroundColor: C.bg, borderRadius: scale(10), paddingHorizontal: scale(12), paddingVertical: scale(10), fontSize: moderateScale(13), color: C.text, borderWidth: 1.5, borderColor: C.border },
+  textArea: { backgroundColor: C.bg, borderRadius: scale(10), paddingHorizontal: scale(12), paddingVertical: scale(10), fontSize: moderateScale(13), color: C.text, borderWidth: 1.5, borderColor: C.border, minHeight: scale(70), textAlignVertical: 'top' },
+  dateBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(12), paddingVertical: scale(12), borderRadius: scale(10), borderWidth: 1.5, borderColor: C.border, backgroundColor: C.bg },
+  dateBtnText: { flex: 1, fontSize: moderateScale(13), fontWeight: '600', color: C.ink, marginLeft: scale(8) },
   // Payment Mode Grid
-  modeGrid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 },
-  modeBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8, backgroundColor: C.bg, borderWidth: 1.5, borderColor: C.border, margin: 4 },
+  modeGrid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: scale(-4) },
+  modeBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(10), paddingVertical: scale(8), borderRadius: scale(8), backgroundColor: C.bg, borderWidth: 1.5, borderColor: C.border, margin: scale(4) },
   modeBtnActive: { backgroundColor: C.gradient1, borderColor: C.gradient1 },
-  modeBtnText: { fontSize: 11, fontWeight: '600', color: C.ink, marginLeft: 5 },
+  modeBtnText: { fontSize: moderateScale(11), fontWeight: '600', color: C.ink, marginLeft: scale(5) },
   modeBtnTextActive: { color: '#fff' },
   // Category Grid
-  catGrid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 },
-  catBtn: { paddingHorizontal: 10, paddingVertical: 7, borderRadius: 8, backgroundColor: C.bg, borderWidth: 1.5, borderColor: C.border, margin: 4 },
+  catGrid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: scale(-4) },
+  catBtn: { paddingHorizontal: scale(10), paddingVertical: scale(7), borderRadius: scale(8), backgroundColor: C.bg, borderWidth: 1.5, borderColor: C.border, margin: scale(4) },
   catBtnActive: { backgroundColor: C.warning, borderColor: C.warning },
-  catBtnText: { fontSize: 11, fontWeight: '600', color: C.ink },
+  catBtnText: { fontSize: moderateScale(11), fontWeight: '600', color: C.ink },
   catBtnTextActive: { color: '#fff' },
 
   // Buttons
-  cancelBtn: { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: C.bg, alignItems: 'center', marginRight: 6 },
-  cancelBtnText: { fontSize: 15, fontWeight: '700', color: C.ink },
-  saveBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 12, backgroundColor: C.gradient1, marginLeft: 6 },
-  saveBtnText: { fontSize: 15, fontWeight: '700', color: '#fff', marginLeft: 8 },
+  cancelBtn: { flex: 1, paddingVertical: scale(14), borderRadius: scale(12), backgroundColor: C.bg, alignItems: 'center', marginRight: scale(6) },
+  cancelBtnText: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink },
+  saveBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: scale(14), borderRadius: scale(12), backgroundColor: C.gradient1, marginLeft: scale(6) },
+  saveBtnText: { fontSize: moderateScale(15), fontWeight: '700', color: '#fff', marginLeft: scale(8) },
 });

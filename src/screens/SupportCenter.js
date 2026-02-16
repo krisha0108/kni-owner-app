@@ -10,6 +10,7 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import { api, IMAGE_BASE_URL } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
 
+import { scale, moderateScale } from '../utils/responsive';
 const { width: W } = Dimensions.get('window');
 
 const C = {
@@ -302,7 +303,7 @@ export default function SupportCenter({ navigation }) {
           {/* Header row */}
           <View style={st.itemHeaderRow}>
             <LinearGradient colors={catCfg.gradient} style={st.typeIconBox}>
-              <Icon name={catCfg.icon} size={18} color="#fff" />
+              <Icon name={catCfg.icon} size={scale(18)} color="#fff" />
             </LinearGradient>
             <View style={st.itemHeaderInfo}>
               <Text style={st.itemTitle} numberOfLines={2}>{item.title}</Text>
@@ -318,7 +319,7 @@ export default function SupportCenter({ navigation }) {
           {/* Equipment */}
           {item.equipmentName ? (
             <View style={st.equipmentRow}>
-              <Icon name="hardware-chip-outline" size={13} color={C.muted} />
+              <Icon name="hardware-chip-outline" size={scale(13)} color={C.muted} />
               <Text style={st.equipmentText}>{item.equipmentName}</Text>
             </View>
           ) : null}
@@ -326,12 +327,12 @@ export default function SupportCenter({ navigation }) {
           {/* Footer */}
           <View style={st.itemFooter}>
             <View style={[st.statusChip, { backgroundColor: stCfg.bg }]}>
-              <Icon name={stCfg.icon} size={13} color={stCfg.color} />
+              <Icon name={stCfg.icon} size={scale(13)} color={stCfg.color} />
               <Text style={[st.statusChipText, { color: stCfg.color }]}>{stCfg.label}</Text>
             </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-                <Icon name="chatbubble-outline" size={12} color={C.muted} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(10) }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(3) }}>
+                <Icon name="chatbubble-outline" size={scale(12)} color={C.muted} />
                 <Text style={st.footerMeta}>{replies}</Text>
               </View>
               <Text style={st.footerMeta}>#{item.id?.slice(0, 8)}</Text>
@@ -341,13 +342,13 @@ export default function SupportCenter({ navigation }) {
           {/* Action */}
           <View style={st.actionRow}>
             <TouchableOpacity style={st.actionButton} onPress={() => openTicketDetail(item)} activeOpacity={0.7}>
-              <Icon name="eye-outline" size={16} color={C.info} />
+              <Icon name="eye-outline" size={scale(16)} color={C.info} />
               <Text style={st.actionButtonText}>View Details</Text>
-              <Icon name="chevron-forward" size={14} color={C.info} />
+              <Icon name="chevron-forward" size={scale(14)} color={C.info} />
             </TouchableOpacity>
             {(item.status === 'PENDING' || item.status === 'pending') && (
               <TouchableOpacity style={st.deleteButton} onPress={() => handleDeleteTicket(item.id)}>
-                <Icon name="trash-outline" size={16} color={C.danger} />
+                <Icon name="trash-outline" size={scale(16)} color={C.danger} />
               </TouchableOpacity>
             )}
           </View>
@@ -360,7 +361,7 @@ export default function SupportCenter({ navigation }) {
   const renderEmpty = () => (
     <View style={st.emptyBox}>
       <LinearGradient colors={['#FEE2E2', '#FECACA']} style={st.emptyIconCircle}>
-        <Icon name="chatbubbles" size={48} color={C.primary} />
+        <Icon name="chatbubbles" size={scale(48)} color={C.primary} />
       </LinearGradient>
       <Text style={st.emptyTitle}>No Tickets Found</Text>
       <Text style={st.emptySubtitle}>
@@ -368,7 +369,7 @@ export default function SupportCenter({ navigation }) {
       </Text>
       <TouchableOpacity activeOpacity={0.85} onPress={() => { resetForm(); setCreateModalVisible(true); }}>
         <LinearGradient colors={[C.primary, C.primaryDark]} style={st.emptyBtn}>
-          <Icon name="add-circle" size={18} color="#fff" />
+          <Icon name="add-circle" size={scale(18)} color="#fff" />
           <Text style={st.emptyBtnText}>New Ticket</Text>
         </LinearGradient>
       </TouchableOpacity>
@@ -380,14 +381,14 @@ export default function SupportCenter({ navigation }) {
     <View style={st.helpCard}>
       <LinearGradient colors={['#EFF6FF', '#DBEAFE']} style={st.helpGradient}>
         <View style={st.helpIconBox}>
-          <Icon name="call" size={24} color="#3B82F6" />
+          <Icon name="call" size={scale(24)} color="#3B82F6" />
         </View>
         <Text style={st.helpTitle}>Need Urgent Help?</Text>
         <Text style={st.helpText}>
           Our support team is available to assist you. Call us directly for urgent issues.
         </Text>
         <TouchableOpacity style={st.helpBtn} onPress={callSupport}>
-          <Icon name="call" size={16} color="#fff" />
+          <Icon name="call" size={scale(16)} color="#fff" />
           <Text style={st.helpBtnText}>Call Support</Text>
         </TouchableOpacity>
       </LinearGradient>
@@ -400,10 +401,10 @@ export default function SupportCenter({ navigation }) {
       <SafeAreaView style={st.container}>
         <LinearGradient colors={[C.primary, C.primaryDark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
-            <Icon name="arrow-back" size={22} color="#fff" />
+            <Icon name="arrow-back" size={scale(22)} color="#fff" />
           </TouchableOpacity>
           <Text style={st.headerTitle}>Support Center</Text>
-          <View style={{ width: 38 }} />
+          <View style={{ width: scale(38) }} />
         </LinearGradient>
         <View style={st.loadingBox}>
           <LinearGradient colors={['#FEE2E2', '#FECACA']} style={st.loadingCircle}>
@@ -423,7 +424,7 @@ export default function SupportCenter({ navigation }) {
       {/* ─── Gradient Header ─── */}
       <LinearGradient colors={[C.primary, C.primaryDark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
-          <Icon name="arrow-back" size={22} color="#fff" />
+          <Icon name="arrow-back" size={scale(22)} color="#fff" />
         </TouchableOpacity>
         <View style={st.headerCenter}>
           <Text style={st.headerTitle}>Support Center</Text>
@@ -434,7 +435,7 @@ export default function SupportCenter({ navigation }) {
           )}
         </View>
         <TouchableOpacity onPress={callSupport} style={st.backBtn}>
-          <Icon name="call" size={18} color="#fff" />
+          <Icon name="call" size={scale(18)} color="#fff" />
         </TouchableOpacity>
       </LinearGradient>
 
@@ -446,12 +447,12 @@ export default function SupportCenter({ navigation }) {
           activeOpacity={restaurants.length > 1 ? 0.7 : 1}
         >
           <View style={st.restaurantIconBox}>
-            <Icon name="restaurant" size={16} color={C.primary} />
+            <Icon name="restaurant" size={scale(16)} color={C.primary} />
           </View>
           <Text style={st.restaurantName} numberOfLines={1}>{currentRestaurant.name}</Text>
           {restaurants.length > 1 && (
             <View style={st.switchPill}>
-              <Icon name="swap-horizontal" size={14} color={C.primary} />
+              <Icon name="swap-horizontal" size={scale(14)} color={C.primary} />
               <Text style={st.switchText}>Switch</Text>
             </View>
           )}
@@ -466,7 +467,7 @@ export default function SupportCenter({ navigation }) {
             onPress={() => setActiveTab(activeTab === 'PENDING' ? 'all' : 'PENDING')}
           >
             <LinearGradient colors={['#FEF3C7', '#FDE68A']} style={st.summaryIconCircle}>
-              <Icon name="time" size={18} color="#D97706" />
+              <Icon name="time" size={scale(18)} color="#D97706" />
             </LinearGradient>
             <Text style={st.summaryCount}>{statusCounts['PENDING'] || 0}</Text>
             <Text style={st.summaryLabel}>Pending</Text>
@@ -477,7 +478,7 @@ export default function SupportCenter({ navigation }) {
             onPress={() => setActiveTab(activeTab === 'ON_WORK' ? 'all' : 'ON_WORK')}
           >
             <LinearGradient colors={['#E0E7FF', '#C7D2FE']} style={st.summaryIconCircle}>
-              <Icon name="construct" size={18} color="#4F46E5" />
+              <Icon name="construct" size={scale(18)} color="#4F46E5" />
             </LinearGradient>
             <Text style={st.summaryCount}>{statusCounts['ON_WORK'] || 0}</Text>
             <Text style={st.summaryLabel}>On Work</Text>
@@ -488,7 +489,7 @@ export default function SupportCenter({ navigation }) {
             onPress={() => setActiveTab(activeTab === 'COMPLETED' ? 'all' : 'COMPLETED')}
           >
             <LinearGradient colors={['#D1FAE5', '#A7F3D0']} style={st.summaryIconCircle}>
-              <Icon name="checkmark-circle" size={18} color="#059669" />
+              <Icon name="checkmark-circle" size={scale(18)} color="#059669" />
             </LinearGradient>
             <Text style={st.summaryCount}>{statusCounts['COMPLETED'] || 0}</Text>
             <Text style={st.summaryLabel}>Done</Text>
@@ -499,7 +500,7 @@ export default function SupportCenter({ navigation }) {
             onPress={() => setActiveTab('all')}
           >
             <LinearGradient colors={['#FEE2E2', '#FECACA']} style={st.summaryIconCircle}>
-              <Icon name="documents" size={18} color={C.primary} />
+              <Icon name="documents" size={scale(18)} color={C.primary} />
             </LinearGradient>
             <Text style={st.summaryCount}>{tickets.length}</Text>
             <Text style={st.summaryLabel}>Total</Text>
@@ -511,7 +512,7 @@ export default function SupportCenter({ navigation }) {
       <View style={st.searchSection}>
         <View style={st.searchBox}>
           <View style={st.searchIconBox}>
-            <Icon name="search" size={16} color={C.primary} />
+            <Icon name="search" size={scale(16)} color={C.primary} />
           </View>
           <TextInput
             style={st.searchInput}
@@ -521,8 +522,8 @@ export default function SupportCenter({ navigation }) {
             onChangeText={setSearchQuery}
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')} style={{ padding: 6 }}>
-              <View style={st.clearBtn}><Icon name="close" size={12} color="#fff" /></View>
+            <TouchableOpacity onPress={() => setSearchQuery('')} style={{ padding: scale(6) }}>
+              <View style={st.clearBtn}><Icon name="close" size={scale(12)} color="#fff" /></View>
             </TouchableOpacity>
           )}
         </View>
@@ -541,7 +542,7 @@ export default function SupportCenter({ navigation }) {
                 onPress={() => setActiveTab(tab.key)}
                 activeOpacity={0.7}
               >
-                <Icon name={tab.icon} size={14} color={isActive ? '#fff' : C.muted} style={{ marginRight: 5 }} />
+                <Icon name={tab.icon} size={scale(14)} color={isActive ? '#fff' : C.muted} style={{ marginRight: scale(5) }} />
                 <Text style={[st.tabText, isActive && st.tabTextActive]}>{tab.label}</Text>
                 {cnt !== null && cnt > 0 && (
                   <View style={[st.tabBadge, isActive && st.tabBadgeActive]}>
@@ -579,7 +580,7 @@ export default function SupportCenter({ navigation }) {
       {filteredTickets.length > 0 && (
         <TouchableOpacity style={st.fabWrap} activeOpacity={0.85} onPress={() => { resetForm(); setCreateModalVisible(true); }}>
           <LinearGradient colors={[C.primary, C.primaryDark]} style={st.fab}>
-            <Icon name="add" size={28} color="#fff" />
+            <Icon name="add" size={scale(28)} color="#fff" />
           </LinearGradient>
         </TouchableOpacity>
       )}
@@ -589,13 +590,13 @@ export default function SupportCenter({ navigation }) {
         <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top', 'left', 'right']}>
           <LinearGradient colors={[C.primary, C.primaryDark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.header}>
             <TouchableOpacity onPress={() => setCreateModalVisible(false)} style={st.backBtn}>
-              <Icon name="chevron-back" size={20} color="#fff" />
+              <Icon name="chevron-back" size={scale(20)} color="#fff" />
             </TouchableOpacity>
             <Text style={st.headerTitle}>New Ticket</Text>
-            <View style={{ width: 38 }} />
+            <View style={{ width: scale(38) }} />
           </LinearGradient>
 
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingBottom: 100 }} keyboardShouldPersistTaps="handled">
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: scale(20), paddingBottom: scale(100) }} keyboardShouldPersistTaps="handled">
             <Text style={st.inputLabel}>Title *</Text>
             <TextInput
               style={st.input}
@@ -607,13 +608,13 @@ export default function SupportCenter({ navigation }) {
 
             <Text style={st.inputLabel}>Category</Text>
             <TouchableOpacity style={st.pickerInput} onPress={() => setCategoryPickerVisible(true)}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(8) }}>
                 <LinearGradient colors={CATEGORY_CONFIG[formData.category]?.gradient || ['#94A3B8', '#64748B']} style={st.pickerCatIcon}>
-                  <Icon name={CATEGORY_CONFIG[formData.category]?.icon || 'help-circle'} size={14} color="#fff" />
+                  <Icon name={CATEGORY_CONFIG[formData.category]?.icon || 'help-circle'} size={scale(14)} color="#fff" />
                 </LinearGradient>
                 <Text style={st.pickerInputText}>{formData.category}</Text>
               </View>
-              <Icon name="chevron-down" size={18} color={C.muted} />
+              <Icon name="chevron-down" size={scale(18)} color={C.muted} />
             </TouchableOpacity>
 
             <Text style={st.inputLabel}>Equipment Name (Optional)</Text>
@@ -641,12 +642,12 @@ export default function SupportCenter({ navigation }) {
               <View style={st.imgPreviewWrap}>
                 <Image source={{ uri: ticketImageUri }} style={st.imgPreview} />
                 <TouchableOpacity style={st.removeImgBtn} onPress={() => setTicketImageUri('')}>
-                  <Icon name="close" size={14} color="#fff" />
+                  <Icon name="close" size={scale(14)} color="#fff" />
                 </TouchableOpacity>
               </View>
             ) : (
               <TouchableOpacity style={st.uploadBtn} onPress={pickTicketImage}>
-                <Icon name="cloud-upload-outline" size={22} color={C.primary} />
+                <Icon name="cloud-upload-outline" size={scale(22)} color={C.primary} />
                 <Text style={st.uploadBtnText}>Upload Image</Text>
               </TouchableOpacity>
             )}
@@ -659,8 +660,8 @@ export default function SupportCenter({ navigation }) {
             <TouchableOpacity activeOpacity={0.85} onPress={handleCreate} disabled={isCreating} style={{ flex: 1 }}>
               <LinearGradient colors={isCreating ? ['#FCA5A5', '#FCA5A5'] : [C.primary, C.primaryDark]} style={st.submitBtn}>
                 {isCreating ? <ActivityIndicator size="small" color="#fff" /> : (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <Icon name="send" size={16} color="#fff" />
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(8) }}>
+                    <Icon name="send" size={scale(16)} color="#fff" />
                     <Text style={st.submitBtnText}>Create Ticket</Text>
                   </View>
                 )}
@@ -675,7 +676,7 @@ export default function SupportCenter({ navigation }) {
         <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top', 'left', 'right']}>
           <LinearGradient colors={[C.primary, C.primaryDark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.header}>
             <TouchableOpacity onPress={() => setDetailModalVisible(false)} style={st.backBtn}>
-              <Icon name="chevron-back" size={20} color="#fff" />
+              <Icon name="chevron-back" size={scale(20)} color="#fff" />
             </TouchableOpacity>
             <View style={st.headerCenter}>
               <Text style={st.headerTitle}>Ticket Details</Text>
@@ -685,7 +686,7 @@ export default function SupportCenter({ navigation }) {
                 </View>
               )}
             </View>
-            <View style={{ width: 38 }} />
+            <View style={{ width: scale(38) }} />
           </LinearGradient>
 
           {selectedTicket && (() => {
@@ -693,14 +694,14 @@ export default function SupportCenter({ navigation }) {
             const dSt = getStatus(selectedTicket.status);
             return (
               <>
-                <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: canReply ? 90 : 24 }} showsVerticalScrollIndicator={false}>
+                <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: scale(16), paddingBottom: canReply ? 90 : 24 }} showsVerticalScrollIndicator={false}>
                   {/* Ticket Info Card */}
                   <View style={st.detailCard}>
                     <LinearGradient colors={dCat.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={st.itemAccent} />
                     <View style={st.detailCardBody}>
                       <View style={st.itemHeaderRow}>
                         <LinearGradient colors={dCat.gradient} style={st.typeIconBox}>
-                          <Icon name={dCat.icon} size={18} color="#fff" />
+                          <Icon name={dCat.icon} size={scale(18)} color="#fff" />
                         </LinearGradient>
                         <View style={st.itemHeaderInfo}>
                           <Text style={st.itemTitle}>{selectedTicket.title}</Text>
@@ -714,8 +715,8 @@ export default function SupportCenter({ navigation }) {
                       </View>
 
                       {selectedTicket.equipmentName ? (
-                        <View style={[st.equipmentRow, { marginTop: 12 }]}>
-                          <Icon name="hardware-chip-outline" size={13} color={C.muted} />
+                        <View style={[st.equipmentRow, { marginTop: scale(12) }]}>
+                          <Icon name="hardware-chip-outline" size={scale(13)} color={C.muted} />
                           <Text style={st.equipmentText}>{selectedTicket.equipmentName}</Text>
                         </View>
                       ) : null}
@@ -724,9 +725,9 @@ export default function SupportCenter({ navigation }) {
 
                       {selectedTicket.photoUrl ? (
                         <View style={st.detailImgWrap}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 8 }}>
-                            <Icon name="image-outline" size={13} color={C.muted} />
-                            <Text style={{ fontSize: 12, color: C.muted, fontWeight: '600' }}>Attachment</Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(4), marginBottom: scale(8) }}>
+                            <Icon name="image-outline" size={scale(13)} color={C.muted} />
+                            <Text style={{ fontSize: moderateScale(12), color: C.muted, fontWeight: '600' }}>Attachment</Text>
                           </View>
                           <Image source={{ uri: toStorageUrl(selectedTicket.photoUrl) }} style={st.detailImg} resizeMode="cover" />
                         </View>
@@ -734,7 +735,7 @@ export default function SupportCenter({ navigation }) {
 
                       <View style={st.detailFooterRow}>
                         <View style={[st.statusChip, { backgroundColor: dSt.bg }]}>
-                          <Icon name={dSt.icon} size={13} color={dSt.color} />
+                          <Icon name={dSt.icon} size={scale(13)} color={dSt.color} />
                           <Text style={[st.statusChipText, { color: dSt.color }]}>{dSt.label}</Text>
                         </View>
                         <Text style={st.footerMeta}>#{selectedTicket.id?.slice(0, 8)}</Text>
@@ -744,8 +745,8 @@ export default function SupportCenter({ navigation }) {
 
                   {/* Messages Section */}
                   <View style={st.msgSectionHeader}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                      <Icon name="chatbubbles" size={16} color={C.ink} />
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(8) }}>
+                      <Icon name="chatbubbles" size={scale(16)} color={C.ink} />
                       <Text style={st.msgSectionTitle}>Messages</Text>
                     </View>
                     <View style={st.msgCountPill}>
@@ -756,7 +757,7 @@ export default function SupportCenter({ navigation }) {
                   {threads.length === 0 ? (
                     <View style={st.noMsgBox}>
                       <LinearGradient colors={['#F1F5F9', '#E2E8F0']} style={st.noMsgCircle}>
-                        <Icon name="chatbox-outline" size={28} color={C.muted} />
+                        <Icon name="chatbox-outline" size={scale(28)} color={C.muted} />
                       </LinearGradient>
                       <Text style={st.noMsgText}>No messages yet</Text>
                     </View>
@@ -773,12 +774,12 @@ export default function SupportCenter({ navigation }) {
                         )}
                         <View style={st.threadInner}>
                           <View style={st.threadHeader}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(6) }}>
                               <LinearGradient
                                 colors={thread.isAdmin ? ['#3B82F6', '#1D4ED8'] : [C.primary, C.primaryDark]}
                                 style={st.threadAvatar}
                               >
-                                <Icon name={thread.isAdmin ? 'headset' : 'person'} size={10} color="#fff" />
+                                <Icon name={thread.isAdmin ? 'headset' : 'person'} size={scale(10)} color="#fff" />
                               </LinearGradient>
                               <Text style={st.threadAuthor}>
                                 {thread.user?.name || (thread.isAdmin ? 'Support' : 'You')}
@@ -808,7 +809,7 @@ export default function SupportCenter({ navigation }) {
                       <View style={st.replyImgPreview}>
                         <Image source={{ uri: replyImageUri }} style={st.replyImg} />
                         <TouchableOpacity style={st.removeReplyBtn} onPress={() => setReplyImageUri('')}>
-                          <Icon name="close" size={10} color="#fff" />
+                          <Icon name="close" size={scale(10)} color="#fff" />
                         </TouchableOpacity>
                       </View>
                     ) : null}
@@ -821,7 +822,7 @@ export default function SupportCenter({ navigation }) {
                         onChangeText={setNewMessage}
                       />
                       <TouchableOpacity style={st.attachBtn} onPress={pickReplyImage}>
-                        <Icon name="image-outline" size={18} color={C.primary} />
+                        <Icon name="image-outline" size={scale(18)} color={C.primary} />
                       </TouchableOpacity>
                       <TouchableOpacity
                         onPress={handleSendMessage}
@@ -832,7 +833,7 @@ export default function SupportCenter({ navigation }) {
                           colors={(!newMessage.trim() && !replyImageUri) ? ['#E2E8F0', '#E2E8F0'] : [C.primary, C.primaryDark]}
                           style={st.sendBtn}
                         >
-                          {isSending ? <ActivityIndicator size="small" color="#fff" /> : <Icon name="send" size={16} color="#fff" />}
+                          {isSending ? <ActivityIndicator size="small" color="#fff" /> : <Icon name="send" size={scale(16)} color="#fff" />}
                         </LinearGradient>
                       </TouchableOpacity>
                     </View>
@@ -855,10 +856,10 @@ export default function SupportCenter({ navigation }) {
                 <Text style={st.modalSubtitle}>Choose a category for your ticket</Text>
               </View>
               <TouchableOpacity onPress={() => setCategoryPickerVisible(false)} style={st.modalCloseBtn}>
-                <Icon name="close" size={20} color={C.muted} />
+                <Icon name="close" size={scale(20)} color={C.muted} />
               </TouchableOpacity>
             </View>
-            <ScrollView style={st.pickerBody} contentContainerStyle={{ paddingBottom: 30 }}>
+            <ScrollView style={st.pickerBody} contentContainerStyle={{ paddingBottom: scale(30) }}>
               {CATEGORY_OPTIONS.map((cat) => {
                 const isSelected = cat === formData.category;
                 const cfg = CATEGORY_CONFIG[cat] || CATEGORY_CONFIG.General;
@@ -869,18 +870,18 @@ export default function SupportCenter({ navigation }) {
                     onPress={() => { setFormData({ ...formData, category: cat }); setCategoryPickerVisible(false); }}
                     activeOpacity={0.7}
                   >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(12) }}>
                       <LinearGradient
                         colors={isSelected ? cfg.gradient : [cfg.lightBg, cfg.lightBg]}
                         style={st.pickerOptionIcon}
                       >
-                        <Icon name={cfg.icon} size={16} color={isSelected ? '#fff' : cfg.color} />
+                        <Icon name={cfg.icon} size={scale(16)} color={isSelected ? '#fff' : cfg.color} />
                       </LinearGradient>
                       <Text style={[st.pickerOptionText, isSelected && { color: cfg.color, fontWeight: '800' }]}>{cat}</Text>
                     </View>
                     {isSelected && (
                       <View style={[st.selectedCheck, { backgroundColor: cfg.color }]}>
-                        <Icon name="checkmark" size={14} color="#fff" />
+                        <Icon name="checkmark" size={scale(14)} color="#fff" />
                       </View>
                     )}
                   </TouchableOpacity>
@@ -902,10 +903,10 @@ export default function SupportCenter({ navigation }) {
                 <Text style={st.modalSubtitle}>{restaurants.length} restaurants available</Text>
               </View>
               <TouchableOpacity onPress={() => setRestaurantPickerVisible(false)} style={st.modalCloseBtn}>
-                <Icon name="close" size={20} color={C.muted} />
+                <Icon name="close" size={scale(20)} color={C.muted} />
               </TouchableOpacity>
             </View>
-            <ScrollView style={st.pickerBody} contentContainerStyle={{ paddingBottom: 30 }}>
+            <ScrollView style={st.pickerBody} contentContainerStyle={{ paddingBottom: scale(30) }}>
               {restaurants.map((r) => {
                 const isSel = r.id === currentRestaurant?.id;
                 return (
@@ -919,7 +920,7 @@ export default function SupportCenter({ navigation }) {
                       colors={isSel ? [C.primary, C.primaryDark] : ['#FEE2E2', '#FEE2E2']}
                       style={st.restaurantOptIcon}
                     >
-                      <Icon name="restaurant" size={20} color={isSel ? '#fff' : C.primary} />
+                      <Icon name="restaurant" size={scale(20)} color={isSel ? '#fff' : C.primary} />
                     </LinearGradient>
                     <View style={st.restaurantOptInfo}>
                       <Text style={[st.restaurantOptName, isSel && { color: C.primary }]} numberOfLines={1}>{r.name}</Text>
@@ -927,7 +928,7 @@ export default function SupportCenter({ navigation }) {
                     </View>
                     {isSel && (
                       <View style={st.selectedCheck}>
-                        <Icon name="checkmark" size={16} color="#fff" />
+                        <Icon name="checkmark" size={scale(16)} color="#fff" />
                       </View>
                     )}
                   </TouchableOpacity>
@@ -952,13 +953,13 @@ const st = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(14),
   },
   backBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+    width: scale(38),
+    height: scale(38),
+    borderRadius: scale(12),
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -966,34 +967,34 @@ const st = StyleSheet.create({
   headerCenter: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: scale(8),
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: moderateScale(18),
     fontWeight: '800',
     color: '#fff',
   },
   countBadge: {
     backgroundColor: '#fff',
-    paddingHorizontal: 9,
-    paddingVertical: 3,
-    borderRadius: 12,
+    paddingHorizontal: scale(9),
+    paddingVertical: scale(3),
+    borderRadius: scale(12),
   },
   countBadgeText: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     fontWeight: '800',
     color: C.primary,
   },
   headerStatusPill: {
     backgroundColor: 'rgba(255,255,255,0.25)',
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 10,
-    marginTop: 2,
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(3),
+    borderRadius: scale(10),
+    marginTop: scale(2),
     alignSelf: 'center',
   },
   headerStatusText: {
-    fontSize: 11,
+    fontSize: moderateScale(11),
     fontWeight: '700',
     color: '#fff',
   },
@@ -1001,79 +1002,79 @@ const st = StyleSheet.create({
   // ─── Loading ───
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   loadingCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: scale(80),
+    height: scale(80),
+    borderRadius: scale(40),
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: scale(16),
   },
-  loadingText: { fontSize: 14, color: C.muted },
+  loadingText: { fontSize: moderateScale(14), color: C.muted },
 
   // ─── Restaurant Banner ───
   restaurantBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    gap: scale(10),
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(10),
     backgroundColor: '#FFF5F5',
     borderBottomWidth: 1,
     borderBottomColor: '#FEE2E2',
   },
   restaurantIconBox: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
+    width: scale(32),
+    height: scale(32),
+    borderRadius: scale(10),
     backgroundColor: '#FEE2E2',
     alignItems: 'center',
     justifyContent: 'center',
   },
   restaurantName: {
     flex: 1,
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '700',
     color: C.ink,
   },
   switchPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    gap: scale(4),
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(5),
     backgroundColor: '#fff',
-    borderRadius: 16,
+    borderRadius: scale(16),
     borderWidth: 1.5,
     borderColor: C.primary,
   },
   switchText: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     fontWeight: '700',
     color: C.primary,
   },
 
   // ─── Summary Grid ───
   summarySection: {
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 6,
+    paddingHorizontal: scale(16),
+    paddingTop: scale(14),
+    paddingBottom: scale(6),
   },
   summaryGrid: {
     flexDirection: 'row',
-    gap: 8,
+    gap: scale(8),
   },
   summaryCard: {
     flex: 1,
     backgroundColor: C.card,
-    borderRadius: 14,
-    padding: 10,
+    borderRadius: scale(14),
+    padding: scale(10),
     alignItems: 'center',
     borderWidth: 1,
     borderColor: C.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
-    shadowRadius: 4,
+    shadowRadius: scale(4),
     elevation: 1,
   },
   summaryCardActive: {
@@ -1081,68 +1082,68 @@ const st = StyleSheet.create({
     borderWidth: 1.5,
   },
   summaryIconCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+    width: scale(34),
+    height: scale(34),
+    borderRadius: scale(10),
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 6,
+    marginBottom: scale(6),
   },
   summaryCount: {
-    fontSize: 18,
+    fontSize: moderateScale(18),
     fontWeight: '800',
     color: C.ink,
   },
   summaryLabel: {
-    fontSize: 10,
+    fontSize: moderateScale(10),
     fontWeight: '600',
     color: C.muted,
-    marginTop: 2,
+    marginTop: scale(2),
     textTransform: 'uppercase',
     letterSpacing: 0.3,
   },
 
   // ─── Search ───
   searchSection: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 4,
+    paddingHorizontal: scale(16),
+    paddingTop: scale(8),
+    paddingBottom: scale(4),
   },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: C.card,
-    borderRadius: 14,
-    paddingHorizontal: 6,
-    paddingVertical: 4,
+    borderRadius: scale(14),
+    paddingHorizontal: scale(6),
+    paddingVertical: scale(4),
     borderWidth: 1,
     borderColor: '#EEF2F7',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: scale(2) },
     shadowOpacity: 0.04,
-    shadowRadius: 8,
+    shadowRadius: scale(8),
     elevation: 2,
   },
   searchIconBox: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+    width: scale(34),
+    height: scale(34),
+    borderRadius: scale(10),
     backgroundColor: '#FEF2F2',
     alignItems: 'center',
     justifyContent: 'center',
   },
   searchInput: {
     flex: 1,
-    marginLeft: 10,
-    fontSize: 14,
+    marginLeft: scale(10),
+    fontSize: moderateScale(14),
     fontWeight: '500',
     color: C.text,
     padding: 0,
   },
   clearBtn: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: scale(20),
+    height: scale(20),
+    borderRadius: scale(10),
     backgroundColor: C.muted,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1150,21 +1151,21 @@ const st = StyleSheet.create({
 
   // ─── Filter Tabs ───
   tabsWrapper: {
-    paddingTop: 8,
-    paddingBottom: 4,
+    paddingTop: scale(8),
+    paddingBottom: scale(4),
     borderBottomWidth: 1,
     borderBottomColor: '#EEEFF2',
   },
   tabsContent: {
-    paddingHorizontal: 16,
-    gap: 8,
+    paddingHorizontal: scale(16),
+    gap: scale(8),
   },
   tab: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingHorizontal: scale(14),
+    paddingVertical: scale(8),
+    borderRadius: scale(20),
     backgroundColor: C.card,
     borderWidth: 1.5,
     borderColor: C.border,
@@ -1174,7 +1175,7 @@ const st = StyleSheet.create({
     borderColor: C.primary,
   },
   tabText: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     fontWeight: '600',
     color: C.muted,
   },
@@ -1182,17 +1183,17 @@ const st = StyleSheet.create({
     color: '#fff',
   },
   tabBadge: {
-    marginLeft: 6,
+    marginLeft: scale(6),
     backgroundColor: '#FEF3C7',
-    paddingHorizontal: 6,
+    paddingHorizontal: scale(6),
     paddingVertical: 1,
-    borderRadius: 8,
+    borderRadius: scale(8),
   },
   tabBadgeActive: {
     backgroundColor: 'rgba(255,255,255,0.3)',
   },
   tabBadgeText: {
-    fontSize: 10,
+    fontSize: moderateScale(10),
     fontWeight: '700',
     color: '#D97706',
   },
@@ -1205,58 +1206,58 @@ const st = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 6,
+    paddingHorizontal: scale(16),
+    paddingTop: scale(12),
+    paddingBottom: scale(6),
   },
   listTitle: {
-    fontSize: 15,
+    fontSize: moderateScale(15),
     fontWeight: '700',
     color: C.ink,
   },
   listCount: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     fontWeight: '600',
     color: C.muted,
     backgroundColor: '#F1F5F9',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
+    paddingHorizontal: scale(8),
+    paddingVertical: scale(3),
+    borderRadius: scale(8),
   },
   listContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 100,
+    paddingHorizontal: scale(16),
+    paddingBottom: scale(100),
   },
 
   // ─── Ticket Card ───
   itemCard: {
     backgroundColor: C.card,
-    borderRadius: 16,
-    marginBottom: 12,
+    borderRadius: scale(16),
+    marginBottom: scale(12),
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: C.border,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: scale(2) },
     shadowOpacity: 0.05,
-    shadowRadius: 8,
+    shadowRadius: scale(8),
     elevation: 2,
   },
   itemAccent: {
-    height: 3,
+    height: scale(3),
   },
   itemBody: {
-    padding: 14,
+    padding: scale(14),
   },
   itemHeaderRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: scale(12),
     alignItems: 'flex-start',
   },
   typeIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(12),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1264,93 +1265,93 @@ const st = StyleSheet.create({
     flex: 1,
   },
   itemTitle: {
-    fontSize: 15,
+    fontSize: moderateScale(15),
     fontWeight: '700',
     color: C.ink,
-    marginBottom: 4,
+    marginBottom: scale(4),
   },
   itemMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: scale(8),
   },
   typePill: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
+    paddingHorizontal: scale(8),
+    paddingVertical: scale(2),
+    borderRadius: scale(6),
   },
   typePillText: {
-    fontSize: 10,
+    fontSize: moderateScale(10),
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.3,
   },
   timeAgoText: {
-    fontSize: 11,
+    fontSize: moderateScale(11),
     color: C.muted,
   },
   equipmentRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginTop: 10,
-    paddingLeft: 52,
+    gap: scale(6),
+    marginTop: scale(10),
+    paddingLeft: scale(52),
   },
   equipmentText: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     color: C.muted,
   },
   itemFooter: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 12,
-    paddingLeft: 52,
+    marginTop: scale(12),
+    paddingLeft: scale(52),
   },
   statusChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
+    gap: scale(5),
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(5),
+    borderRadius: scale(8),
   },
   statusChipText: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     fontWeight: '700',
   },
   footerMeta: {
-    fontSize: 11,
+    fontSize: moderateScale(11),
     color: C.muted,
     fontFamily: 'monospace',
   },
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginTop: 12,
+    gap: scale(8),
+    marginTop: scale(12),
   },
   actionButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
+    gap: scale(6),
+    paddingVertical: scale(10),
     backgroundColor: '#EFF6FF',
-    borderRadius: 10,
+    borderRadius: scale(10),
     borderWidth: 1,
     borderColor: '#BFDBFE',
   },
   actionButtonText: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     fontWeight: '700',
     color: C.info,
   },
   deleteButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(10),
     backgroundColor: '#FEF2F2',
     borderWidth: 1,
     borderColor: '#FECACA',
@@ -1361,86 +1362,86 @@ const st = StyleSheet.create({
   // ─── Empty State ───
   emptyBox: {
     alignItems: 'center',
-    paddingVertical: 50,
+    paddingVertical: scale(50),
   },
   emptyIconCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: scale(100),
+    height: scale(100),
+    borderRadius: scale(50),
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: scale(20),
   },
   emptyTitle: {
-    fontSize: 20,
+    fontSize: moderateScale(20),
     fontWeight: '800',
     color: C.ink,
-    marginBottom: 6,
+    marginBottom: scale(6),
   },
   emptySubtitle: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: C.muted,
-    marginBottom: 20,
+    marginBottom: scale(20),
     textAlign: 'center',
   },
   emptyBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 24,
-    paddingVertical: 13,
-    borderRadius: 14,
+    gap: scale(8),
+    paddingHorizontal: scale(24),
+    paddingVertical: scale(13),
+    borderRadius: scale(14),
   },
   emptyBtnText: {
-    fontSize: 15,
+    fontSize: moderateScale(15),
     fontWeight: '800',
     color: '#fff',
   },
 
   // ─── Help Card ───
   helpCard: {
-    marginTop: 16,
-    borderRadius: 16,
+    marginTop: scale(16),
+    borderRadius: scale(16),
     overflow: 'hidden',
   },
   helpGradient: {
-    padding: 20,
+    padding: scale(20),
     alignItems: 'center',
-    borderRadius: 16,
+    borderRadius: scale(16),
   },
   helpIconBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: scale(48),
+    height: scale(48),
+    borderRadius: scale(24),
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: scale(12),
   },
   helpTitle: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: '800',
     color: C.ink,
-    marginBottom: 6,
+    marginBottom: scale(6),
   },
   helpText: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     color: C.muted,
     textAlign: 'center',
-    lineHeight: 19,
-    marginBottom: 16,
+    lineHeight: moderateScale(19),
+    marginBottom: scale(16),
   },
   helpBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
+    gap: scale(6),
+    paddingHorizontal: scale(20),
+    paddingVertical: scale(10),
+    borderRadius: scale(20),
     backgroundColor: C.info,
   },
   helpBtnText: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     fontWeight: '700',
     color: '#fff',
   },
@@ -1448,18 +1449,18 @@ const st = StyleSheet.create({
   // ─── FAB ───
   fabWrap: {
     position: 'absolute',
-    bottom: 90,
-    right: 20,
+    bottom: scale(90),
+    right: scale(20),
     shadowColor: C.primary,
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: scale(4) },
     shadowOpacity: 0.35,
-    shadowRadius: 8,
+    shadowRadius: scale(8),
     elevation: 8,
   },
   fab: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: scale(56),
+    height: scale(56),
+    borderRadius: scale(28),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1467,131 +1468,131 @@ const st = StyleSheet.create({
   // ─── Create Modal ───
   createFooter: {
     flexDirection: 'row',
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
+    gap: scale(12),
+    paddingHorizontal: scale(20),
+    paddingVertical: scale(14),
     borderTopWidth: 1,
     borderTopColor: '#EEF2F7',
     backgroundColor: C.card,
   },
   inputLabel: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     fontWeight: '700',
     color: C.ink,
-    marginBottom: 8,
-    marginTop: 16,
+    marginBottom: scale(8),
+    marginTop: scale(16),
   },
   input: {
     backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 13,
-    fontSize: 14,
+    borderRadius: scale(12),
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(13),
+    fontSize: moderateScale(14),
     color: C.text,
     borderWidth: 1,
     borderColor: '#EEF2F7',
   },
-  textArea: { minHeight: 100, textAlignVertical: 'top' },
+  textArea: { minHeight: scale(100), textAlignVertical: 'top' },
   pickerInput: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 13,
+    borderRadius: scale(12),
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(13),
     borderWidth: 1,
     borderColor: '#EEF2F7',
   },
   pickerCatIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
+    width: scale(28),
+    height: scale(28),
+    borderRadius: scale(8),
     alignItems: 'center',
     justifyContent: 'center',
   },
-  pickerInputText: { fontSize: 14, color: C.text, fontWeight: '500' },
+  pickerInputText: { fontSize: moderateScale(14), color: C.text, fontWeight: '500' },
   uploadBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 16,
-    borderRadius: 14,
+    gap: scale(8),
+    paddingVertical: scale(16),
+    borderRadius: scale(14),
     borderWidth: 1.5,
     borderColor: '#FECACA',
     borderStyle: 'dashed',
     backgroundColor: '#FEF2F2',
   },
-  uploadBtnText: { fontSize: 14, fontWeight: '600', color: C.primary },
+  uploadBtnText: { fontSize: moderateScale(14), fontWeight: '600', color: C.primary },
   imgPreviewWrap: { position: 'relative', alignSelf: 'flex-start' },
-  imgPreview: { width: 100, height: 100, borderRadius: 14, borderWidth: 1, borderColor: '#EEF2F7' },
+  imgPreview: { width: scale(100), height: scale(100), borderRadius: scale(14), borderWidth: 1, borderColor: '#EEF2F7' },
   removeImgBtn: {
     position: 'absolute',
-    top: -8,
-    right: -8,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    top: scale(-8),
+    right: scale(-8),
+    width: scale(24),
+    height: scale(24),
+    borderRadius: scale(12),
     backgroundColor: C.danger,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cancelBtn: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: scale(14),
     backgroundColor: '#F1F5F9',
-    borderRadius: 12,
+    borderRadius: scale(12),
     alignItems: 'center',
   },
-  cancelBtnText: { fontSize: 15, fontWeight: '800', color: C.ink },
+  cancelBtnText: { fontSize: moderateScale(15), fontWeight: '800', color: C.ink },
   submitBtn: {
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingVertical: scale(14),
+    borderRadius: scale(12),
     alignItems: 'center',
     justifyContent: 'center',
   },
-  submitBtnText: { fontSize: 15, fontWeight: '800', color: '#fff' },
+  submitBtnText: { fontSize: moderateScale(15), fontWeight: '800', color: '#fff' },
 
   // ─── Detail Modal ───
   detailCard: {
     backgroundColor: C.card,
-    borderRadius: 16,
+    borderRadius: scale(16),
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: C.border,
-    marginBottom: 20,
+    marginBottom: scale(20),
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: scale(2) },
     shadowOpacity: 0.05,
-    shadowRadius: 8,
+    shadowRadius: scale(8),
     elevation: 2,
   },
   detailCardBody: {
-    padding: 14,
+    padding: scale(14),
   },
   detailDesc: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: C.text,
-    lineHeight: 21,
-    marginTop: 12,
-    paddingLeft: 52,
+    lineHeight: moderateScale(21),
+    marginTop: scale(12),
+    paddingLeft: scale(52),
   },
   detailImgWrap: {
-    marginTop: 14,
-    paddingLeft: 52,
+    marginTop: scale(14),
+    paddingLeft: scale(52),
   },
   detailImg: {
     width: '100%',
-    height: 160,
-    borderRadius: 12,
+    height: scale(160),
+    borderRadius: scale(12),
   },
   detailFooterRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 14,
-    paddingLeft: 52,
+    marginTop: scale(14),
+    paddingLeft: scale(52),
   },
 
   // ─── Messages ───
@@ -1599,112 +1600,112 @@ const st = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 14,
+    marginBottom: scale(14),
   },
   msgSectionTitle: {
-    fontSize: 15,
+    fontSize: moderateScale(15),
     fontWeight: '800',
     color: C.ink,
   },
   msgCountPill: {
     backgroundColor: '#FEF2F2',
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 10,
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(3),
+    borderRadius: scale(10),
   },
   msgCountText: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     fontWeight: '800',
     color: C.primary,
   },
   noMsgBox: {
     alignItems: 'center',
-    paddingVertical: 30,
+    paddingVertical: scale(30),
   },
   noMsgCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: scale(64),
+    height: scale(64),
+    borderRadius: scale(32),
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: scale(12),
   },
   noMsgText: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     color: C.muted,
   },
 
   // ─── Thread Messages ───
   threadMsg: {
-    borderRadius: 14,
-    marginBottom: 10,
+    borderRadius: scale(14),
+    marginBottom: scale(10),
     overflow: 'hidden',
     borderWidth: 1,
   },
   threadAdmin: {
     backgroundColor: '#F0F7FF',
     borderColor: '#DBEAFE',
-    marginLeft: 20,
+    marginLeft: scale(20),
   },
   threadOwner: {
     backgroundColor: '#FEF8F8',
     borderColor: '#FECACA',
-    marginRight: 20,
+    marginRight: scale(20),
   },
   threadAccentLine: {
-    height: 3,
+    height: scale(3),
   },
   threadInner: {
-    padding: 12,
+    padding: scale(12),
   },
   threadHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: scale(8),
   },
   threadAvatar: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: scale(22),
+    height: scale(22),
+    borderRadius: scale(11),
     alignItems: 'center',
     justifyContent: 'center',
   },
   threadAuthor: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     fontWeight: '700',
     color: C.ink,
   },
   supportBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
+    paddingHorizontal: scale(6),
+    paddingVertical: scale(2),
+    borderRadius: scale(6),
   },
   supportBadgeText: {
-    fontSize: 9,
+    fontSize: moderateScale(9),
     fontWeight: '800',
     color: '#fff',
   },
   threadTime: {
-    fontSize: 10,
+    fontSize: moderateScale(10),
     color: C.muted,
   },
   threadText: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     color: C.text,
-    lineHeight: 20,
+    lineHeight: moderateScale(20),
   },
   threadImage: {
     width: '100%',
-    height: 120,
-    borderRadius: 10,
-    marginTop: 8,
+    height: scale(120),
+    borderRadius: scale(10),
+    marginTop: scale(8),
   },
 
   // ─── Reply Bar ───
   replyBar: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(10),
     borderTopWidth: 1,
     borderTopColor: '#EEF2F7',
     backgroundColor: C.card,
@@ -1712,20 +1713,20 @@ const st = StyleSheet.create({
   replyImgPreview: {
     position: 'relative',
     alignSelf: 'flex-start',
-    marginBottom: 8,
+    marginBottom: scale(8),
   },
   replyImg: {
-    width: 56,
-    height: 56,
-    borderRadius: 10,
+    width: scale(56),
+    height: scale(56),
+    borderRadius: scale(10),
   },
   removeReplyBtn: {
     position: 'absolute',
-    top: -5,
-    right: -5,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    top: scale(-5),
+    right: scale(-5),
+    width: scale(18),
+    height: scale(18),
+    borderRadius: scale(9),
     backgroundColor: C.danger,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1733,31 +1734,31 @@ const st = StyleSheet.create({
   replyInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: scale(8),
   },
   replyInput: {
     flex: 1,
     backgroundColor: '#F8FAFC',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    fontSize: 14,
+    borderRadius: scale(20),
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(10),
+    fontSize: moderateScale(14),
     color: C.text,
     borderWidth: 1,
     borderColor: '#EEF2F7',
   },
   attachBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: scale(36),
+    height: scale(36),
+    borderRadius: scale(18),
     backgroundColor: '#FEF2F2',
     alignItems: 'center',
     justifyContent: 'center',
   },
   sendBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: scale(38),
+    height: scale(38),
+    borderRadius: scale(19),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1770,56 +1771,56 @@ const st = StyleSheet.create({
   },
   pickerSheet: {
     backgroundColor: C.card,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    borderTopLeftRadius: scale(28),
+    borderTopRightRadius: scale(28),
     maxHeight: '70%',
   },
   modalDragBar: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
+    width: scale(40),
+    height: scale(4),
+    borderRadius: scale(2),
     backgroundColor: '#D1D5DB',
     alignSelf: 'center',
-    marginTop: 12,
+    marginTop: scale(12),
   },
   modalHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 14,
+    paddingHorizontal: scale(20),
+    paddingTop: scale(16),
+    paddingBottom: scale(14),
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: moderateScale(18),
     fontWeight: '800',
     color: C.ink,
   },
   modalSubtitle: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     color: C.muted,
-    marginTop: 2,
+    marginTop: scale(2),
   },
   modalCloseBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: scale(36),
+    height: scale(36),
+    borderRadius: scale(18),
     backgroundColor: '#F3F4F6',
     alignItems: 'center',
     justifyContent: 'center',
   },
   pickerBody: {
-    padding: 16,
+    padding: scale(16),
   },
   pickerOption: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 14,
-    marginBottom: 10,
-    borderRadius: 14,
+    padding: scale(14),
+    marginBottom: scale(10),
+    borderRadius: scale(14),
     borderWidth: 2,
     borderColor: C.border,
     backgroundColor: '#FAFBFC',
@@ -1829,21 +1830,21 @@ const st = StyleSheet.create({
     backgroundColor: '#FFF5F5',
   },
   pickerOptionIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: scale(36),
+    height: scale(36),
+    borderRadius: scale(10),
     alignItems: 'center',
     justifyContent: 'center',
   },
   pickerOptionText: {
-    fontSize: 15,
+    fontSize: moderateScale(15),
     fontWeight: '600',
     color: C.ink,
   },
   selectedCheck: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: scale(28),
+    height: scale(28),
+    borderRadius: scale(14),
     backgroundColor: C.primary,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1853,10 +1854,10 @@ const st = StyleSheet.create({
   restaurantOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    padding: 14,
-    marginBottom: 10,
-    borderRadius: 14,
+    gap: scale(12),
+    padding: scale(14),
+    marginBottom: scale(10),
+    borderRadius: scale(14),
     borderWidth: 2,
     borderColor: C.border,
     backgroundColor: '#FAFBFC',
@@ -1866,9 +1867,9 @@ const st = StyleSheet.create({
     backgroundColor: '#FFF5F5',
   },
   restaurantOptIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: scale(44),
+    height: scale(44),
+    borderRadius: scale(14),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1876,13 +1877,13 @@ const st = StyleSheet.create({
     flex: 1,
   },
   restaurantOptName: {
-    fontSize: 15,
+    fontSize: moderateScale(15),
     fontWeight: '700',
     color: C.ink,
   },
   restaurantOptAddr: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     color: C.muted,
-    marginTop: 3,
+    marginTop: scale(3),
   },
 });

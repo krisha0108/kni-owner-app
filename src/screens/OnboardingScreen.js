@@ -10,6 +10,7 @@ import {
 import Onboarding from 'react-native-onboarding-swiper';
 import LottieView from 'lottie-react-native';
 
+import { scale, moderateScale } from '../utils/responsive';
 const { width, height } = Dimensions.get('window');
 
 const OnboardingScreen = ({ navigation }) => {
@@ -110,71 +111,71 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#EF3A3A',
-    borderRadius: 20,
-    padding: 10,
+    borderRadius: scale(20),
+    padding: scale(10),
   },
   title: {
-    fontSize: 26,
+    fontSize: moderateScale(26),
     fontWeight: '800',
     color: '#1D2254',
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: scale(12),
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     color: '#666',
     textAlign: 'center',
-    paddingHorizontal: 30,
+    paddingHorizontal: scale(30),
   },
   whiteTitle: {
-    fontSize: 26,
+    fontSize: moderateScale(26),
     fontWeight: '800',
     color: '#FFFFFF',
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: scale(12),
   },
   whiteSubtitle: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     color: '#F5F5F5',
     textAlign: 'center',
-    paddingHorizontal: 30,
+    paddingHorizontal: scale(30),
   },
 
   // 🔹 ORIGINAL BUTTON STYLES (unchanged)
   doneButton: {
-    marginRight: 18,
+    marginRight: scale(18),
     backgroundColor: '#1D2254',
-    paddingVertical: 10,
-    paddingHorizontal: 22,
-    borderRadius: 25,
+    paddingVertical: scale(10),
+    paddingHorizontal: scale(22),
+    borderRadius: scale(25),
   },
   doneText: {
     color: '#fff',
     fontWeight: '700',
-    fontSize: 15,
+    fontSize: moderateScale(15),
   },
   nextButton: {
-    marginRight: 5,
+    marginRight: scale(5),
     // backgroundColor: '#1D2254',
-    paddingVertical: 10,
-    paddingHorizontal: 22,
-    borderRadius: 25,
+    paddingVertical: scale(10),
+    paddingHorizontal: scale(22),
+    borderRadius: scale(25),
   },
   nextText: {
     color: '#1D2254',
     fontWeight: '600',
-    fontSize: 15,
+    fontSize: moderateScale(15),
   },
   skipButton: {
-    marginLeft: 5,
-    paddingVertical: 10,
-    paddingHorizontal: 22,
-    borderRadius: 25,
+    marginLeft: scale(5),
+    paddingVertical: scale(10),
+    paddingHorizontal: scale(22),
+    borderRadius: scale(25),
   },
   skipText: {
     color: '#1D2254',
     fontWeight: '600',
-    fontSize: 15,
+    fontSize: moderateScale(15),
   },
 
   // 🔹 JUST LIFT BUTTONS UP A BIT (NO STYLE CHANGE)

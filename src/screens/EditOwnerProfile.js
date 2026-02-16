@@ -10,6 +10,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import { api } from '../api/client';
 
+import { scale, moderateScale } from '../utils/responsive';
 const C = {
   primary: '#EF3A3A', primaryDark: '#D42E2E', ink: '#1D2254',
   text: '#0F172A', muted: '#6B7280', border: '#E5E7EB', bg: '#F5F7FA',
@@ -102,14 +103,14 @@ export default function EditOwnerProfile() {
         <StatusBar barStyle="light-content" />
         <LinearGradient colors={[C.primary, C.primaryDark]} style={st.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
-            <Icon name="chevron-back" size={20} color="#fff" />
+            <Icon name="chevron-back" size={scale(20)} color="#fff" />
           </TouchableOpacity>
           <Text style={st.headerTitle}>Edit Profile</Text>
-          <View style={{ width: 40 }} />
+          <View style={{ width: scale(40) }} />
         </LinearGradient>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <ActivityIndicator size="large" color={C.primary} />
-          <Text style={{ color: C.muted, marginTop: 12 }}>Loading...</Text>
+          <Text style={{ color: C.muted, marginTop: scale(12) }}>Loading...</Text>
         </View>
       </SafeAreaView>
     );
@@ -122,7 +123,7 @@ export default function EditOwnerProfile() {
       {/* ===== HEADER ===== */}
       <LinearGradient colors={[C.primary, C.primaryDark]} style={st.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
-          <Icon name="chevron-back" size={20} color="#fff" />
+          <Icon name="chevron-back" size={scale(20)} color="#fff" />
         </TouchableOpacity>
         <Text style={st.headerTitle}>Edit Profile</Text>
         <TouchableOpacity onPress={onSave} disabled={saving} style={st.saveTopBtn}>
@@ -135,7 +136,7 @@ export default function EditOwnerProfile() {
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 40 }}>
+          contentContainerStyle={{ padding: scale(16), paddingBottom: insets.bottom + 40 }}>
 
           {/* ===== AVATAR PREVIEW ===== */}
           <View style={st.avatarSection}>
@@ -152,14 +153,14 @@ export default function EditOwnerProfile() {
             {/* --- Name Row --- */}
             <Text style={st.groupLabel}>Personal Details</Text>
             <View style={st.nameRow}>
-              <View style={{ flex: 1, marginRight: 6 }}>
+              <View style={{ flex: 1, marginRight: scale(6) }}>
                 <Text style={st.label}>First Name <Text style={{ color: C.primary }}>*</Text></Text>
                 <View style={st.inputBox}>
                   <TextInput style={st.input} value={firstName} onChangeText={setFirstName}
                     placeholder="First name" placeholderTextColor="#B0B8C4" />
                 </View>
               </View>
-              <View style={{ flex: 1, marginLeft: 6 }}>
+              <View style={{ flex: 1, marginLeft: scale(6) }}>
                 <Text style={st.label}>Last Name</Text>
                 <View style={st.inputBox}>
                   <TextInput style={st.input} value={lastName} onChangeText={setLastName}
@@ -170,16 +171,16 @@ export default function EditOwnerProfile() {
 
             <Text style={st.label}>Email <Text style={{ color: C.primary }}>*</Text></Text>
             <View style={st.inputBox}>
-              <Icon name="mail-outline" size={16} color="#94A3B8" style={{ marginLeft: 12 }} />
-              <TextInput style={[st.input, { paddingLeft: 8 }]} value={email} onChangeText={setEmail}
+              <Icon name="mail-outline" size={scale(16)} color="#94A3B8" style={{ marginLeft: scale(12) }} />
+              <TextInput style={[st.input, { paddingLeft: scale(8) }]} value={email} onChangeText={setEmail}
                 placeholder="your@email.com" placeholderTextColor="#B0B8C4"
                 keyboardType="email-address" autoCapitalize="none" />
             </View>
 
             <Text style={st.label}>Phone <Text style={{ color: C.primary }}>*</Text></Text>
             <View style={st.inputBox}>
-              <Icon name="call-outline" size={16} color="#94A3B8" style={{ marginLeft: 12 }} />
-              <TextInput style={[st.input, { paddingLeft: 8 }]} value={phone} onChangeText={setPhone}
+              <Icon name="call-outline" size={scale(16)} color="#94A3B8" style={{ marginLeft: scale(12) }} />
+              <TextInput style={[st.input, { paddingLeft: scale(8) }]} value={phone} onChangeText={setPhone}
                 placeholder="+91 98765 43210" placeholderTextColor="#B0B8C4" keyboardType="phone-pad" />
             </View>
 
@@ -190,12 +191,12 @@ export default function EditOwnerProfile() {
             <Text style={st.groupLabel}>Security</Text>
             <Text style={st.label}>New Password</Text>
             <View style={st.inputBox}>
-              <Icon name="lock-closed-outline" size={16} color="#94A3B8" style={{ marginLeft: 12 }} />
-              <TextInput style={[st.input, { paddingLeft: 8 }]} value={password} onChangeText={setPassword}
+              <Icon name="lock-closed-outline" size={scale(16)} color="#94A3B8" style={{ marginLeft: scale(12) }} />
+              <TextInput style={[st.input, { paddingLeft: scale(8) }]} value={password} onChangeText={setPassword}
                 placeholder="Leave blank to keep current" placeholderTextColor="#B0B8C4"
                 secureTextEntry={!showPassword} autoCapitalize="none" />
-              <TouchableOpacity onPress={() => setShowPassword(s => !s)} style={{ padding: 12 }}>
-                <Icon name={showPassword ? 'eye-off' : 'eye'} size={18} color="#94A3B8" />
+              <TouchableOpacity onPress={() => setShowPassword(s => !s)} style={{ padding: scale(12) }}>
+                <Icon name={showPassword ? 'eye-off' : 'eye'} size={scale(18)} color="#94A3B8" />
               </TouchableOpacity>
             </View>
             <Text style={st.hint}>Only fill this if you want to change your password</Text>
@@ -207,25 +208,25 @@ export default function EditOwnerProfile() {
             <Text style={st.groupLabel}>Business</Text>
             <Text style={st.label}>Restaurant Name</Text>
             <View style={st.inputBox}>
-              <Icon name="restaurant-outline" size={16} color="#94A3B8" style={{ marginLeft: 12 }} />
-              <TextInput style={[st.input, { paddingLeft: 8 }]} value={restaurantName} onChangeText={setRestaurantName}
+              <Icon name="restaurant-outline" size={scale(16)} color="#94A3B8" style={{ marginLeft: scale(12) }} />
+              <TextInput style={[st.input, { paddingLeft: scale(8) }]} value={restaurantName} onChangeText={setRestaurantName}
                 placeholder="Your restaurant name" placeholderTextColor="#B0B8C4" />
             </View>
 
             <Text style={st.label}>Locations</Text>
             <View style={st.inputBox}>
-              <Icon name="location-outline" size={16} color="#94A3B8" style={{ marginLeft: 12 }} />
-              <TextInput style={[st.input, { paddingLeft: 8 }]} value={locations} onChangeText={setLocations}
+              <Icon name="location-outline" size={scale(16)} color="#94A3B8" style={{ marginLeft: scale(12) }} />
+              <TextInput style={[st.input, { paddingLeft: scale(8) }]} value={locations} onChangeText={setLocations}
                 placeholder="e.g. 3" placeholderTextColor="#B0B8C4" keyboardType="number-pad" />
             </View>
           </View>
 
           {/* ===== BUTTONS ===== */}
-          <TouchableOpacity disabled={saving} onPress={onSave} activeOpacity={0.85} style={{ marginTop: 16 }}>
+          <TouchableOpacity disabled={saving} onPress={onSave} activeOpacity={0.85} style={{ marginTop: scale(16) }}>
             <LinearGradient colors={[C.primary, C.primaryDark]} style={st.saveBtn}>
               {saving ? <ActivityIndicator color="#fff" /> : (
                 <>
-                  <Icon name="checkmark-circle" size={20} color="#fff" />
+                  <Icon name="checkmark-circle" size={scale(20)} color="#fff" />
                   <Text style={st.saveBtnText}>Save Changes</Text>
                 </>
               )}
@@ -248,108 +249,108 @@ const st = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(14),
   },
   backBtn: {
-    width: 40, height: 40, borderRadius: 12,
+    width: scale(40), height: scale(40), borderRadius: scale(12),
     backgroundColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center', justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: 18, fontWeight: '800', color: '#fff',
+    fontSize: moderateScale(18), fontWeight: '800', color: '#fff',
   },
   saveTopBtn: {
     backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 16, paddingVertical: 8, borderRadius: 10,
+    paddingHorizontal: scale(16), paddingVertical: scale(8), borderRadius: scale(10),
   },
   saveTopText: {
-    color: '#fff', fontWeight: '800', fontSize: 14,
+    color: '#fff', fontWeight: '800', fontSize: moderateScale(14),
   },
 
   /* Avatar */
   avatarSection: {
-    alignItems: 'center', paddingVertical: 20,
+    alignItems: 'center', paddingVertical: scale(20),
   },
   avatarCircle: {
-    width: 72, height: 72, borderRadius: 24,
+    width: scale(72), height: scale(72), borderRadius: scale(24),
     alignItems: 'center', justifyContent: 'center',
-    shadowColor: C.primary, shadowOpacity: 0.3, shadowRadius: 10, elevation: 6,
+    shadowColor: C.primary, shadowOpacity: 0.3, shadowRadius: scale(10), elevation: 6,
   },
   avatarText: {
-    color: '#fff', fontSize: 30, fontWeight: '900',
+    color: '#fff', fontSize: moderateScale(30), fontWeight: '900',
   },
   avatarName: {
-    color: C.ink, fontWeight: '800', fontSize: 18, marginTop: 12,
+    color: C.ink, fontWeight: '800', fontSize: moderateScale(18), marginTop: scale(12),
   },
   avatarSub: {
-    color: C.muted, fontSize: 13, marginTop: 3,
+    color: C.muted, fontSize: moderateScale(13), marginTop: scale(3),
   },
 
   /* Form Card */
   formCard: {
     backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 18,
+    borderRadius: scale(20),
+    padding: scale(18),
     borderWidth: 1,
     borderColor: '#EEF2F7',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
+    shadowOffset: { width: 0, height: scale(3) },
     shadowOpacity: 0.06,
-    shadowRadius: 10,
+    shadowRadius: scale(10),
     elevation: 3,
   },
 
   /* Group Label */
   groupLabel: {
-    fontSize: 14, fontWeight: '800', color: C.ink,
-    marginBottom: 12, marginTop: 4,
+    fontSize: moderateScale(14), fontWeight: '800', color: C.ink,
+    marginBottom: scale(12), marginTop: scale(4),
   },
 
   /* Label */
   label: {
-    fontSize: 12, fontWeight: '600', color: C.muted,
-    marginBottom: 6, marginLeft: 2,
+    fontSize: moderateScale(12), fontWeight: '600', color: C.muted,
+    marginBottom: scale(6), marginLeft: scale(2),
   },
 
   /* Input */
   nameRow: { flexDirection: 'row' },
   inputBox: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#F8FAFC', borderRadius: 12,
+    backgroundColor: '#F8FAFC', borderRadius: scale(12),
     borderWidth: 1.2, borderColor: '#E2E8F0',
-    marginBottom: 14,
+    marginBottom: scale(14),
   },
   input: {
-    flex: 1, paddingHorizontal: 14, paddingVertical: 13,
-    fontSize: 15, color: C.text, fontWeight: '500',
+    flex: 1, paddingHorizontal: scale(14), paddingVertical: scale(13),
+    fontSize: moderateScale(15), color: C.text, fontWeight: '500',
   },
 
   /* Hint */
   hint: {
-    fontSize: 11.5, color: '#94A3B8', marginTop: -6, marginBottom: 8, marginLeft: 2,
+    fontSize: moderateScale(11.5), color: '#94A3B8', marginTop: scale(-6), marginBottom: scale(8), marginLeft: scale(2),
   },
 
   /* Divider */
   divider: {
-    height: 1, backgroundColor: '#F1F5F9', marginVertical: 16,
+    height: 1, backgroundColor: '#F1F5F9', marginVertical: scale(16),
   },
 
   /* Save / Cancel */
   saveBtn: {
-    borderRadius: 14, paddingVertical: 16,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    shadowColor: C.primary, shadowOpacity: 0.2, shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 }, elevation: 4,
+    borderRadius: scale(14), paddingVertical: scale(16),
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: scale(8),
+    shadowColor: C.primary, shadowOpacity: 0.2, shadowRadius: scale(8),
+    shadowOffset: { width: 0, height: scale(4) }, elevation: 4,
   },
   saveBtnText: {
-    color: '#fff', fontWeight: '800', fontSize: 16,
+    color: '#fff', fontWeight: '800', fontSize: moderateScale(16),
   },
   cancelBtn: {
-    marginTop: 10, paddingVertical: 14, alignItems: 'center',
-    borderRadius: 14, backgroundColor: '#F1F5F9',
+    marginTop: scale(10), paddingVertical: scale(14), alignItems: 'center',
+    borderRadius: scale(14), backgroundColor: '#F1F5F9',
   },
   cancelBtnText: {
-    color: C.muted, fontWeight: '700', fontSize: 15,
+    color: C.muted, fontWeight: '700', fontSize: moderateScale(15),
   },
 });

@@ -19,6 +19,7 @@ import { RestaurantSelectorBar } from '../components/RestaurantSelector';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
+import { scale, moderateScale } from '../utils/responsive';
 // Keep original colors - not flashy
 const C = {
   primary: '#EF3A3A',
@@ -199,10 +200,10 @@ export default function VendorLedgerScreen({ navigation }) {
 
   // ==================== RENDER VENDOR CARD ====================
   const renderVendorCard = ({ item }) => (
-    <View style={[st.vendorCard, isTablet && { marginHorizontal: 6 }]}>
+    <View style={[st.vendorCard, isTablet && { marginHorizontal: scale(6) }]}>
       <View style={st.vendorHeader}>
         <View style={st.vendorIconBox}>
-          <Icon name="business" size={22} color={C.info} />
+          <Icon name="business" size={scale(22)} color={C.info} />
         </View>
         <View style={st.vendorInfo}>
           <Text style={st.vendorName} numberOfLines={1}>{item.vendorName}</Text>
@@ -221,12 +222,12 @@ export default function VendorLedgerScreen({ navigation }) {
 
       <View style={st.vendorStats}>
         <View style={st.statBox}>
-          <Icon name="cart-outline" size={14} color={C.danger} />
+          <Icon name="cart-outline" size={scale(14)} color={C.danger} />
           <Text style={st.statLabel}>Purchases</Text>
           <Text style={[st.statValue, { color: C.danger }]}>{formatPrice(item.totalPurchases)}</Text>
         </View>
         <View style={st.statBox}>
-          <Icon name="wallet-outline" size={14} color={C.ok} />
+          <Icon name="wallet-outline" size={scale(14)} color={C.ok} />
           <Text style={st.statLabel}>Payments</Text>
           <Text style={[st.statValue, { color: C.ok }]}>{formatPrice(item.totalPayments)}</Text>
         </View>
@@ -236,11 +237,11 @@ export default function VendorLedgerScreen({ navigation }) {
         <Text style={st.lastTxn}>Last: {formatDate(item.lastTransactionDate)}</Text>
         <View style={st.vendorActions}>
           <TouchableOpacity style={[st.vendorBtn, { backgroundColor: C.dangerLight }]} onPress={() => openEntryModal('PURCHASE', item)}>
-            <Icon name="cart" size={14} color={C.danger} />
+            <Icon name="cart" size={scale(14)} color={C.danger} />
             <Text style={[st.vendorBtnText, { color: C.danger }]}>Purchase</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[st.vendorBtn, { backgroundColor: C.okLight }]} onPress={() => openEntryModal('PAYMENT', item)}>
-            <Icon name="wallet" size={14} color={C.ok} />
+            <Icon name="wallet" size={scale(14)} color={C.ok} />
             <Text style={[st.vendorBtnText, { color: C.ok }]}>Payment</Text>
           </TouchableOpacity>
         </View>
@@ -254,10 +255,10 @@ export default function VendorLedgerScreen({ navigation }) {
     const isDebit = item.entryType === 'PURCHASE' || item.entryType === 'DEBIT_NOTE';
 
     return (
-      <View style={[st.entryCard, isTablet && { marginHorizontal: 6 }]}>
+      <View style={[st.entryCard, isTablet && { marginHorizontal: scale(6) }]}>
         <View style={st.entryHeader}>
           <View style={[st.entryIcon, { backgroundColor: config.bg }]}>
-            <Icon name={config.icon} size={18} color={config.color} />
+            <Icon name={config.icon} size={scale(18)} color={config.color} />
           </View>
           <View style={st.entryInfo}>
             <Text style={st.entryVendor} numberOfLines={1}>{item.vendorName}</Text>
@@ -297,28 +298,28 @@ export default function VendorLedgerScreen({ navigation }) {
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.summaryScroll}>
           <View style={[st.summaryCard, { borderLeftColor: C.info }]}>
             <View style={[st.summaryIcon, { backgroundColor: C.infoLight }]}>
-              <Icon name="people" size={18} color={C.info} />
+              <Icon name="people" size={scale(18)} color={C.info} />
             </View>
             <Text style={st.summaryLabel}>Vendors</Text>
             <Text style={st.summaryValue}>{summary.totalVendors}</Text>
           </View>
           <View style={[st.summaryCard, { borderLeftColor: C.danger }]}>
             <View style={[st.summaryIcon, { backgroundColor: C.dangerLight }]}>
-              <Icon name="trending-up" size={18} color={C.danger} />
+              <Icon name="trending-up" size={scale(18)} color={C.danger} />
             </View>
             <Text style={st.summaryLabel}>Total Due</Text>
             <Text style={[st.summaryValue, { color: C.danger }]}>{formatPrice(summary.totalDue)}</Text>
           </View>
           <View style={[st.summaryCard, { borderLeftColor: C.ok }]}>
             <View style={[st.summaryIcon, { backgroundColor: C.okLight }]}>
-              <Icon name="trending-down" size={18} color={C.ok} />
+              <Icon name="trending-down" size={scale(18)} color={C.ok} />
             </View>
             <Text style={st.summaryLabel}>Advance</Text>
             <Text style={[st.summaryValue, { color: C.ok }]}>{formatPrice(summary.totalAdvance)}</Text>
           </View>
           <View style={[st.summaryCard, { borderLeftColor: C.warn }]}>
             <View style={[st.summaryIcon, { backgroundColor: C.warnLight }]}>
-              <Icon name="wallet" size={18} color={C.warn} />
+              <Icon name="wallet" size={scale(18)} color={C.warn} />
             </View>
             <Text style={st.summaryLabel}>Net Balance</Text>
             <Text style={[st.summaryValue, { color: summary.netBalance > 0 ? C.danger : C.ok }]}>{formatPrice(summary.netBalance)}</Text>
@@ -329,11 +330,11 @@ export default function VendorLedgerScreen({ navigation }) {
       {/* Quick Actions */}
       <View style={st.quickRow}>
         <TouchableOpacity style={[st.quickBtn, { backgroundColor: C.dangerLight, borderColor: C.danger }]} onPress={() => openEntryModal('PURCHASE')}>
-          <Icon name="cart" size={18} color={C.danger} />
+          <Icon name="cart" size={scale(18)} color={C.danger} />
           <Text style={[st.quickBtnText, { color: C.danger }]}>Add Purchase</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[st.quickBtn, { backgroundColor: C.okLight, borderColor: C.ok }]} onPress={() => openEntryModal('PAYMENT')}>
-          <Icon name="wallet" size={18} color={C.ok} />
+          <Icon name="wallet" size={scale(18)} color={C.ok} />
           <Text style={[st.quickBtnText, { color: C.ok }]}>Add Payment</Text>
         </TouchableOpacity>
       </View>
@@ -341,11 +342,11 @@ export default function VendorLedgerScreen({ navigation }) {
       {/* Tabs */}
       <View style={st.tabsContainer}>
         <TouchableOpacity style={[st.tab, activeTab === 'summary' && st.tabActive]} onPress={() => setActiveTab('summary')}>
-          <Icon name="people" size={16} color={activeTab === 'summary' ? '#fff' : C.muted} />
+          <Icon name="people" size={scale(16)} color={activeTab === 'summary' ? '#fff' : C.muted} />
           <Text style={[st.tabText, activeTab === 'summary' && st.tabTextActive]}>Vendors ({vendors.length})</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[st.tab, activeTab === 'transactions' && st.tabActive]} onPress={() => setActiveTab('transactions')}>
-          <Icon name="list" size={16} color={activeTab === 'transactions' ? '#fff' : C.muted} />
+          <Icon name="list" size={scale(16)} color={activeTab === 'transactions' ? '#fff' : C.muted} />
           <Text style={[st.tabText, activeTab === 'transactions' && st.tabTextActive]}>Transactions ({entries.length})</Text>
         </TouchableOpacity>
       </View>
@@ -359,10 +360,10 @@ export default function VendorLedgerScreen({ navigation }) {
         <StatusBar barStyle="dark-content" backgroundColor={C.card} />
         <View style={st.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
-            <Icon name="arrow-back" size={22} color={C.ink} />
+            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
           </TouchableOpacity>
           <Text style={st.headerTitle}>Vendor Ledger</Text>
-          <View style={{ width: 40 }} />
+          <View style={{ width: scale(40) }} />
         </View>
         <View style={st.loadingBox}>
           <ActivityIndicator size="large" color={C.primary} />
@@ -380,13 +381,13 @@ export default function VendorLedgerScreen({ navigation }) {
         <StatusBar barStyle="dark-content" backgroundColor={C.card} />
         <View style={st.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
-            <Icon name="arrow-back" size={22} color={C.ink} />
+            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
           </TouchableOpacity>
           <Text style={st.headerTitle}>Vendor Ledger</Text>
-          <View style={{ width: 40 }} />
+          <View style={{ width: scale(40) }} />
         </View>
         <View style={st.emptyState}>
-          <Icon name="business-outline" size={64} color={C.muted} />
+          <Icon name="business-outline" size={scale(64)} color={C.muted} />
           <Text style={st.emptyTitle}>No Restaurant Found</Text>
           <Text style={st.emptySubtitle}>Please add a restaurant first</Text>
         </View>
@@ -408,7 +409,7 @@ export default function VendorLedgerScreen({ navigation }) {
       {/* Header */}
       <View style={st.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
-          <Icon name="arrow-back" size={22} color={C.ink} />
+          <Icon name="arrow-back" size={scale(22)} color={C.ink} />
         </TouchableOpacity>
         <View style={st.headerCenter}>
           <Text style={st.headerTitle}>Vendor Ledger</Text>
@@ -416,10 +417,10 @@ export default function VendorLedgerScreen({ navigation }) {
         </View>
         <View style={st.headerActions}>
           <TouchableOpacity style={st.headerIconBtn} onPress={() => openEntryModal()}>
-            <Icon name="add" size={20} color={C.primary} />
+            <Icon name="add" size={scale(20)} color={C.primary} />
           </TouchableOpacity>
           <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
-            <Icon name="menu" size={20} color={C.ink} />
+            <Icon name="menu" size={scale(20)} color={C.ink} />
           </TouchableOpacity>
         </View>
       </View>
@@ -441,11 +442,11 @@ export default function VendorLedgerScreen({ navigation }) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} />}
         ListEmptyComponent={
           <View style={st.emptyState}>
-            <Icon name={activeTab === 'summary' ? 'business-outline' : 'document-text-outline'} size={64} color={C.muted} />
+            <Icon name={activeTab === 'summary' ? 'business-outline' : 'document-text-outline'} size={scale(64)} color={C.muted} />
             <Text style={st.emptyTitle}>{activeTab === 'summary' ? 'No Vendors Yet' : 'No Transactions Yet'}</Text>
             <Text style={st.emptySubtitle}>Add a purchase or payment to get started</Text>
             <TouchableOpacity style={st.emptyBtn} onPress={() => openEntryModal()}>
-              <Icon name="add" size={18} color="#fff" />
+              <Icon name="add" size={scale(18)} color="#fff" />
               <Text style={st.emptyBtnText}>Add Entry</Text>
             </TouchableOpacity>
           </View>
@@ -462,7 +463,7 @@ export default function VendorLedgerScreen({ navigation }) {
             <View style={st.modalHeader}>
               <Text style={st.modalTitle}>Add {getEntryConfig(form.entryType).label}</Text>
               <TouchableOpacity onPress={() => setEntryModal(false)} style={st.modalClose}>
-                <Icon name="close" size={24} color={C.ink} />
+                <Icon name="close" size={scale(24)} color={C.ink} />
               </TouchableOpacity>
             </View>
 
@@ -485,7 +486,7 @@ export default function VendorLedgerScreen({ navigation }) {
                       style={[st.typeBtn, isActive && { backgroundColor: type.color, borderColor: type.color }]}
                       onPress={() => setForm(f => ({ ...f, entryType: type.value }))}
                     >
-                      <Icon name={type.icon} size={16} color={isActive ? '#fff' : type.color} />
+                      <Icon name={type.icon} size={scale(16)} color={isActive ? '#fff' : type.color} />
                       <Text style={[st.typeBtnText, isActive && { color: '#fff' }]}>{type.label}</Text>
                     </TouchableOpacity>
                   );
@@ -556,7 +557,7 @@ export default function VendorLedgerScreen({ navigation }) {
                           style={[st.modeBtn, isActive && st.modeBtnActive]}
                           onPress={() => setForm(f => ({ ...f, paymentMode: mode.value }))}
                         >
-                          <Icon name={mode.icon} size={14} color={isActive ? '#fff' : C.ink} />
+                          <Icon name={mode.icon} size={scale(14)} color={isActive ? '#fff' : C.ink} />
                           <Text style={[st.modeBtnText, isActive && st.modeBtnTextActive]}>{mode.label}</Text>
                         </TouchableOpacity>
                       );
@@ -592,7 +593,7 @@ export default function VendorLedgerScreen({ navigation }) {
                 <View style={st.halfField}>
                   <Text style={st.label}>Bill Date</Text>
                   <TouchableOpacity style={st.dateBtn} onPress={() => setShowBillDatePicker(true)}>
-                    <Icon name="calendar" size={18} color={C.info} />
+                    <Icon name="calendar" size={scale(18)} color={C.info} />
                     <Text style={st.dateBtnText}>{form.billDate ? formatDate(form.billDate) : 'Select Date'}</Text>
                   </TouchableOpacity>
                   {showBillDatePicker && (
@@ -609,7 +610,7 @@ export default function VendorLedgerScreen({ navigation }) {
               {/* Entry Date */}
               <Text style={st.label}>Entry Date *</Text>
               <TouchableOpacity style={st.dateBtn} onPress={() => setShowEntryDatePicker(true)}>
-                <Icon name="calendar" size={18} color={C.info} />
+                <Icon name="calendar" size={scale(18)} color={C.info} />
                 <Text style={st.dateBtnText}>{form.entryDate ? formatDate(form.entryDate) : 'Select Date'}</Text>
               </TouchableOpacity>
               {showEntryDatePicker && (
@@ -627,7 +628,7 @@ export default function VendorLedgerScreen({ navigation }) {
                 <>
                   <Text style={st.label}>Due Date</Text>
                   <TouchableOpacity style={st.dateBtn} onPress={() => setShowDueDatePicker(true)}>
-                    <Icon name="calendar" size={18} color={C.warn} />
+                    <Icon name="calendar" size={scale(18)} color={C.warn} />
                     <Text style={st.dateBtnText}>{form.dueDate ? formatDate(form.dueDate) : 'Select Due Date'}</Text>
                   </TouchableOpacity>
                   {showDueDatePicker && (
@@ -642,7 +643,7 @@ export default function VendorLedgerScreen({ navigation }) {
                 </>
               )}
 
-                <View style={{ height: 60 }} />
+                <View style={{ height: scale(60) }} />
               </View>
             </ScrollView>
 
@@ -656,7 +657,7 @@ export default function VendorLedgerScreen({ navigation }) {
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
                   <>
-                    <Icon name="checkmark" size={18} color="#fff" />
+                    <Icon name="checkmark" size={scale(18)} color="#fff" />
                     <Text style={st.saveBtnText}>Save</Text>
                   </>
                 )}
@@ -673,123 +674,123 @@ const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
 
   // Header
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border },
-  backBtn: { width: 40, height: 40, borderRadius: 10, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
-  headerCenter: { flex: 1, marginLeft: 12 },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
-  headerSubtitle: { fontSize: 12, color: C.muted, marginTop: 2 },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(16), paddingVertical: scale(12), backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border },
+  backBtn: { width: scale(40), height: scale(40), borderRadius: scale(10), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
+  headerCenter: { flex: 1, marginLeft: scale(12) },
+  headerTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink },
+  headerSubtitle: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(2) },
   headerActions: { flexDirection: 'row' },
-  headerIconBtn: { width: 40, height: 40, borderRadius: 10, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', marginLeft: 8 },
+  headerIconBtn: { width: scale(40), height: scale(40), borderRadius: scale(10), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', marginLeft: scale(8) },
 
   // Summary Section
-  summarySection: { marginTop: 16, marginBottom: 4 },
-  summaryScroll: { paddingHorizontal: 16, paddingBottom: 8 },
-  summaryCard: { width: 140, backgroundColor: C.card, borderRadius: 12, padding: 14, marginRight: 10, marginBottom: 4, borderLeftWidth: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
-  summaryIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
-  summaryLabel: { fontSize: 11, color: C.muted, marginBottom: 4 },
-  summaryValue: { fontSize: 16, fontWeight: '700', color: C.ink },
+  summarySection: { marginTop: scale(16), marginBottom: scale(4) },
+  summaryScroll: { paddingHorizontal: scale(16), paddingBottom: scale(8) },
+  summaryCard: { width: scale(140), backgroundColor: C.card, borderRadius: scale(12), padding: scale(14), marginRight: scale(10), marginBottom: scale(4), borderLeftWidth: 3, shadowColor: '#000', shadowOffset: { width: 0, height: scale(2) }, shadowOpacity: 0.05, shadowRadius: scale(4), elevation: 2 },
+  summaryIcon: { width: scale(36), height: scale(36), borderRadius: scale(10), alignItems: 'center', justifyContent: 'center', marginBottom: scale(10) },
+  summaryLabel: { fontSize: moderateScale(11), color: C.muted, marginBottom: scale(4) },
+  summaryValue: { fontSize: moderateScale(16), fontWeight: '700', color: C.ink },
 
   // Quick Actions
-  quickRow: { flexDirection: 'row', paddingHorizontal: 16, marginTop: 16 },
-  quickBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 10, borderWidth: 1.5, marginRight: 8 },
-  quickBtnText: { fontSize: 13, fontWeight: '600', marginLeft: 8 },
+  quickRow: { flexDirection: 'row', paddingHorizontal: scale(16), marginTop: scale(16) },
+  quickBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: scale(12), borderRadius: scale(10), borderWidth: 1.5, marginRight: scale(8) },
+  quickBtnText: { fontSize: moderateScale(13), fontWeight: '600', marginLeft: scale(8) },
 
   // Tabs
-  tabsContainer: { flexDirection: 'row', marginHorizontal: 16, marginTop: 16, marginBottom: 16, backgroundColor: C.card, borderRadius: 12, padding: 4, borderWidth: 1, borderColor: C.border },
-  tab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 10 },
+  tabsContainer: { flexDirection: 'row', marginHorizontal: scale(16), marginTop: scale(16), marginBottom: scale(16), backgroundColor: C.card, borderRadius: scale(12), padding: scale(4), borderWidth: 1, borderColor: C.border },
+  tab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: scale(10), borderRadius: scale(10) },
   tabActive: { backgroundColor: C.primary },
-  tabText: { fontSize: 12, fontWeight: '600', color: C.muted, marginLeft: 6 },
+  tabText: { fontSize: moderateScale(12), fontWeight: '600', color: C.muted, marginLeft: scale(6) },
   tabTextActive: { color: '#fff' },
 
   // List
-  listContent: { paddingHorizontal: 16, paddingBottom: 120, paddingTop: 16 },
+  listContent: { paddingHorizontal: scale(16), paddingBottom: scale(120), paddingTop: scale(16) },
   columnWrapper: { justifyContent: 'space-between' },
 
   // Vendor Card
-  vendorCard: { flex: 1, backgroundColor: C.card, borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: C.border },
-  vendorHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
-  vendorIconBox: { width: 44, height: 44, borderRadius: 12, backgroundColor: C.infoLight, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  vendorCard: { flex: 1, backgroundColor: C.card, borderRadius: scale(14), padding: scale(14), marginBottom: scale(12), borderWidth: 1, borderColor: C.border },
+  vendorHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: scale(12) },
+  vendorIconBox: { width: scale(44), height: scale(44), borderRadius: scale(12), backgroundColor: C.infoLight, alignItems: 'center', justifyContent: 'center', marginRight: scale(12) },
   vendorInfo: { flex: 1 },
-  vendorName: { fontSize: 15, fontWeight: '700', color: C.ink },
-  vendorMeta: { fontSize: 11, color: C.muted, marginTop: 2 },
-  balanceBadge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, alignItems: 'flex-end' },
-  balanceBadgeText: { fontSize: 14, fontWeight: '700' },
-  balanceBadgeLabel: { fontSize: 9, fontWeight: '600', marginTop: 2 },
-  vendorStats: { flexDirection: 'row', marginBottom: 12 },
-  statBox: { flex: 1, backgroundColor: C.bg, borderRadius: 8, padding: 10, marginRight: 8, alignItems: 'center' },
-  statLabel: { fontSize: 10, color: C.muted, marginTop: 4, marginBottom: 2 },
-  statValue: { fontSize: 13, fontWeight: '700' },
-  vendorFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 12, borderTopWidth: 1, borderTopColor: C.border },
-  lastTxn: { fontSize: 10, color: C.muted },
+  vendorName: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink },
+  vendorMeta: { fontSize: moderateScale(11), color: C.muted, marginTop: scale(2) },
+  balanceBadge: { paddingHorizontal: scale(10), paddingVertical: scale(6), borderRadius: scale(8), alignItems: 'flex-end' },
+  balanceBadgeText: { fontSize: moderateScale(14), fontWeight: '700' },
+  balanceBadgeLabel: { fontSize: moderateScale(9), fontWeight: '600', marginTop: scale(2) },
+  vendorStats: { flexDirection: 'row', marginBottom: scale(12) },
+  statBox: { flex: 1, backgroundColor: C.bg, borderRadius: scale(8), padding: scale(10), marginRight: scale(8), alignItems: 'center' },
+  statLabel: { fontSize: moderateScale(10), color: C.muted, marginTop: scale(4), marginBottom: scale(2) },
+  statValue: { fontSize: moderateScale(13), fontWeight: '700' },
+  vendorFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: scale(12), borderTopWidth: 1, borderTopColor: C.border },
+  lastTxn: { fontSize: moderateScale(10), color: C.muted },
   vendorActions: { flexDirection: 'row' },
-  vendorBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, marginLeft: 6 },
-  vendorBtnText: { fontSize: 11, fontWeight: '600', marginLeft: 4 },
+  vendorBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(10), paddingVertical: scale(6), borderRadius: scale(8), marginLeft: scale(6) },
+  vendorBtnText: { fontSize: moderateScale(11), fontWeight: '600', marginLeft: scale(4) },
 
   // Entry Card
-  entryCard: { flex: 1, backgroundColor: C.card, borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: C.border },
-  entryHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-  entryIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginRight: 10 },
+  entryCard: { flex: 1, backgroundColor: C.card, borderRadius: scale(12), padding: scale(14), marginBottom: scale(10), borderWidth: 1, borderColor: C.border },
+  entryHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: scale(10) },
+  entryIcon: { width: scale(36), height: scale(36), borderRadius: scale(10), alignItems: 'center', justifyContent: 'center', marginRight: scale(10) },
   entryInfo: { flex: 1 },
-  entryVendor: { fontSize: 14, fontWeight: '700', color: C.ink },
-  entryDate: { fontSize: 11, color: C.muted, marginTop: 2 },
-  entryBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
-  entryBadgeText: { fontSize: 10, fontWeight: '600' },
-  entryDesc: { fontSize: 13, color: C.text, marginBottom: 6 },
-  entryBill: { fontSize: 11, color: C.muted, marginBottom: 6 },
-  entryFooter: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: 10, borderTopWidth: 1, borderTopColor: C.border },
-  entryAmtLabel: { fontSize: 10, color: C.muted },
-  entryAmt: { fontSize: 15, fontWeight: '700', marginTop: 2 },
+  entryVendor: { fontSize: moderateScale(14), fontWeight: '700', color: C.ink },
+  entryDate: { fontSize: moderateScale(11), color: C.muted, marginTop: scale(2) },
+  entryBadge: { paddingHorizontal: scale(8), paddingVertical: scale(4), borderRadius: scale(6) },
+  entryBadgeText: { fontSize: moderateScale(10), fontWeight: '600' },
+  entryDesc: { fontSize: moderateScale(13), color: C.text, marginBottom: scale(6) },
+  entryBill: { fontSize: moderateScale(11), color: C.muted, marginBottom: scale(6) },
+  entryFooter: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: scale(10), borderTopWidth: 1, borderTopColor: C.border },
+  entryAmtLabel: { fontSize: moderateScale(10), color: C.muted },
+  entryAmt: { fontSize: moderateScale(15), fontWeight: '700', marginTop: scale(2) },
   entryBalBox: { alignItems: 'flex-end' },
-  entryBalLabel: { fontSize: 10, color: C.muted },
-  entryBal: { fontSize: 14, fontWeight: '700', marginTop: 2 },
+  entryBalLabel: { fontSize: moderateScale(10), color: C.muted },
+  entryBal: { fontSize: moderateScale(14), fontWeight: '700', marginTop: scale(2) },
 
   // Loading & Empty
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  loadingText: { marginTop: 16, fontSize: 14, color: C.muted },
-  emptyState: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 40 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: C.ink, marginTop: 16 },
-  emptySubtitle: { fontSize: 13, color: C.muted, textAlign: 'center', marginTop: 6 },
-  emptyBtn: { flexDirection: 'row', alignItems: 'center', marginTop: 20, paddingHorizontal: 20, paddingVertical: 12, backgroundColor: C.primary, borderRadius: 10 },
-  emptyBtnText: { fontSize: 14, fontWeight: '600', color: '#fff', marginLeft: 8 },
+  loadingText: { marginTop: scale(16), fontSize: moderateScale(14), color: C.muted },
+  emptyState: { alignItems: 'center', paddingTop: scale(60), paddingHorizontal: scale(40) },
+  emptyTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink, marginTop: scale(16) },
+  emptySubtitle: { fontSize: moderateScale(13), color: C.muted, textAlign: 'center', marginTop: scale(6) },
+  emptyBtn: { flexDirection: 'row', alignItems: 'center', marginTop: scale(20), paddingHorizontal: scale(20), paddingVertical: scale(12), backgroundColor: C.primary, borderRadius: scale(10) },
+  emptyBtnText: { fontSize: moderateScale(14), fontWeight: '600', color: '#fff', marginLeft: scale(8) },
 
   // Modal
-  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: C.border },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
-  modalClose: { width: 36, height: 36, borderRadius: 18, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: scale(16), borderBottomWidth: 1, borderBottomColor: C.border },
+  modalTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink },
+  modalClose: { width: scale(36), height: scale(36), borderRadius: scale(18), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
   modalBody: { flex: 1 },
-  modalBodyContent: { padding: 16, paddingBottom: 80 },
-  modalFooter: { flexDirection: 'row', padding: 16, borderTopWidth: 1, borderTopColor: C.border },
+  modalBodyContent: { padding: scale(16), paddingBottom: scale(80) },
+  modalFooter: { flexDirection: 'row', padding: scale(16), borderTopWidth: 1, borderTopColor: C.border },
 
   // Form
-  label: { fontSize: 12, fontWeight: '600', color: C.muted, marginBottom: 8, marginTop: 14 },
-  input: { backgroundColor: C.bg, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: C.text, borderWidth: 1, borderColor: C.border },
-  textArea: { backgroundColor: C.bg, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: C.text, borderWidth: 1, borderColor: C.border, minHeight: 80, textAlignVertical: 'top' },
-  rowFields: { flexDirection: 'row', marginHorizontal: -6 },
-  halfField: { flex: 1, marginHorizontal: 6 },
-  amountRow: { flexDirection: 'row', alignItems: 'center', borderRadius: 10, borderWidth: 1, borderColor: C.border, backgroundColor: C.bg, overflow: 'hidden' },
-  currencyBox: { width: 44, height: 48, backgroundColor: C.infoLight, alignItems: 'center', justifyContent: 'center' },
-  currencyText: { fontSize: 16, fontWeight: '700', color: C.info },
-  amountInput: { flex: 1, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, fontWeight: '600', color: C.ink },
+  label: { fontSize: moderateScale(12), fontWeight: '600', color: C.muted, marginBottom: scale(8), marginTop: scale(14) },
+  input: { backgroundColor: C.bg, borderRadius: scale(10), paddingHorizontal: scale(14), paddingVertical: scale(12), fontSize: moderateScale(14), color: C.text, borderWidth: 1, borderColor: C.border },
+  textArea: { backgroundColor: C.bg, borderRadius: scale(10), paddingHorizontal: scale(14), paddingVertical: scale(12), fontSize: moderateScale(14), color: C.text, borderWidth: 1, borderColor: C.border, minHeight: scale(80), textAlignVertical: 'top' },
+  rowFields: { flexDirection: 'row', marginHorizontal: scale(-6) },
+  halfField: { flex: 1, marginHorizontal: scale(6) },
+  amountRow: { flexDirection: 'row', alignItems: 'center', borderRadius: scale(10), borderWidth: 1, borderColor: C.border, backgroundColor: C.bg, overflow: 'hidden' },
+  currencyBox: { width: scale(44), height: scale(48), backgroundColor: C.infoLight, alignItems: 'center', justifyContent: 'center' },
+  currencyText: { fontSize: moderateScale(16), fontWeight: '700', color: C.info },
+  amountInput: { flex: 1, paddingHorizontal: scale(14), paddingVertical: scale(12), fontSize: moderateScale(15), fontWeight: '600', color: C.ink },
 
   // Date Button
-  dateBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.bg, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 14, borderWidth: 1, borderColor: C.border },
-  dateBtnText: { flex: 1, fontSize: 14, fontWeight: '600', color: C.ink, marginLeft: 10 },
+  dateBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.bg, borderRadius: scale(10), paddingHorizontal: scale(14), paddingVertical: scale(14), borderWidth: 1, borderColor: C.border },
+  dateBtnText: { flex: 1, fontSize: moderateScale(14), fontWeight: '600', color: C.ink, marginLeft: scale(10) },
 
   // Type Grid
-  typeGrid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 },
-  typeBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10, backgroundColor: C.bg, borderWidth: 1.5, borderColor: C.border, margin: 4 },
-  typeBtnText: { fontSize: 12, fontWeight: '600', color: C.ink, marginLeft: 6 },
+  typeGrid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: scale(-4) },
+  typeBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(12), paddingVertical: scale(10), borderRadius: scale(10), backgroundColor: C.bg, borderWidth: 1.5, borderColor: C.border, margin: scale(4) },
+  typeBtnText: { fontSize: moderateScale(12), fontWeight: '600', color: C.ink, marginLeft: scale(6) },
 
   // Mode Grid
-  modeGrid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 },
-  modeBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8, backgroundColor: C.bg, borderWidth: 1, borderColor: C.border, margin: 4 },
+  modeGrid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: scale(-4) },
+  modeBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(10), paddingVertical: scale(8), borderRadius: scale(8), backgroundColor: C.bg, borderWidth: 1, borderColor: C.border, margin: scale(4) },
   modeBtnActive: { backgroundColor: C.primary, borderColor: C.primary },
-  modeBtnText: { fontSize: 11, fontWeight: '600', color: C.ink, marginLeft: 5 },
+  modeBtnText: { fontSize: moderateScale(11), fontWeight: '600', color: C.ink, marginLeft: scale(5) },
   modeBtnTextActive: { color: '#fff' },
 
   // Buttons
-  cancelBtn: { flex: 1, paddingVertical: 14, borderRadius: 10, backgroundColor: C.bg, alignItems: 'center', marginRight: 6 },
-  cancelBtnText: { fontSize: 14, fontWeight: '700', color: C.ink },
-  saveBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 10, backgroundColor: C.primary, marginLeft: 6 },
-  saveBtnText: { fontSize: 14, fontWeight: '700', color: '#fff', marginLeft: 8 },
+  cancelBtn: { flex: 1, paddingVertical: scale(14), borderRadius: scale(10), backgroundColor: C.bg, alignItems: 'center', marginRight: scale(6) },
+  cancelBtnText: { fontSize: moderateScale(14), fontWeight: '700', color: C.ink },
+  saveBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: scale(14), borderRadius: scale(10), backgroundColor: C.primary, marginLeft: scale(6) },
+  saveBtnText: { fontSize: moderateScale(14), fontWeight: '700', color: '#fff', marginLeft: scale(8) },
 });

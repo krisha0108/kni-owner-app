@@ -31,6 +31,7 @@ import { useRestaurant } from '../context/RestaurantContext';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
+import { scale, moderateScale } from '../utils/responsive';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = (SCREEN_WIDTH - 48) / 2;
 
@@ -252,7 +253,7 @@ export default function MarketplaceScreen({ navigation }) {
             <Image source={{ uri: getImageUrl(item.imageUrl || item.image) }} style={st.productImage} />
           ) : (
             <View style={st.productImagePlaceholder}>
-              <Icon name="cube-outline" size={32} color={C.muted} />
+              <Icon name="cube-outline" size={scale(32)} color={C.muted} />
             </View>
           )}
 
@@ -274,7 +275,7 @@ export default function MarketplaceScreen({ navigation }) {
 
           {vendorName && (
             <View style={st.vendorRow}>
-              <Icon name="storefront" size={11} color={C.success} />
+              <Icon name="storefront" size={scale(11)} color={C.success} />
               <Text style={st.vendorName} numberOfLines={1}>{vendorName}</Text>
             </View>
           )}
@@ -290,7 +291,7 @@ export default function MarketplaceScreen({ navigation }) {
                 style={st.qtyBtn}
                 onPress={() => updateCartQuantity(item.id, -1)}
               >
-                <Icon name="remove" size={16} color={C.primary} />
+                <Icon name="remove" size={scale(16)} color={C.primary} />
               </TouchableOpacity>
               <Text style={st.qtyText}>{cartQty}</Text>
               <TouchableOpacity
@@ -298,7 +299,7 @@ export default function MarketplaceScreen({ navigation }) {
                 onPress={() => updateCartQuantity(item.id, 1)}
                 disabled={cartQty >= stockQty}
               >
-                <Icon name="add" size={16} color={cartQty >= stockQty ? C.muted : C.primary} />
+                <Icon name="add" size={scale(16)} color={cartQty >= stockQty ? C.muted : C.primary} />
               </TouchableOpacity>
             </View>
           ) : (
@@ -307,7 +308,7 @@ export default function MarketplaceScreen({ navigation }) {
               onPress={() => addToCart(item)}
               disabled={!inStock}
             >
-              <Icon name="add" size={16} color={inStock ? '#fff' : C.muted} />
+              <Icon name="add" size={scale(16)} color={inStock ? '#fff' : C.muted} />
               <Text style={[st.addToCartText, !inStock && st.addToCartTextDisabled]}>
                 ADD
               </Text>
@@ -321,7 +322,7 @@ export default function MarketplaceScreen({ navigation }) {
   const renderEmptyState = () => (
     <View style={st.emptyState}>
       <View style={st.emptyIconContainer}>
-        <Icon name="storefront-outline" size={64} color={C.muted} />
+        <Icon name="storefront-outline" size={scale(64)} color={C.muted} />
       </View>
       <Text style={st.emptyTitle}>No Products Found</Text>
       <Text style={st.emptySubtitle}>
@@ -362,7 +363,7 @@ export default function MarketplaceScreen({ navigation }) {
         </LinearGradient>
         <View style={st.emptyState}>
           <View style={st.emptyIconContainer}>
-            <Icon name="restaurant-outline" size={64} color={C.muted} />
+            <Icon name="restaurant-outline" size={scale(64)} color={C.muted} />
           </View>
           <Text style={st.emptyTitle}>Select a Restaurant</Text>
           <Text style={st.emptySubtitle}>Please select a restaurant to view available products</Text>
@@ -396,13 +397,13 @@ export default function MarketplaceScreen({ navigation }) {
               style={st.heroIconBtn}
               onPress={() => navigation.navigate('MarketplaceOrders')}
             >
-              <Icon name="receipt-outline" size={22} color="#fff" />
+              <Icon name="receipt-outline" size={scale(22)} color="#fff" />
             </TouchableOpacity>
             <TouchableOpacity
               style={st.heroIconBtn}
               onPress={() => setMenuVisible(true)}
             >
-              <Icon name="menu-outline" size={22} color="#fff" />
+              <Icon name="menu-outline" size={scale(22)} color="#fff" />
             </TouchableOpacity>
           </View>
         </View>
@@ -410,7 +411,7 @@ export default function MarketplaceScreen({ navigation }) {
         {/* Search Bar */}
         <View style={st.searchContainer}>
           <View style={st.searchBar}>
-            <Icon name="search" size={20} color={C.muted} />
+            <Icon name="search" size={scale(20)} color={C.muted} />
             <TextInput
               style={st.searchInput}
               placeholder="Search products..."
@@ -421,7 +422,7 @@ export default function MarketplaceScreen({ navigation }) {
             />
             {search.length > 0 && (
               <TouchableOpacity onPress={() => setSearch('')} style={st.clearBtn}>
-                <Icon name="close-circle" size={20} color={C.muted} />
+                <Icon name="close-circle" size={scale(20)} color={C.muted} />
               </TouchableOpacity>
             )}
           </View>
@@ -440,7 +441,7 @@ export default function MarketplaceScreen({ navigation }) {
             style={[st.categoryChip, selectedCategory === 'all' && st.categoryChipActive]}
             onPress={() => setSelectedCategory('all')}
           >
-            <Icon name="apps" size={16} color={selectedCategory === 'all' ? '#fff' : C.primary} />
+            <Icon name="apps" size={scale(16)} color={selectedCategory === 'all' ? '#fff' : C.primary} />
             <Text style={[st.categoryChipText, selectedCategory === 'all' && st.categoryChipTextActive]}>
               All ({products.length})
             </Text>
@@ -457,7 +458,7 @@ export default function MarketplaceScreen({ navigation }) {
                 style={[st.categoryChip, isActive && st.categoryChipActive]}
                 onPress={() => setSelectedCategory(cat.id)}
               >
-                <Icon name={iconName} size={16} color={isActive ? '#fff' : C.primary} />
+                <Icon name={iconName} size={scale(16)} color={isActive ? '#fff' : C.primary} />
                 <Text style={[st.categoryChipText, isActive && st.categoryChipTextActive]}>
                   {cat.name} ({catCount})
                 </Text>
@@ -511,7 +512,7 @@ export default function MarketplaceScreen({ navigation }) {
             >
               <View style={st.floatingCartLeft}>
                 <View style={st.cartIconContainer}>
-                  <Icon name="cart" size={22} color="#fff" />
+                  <Icon name="cart" size={scale(22)} color="#fff" />
                   <View style={st.cartBadge}>
                     <Text style={st.cartBadgeText}>{cart.length}</Text>
                   </View>
@@ -523,7 +524,7 @@ export default function MarketplaceScreen({ navigation }) {
               </View>
               <View style={st.floatingCartRight}>
                 <Text style={st.viewCartText}>View Cart</Text>
-                <Icon name="arrow-forward" size={18} color="#fff" />
+                <Icon name="arrow-forward" size={scale(18)} color="#fff" />
               </View>
             </LinearGradient>
           </TouchableOpacity>
@@ -541,7 +542,7 @@ export default function MarketplaceScreen({ navigation }) {
                 <Text style={st.modalSubtitle}>{cart.length} items</Text>
               </View>
               <TouchableOpacity style={st.modalCloseBtn} onPress={() => setOrderModalVisible(false)}>
-                <Icon name="close" size={24} color={C.ink} />
+                <Icon name="close" size={scale(24)} color={C.ink} />
               </TouchableOpacity>
             </View>
 
@@ -559,7 +560,7 @@ export default function MarketplaceScreen({ navigation }) {
                       <Image source={{ uri: getImageUrl(item.product.imageUrl) }} style={st.cartItemImg} />
                     ) : (
                       <View style={st.cartItemImgPlaceholder}>
-                        <Icon name="cube" size={20} color={C.muted} />
+                        <Icon name="cube" size={scale(20)} color={C.muted} />
                       </View>
                     )}
                   </View>
@@ -572,14 +573,14 @@ export default function MarketplaceScreen({ navigation }) {
                       style={st.cartQtyBtn}
                       onPress={() => updateCartQuantity(item.product.id, -1)}
                     >
-                      <Icon name="remove" size={16} color={C.primary} />
+                      <Icon name="remove" size={scale(16)} color={C.primary} />
                     </TouchableOpacity>
                     <Text style={st.cartQtyText}>{item.quantity}</Text>
                     <TouchableOpacity
                       style={st.cartQtyBtn}
                       onPress={() => updateCartQuantity(item.product.id, 1)}
                     >
-                      <Icon name="add" size={16} color={C.primary} />
+                      <Icon name="add" size={scale(16)} color={C.primary} />
                     </TouchableOpacity>
                   </View>
                   <Text style={st.cartItemTotal}>
@@ -636,7 +637,7 @@ export default function MarketplaceScreen({ navigation }) {
                   ) : (
                     <>
                       <Text style={st.placeOrderText}>Place Order</Text>
-                      <Icon name="arrow-forward" size={20} color="#fff" />
+                      <Icon name="arrow-forward" size={scale(20)} color="#fff" />
                     </>
                   )}
                 </LinearGradient>
@@ -658,38 +659,38 @@ const st = StyleSheet.create({
 
   // Hero Section
   heroSection: {
-    paddingTop: 16,
-    paddingBottom: 24,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+    paddingTop: scale(16),
+    paddingBottom: scale(24),
+    borderBottomLeftRadius: scale(24),
+    borderBottomRightRadius: scale(24),
   },
   heroContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    paddingHorizontal: 20,
-    marginBottom: 20,
+    paddingHorizontal: scale(20),
+    marginBottom: scale(20),
   },
   heroTextContainer: {},
   heroTitle: {
-    fontSize: 28,
+    fontSize: moderateScale(28),
     fontWeight: '800',
     color: '#fff',
     letterSpacing: -0.5,
   },
   heroSubtitle: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: 'rgba(255,255,255,0.8)',
-    marginTop: 4,
+    marginTop: scale(4),
   },
   heroActions: {
     flexDirection: 'row',
-    gap: 8,
+    gap: scale(8),
   },
   heroIconBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: scale(44),
+    height: scale(44),
+    borderRadius: scale(12),
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -697,50 +698,50 @@ const st = StyleSheet.create({
 
   // Search Bar
   searchContainer: {
-    paddingHorizontal: 20,
+    paddingHorizontal: scale(20),
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    height: 52,
+    borderRadius: scale(16),
+    paddingHorizontal: scale(16),
+    height: scale(52),
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: scale(4) },
     shadowOpacity: 0.1,
-    shadowRadius: 12,
+    shadowRadius: scale(12),
     elevation: 5,
   },
   searchInput: {
     flex: 1,
-    marginLeft: 12,
-    fontSize: 16,
+    marginLeft: scale(12),
+    fontSize: moderateScale(16),
     color: C.ink,
   },
   clearBtn: {
-    padding: 4,
+    padding: scale(4),
   },
 
   // Categories - Compact Chips (Fixed)
   categoriesSection: {
     backgroundColor: C.card,
-    paddingVertical: 12,
+    paddingVertical: scale(12),
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
   categoriesScroll: {
-    paddingHorizontal: 16,
+    paddingHorizontal: scale(16),
   },
   categoryChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    marginRight: 8,
+    gap: scale(6),
+    paddingHorizontal: scale(14),
+    paddingVertical: scale(10),
+    marginRight: scale(8),
     backgroundColor: C.card,
-    borderRadius: 20,
+    borderRadius: scale(20),
     borderWidth: 1.5,
     borderColor: C.border,
   },
@@ -749,7 +750,7 @@ const st = StyleSheet.create({
     borderColor: C.primary,
   },
   categoryChipText: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     fontWeight: '600',
     color: C.ink,
   },
@@ -762,42 +763,42 @@ const st = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(10),
     backgroundColor: C.bg,
   },
   productsTitle: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: '700',
     color: C.ink,
   },
   productsCount: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     color: C.muted,
   },
 
   // Products List
   productsList: {
-    paddingTop: 8,
-    paddingBottom: 120,
+    paddingTop: scale(8),
+    paddingBottom: scale(120),
   },
 
   // Product Card
   productCard: {
     width: CARD_WIDTH,
     backgroundColor: C.card,
-    borderRadius: 12,
-    marginBottom: 12,
+    borderRadius: scale(12),
+    marginBottom: scale(12),
     shadowColor: C.shadow,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: scale(2) },
     shadowOpacity: 0.06,
-    shadowRadius: 8,
+    shadowRadius: scale(8),
     elevation: 2,
     overflow: 'hidden',
   },
   productImageContainer: {
     position: 'relative',
-    height: 100,
+    height: scale(100),
     backgroundColor: C.bg,
   },
   productImage: {
@@ -813,70 +814,70 @@ const st = StyleSheet.create({
   },
   outOfStockBadge: {
     position: 'absolute',
-    top: 6,
-    left: 6,
+    top: scale(6),
+    left: scale(6),
     backgroundColor: 'rgba(0,0,0,0.7)',
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 4,
+    paddingHorizontal: scale(6),
+    paddingVertical: scale(3),
+    borderRadius: scale(4),
   },
   outOfStockText: {
-    fontSize: 9,
+    fontSize: moderateScale(9),
     fontWeight: '600',
     color: '#fff',
   },
   productInfo: {
-    padding: 10,
-    paddingBottom: 6,
+    padding: scale(10),
+    paddingBottom: scale(6),
   },
   productName: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     fontWeight: '600',
     color: C.ink,
-    lineHeight: 18,
-    height: 36,
+    lineHeight: moderateScale(18),
+    height: scale(36),
   },
   productUnit: {
-    fontSize: 11,
+    fontSize: moderateScale(11),
     color: C.muted,
-    marginTop: 2,
+    marginTop: scale(2),
   },
   vendorRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginTop: 4,
+    gap: scale(4),
+    marginTop: scale(4),
   },
   vendorName: {
-    fontSize: 10,
+    fontSize: moderateScale(10),
     color: C.success,
     fontWeight: '500',
     flex: 1,
   },
   productPrice: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: '800',
     color: C.ink,
-    marginTop: 6,
+    marginTop: scale(6),
   },
 
   // Card Footer with Button
   cardFooter: {
-    paddingHorizontal: 10,
-    paddingBottom: 10,
+    paddingHorizontal: scale(10),
+    paddingBottom: scale(10),
   },
   quantityContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: C.primaryLight,
-    borderRadius: 8,
-    padding: 4,
+    borderRadius: scale(8),
+    padding: scale(4),
   },
   qtyBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 6,
+    width: scale(28),
+    height: scale(28),
+    borderRadius: scale(6),
     backgroundColor: C.card,
     alignItems: 'center',
     justifyContent: 'center',
@@ -885,10 +886,10 @@ const st = StyleSheet.create({
     backgroundColor: C.bg,
   },
   qtyText: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '700',
     color: C.primary,
-    minWidth: 30,
+    minWidth: scale(30),
     textAlign: 'center',
   },
   addToCartBtn: {
@@ -896,15 +897,15 @@ const st = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: C.primary,
-    borderRadius: 8,
-    paddingVertical: 8,
-    gap: 4,
+    borderRadius: scale(8),
+    paddingVertical: scale(8),
+    gap: scale(4),
   },
   addToCartBtnDisabled: {
     backgroundColor: C.border,
   },
   addToCartText: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     fontWeight: '700',
     color: '#fff',
   },
@@ -915,49 +916,49 @@ const st = StyleSheet.create({
   // Empty State
   emptyState: {
     alignItems: 'center',
-    paddingTop: 60,
-    paddingHorizontal: 40,
+    paddingTop: scale(60),
+    paddingHorizontal: scale(40),
   },
   emptyIconContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: scale(120),
+    height: scale(120),
+    borderRadius: scale(60),
     backgroundColor: C.border,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: scale(20),
   },
   emptyTitle: {
-    fontSize: 20,
+    fontSize: moderateScale(20),
     fontWeight: '700',
     color: C.ink,
-    marginBottom: 8,
+    marginBottom: scale(8),
   },
   emptySubtitle: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: C.muted,
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: moderateScale(22),
   },
   clearSearchBtn: {
-    marginTop: 20,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+    marginTop: scale(20),
+    paddingHorizontal: scale(24),
+    paddingVertical: scale(12),
     backgroundColor: C.primary,
-    borderRadius: 12,
+    borderRadius: scale(12),
   },
   clearSearchBtnText: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '600',
     color: '#fff',
   },
 
   // Loading State
   loadingHero: {
-    paddingVertical: 24,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+    paddingVertical: scale(24),
+    paddingHorizontal: scale(20),
+    borderBottomLeftRadius: scale(24),
+    borderBottomRightRadius: scale(24),
   },
   loadingContainer: {
     flex: 1,
@@ -965,74 +966,74 @@ const st = StyleSheet.create({
     justifyContent: 'center',
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
+    marginTop: scale(16),
+    fontSize: moderateScale(16),
     color: C.muted,
   },
 
   // Floating Cart
   floatingCart: {
     position: 'absolute',
-    bottom: 100,
-    left: 16,
-    right: 16,
+    bottom: scale(100),
+    left: scale(16),
+    right: scale(16),
   },
   floatingCartBtn: {
-    borderRadius: 16,
+    borderRadius: scale(16),
     overflow: 'hidden',
     shadowColor: C.primary,
-    shadowOffset: { width: 0, height: 8 },
+    shadowOffset: { width: 0, height: scale(8) },
     shadowOpacity: 0.3,
-    shadowRadius: 16,
+    shadowRadius: scale(16),
     elevation: 8,
   },
   floatingCartGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: scale(20),
+    paddingVertical: scale(16),
   },
   floatingCartLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: scale(12),
   },
   cartIconContainer: {
     position: 'relative',
   },
   cartBadge: {
     position: 'absolute',
-    top: -6,
-    right: -6,
+    top: scale(-6),
+    right: scale(-6),
     backgroundColor: '#fff',
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
+    borderRadius: scale(10),
+    minWidth: scale(20),
+    height: scale(20),
     alignItems: 'center',
     justifyContent: 'center',
   },
   cartBadgeText: {
-    fontSize: 11,
+    fontSize: moderateScale(11),
     fontWeight: '700',
     color: C.primary,
   },
   cartItemsText: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     color: 'rgba(255,255,255,0.8)',
   },
   cartTotalText: {
-    fontSize: 18,
+    fontSize: moderateScale(18),
     fontWeight: '700',
     color: '#fff',
   },
   floatingCartRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: scale(4),
   },
   viewCartText: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '600',
     color: '#fff',
   },
@@ -1045,8 +1046,8 @@ const st = StyleSheet.create({
   },
   modalContainer: {
     backgroundColor: C.card,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: scale(24),
+    borderTopRightRadius: scale(24),
     maxHeight: '85%',
     flex: 0,
   },
@@ -1054,25 +1055,25 @@ const st = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 20,
+    paddingHorizontal: scale(20),
+    paddingVertical: scale(20),
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: moderateScale(20),
     fontWeight: '700',
     color: C.ink,
   },
   modalSubtitle: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: C.muted,
-    marginTop: 2,
+    marginTop: scale(2),
   },
   modalCloseBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(12),
     backgroundColor: C.bg,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1082,22 +1083,22 @@ const st = StyleSheet.create({
     flexShrink: 1,
   },
   modalBodyContent: {
-    padding: 20,
-    paddingBottom: 10,
+    padding: scale(20),
+    paddingBottom: scale(10),
   },
 
   // Cart Items in Modal
   cartItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: scale(12),
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
   cartItemImage: {
-    width: 56,
-    height: 56,
-    borderRadius: 12,
+    width: scale(56),
+    height: scale(56),
+    borderRadius: scale(12),
     overflow: 'hidden',
     backgroundColor: C.bg,
   },
@@ -1113,92 +1114,92 @@ const st = StyleSheet.create({
   },
   cartItemInfo: {
     flex: 1,
-    marginLeft: 12,
+    marginLeft: scale(12),
   },
   cartItemName: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '600',
     color: C.ink,
-    marginBottom: 4,
+    marginBottom: scale(4),
   },
   cartItemPrice: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     color: C.muted,
   },
   cartItemQty: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 12,
+    marginHorizontal: scale(12),
   },
   cartQtyBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
+    width: scale(28),
+    height: scale(28),
+    borderRadius: scale(8),
     backgroundColor: C.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cartQtyText: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '700',
     color: C.ink,
-    minWidth: 28,
+    minWidth: scale(28),
     textAlign: 'center',
   },
   cartItemTotal: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '700',
     color: C.ink,
-    minWidth: 60,
+    minWidth: scale(60),
     textAlign: 'right',
   },
 
   // Delivery Section
   deliverySection: {
-    marginTop: 24,
-    paddingTop: 20,
+    marginTop: scale(24),
+    paddingTop: scale(20),
     borderTopWidth: 1,
     borderTopColor: C.border,
   },
   deliverySectionTitle: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: '700',
     color: C.ink,
-    marginBottom: 16,
+    marginBottom: scale(16),
   },
   inputLabel: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     fontWeight: '600',
     color: C.muted,
-    marginBottom: 8,
-    marginTop: 12,
+    marginBottom: scale(8),
+    marginTop: scale(12),
   },
   input: {
     backgroundColor: C.bg,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 15,
+    borderRadius: scale(12),
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(14),
+    fontSize: moderateScale(15),
     color: C.ink,
     borderWidth: 1,
     borderColor: C.border,
   },
   textArea: {
     backgroundColor: C.bg,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 15,
+    borderRadius: scale(12),
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(14),
+    fontSize: moderateScale(15),
     color: C.ink,
     borderWidth: 1,
     borderColor: C.border,
-    minHeight: 80,
+    minHeight: scale(80),
     textAlignVertical: 'top',
   },
 
   // Modal Footer
   modalFooter: {
-    padding: 20,
+    padding: scale(20),
     borderTopWidth: 1,
     borderTopColor: C.border,
     backgroundColor: C.card,
@@ -1207,19 +1208,19 @@ const st = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: scale(16),
   },
   totalLabel: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     color: C.muted,
   },
   totalAmount: {
-    fontSize: 24,
+    fontSize: moderateScale(24),
     fontWeight: '800',
     color: C.ink,
   },
   placeOrderBtn: {
-    borderRadius: 14,
+    borderRadius: scale(14),
     overflow: 'hidden',
   },
   placeOrderBtnDisabled: {
@@ -1229,11 +1230,11 @@ const st = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    gap: 8,
+    paddingVertical: scale(16),
+    gap: scale(8),
   },
   placeOrderText: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: '700',
     color: '#fff',
   },

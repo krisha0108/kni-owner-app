@@ -21,6 +21,7 @@ import { RestaurantSelectorBar } from '../components/RestaurantSelector';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
+import { scale, moderateScale } from '../utils/responsive';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = (SCREEN_WIDTH - 48) / 2;
 
@@ -237,7 +238,7 @@ export default function MyEquipmentScreen({ navigation }) {
   // Image upload
   const uploadImage = async (type) => {
     try {
-      const result = await launchImageLibrary({ mediaType: 'photo', quality: 0.8, maxWidth: 1920, maxHeight: 1920 });
+      const result = await launchImageLibrary({ mediaType: 'photo', quality: 0.8, maxWidth: scale(1920), maxHeight: scale(1920) });
       if (result.didCancel || !result.assets?.[0]) return;
       setUploading(true);
       const asset = result.assets[0];
@@ -348,18 +349,18 @@ export default function MyEquipmentScreen({ navigation }) {
             <Image source={{ uri: getImageUrl(item.photoUrls[0]) }} style={st.cardImage} />
           ) : (
             <View style={st.cardImagePlaceholder}>
-              <Icon name="hardware-chip-outline" size={40} color={C.muted} />
+              <Icon name="hardware-chip-outline" size={scale(40)} color={C.muted} />
             </View>
           )}
           {/* Status Badge */}
           <View style={[st.statusBadge, { backgroundColor: sStyle.bg }]}>
-            <Icon name={sStyle.icon} size={12} color={sStyle.text} />
+            <Icon name={sStyle.icon} size={scale(12)} color={sStyle.text} />
             <Text style={[st.statusBadgeText, { color: sStyle.text }]}>{sStyle.label}</Text>
           </View>
           {/* Photo Count Badge */}
           {photoCount > 1 && (
             <View style={st.photoCountBadge}>
-              <Icon name="images" size={12} color="#fff" />
+              <Icon name="images" size={scale(12)} color="#fff" />
               <Text style={st.photoCountText}>{photoCount}</Text>
             </View>
           )}
@@ -370,7 +371,7 @@ export default function MyEquipmentScreen({ navigation }) {
           <Text style={st.cardTitle} numberOfLines={1}>{item.name}</Text>
           {categoryName && (
             <View style={st.categoryRow}>
-              <Icon name="folder-outline" size={12} color={C.muted} />
+              <Icon name="folder-outline" size={scale(12)} color={C.muted} />
               <Text style={st.categoryText} numberOfLines={1}>{categoryName}</Text>
             </View>
           )}
@@ -380,7 +381,7 @@ export default function MyEquipmentScreen({ navigation }) {
 
           {/* Warranty Row */}
           <View style={[st.warrantyRow, { backgroundColor: wStyle.bg }]}>
-            <Icon name={wStyle.icon} size={14} color={wStyle.text} />
+            <Icon name={wStyle.icon} size={scale(14)} color={wStyle.text} />
             <Text style={[st.warrantyText, { color: wStyle.text }]}>{ws.label}</Text>
           </View>
 
@@ -389,13 +390,13 @@ export default function MyEquipmentScreen({ navigation }) {
             <View style={st.docsRow}>
               {item.billImageUrl && (
                 <View style={st.docBadge}>
-                  <Icon name="document-text" size={10} color={C.info} />
+                  <Icon name="document-text" size={scale(10)} color={C.info} />
                   <Text style={st.docText}>Bill</Text>
                 </View>
               )}
               {item.warrantyCardUrl && (
                 <View style={st.docBadge}>
-                  <Icon name="card" size={10} color={C.success} />
+                  <Icon name="card" size={scale(10)} color={C.success} />
                   <Text style={st.docText}>Card</Text>
                 </View>
               )}
@@ -419,14 +420,14 @@ export default function MyEquipmentScreen({ navigation }) {
               });
             }}
           >
-            <Icon name="construct" size={14} color="#fff" />
+            <Icon name="construct" size={scale(14)} color="#fff" />
             <Text style={st.serviceBtnText}>Service</Text>
           </TouchableOpacity>
           <TouchableOpacity style={st.iconBtn} onPress={() => openForm(item)}>
-            <Icon name="pencil" size={16} color={C.info} />
+            <Icon name="pencil" size={scale(16)} color={C.info} />
           </TouchableOpacity>
           <TouchableOpacity style={[st.iconBtn, { backgroundColor: C.dangerLight }]} onPress={() => deleteEquipment(item)}>
-            <Icon name="trash" size={16} color={C.danger} />
+            <Icon name="trash" size={scale(16)} color={C.danger} />
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
@@ -464,7 +465,7 @@ export default function MyEquipmentScreen({ navigation }) {
       >
         <View style={st.heroContent}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
-            <Icon name="arrow-back" size={22} color="#fff" />
+            <Icon name="arrow-back" size={scale(22)} color="#fff" />
           </TouchableOpacity>
           <View style={st.heroTextContainer}>
             <Text style={st.heroTitle}>My Equipment</Text>
@@ -472,10 +473,10 @@ export default function MyEquipmentScreen({ navigation }) {
           </View>
           <View style={st.heroActions}>
             <TouchableOpacity style={st.heroIconBtn} onPress={() => openForm()}>
-              <Icon name="add" size={22} color="#fff" />
+              <Icon name="add" size={scale(22)} color="#fff" />
             </TouchableOpacity>
             <TouchableOpacity style={st.heroIconBtn} onPress={() => setMenuVisible(true)}>
-              <Icon name="menu" size={22} color="#fff" />
+              <Icon name="menu" size={scale(22)} color="#fff" />
             </TouchableOpacity>
           </View>
         </View>
@@ -483,7 +484,7 @@ export default function MyEquipmentScreen({ navigation }) {
         {/* Search Bar */}
         <View style={st.searchContainer}>
           <View style={st.searchBar}>
-            <Icon name="search" size={20} color={C.muted} />
+            <Icon name="search" size={scale(20)} color={C.muted} />
             <TextInput
               style={st.searchInput}
               placeholder="Search equipment..."
@@ -494,7 +495,7 @@ export default function MyEquipmentScreen({ navigation }) {
             />
             {search.length > 0 && (
               <TouchableOpacity onPress={() => setSearch('')} style={st.clearBtn}>
-                <Icon name="close-circle" size={20} color={C.muted} />
+                <Icon name="close-circle" size={scale(20)} color={C.muted} />
               </TouchableOpacity>
             )}
           </View>
@@ -515,7 +516,7 @@ export default function MyEquipmentScreen({ navigation }) {
                 style={[st.filterChip, isActive && st.filterChipActive]}
                 onPress={() => setStatusFilter(filter.key)}
               >
-                <Icon name={filter.icon} size={16} color={isActive ? '#fff' : filter.color} />
+                <Icon name={filter.icon} size={scale(16)} color={isActive ? '#fff' : filter.color} />
                 <Text style={[st.filterChipText, isActive && st.filterChipTextActive]}>
                   {filter.label} ({statusCounts[filter.key] || 0})
                 </Text>
@@ -536,7 +537,7 @@ export default function MyEquipmentScreen({ navigation }) {
                 style={[st.warrantyChip, isActive && st.warrantyChipActive]}
                 onPress={() => setWarrantyFilter(filter.key)}
               >
-                <Icon name={filter.icon} size={14} color={isActive ? '#fff' : (filter.color || C.muted)} />
+                <Icon name={filter.icon} size={scale(14)} color={isActive ? '#fff' : (filter.color || C.muted)} />
                 <Text style={[st.warrantyChipText, isActive && st.warrantyChipTextActive]}>{filter.label}</Text>
               </TouchableOpacity>
             );
@@ -552,7 +553,7 @@ export default function MyEquipmentScreen({ navigation }) {
             style={st.clearFiltersBtn}
             onPress={() => { setStatusFilter('all'); setWarrantyFilter('all'); setSearch(''); }}
           >
-            <Icon name="close-circle" size={14} color={C.primary} />
+            <Icon name="close-circle" size={scale(14)} color={C.primary} />
             <Text style={st.clearFiltersText}>Clear</Text>
           </TouchableOpacity>
         )}
@@ -572,7 +573,7 @@ export default function MyEquipmentScreen({ navigation }) {
         ListEmptyComponent={
           <View style={st.emptyState}>
             <View style={st.emptyIconContainer}>
-              <Icon name="hardware-chip-outline" size={64} color={C.muted} />
+              <Icon name="hardware-chip-outline" size={scale(64)} color={C.muted} />
             </View>
             <Text style={st.emptyTitle}>{equipments.length === 0 ? 'No Equipment Yet' : 'No Results'}</Text>
             <Text style={st.emptySubtitle}>
@@ -580,7 +581,7 @@ export default function MyEquipmentScreen({ navigation }) {
             </Text>
             {equipments.length === 0 && (
               <TouchableOpacity style={st.emptyBtn} onPress={() => openForm()}>
-                <Icon name="add" size={18} color="#fff" />
+                <Icon name="add" size={scale(18)} color="#fff" />
                 <Text style={st.emptyBtnText}>Add Equipment</Text>
               </TouchableOpacity>
             )}
@@ -595,7 +596,7 @@ export default function MyEquipmentScreen({ navigation }) {
             <LinearGradient colors={[C.gradient1, C.gradient2]} style={st.modalHeader}>
               <Text style={st.modalTitle}>{form.id ? 'Edit Equipment' : 'Add Equipment'}</Text>
               <TouchableOpacity onPress={() => setModalVisible(false)} style={st.modalCloseBtn}>
-                <Icon name="close" size={24} color="#fff" />
+                <Icon name="close" size={scale(24)} color="#fff" />
               </TouchableOpacity>
             </LinearGradient>
 
@@ -603,7 +604,7 @@ export default function MyEquipmentScreen({ navigation }) {
               {/* Restaurant */}
               <Text style={st.inputLabel}>Restaurant</Text>
               <View style={st.readOnlyInput}>
-                <Icon name="business" size={18} color={C.muted} />
+                <Icon name="business" size={scale(18)} color={C.muted} />
                 <Text style={st.readOnlyText}>{selectedRestaurant?.name || 'No restaurant'}</Text>
               </View>
 
@@ -613,7 +614,7 @@ export default function MyEquipmentScreen({ navigation }) {
                 <Text style={form.categoryId ? st.pickerText : st.pickerPlaceholder}>
                   {categories.find(c => c.id === form.categoryId)?.name || 'Select category'}
                 </Text>
-                <Icon name="chevron-down" size={18} color={C.muted} />
+                <Icon name="chevron-down" size={scale(18)} color={C.muted} />
               </TouchableOpacity>
 
               {/* Subcategory */}
@@ -626,7 +627,7 @@ export default function MyEquipmentScreen({ navigation }) {
                 <Text style={form.subCategoryId ? st.pickerText : st.pickerPlaceholder}>
                   {subCategories.find(sc => sc.id === form.subCategoryId)?.name || 'Select subcategory'}
                 </Text>
-                <Icon name="chevron-down" size={18} color={C.muted} />
+                <Icon name="chevron-down" size={scale(18)} color={C.muted} />
               </TouchableOpacity>
 
               {/* Brand & Model Row */}
@@ -656,7 +657,7 @@ export default function MyEquipmentScreen({ navigation }) {
               {/* Purchase Date */}
               <Text style={st.inputLabel}>Purchase Date</Text>
               <TouchableOpacity style={st.dateBtn} onPress={() => setShowPurchaseDatePicker(true)}>
-                <Icon name="calendar" size={18} color={C.primary} />
+                <Icon name="calendar" size={scale(18)} color={C.primary} />
                 <Text style={form.purchaseDate ? st.dateText : st.datePlaceholder}>
                   {form.purchaseDate ? formatDateDisplay(form.purchaseDate) : 'Select date'}
                 </Text>
@@ -670,7 +671,7 @@ export default function MyEquipmentScreen({ navigation }) {
               {/* Warranty End Date */}
               <Text style={st.inputLabel}>Warranty End Date</Text>
               <TouchableOpacity style={st.dateBtn} onPress={() => setShowWarrantyDatePicker(true)}>
-                <Icon name="shield-checkmark" size={18} color={C.info} />
+                <Icon name="shield-checkmark" size={scale(18)} color={C.info} />
                 <Text style={form.warrantyEndDate ? st.dateText : st.datePlaceholder}>
                   {form.warrantyEndDate ? formatDateDisplay(form.warrantyEndDate) : 'Select date'}
                 </Text>
@@ -692,14 +693,14 @@ export default function MyEquipmentScreen({ navigation }) {
                 <View style={st.imagePreview}>
                   <Image source={{ uri: getImageUrl(form.billImageUrl) }} style={st.previewImg} />
                   <TouchableOpacity style={st.removeImgBtn} onPress={() => setForm(f => ({ ...f, billImageUrl: '' }))}>
-                    <Icon name="close-circle" size={24} color={C.danger} />
+                    <Icon name="close-circle" size={scale(24)} color={C.danger} />
                   </TouchableOpacity>
                 </View>
               ) : (
                 <TouchableOpacity style={st.uploadBtn} onPress={() => uploadImage('bills')} disabled={uploading}>
                   {uploading ? <ActivityIndicator size="small" color={C.primary} /> : (
                     <>
-                      <Icon name="cloud-upload" size={24} color={C.primary} />
+                      <Icon name="cloud-upload" size={scale(24)} color={C.primary} />
                       <Text style={st.uploadText}>Upload Bill</Text>
                     </>
                   )}
@@ -712,14 +713,14 @@ export default function MyEquipmentScreen({ navigation }) {
                 <View style={st.imagePreview}>
                   <Image source={{ uri: getImageUrl(form.warrantyCardUrl) }} style={st.previewImg} />
                   <TouchableOpacity style={st.removeImgBtn} onPress={() => setForm(f => ({ ...f, warrantyCardUrl: '' }))}>
-                    <Icon name="close-circle" size={24} color={C.danger} />
+                    <Icon name="close-circle" size={scale(24)} color={C.danger} />
                   </TouchableOpacity>
                 </View>
               ) : (
                 <TouchableOpacity style={st.uploadBtn} onPress={() => uploadImage('warranty-cards')} disabled={uploading}>
                   {uploading ? <ActivityIndicator size="small" color={C.primary} /> : (
                     <>
-                      <Icon name="shield-checkmark" size={24} color={C.primary} />
+                      <Icon name="shield-checkmark" size={scale(24)} color={C.primary} />
                       <Text style={st.uploadText}>Upload Warranty Card</Text>
                     </>
                   )}
@@ -733,14 +734,14 @@ export default function MyEquipmentScreen({ navigation }) {
                   <View key={index} style={st.photoItem}>
                     <Image source={{ uri: getImageUrl(url) }} style={st.photoImg} />
                     <TouchableOpacity style={st.removePhotoBtn} onPress={() => removePhoto(index)}>
-                      <Icon name="close-circle" size={20} color={C.danger} />
+                      <Icon name="close-circle" size={scale(20)} color={C.danger} />
                     </TouchableOpacity>
                   </View>
                 ))}
                 {form.photoUrls.length < 5 && (
                   <TouchableOpacity style={st.addPhotoBtn} onPress={() => uploadImage('photos')} disabled={uploading}>
                     {uploading ? <ActivityIndicator size="small" color={C.primary} /> : (
-                      <Icon name="add" size={28} color={C.primary} />
+                      <Icon name="add" size={scale(28)} color={C.primary} />
                     )}
                   </TouchableOpacity>
                 )}
@@ -771,16 +772,16 @@ export default function MyEquipmentScreen({ navigation }) {
             <View style={st.pickerModalHeader}>
               <Text style={st.pickerModalTitle}>Select Category</Text>
               <TouchableOpacity onPress={() => setCategoryPickerVisible(false)}>
-                <Icon name="close" size={24} color={C.ink} />
+                <Icon name="close" size={scale(24)} color={C.ink} />
               </TouchableOpacity>
             </View>
             <ScrollView style={st.pickerList}>
               {categories.map(c => (
                 <TouchableOpacity key={c.id} style={[st.pickerItem, form.categoryId === c.id && st.pickerItemActive]}
                   onPress={() => { setForm(f => ({ ...f, categoryId: c.id, subCategoryId: '' })); setCategoryPickerVisible(false); }}>
-                  <Icon name="folder" size={20} color={form.categoryId === c.id ? C.primary : C.muted} />
+                  <Icon name="folder" size={scale(20)} color={form.categoryId === c.id ? C.primary : C.muted} />
                   <Text style={[st.pickerItemText, form.categoryId === c.id && { color: C.primary }]}>{c.name}</Text>
-                  {form.categoryId === c.id && <Icon name="checkmark-circle" size={20} color={C.primary} />}
+                  {form.categoryId === c.id && <Icon name="checkmark-circle" size={scale(20)} color={C.primary} />}
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -795,7 +796,7 @@ export default function MyEquipmentScreen({ navigation }) {
             <View style={st.pickerModalHeader}>
               <Text style={st.pickerModalTitle}>Select Subcategory</Text>
               <TouchableOpacity onPress={() => setSubCategoryPickerVisible(false)}>
-                <Icon name="close" size={24} color={C.ink} />
+                <Icon name="close" size={scale(24)} color={C.ink} />
               </TouchableOpacity>
             </View>
             <ScrollView style={st.pickerList}>
@@ -804,9 +805,9 @@ export default function MyEquipmentScreen({ navigation }) {
               ) : subCategories.map(sc => (
                 <TouchableOpacity key={sc.id} style={[st.pickerItem, form.subCategoryId === sc.id && st.pickerItemActive]}
                   onPress={() => { setForm(f => ({ ...f, subCategoryId: sc.id })); setSubCategoryPickerVisible(false); }}>
-                  <Icon name="layers" size={20} color={form.subCategoryId === sc.id ? C.primary : C.muted} />
+                  <Icon name="layers" size={scale(20)} color={form.subCategoryId === sc.id ? C.primary : C.muted} />
                   <Text style={[st.pickerItemText, form.subCategoryId === sc.id && { color: C.primary }]}>{sc.name}</Text>
-                  {form.subCategoryId === sc.id && <Icon name="checkmark-circle" size={20} color={C.primary} />}
+                  {form.subCategoryId === sc.id && <Icon name="checkmark-circle" size={scale(20)} color={C.primary} />}
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -825,132 +826,132 @@ const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
 
   // Hero Section (Compact)
-  heroSection: { paddingTop: 8, paddingBottom: 16, borderBottomLeftRadius: 20, borderBottomRightRadius: 20 },
-  heroContent: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginBottom: 12 },
-  backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  heroSection: { paddingTop: scale(8), paddingBottom: scale(16), borderBottomLeftRadius: scale(20), borderBottomRightRadius: scale(20) },
+  heroContent: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(16), marginBottom: scale(12) },
+  backBtn: { width: scale(40), height: scale(40), borderRadius: scale(12), backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginRight: scale(12) },
   heroTextContainer: { flex: 1 },
-  heroTitle: { fontSize: 24, fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
-  heroSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.8)', marginTop: 2 },
-  heroActions: { flexDirection: 'row', gap: 8 },
-  heroIconBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
+  heroTitle: { fontSize: moderateScale(24), fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
+  heroSubtitle: { fontSize: moderateScale(13), color: 'rgba(255,255,255,0.8)', marginTop: scale(2) },
+  heroActions: { flexDirection: 'row', gap: scale(8) },
+  heroIconBtn: { width: scale(40), height: scale(40), borderRadius: scale(12), backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
 
   // Search
-  searchContainer: { paddingHorizontal: 16 },
-  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 14, paddingHorizontal: 14, height: 48, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12, elevation: 5 },
-  searchInput: { flex: 1, marginLeft: 10, fontSize: 15, color: C.ink },
-  clearBtn: { padding: 4 },
+  searchContainer: { paddingHorizontal: scale(16) },
+  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: scale(14), paddingHorizontal: scale(14), height: scale(48), shadowColor: '#000', shadowOffset: { width: 0, height: scale(4) }, shadowOpacity: 0.1, shadowRadius: scale(12), elevation: 5 },
+  searchInput: { flex: 1, marginLeft: scale(10), fontSize: moderateScale(15), color: C.ink },
+  clearBtn: { padding: scale(4) },
 
   // Filters
-  filterSection: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: C.border, backgroundColor: C.card },
-  warrantyFilterSection: { paddingVertical: 8, backgroundColor: C.bg },
-  filterScroll: { paddingHorizontal: 16 },
-  filterChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 10, marginRight: 8, backgroundColor: C.card, borderRadius: 20, borderWidth: 1.5, borderColor: C.border },
+  filterSection: { paddingVertical: scale(10), borderBottomWidth: 1, borderBottomColor: C.border, backgroundColor: C.card },
+  warrantyFilterSection: { paddingVertical: scale(8), backgroundColor: C.bg },
+  filterScroll: { paddingHorizontal: scale(16) },
+  filterChip: { flexDirection: 'row', alignItems: 'center', gap: scale(6), paddingHorizontal: scale(14), paddingVertical: scale(10), marginRight: scale(8), backgroundColor: C.card, borderRadius: scale(20), borderWidth: 1.5, borderColor: C.border },
   filterChipActive: { backgroundColor: C.primary, borderColor: C.primary },
-  filterChipText: { fontSize: 13, fontWeight: '600', color: C.ink },
+  filterChipText: { fontSize: moderateScale(13), fontWeight: '600', color: C.ink },
   filterChipTextActive: { color: '#fff' },
-  warrantyChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, marginRight: 8, backgroundColor: C.card, borderRadius: 16, borderWidth: 1, borderColor: C.border },
+  warrantyChip: { flexDirection: 'row', alignItems: 'center', gap: scale(6), paddingHorizontal: scale(12), paddingVertical: scale(8), marginRight: scale(8), backgroundColor: C.card, borderRadius: scale(16), borderWidth: 1, borderColor: C.border },
   warrantyChipActive: { backgroundColor: C.info, borderColor: C.info },
-  warrantyChipText: { fontSize: 12, fontWeight: '600', color: C.muted },
+  warrantyChipText: { fontSize: moderateScale(12), fontWeight: '600', color: C.muted },
   warrantyChipTextActive: { color: '#fff' },
 
   // Results Header
-  resultsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10 },
-  resultsTitle: { fontSize: 15, fontWeight: '700', color: C.ink },
-  clearFiltersBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: C.primaryLight, borderRadius: 8 },
-  clearFiltersText: { fontSize: 12, fontWeight: '600', color: C.primary },
+  resultsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: scale(16), paddingVertical: scale(10) },
+  resultsTitle: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink },
+  clearFiltersBtn: { flexDirection: 'row', alignItems: 'center', gap: scale(4), paddingHorizontal: scale(10), paddingVertical: scale(6), backgroundColor: C.primaryLight, borderRadius: scale(8) },
+  clearFiltersText: { fontSize: moderateScale(12), fontWeight: '600', color: C.primary },
 
   // List
-  listContent: { paddingHorizontal: 16, paddingBottom: 120 },
+  listContent: { paddingHorizontal: scale(16), paddingBottom: scale(120) },
   columnWrapper: { justifyContent: 'space-between' },
 
   // Card
-  card: { flex: 1, backgroundColor: C.card, borderRadius: 16, marginBottom: 12, marginHorizontal: 4, shadowColor: C.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3, overflow: 'hidden' },
-  cardImageContainer: { height: 120, backgroundColor: C.bg, position: 'relative' },
+  card: { flex: 1, backgroundColor: C.card, borderRadius: scale(16), marginBottom: scale(12), marginHorizontal: scale(4), shadowColor: C.shadow, shadowOffset: { width: 0, height: scale(2) }, shadowOpacity: 0.08, shadowRadius: scale(8), elevation: 3, overflow: 'hidden' },
+  cardImageContainer: { height: scale(120), backgroundColor: C.bg, position: 'relative' },
   cardImage: { width: '100%', height: '100%' },
   cardImagePlaceholder: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
-  statusBadge: { position: 'absolute', top: 8, left: 8, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  statusBadgeText: { fontSize: 10, fontWeight: '700' },
-  photoCountBadge: { position: 'absolute', top: 8, right: 8, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 8 },
-  photoCountText: { fontSize: 10, fontWeight: '700', color: '#fff' },
-  cardInfo: { padding: 12 },
-  cardTitle: { fontSize: 15, fontWeight: '700', color: C.ink },
-  categoryRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
-  categoryText: { fontSize: 12, color: C.muted },
-  serialText: { fontSize: 10, color: C.muted, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', marginTop: 4 },
-  warrantyRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
-  warrantyText: { fontSize: 11, fontWeight: '600' },
-  docsRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
-  docBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: C.bg, borderRadius: 6 },
-  docText: { fontSize: 10, fontWeight: '600', color: C.muted },
-  cardActions: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, paddingTop: 0 },
-  serviceBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, backgroundColor: C.primary, borderRadius: 10 },
-  serviceBtnText: { fontSize: 12, fontWeight: '700', color: '#fff' },
-  iconBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: C.infoLight, alignItems: 'center', justifyContent: 'center' },
+  statusBadge: { position: 'absolute', top: scale(8), left: scale(8), flexDirection: 'row', alignItems: 'center', gap: scale(4), paddingHorizontal: scale(8), paddingVertical: scale(4), borderRadius: scale(8) },
+  statusBadgeText: { fontSize: moderateScale(10), fontWeight: '700' },
+  photoCountBadge: { position: 'absolute', top: scale(8), right: scale(8), flexDirection: 'row', alignItems: 'center', gap: scale(4), paddingHorizontal: scale(8), paddingVertical: scale(4), backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: scale(8) },
+  photoCountText: { fontSize: moderateScale(10), fontWeight: '700', color: '#fff' },
+  cardInfo: { padding: scale(12) },
+  cardTitle: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink },
+  categoryRow: { flexDirection: 'row', alignItems: 'center', gap: scale(4), marginTop: scale(4) },
+  categoryText: { fontSize: moderateScale(12), color: C.muted },
+  serialText: { fontSize: moderateScale(10), color: C.muted, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', marginTop: scale(4) },
+  warrantyRow: { flexDirection: 'row', alignItems: 'center', gap: scale(6), marginTop: scale(8), paddingHorizontal: scale(10), paddingVertical: scale(6), borderRadius: scale(8) },
+  warrantyText: { fontSize: moderateScale(11), fontWeight: '600' },
+  docsRow: { flexDirection: 'row', gap: scale(8), marginTop: scale(8) },
+  docBadge: { flexDirection: 'row', alignItems: 'center', gap: scale(4), paddingHorizontal: scale(8), paddingVertical: scale(4), backgroundColor: C.bg, borderRadius: scale(6) },
+  docText: { fontSize: moderateScale(10), fontWeight: '600', color: C.muted },
+  cardActions: { flexDirection: 'row', alignItems: 'center', gap: scale(8), padding: scale(12), paddingTop: 0 },
+  serviceBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: scale(6), paddingVertical: scale(10), backgroundColor: C.primary, borderRadius: scale(10) },
+  serviceBtnText: { fontSize: moderateScale(12), fontWeight: '700', color: '#fff' },
+  iconBtn: { width: scale(36), height: scale(36), borderRadius: scale(10), backgroundColor: C.infoLight, alignItems: 'center', justifyContent: 'center' },
 
   // Loading & Empty
-  loadingHero: { paddingVertical: 24, paddingHorizontal: 20, borderBottomLeftRadius: 24, borderBottomRightRadius: 24 },
+  loadingHero: { paddingVertical: scale(24), paddingHorizontal: scale(20), borderBottomLeftRadius: scale(24), borderBottomRightRadius: scale(24) },
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  loadingText: { marginTop: 16, fontSize: 15, color: C.muted },
-  emptyState: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 40 },
-  emptyIconContainer: { width: 120, height: 120, borderRadius: 60, backgroundColor: C.border, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
-  emptyTitle: { fontSize: 20, fontWeight: '700', color: C.ink, marginBottom: 8 },
-  emptySubtitle: { fontSize: 14, color: C.muted, textAlign: 'center' },
-  emptyBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 24, paddingHorizontal: 24, paddingVertical: 14, backgroundColor: C.primary, borderRadius: 14 },
-  emptyBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  loadingText: { marginTop: scale(16), fontSize: moderateScale(15), color: C.muted },
+  emptyState: { alignItems: 'center', paddingTop: scale(60), paddingHorizontal: scale(40) },
+  emptyIconContainer: { width: scale(120), height: scale(120), borderRadius: scale(60), backgroundColor: C.border, alignItems: 'center', justifyContent: 'center', marginBottom: scale(20) },
+  emptyTitle: { fontSize: moderateScale(20), fontWeight: '700', color: C.ink, marginBottom: scale(8) },
+  emptySubtitle: { fontSize: moderateScale(14), color: C.muted, textAlign: 'center' },
+  emptyBtn: { flexDirection: 'row', alignItems: 'center', gap: scale(8), marginTop: scale(24), paddingHorizontal: scale(24), paddingVertical: scale(14), backgroundColor: C.primary, borderRadius: scale(14) },
+  emptyBtnText: { fontSize: moderateScale(15), fontWeight: '700', color: '#fff' },
 
   // Modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContainer: { backgroundColor: C.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '90%' },
-  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, borderTopLeftRadius: 24, borderTopRightRadius: 24 },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: '#fff' },
-  modalCloseBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
+  modalContainer: { backgroundColor: C.card, borderTopLeftRadius: scale(24), borderTopRightRadius: scale(24), maxHeight: '90%' },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: scale(20), paddingVertical: scale(16), borderTopLeftRadius: scale(24), borderTopRightRadius: scale(24) },
+  modalTitle: { fontSize: moderateScale(18), fontWeight: '700', color: '#fff' },
+  modalCloseBtn: { width: scale(36), height: scale(36), borderRadius: scale(10), backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
   modalBody: { flexGrow: 1, flexShrink: 1 },
-  modalBodyContent: { padding: 20, paddingBottom: 30 },
-  modalFooter: { flexDirection: 'row', gap: 12, padding: 20, borderTopWidth: 1, borderTopColor: C.border },
+  modalBodyContent: { padding: scale(20), paddingBottom: scale(30) },
+  modalFooter: { flexDirection: 'row', gap: scale(12), padding: scale(20), borderTopWidth: 1, borderTopColor: C.border },
 
   // Form inputs
-  inputLabel: { fontSize: 13, fontWeight: '600', color: C.muted, marginBottom: 8, marginTop: 16 },
-  input: { backgroundColor: C.bg, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 14, fontSize: 15, color: C.ink, borderWidth: 1, borderColor: C.border },
-  textArea: { height: 80, textAlignVertical: 'top' },
-  readOnlyInput: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.bg, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 14, borderWidth: 1, borderColor: C.border },
-  readOnlyText: { fontSize: 15, fontWeight: '600', color: C.ink },
-  pickerBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: C.bg, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 14, borderWidth: 1, borderColor: C.border },
+  inputLabel: { fontSize: moderateScale(13), fontWeight: '600', color: C.muted, marginBottom: scale(8), marginTop: scale(16) },
+  input: { backgroundColor: C.bg, borderRadius: scale(12), paddingHorizontal: scale(14), paddingVertical: scale(14), fontSize: moderateScale(15), color: C.ink, borderWidth: 1, borderColor: C.border },
+  textArea: { height: scale(80), textAlignVertical: 'top' },
+  readOnlyInput: { flexDirection: 'row', alignItems: 'center', gap: scale(10), backgroundColor: C.bg, borderRadius: scale(12), paddingHorizontal: scale(14), paddingVertical: scale(14), borderWidth: 1, borderColor: C.border },
+  readOnlyText: { fontSize: moderateScale(15), fontWeight: '600', color: C.ink },
+  pickerBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: C.bg, borderRadius: scale(12), paddingHorizontal: scale(14), paddingVertical: scale(14), borderWidth: 1, borderColor: C.border },
   pickerBtnDisabled: { opacity: 0.5 },
-  pickerText: { fontSize: 15, color: C.ink },
-  pickerPlaceholder: { fontSize: 15, color: C.muted },
-  dateBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.bg, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 14, borderWidth: 1, borderColor: C.border },
-  dateText: { fontSize: 15, color: C.ink, flex: 1 },
-  datePlaceholder: { fontSize: 15, color: C.muted, flex: 1 },
-  formRow: { flexDirection: 'row', gap: 12 },
+  pickerText: { fontSize: moderateScale(15), color: C.ink },
+  pickerPlaceholder: { fontSize: moderateScale(15), color: C.muted },
+  dateBtn: { flexDirection: 'row', alignItems: 'center', gap: scale(10), backgroundColor: C.bg, borderRadius: scale(12), paddingHorizontal: scale(14), paddingVertical: scale(14), borderWidth: 1, borderColor: C.border },
+  dateText: { fontSize: moderateScale(15), color: C.ink, flex: 1 },
+  datePlaceholder: { fontSize: moderateScale(15), color: C.muted, flex: 1 },
+  formRow: { flexDirection: 'row', gap: scale(12) },
   formCol: { flex: 1 },
 
   // Image uploads
-  uploadBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: C.bg, borderRadius: 12, paddingVertical: 20, borderWidth: 2, borderColor: C.border, borderStyle: 'dashed' },
-  uploadText: { fontSize: 14, fontWeight: '600', color: C.primary },
+  uploadBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: scale(10), backgroundColor: C.bg, borderRadius: scale(12), paddingVertical: scale(20), borderWidth: 2, borderColor: C.border, borderStyle: 'dashed' },
+  uploadText: { fontSize: moderateScale(14), fontWeight: '600', color: C.primary },
   imagePreview: { position: 'relative' },
-  previewImg: { width: '100%', height: 120, borderRadius: 12, backgroundColor: C.bg },
-  removeImgBtn: { position: 'absolute', top: 8, right: 8 },
-  photosGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  previewImg: { width: '100%', height: scale(120), borderRadius: scale(12), backgroundColor: C.bg },
+  removeImgBtn: { position: 'absolute', top: scale(8), right: scale(8) },
+  photosGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: scale(12) },
   photoItem: { position: 'relative' },
-  photoImg: { width: 80, height: 80, borderRadius: 12, backgroundColor: C.bg },
-  removePhotoBtn: { position: 'absolute', top: -6, right: -6 },
-  addPhotoBtn: { width: 80, height: 80, borderRadius: 12, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.border, borderStyle: 'dashed' },
+  photoImg: { width: scale(80), height: scale(80), borderRadius: scale(12), backgroundColor: C.bg },
+  removePhotoBtn: { position: 'absolute', top: scale(-6), right: scale(-6) },
+  addPhotoBtn: { width: scale(80), height: scale(80), borderRadius: scale(12), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.border, borderStyle: 'dashed' },
 
   // Modal buttons
-  cancelBtn: { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: C.bg, alignItems: 'center' },
-  cancelBtnText: { fontSize: 15, fontWeight: '700', color: C.ink },
-  saveBtn: { flex: 1, borderRadius: 12, overflow: 'hidden' },
-  saveBtnGradient: { paddingVertical: 14, alignItems: 'center' },
-  saveBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  cancelBtn: { flex: 1, paddingVertical: scale(14), borderRadius: scale(12), backgroundColor: C.bg, alignItems: 'center' },
+  cancelBtnText: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink },
+  saveBtn: { flex: 1, borderRadius: scale(12), overflow: 'hidden' },
+  saveBtnGradient: { paddingVertical: scale(14), alignItems: 'center' },
+  saveBtnText: { fontSize: moderateScale(15), fontWeight: '700', color: '#fff' },
 
   // Picker Modal
-  pickerModal: { backgroundColor: C.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '70%' },
-  pickerModalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, borderBottomWidth: 1, borderBottomColor: C.border },
-  pickerModalTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
-  pickerList: { padding: 16 },
-  pickerItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: C.border },
+  pickerModal: { backgroundColor: C.card, borderTopLeftRadius: scale(24), borderTopRightRadius: scale(24), maxHeight: '70%' },
+  pickerModalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: scale(20), borderBottomWidth: 1, borderBottomColor: C.border },
+  pickerModalTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink },
+  pickerList: { padding: scale(16) },
+  pickerItem: { flexDirection: 'row', alignItems: 'center', gap: scale(12), paddingVertical: scale(14), borderBottomWidth: 1, borderBottomColor: C.border },
   pickerItemActive: { backgroundColor: C.primaryLight },
-  pickerItemText: { flex: 1, fontSize: 15, fontWeight: '600', color: C.ink },
-  emptyPicker: { padding: 20, alignItems: 'center' },
-  emptyPickerText: { fontSize: 14, color: C.muted },
+  pickerItemText: { flex: 1, fontSize: moderateScale(15), fontWeight: '600', color: C.ink },
+  emptyPicker: { padding: scale(20), alignItems: 'center' },
+  emptyPickerText: { fontSize: moderateScale(14), color: C.muted },
 });

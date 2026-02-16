@@ -26,6 +26,7 @@ import { api } from '../api/client';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
+import { scale, moderateScale } from '../utils/responsive';
 // Premium Color Palette
 const C = {
   primary: '#EF3A3A',
@@ -199,7 +200,7 @@ export default function CategoryRequestScreen({ navigation }) {
         {/* Header Row */}
         <View style={st.cardHeader}>
           <View style={[st.statusBadge, { backgroundColor: statusConfig.bg }]}>
-            <Icon name={statusConfig.icon} size={14} color={statusConfig.color} />
+            <Icon name={statusConfig.icon} size={scale(14)} color={statusConfig.color} />
             <Text style={[st.statusText, { color: statusConfig.color }]}>{statusConfig.label}</Text>
           </View>
           <Text style={st.dateText}>{formatDate(request.createdAt)}</Text>
@@ -216,7 +217,7 @@ export default function CategoryRequestScreen({ navigation }) {
         {/* Rejection Reason */}
         {request.status === 'REJECTED' && request.rejectionReason && (
           <View style={st.rejectionBox}>
-            <Icon name="alert-circle" size={14} color={C.rejectedColor} />
+            <Icon name="alert-circle" size={scale(14)} color={C.rejectedColor} />
             <Text style={st.rejectionText}>{request.rejectionReason}</Text>
           </View>
         )}
@@ -232,7 +233,7 @@ export default function CategoryRequestScreen({ navigation }) {
               <ActivityIndicator size="small" color={C.rejectedColor} />
             ) : (
               <>
-                <Icon name="trash-outline" size={16} color={C.rejectedColor} />
+                <Icon name="trash-outline" size={scale(16)} color={C.rejectedColor} />
                 <Text style={st.deleteBtnText}>Delete</Text>
               </>
             )}
@@ -249,18 +250,18 @@ export default function CategoryRequestScreen({ navigation }) {
       {/* Header */}
       <View style={st.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
-          <Icon name="arrow-back" size={22} color={C.ink} />
+          <Icon name="arrow-back" size={scale(22)} color={C.ink} />
         </TouchableOpacity>
         <View style={st.headerCenter}>
           <Text style={st.headerTitle}>Category Requests</Text>
         </View>
         {/* New Request Button in Header */}
         <TouchableOpacity style={st.newReqBtn} onPress={() => setModalVisible(true)}>
-          <Icon name="add" size={18} color="#FFF" />
+          <Icon name="add" size={scale(18)} color="#FFF" />
           <Text style={st.newReqBtnText}>New</Text>
         </TouchableOpacity>
         <TouchableOpacity style={st.menuBtn} onPress={() => setMenuVisible(true)}>
-          <Icon name="menu" size={20} color={C.ink} />
+          <Icon name="menu" size={scale(20)} color={C.ink} />
         </TouchableOpacity>
       </View>
 
@@ -273,17 +274,17 @@ export default function CategoryRequestScreen({ navigation }) {
         {/* Stats Cards */}
         <View style={st.statsRow}>
           <View style={[st.statCard, { backgroundColor: C.pendingBg, borderColor: C.pendingBorder }]}>
-            <Icon name="time" size={20} color={C.pendingColor} />
+            <Icon name="time" size={scale(20)} color={C.pendingColor} />
             <Text style={[st.statCount, { color: C.pendingColor }]}>{pendingCount}</Text>
             <Text style={st.statLabel}>Pending</Text>
           </View>
           <View style={[st.statCard, { backgroundColor: C.approvedBg, borderColor: C.approvedBorder }]}>
-            <Icon name="checkmark-circle" size={20} color={C.approvedColor} />
+            <Icon name="checkmark-circle" size={scale(20)} color={C.approvedColor} />
             <Text style={[st.statCount, { color: C.approvedColor }]}>{approvedCount}</Text>
             <Text style={st.statLabel}>Approved</Text>
           </View>
           <View style={[st.statCard, { backgroundColor: C.rejectedBg, borderColor: C.rejectedBorder }]}>
-            <Icon name="close-circle" size={20} color={C.rejectedColor} />
+            <Icon name="close-circle" size={scale(20)} color={C.rejectedColor} />
             <Text style={[st.statCount, { color: C.rejectedColor }]}>{rejectedCount}</Text>
             <Text style={st.statLabel}>Rejected</Text>
           </View>
@@ -297,7 +298,7 @@ export default function CategoryRequestScreen({ navigation }) {
           </View>
         ) : myRequests.length === 0 ? (
           <View style={st.emptyBox}>
-            <Icon name="folder-open-outline" size={48} color={C.muted} />
+            <Icon name="folder-open-outline" size={scale(48)} color={C.muted} />
             <Text style={st.emptyTitle}>No Requests Yet</Text>
             <Text style={st.emptyText}>Tap "New" button to submit your first request</Text>
           </View>
@@ -307,7 +308,7 @@ export default function CategoryRequestScreen({ navigation }) {
           </View>
         )}
 
-        <View style={{ height: 100 }} />
+        <View style={{ height: scale(100) }} />
       </ScrollView>
 
       {/* New Request Modal */}
@@ -325,14 +326,14 @@ export default function CategoryRequestScreen({ navigation }) {
             {/* Modal Header */}
             <View style={st.modalHeader}>
               <View style={st.modalIconBox}>
-                <Icon name="add-circle" size={24} color={C.primary} />
+                <Icon name="add-circle" size={scale(24)} color={C.primary} />
               </View>
               <View style={st.modalHeaderText}>
                 <Text style={st.modalTitle}>New Category Request</Text>
                 <Text style={st.modalSubtitle}>Submit a request for a new category</Text>
               </View>
               <TouchableOpacity style={st.modalCloseBtn} onPress={() => setModalVisible(false)}>
-                <Icon name="close" size={22} color={C.muted} />
+                <Icon name="close" size={scale(22)} color={C.muted} />
               </TouchableOpacity>
             </View>
 
@@ -351,7 +352,7 @@ export default function CategoryRequestScreen({ navigation }) {
                   <Text style={st.requiredBadge}>Required</Text>
                 </View>
                 <View style={[st.inputBox, categoryName && st.inputBoxActive]}>
-                  <Icon name="pricetag-outline" size={18} color={categoryName ? C.primary : C.muted} />
+                  <Icon name="pricetag-outline" size={scale(18)} color={categoryName ? C.primary : C.muted} />
                   <TextInput
                     style={st.input}
                     placeholder="e.g., Seafood, Vegan, Italian"
@@ -420,7 +421,7 @@ export default function CategoryRequestScreen({ navigation }) {
                   <ActivityIndicator color="#FFF" size="small" />
                 ) : (
                   <>
-                    <Icon name="send" size={18} color="#FFF" />
+                    <Icon name="send" size={scale(18)} color="#FFF" />
                     <Text style={st.submitBtnText}>Submit</Text>
                   </>
                 )}
@@ -443,123 +444,123 @@ const st = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(12),
     backgroundColor: C.card,
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
   backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(12),
     backgroundColor: C.bg,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerCenter: { flex: 1, marginLeft: 12 },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
+  headerCenter: { flex: 1, marginLeft: scale(12) },
+  headerTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink },
   newReqBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: C.primary,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginRight: 10,
+    paddingHorizontal: scale(14),
+    paddingVertical: scale(8),
+    borderRadius: scale(20),
+    marginRight: scale(10),
   },
-  newReqBtnText: { fontSize: 13, fontWeight: '700', color: '#FFF', marginLeft: 4 },
+  newReqBtnText: { fontSize: moderateScale(13), fontWeight: '700', color: '#FFF', marginLeft: scale(4) },
   menuBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(12),
     backgroundColor: C.bg,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   content: { flex: 1 },
-  scrollContent: { flexGrow: 1, padding: 16 },
+  scrollContent: { flexGrow: 1, padding: scale(16) },
 
   // Stats
   statsRow: {
     flexDirection: 'row',
-    marginBottom: 16,
+    marginBottom: scale(16),
   },
   statCard: {
     flex: 1,
-    borderRadius: 12,
-    padding: 12,
-    marginHorizontal: 4,
+    borderRadius: scale(12),
+    padding: scale(12),
+    marginHorizontal: scale(4),
     alignItems: 'center',
     borderWidth: 1,
   },
-  statCount: { fontSize: 20, fontWeight: '800', marginTop: 4 },
-  statLabel: { fontSize: 10, color: C.muted, fontWeight: '600', marginTop: 2 },
+  statCount: { fontSize: moderateScale(20), fontWeight: '800', marginTop: scale(4) },
+  statLabel: { fontSize: moderateScale(10), color: C.muted, fontWeight: '600', marginTop: scale(2) },
 
   // Request Card
   requestsList: {},
   requestCard: {
     backgroundColor: C.card,
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 12,
+    borderRadius: scale(14),
+    padding: scale(14),
+    marginBottom: scale(12),
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: scale(10),
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 16,
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(5),
+    borderRadius: scale(16),
   },
-  statusText: { fontSize: 11, fontWeight: '700', marginLeft: 5 },
-  dateText: { fontSize: 11, color: C.muted },
-  categoryName: { fontSize: 16, fontWeight: '700', color: C.ink, marginBottom: 6 },
-  descText: { fontSize: 13, color: C.text, lineHeight: 18, marginBottom: 8 },
+  statusText: { fontSize: moderateScale(11), fontWeight: '700', marginLeft: scale(5) },
+  dateText: { fontSize: moderateScale(11), color: C.muted },
+  categoryName: { fontSize: moderateScale(16), fontWeight: '700', color: C.ink, marginBottom: scale(6) },
+  descText: { fontSize: moderateScale(13), color: C.text, lineHeight: moderateScale(18), marginBottom: scale(8) },
 
   rejectionBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     backgroundColor: C.rejectedBg,
-    padding: 10,
-    borderRadius: 10,
-    marginTop: 6,
+    padding: scale(10),
+    borderRadius: scale(10),
+    marginTop: scale(6),
   },
-  rejectionText: { flex: 1, fontSize: 12, color: C.rejectedColor, marginLeft: 8 },
+  rejectionText: { flex: 1, fontSize: moderateScale(12), color: C.rejectedColor, marginLeft: scale(8) },
 
   deleteBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 12,
-    paddingVertical: 10,
-    borderRadius: 10,
+    marginTop: scale(12),
+    paddingVertical: scale(10),
+    borderRadius: scale(10),
     backgroundColor: C.rejectedBg,
     borderWidth: 1,
     borderColor: C.rejectedBorder,
   },
-  deleteBtnText: { fontSize: 13, fontWeight: '600', color: C.rejectedColor, marginLeft: 6 },
+  deleteBtnText: { fontSize: moderateScale(13), fontWeight: '600', color: C.rejectedColor, marginLeft: scale(6) },
 
   // Loading & Empty
   loadingBox: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 60,
+    paddingVertical: scale(60),
   },
-  loadingText: { fontSize: 14, color: C.muted, marginTop: 12 },
+  loadingText: { fontSize: moderateScale(14), color: C.muted, marginTop: scale(12) },
 
   emptyBox: {
     alignItems: 'center',
-    paddingVertical: 60,
+    paddingVertical: scale(60),
   },
-  emptyTitle: { fontSize: 16, fontWeight: '700', color: C.ink, marginTop: 12 },
-  emptyText: { fontSize: 13, color: C.muted, marginTop: 4, textAlign: 'center' },
+  emptyTitle: { fontSize: moderateScale(16), fontWeight: '700', color: C.ink, marginTop: scale(12) },
+  emptyText: { fontSize: moderateScale(13), color: C.muted, marginTop: scale(4), textAlign: 'center' },
 
   // Modal
   modalOverlay: {
@@ -569,32 +570,32 @@ const st = StyleSheet.create({
   },
   modalContainer: {
     backgroundColor: C.card,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: scale(24),
+    borderTopRightRadius: scale(24),
     maxHeight: '85%',
   },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    padding: scale(16),
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
   modalIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: scale(44),
+    height: scale(44),
+    borderRadius: scale(12),
     backgroundColor: C.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  modalHeaderText: { flex: 1, marginLeft: 12 },
-  modalTitle: { fontSize: 17, fontWeight: '700', color: C.ink },
-  modalSubtitle: { fontSize: 12, color: C.muted, marginTop: 2 },
+  modalHeaderText: { flex: 1, marginLeft: scale(12) },
+  modalTitle: { fontSize: moderateScale(17), fontWeight: '700', color: C.ink },
+  modalSubtitle: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(2) },
   modalCloseBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: scale(36),
+    height: scale(36),
+    borderRadius: scale(10),
     backgroundColor: C.bg,
     alignItems: 'center',
     justifyContent: 'center',
@@ -602,29 +603,29 @@ const st = StyleSheet.create({
 
   modalScroll: {
     flexGrow: 0,
-    maxHeight: 350,
+    maxHeight: scale(350),
   },
   modalScrollContent: {
-    padding: 16,
-    paddingBottom: 20,
+    padding: scale(16),
+    paddingBottom: scale(20),
   },
 
   // Input
-  inputGroup: { marginBottom: 14 },
+  inputGroup: { marginBottom: scale(14) },
   inputLabelRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 6,
+    marginBottom: scale(6),
   },
-  inputLabel: { fontSize: 13, fontWeight: '600', color: C.ink },
+  inputLabel: { fontSize: moderateScale(13), fontWeight: '600', color: C.ink },
   requiredBadge: {
-    fontSize: 10,
+    fontSize: moderateScale(10),
     fontWeight: '600',
     color: C.primary,
   },
   optionalBadge: {
-    fontSize: 10,
+    fontSize: moderateScale(10),
     fontWeight: '500',
     color: C.muted,
   },
@@ -635,45 +636,45 @@ const st = StyleSheet.create({
     backgroundColor: C.bg,
     borderWidth: 1.5,
     borderColor: C.border,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderRadius: scale(12),
+    paddingHorizontal: scale(12),
+    paddingVertical: scale(10),
   },
   inputBoxActive: { borderColor: C.primary },
   textAreaBox: { alignItems: 'flex-start' },
 
-  input: { flex: 1, fontSize: 14, color: C.ink, marginLeft: 8 },
-  textArea: { minHeight: 80, textAlignVertical: 'top', marginLeft: 0 },
+  input: { flex: 1, fontSize: moderateScale(14), color: C.ink, marginLeft: scale(8) },
+  textArea: { minHeight: scale(80), textAlignVertical: 'top', marginLeft: 0 },
 
   // Modal Actions
   modalActions: {
     flexDirection: 'row',
-    padding: 16,
+    padding: scale(16),
     borderTopWidth: 1,
     borderTopColor: C.border,
     paddingBottom: Platform.OS === 'ios' ? 30 : 16,
   },
   cancelBtn: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingVertical: scale(14),
+    borderRadius: scale(12),
     backgroundColor: C.bg,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
+    marginRight: scale(10),
     borderWidth: 1,
     borderColor: C.border,
   },
-  cancelBtnText: { fontSize: 15, fontWeight: '600', color: C.text },
+  cancelBtnText: { fontSize: moderateScale(15), fontWeight: '600', color: C.text },
   submitBtn: {
     flex: 1,
     flexDirection: 'row',
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingVertical: scale(14),
+    borderRadius: scale(12),
     backgroundColor: C.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   submitBtnDisabled: { opacity: 0.5 },
-  submitBtnText: { fontSize: 15, fontWeight: '700', color: '#FFF', marginLeft: 8 },
+  submitBtnText: { fontSize: moderateScale(15), fontWeight: '700', color: '#FFF', marginLeft: scale(8) },
 });

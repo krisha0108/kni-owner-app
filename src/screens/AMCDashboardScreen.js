@@ -114,14 +114,14 @@ export default function AMCDashboardScreen({ navigation }) {
         <LinearGradient colors={[C.purple, C.purpleDark]} style={styles.heroHeader}>
           <View style={styles.heroContent}>
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-              <Icon name="arrow-back" size={24} color="#fff" />
+              <Icon name="arrow-back" size={scale(24)} color="#fff" />
             </TouchableOpacity>
             <View style={styles.heroTitleRow}>
-              <Icon name="shield-checkmark-outline" size={22} color="#fff" />
+              <Icon name="shield-checkmark-outline" size={scale(22)} color="#fff" />
               <Text style={styles.heroTitle}>AMC Management</Text>
             </View>
             <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
-              <Icon name="menu" size={24} color="#fff" />
+              <Icon name="menu" size={scale(24)} color="#fff" />
             </TouchableOpacity>
           </View>
         </LinearGradient>
@@ -148,14 +148,14 @@ export default function AMCDashboardScreen({ navigation }) {
       >
         <View style={styles.heroContent}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Icon name="arrow-back" size={24} color="#fff" />
+            <Icon name="arrow-back" size={scale(24)} color="#fff" />
           </TouchableOpacity>
           <View style={styles.heroTitleRow}>
-            <Icon name="shield-checkmark-outline" size={22} color="#fff" />
+            <Icon name="shield-checkmark-outline" size={scale(22)} color="#fff" />
             <Text style={styles.heroTitle}>AMC Management</Text>
           </View>
           <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
-            <Icon name="menu" size={24} color="#fff" />
+            <Icon name="menu" size={scale(24)} color="#fff" />
           </TouchableOpacity>
         </View>
       </LinearGradient>
@@ -175,14 +175,14 @@ export default function AMCDashboardScreen({ navigation }) {
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
             <View style={[styles.statIconBox, { backgroundColor: C.ok + '20' }]}>
-              <Icon name="shield-checkmark" size={22} color={C.ok} />
+              <Icon name="shield-checkmark" size={scale(22)} color={C.ok} />
             </View>
             <Text style={styles.statValue}>{data?.activeContracts || 0}</Text>
             <Text style={styles.statLabel}>Active Contracts</Text>
           </View>
           <View style={styles.statCard}>
             <View style={[styles.statIconBox, { backgroundColor: C.info + '20' }]}>
-              <Icon name="checkmark-done-circle" size={22} color={C.info} />
+              <Icon name="checkmark-done-circle" size={scale(22)} color={C.info} />
             </View>
             <Text style={styles.statValue}>{data?.completedVisits || 0}</Text>
             <Text style={styles.statLabel}>Completed Visits</Text>
@@ -191,14 +191,14 @@ export default function AMCDashboardScreen({ navigation }) {
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
             <View style={[styles.statIconBox, { backgroundColor: C.warn + '20' }]}>
-              <Icon name="time-outline" size={22} color={C.warn} />
+              <Icon name="time-outline" size={scale(22)} color={C.warn} />
             </View>
             <Text style={styles.statValue}>{data?.pendingRequests || 0}</Text>
             <Text style={styles.statLabel}>Pending Requests</Text>
           </View>
           <View style={styles.statCard}>
             <View style={[styles.statIconBox, { backgroundColor: C.danger + '20' }]}>
-              <Icon name="construct-outline" size={22} color={C.danger} />
+              <Icon name="construct-outline" size={scale(22)} color={C.danger} />
             </View>
             <Text style={styles.statValue}>{data?.activeBreakdowns || 0}</Text>
             <Text style={styles.statLabel}>Active Breakdowns</Text>
@@ -216,7 +216,7 @@ export default function AMCDashboardScreen({ navigation }) {
               onPress={() => navigation.navigate(q.screen)}
             >
               <LinearGradient colors={q.grad} style={styles.qaIcon}>
-                <Icon name={q.icon} size={22} color="#fff" />
+                <Icon name={q.icon} size={scale(22)} color="#fff" />
               </LinearGradient>
               <Text style={styles.qaLabel}>{q.label}</Text>
             </TouchableOpacity>
@@ -237,7 +237,7 @@ export default function AMCDashboardScreen({ navigation }) {
                   activeOpacity={0.7}
                 >
                   <View style={[styles.visitIconBox, { backgroundColor: vs.bg }]}>
-                    <Icon name="calendar-outline" size={18} color={vs.color} />
+                    <Icon name="calendar-outline" size={scale(18)} color={vs.color} />
                   </View>
                   <View style={styles.visitInfo}>
                     <Text style={styles.visitDate}>{formatDate(visit.scheduledDate)}</Text>
@@ -275,7 +275,7 @@ export default function AMCDashboardScreen({ navigation }) {
                   activeOpacity={0.7}
                 >
                   <View style={[styles.bdIconBox, { backgroundColor: bs.bg }]}>
-                    <Icon name="warning" size={18} color={bs.color} />
+                    <Icon name="warning" size={scale(18)} color={bs.color} />
                   </View>
                   <View style={styles.bdInfo}>
                     <Text style={styles.bdEquipment} numberOfLines={1}>{bd.equipmentName}</Text>
@@ -307,7 +307,7 @@ export default function AMCDashboardScreen({ navigation }) {
         {!data && !loading && (
           <View style={styles.emptyContainer}>
             <View style={styles.emptyIconBox}>
-              <Icon name="shield-outline" size={48} color={C.muted} />
+              <Icon name="shield-outline" size={scale(48)} color={C.muted} />
             </View>
             <Text style={styles.emptyTitle}>No AMC Data</Text>
             <Text style={styles.emptySubtitle}>Start by creating an AMC request</Text>

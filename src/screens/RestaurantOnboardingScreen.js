@@ -9,6 +9,7 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import LinearGradient from 'react-native-linear-gradient';
 import { api } from '../api/client';
 
+import { scale, moderateScale } from '../utils/responsive';
 const C = {
   primary: '#EF3A3A',
   ink: '#1D2254',
@@ -65,8 +66,8 @@ const RestaurantOnboarding = ({ navigation, route }) => {
       {
         mediaType: 'photo',
         quality: 0.8,
-        maxWidth: 1920,
-        maxHeight: 1920,
+        maxWidth: scale(1920),
+        maxHeight: scale(1920),
       },
       (response) => {
         if (response.didCancel) {
@@ -94,8 +95,8 @@ const RestaurantOnboarding = ({ navigation, route }) => {
       {
         mediaType: 'photo',
         quality: 0.8,
-        maxWidth: 1024,
-        maxHeight: 1024,
+        maxWidth: scale(1024),
+        maxHeight: scale(1024),
       },
       (response) => {
         if (response.didCancel) {
@@ -287,12 +288,12 @@ const RestaurantOnboarding = ({ navigation, route }) => {
                   style={styles.removeImageBtn}
                   onPress={() => setMainImage(null)}
                 >
-                  <Icon name="close-circle" size={24} color={C.primary} />
+                  <Icon name="close-circle" size={scale(24)} color={C.primary} />
                 </TouchableOpacity>
               </View>
             ) : (
               <View style={styles.imagePlaceholder}>
-                <Icon name="camera-outline" size={40} color={C.muted} />
+                <Icon name="camera-outline" size={scale(40)} color={C.muted} />
                 <Text style={styles.imagePlaceholderText}>Add Restaurant Photo</Text>
                 <Text style={styles.imagePlaceholderHint}>(Optional)</Text>
               </View>
@@ -301,7 +302,7 @@ const RestaurantOnboarding = ({ navigation, route }) => {
 
           {/* Hotel Name */}
           <View style={styles.inputBox}>
-            <Icon name="business" size={18} color={C.primary} style={styles.inputIcon} />
+            <Icon name="business" size={scale(18)} color={C.primary} style={styles.inputIcon} />
             <TextInput
               placeholder="Restaurant/Hotel Name *"
               style={styles.input}
@@ -314,10 +315,10 @@ const RestaurantOnboarding = ({ navigation, route }) => {
 
           {/* Address */}
           <View style={[styles.inputBox, { alignItems: 'flex-start' }]}>
-            <Icon name="location" size={18} color={C.primary} style={[styles.inputIcon, { marginTop: 12 }]} />
+            <Icon name="location" size={scale(18)} color={C.primary} style={[styles.inputIcon, { marginTop: scale(12) }]} />
             <TextInput
               placeholder="Full Address (Street, Area, Landmark) *"
-              style={[styles.input, { minHeight: 70, textAlignVertical: 'top', paddingTop: 10 }]}
+              style={[styles.input, { minHeight: scale(70), textAlignVertical: 'top', paddingTop: scale(10) }]}
               multiline
               numberOfLines={3}
               value={form.address}
@@ -329,11 +330,11 @@ const RestaurantOnboarding = ({ navigation, route }) => {
 
           {/* State */}
           <TouchableOpacity style={styles.inputBox} onPress={() => setShowStatePicker(true)}>
-            <Icon name="map" size={18} color={C.primary} style={styles.inputIcon} />
-            <Text style={selectedStateName ? { flex: 1, color: C.text, fontSize: 15 } : { flex: 1, color: C.muted, fontSize: 15 }}>
+            <Icon name="map" size={scale(18)} color={C.primary} style={styles.inputIcon} />
+            <Text style={selectedStateName ? { flex: 1, color: C.text, fontSize: moderateScale(15) } : { flex: 1, color: C.muted, fontSize: moderateScale(15) }}>
               {selectedStateName || 'Select State *'}
             </Text>
-            <Icon name="chevron-down" size={18} color={C.muted} />
+            <Icon name="chevron-down" size={scale(18)} color={C.muted} />
           </TouchableOpacity>
 
           {/* City */}
@@ -347,16 +348,16 @@ const RestaurantOnboarding = ({ navigation, route }) => {
               setShowCityPicker(true);
             }}
           >
-            <Icon name="business" size={18} color={C.primary} style={styles.inputIcon} />
-            <Text style={form.city ? { flex: 1, color: C.text, fontSize: 15 } : { flex: 1, color: C.muted, fontSize: 15 }}>
+            <Icon name="business" size={scale(18)} color={C.primary} style={styles.inputIcon} />
+            <Text style={form.city ? { flex: 1, color: C.text, fontSize: moderateScale(15) } : { flex: 1, color: C.muted, fontSize: moderateScale(15) }}>
               {form.city || 'Select City *'}
             </Text>
-            <Icon name="chevron-down" size={18} color={C.muted} />
+            <Icon name="chevron-down" size={scale(18)} color={C.muted} />
           </TouchableOpacity>
 
           {/* Pincode */}
           <View style={styles.inputBox}>
-            <Icon name="location-outline" size={18} color={C.primary} style={styles.inputIcon} />
+            <Icon name="location-outline" size={scale(18)} color={C.primary} style={styles.inputIcon} />
             <TextInput
               placeholder="Pincode (6 digits, optional)"
               style={styles.input}
@@ -371,7 +372,7 @@ const RestaurantOnboarding = ({ navigation, route }) => {
 
           {/* FSSAI Number */}
           <View style={styles.inputBox}>
-            <Icon name="document-text" size={18} color={C.primary} style={styles.inputIcon} />
+            <Icon name="document-text" size={scale(18)} color={C.primary} style={styles.inputIcon} />
             <TextInput
               placeholder="FSSAI Number (14 digits) *"
               style={styles.input}
@@ -390,20 +391,20 @@ const RestaurantOnboarding = ({ navigation, route }) => {
             onPress={handlePickFile}
             activeOpacity={0.7}
           >
-            <Icon name="cloud-upload-outline" size={20} color={C.primary} />
+            <Icon name="cloud-upload-outline" size={scale(20)} color={C.primary} />
             <Text style={styles.uploadText} numberOfLines={1}>
               {fssaiFile ? fssaiFile.name : 'Upload FSSAI Certificate Image *'}
             </Text>
             {fssaiFile && (
               <TouchableOpacity onPress={() => setFssaiFile(null)}>
-                <Icon name="close-circle" size={20} color={C.primary} />
+                <Icon name="close-circle" size={scale(20)} color={C.primary} />
               </TouchableOpacity>
             )}
           </TouchableOpacity>
 
           {/* Info Box */}
           <View style={styles.infoBox}>
-            <Icon name="information-circle-outline" size={18} color={C.warn} />
+            <Icon name="information-circle-outline" size={scale(18)} color={C.warn} />
             <Text style={styles.infoText}>
               All fields marked with * are required. Your restaurant will be reviewed by admin before activation.
             </Text>
@@ -427,7 +428,7 @@ const RestaurantOnboarding = ({ navigation, route }) => {
               ) : (
                 <>
                   <Text style={styles.submitText}>Complete Setup</Text>
-                  <Icon name="arrow-forward" size={20} color="#fff" style={styles.submitIcon} />
+                  <Icon name="arrow-forward" size={scale(20)} color="#fff" style={styles.submitIcon} />
                 </>
               )}
             </LinearGradient>
@@ -442,7 +443,7 @@ const RestaurantOnboarding = ({ navigation, route }) => {
             <View style={styles.pickerHeader}>
               <Text style={styles.pickerTitle}>Select State</Text>
               <TouchableOpacity onPress={() => setShowStatePicker(false)}>
-                <Icon name="close" size={24} color={C.ink} />
+                <Icon name="close" size={scale(24)} color={C.ink} />
               </TouchableOpacity>
             </View>
             <ScrollView style={styles.pickerList}>
@@ -461,7 +462,7 @@ const RestaurantOnboarding = ({ navigation, route }) => {
                   <Text style={[styles.pickerItemText, selectedStateId === state.id && styles.pickerItemTextActive]}>
                     {state.name}
                   </Text>
-                  {selectedStateId === state.id && <Icon name="checkmark" size={20} color={C.primary} />}
+                  {selectedStateId === state.id && <Icon name="checkmark" size={scale(20)} color={C.primary} />}
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -476,7 +477,7 @@ const RestaurantOnboarding = ({ navigation, route }) => {
             <View style={styles.pickerHeader}>
               <Text style={styles.pickerTitle}>Select City</Text>
               <TouchableOpacity onPress={() => setShowCityPicker(false)}>
-                <Icon name="close" size={24} color={C.ink} />
+                <Icon name="close" size={scale(24)} color={C.ink} />
               </TouchableOpacity>
             </View>
             <ScrollView style={styles.pickerList}>
@@ -492,7 +493,7 @@ const RestaurantOnboarding = ({ navigation, route }) => {
                   <Text style={[styles.pickerItemText, form.city === city.name && styles.pickerItemTextActive]}>
                     {city.name}
                   </Text>
-                  {form.city === city.name && <Icon name="checkmark" size={20} color={C.primary} />}
+                  {form.city === city.name && <Icon name="checkmark" size={scale(20)} color={C.primary} />}
                 </TouchableOpacity>
               ))}
               {cities.length === 0 && (
@@ -511,36 +512,36 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContainer: {
-    paddingBottom: 60,
+    paddingBottom: scale(60),
   },
   heading: {
-    fontSize: 26,
+    fontSize: moderateScale(26),
     fontWeight: '700',
     color: C.ink,
     textAlign: 'center',
-    marginTop: 40,
-    marginBottom: 8,
+    marginTop: scale(40),
+    marginBottom: scale(8),
   },
   subheading: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: C.muted,
     textAlign: 'center',
-    marginBottom: 25,
-    paddingHorizontal: 30,
+    marginBottom: scale(25),
+    paddingHorizontal: scale(30),
   },
   card: {
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    marginHorizontal: 20,
-    borderRadius: 20,
-    padding: 20,
+    marginHorizontal: scale(20),
+    borderRadius: scale(20),
+    padding: scale(20),
     shadowColor: '#000',
     shadowOpacity: 0.1,
-    shadowRadius: 20,
+    shadowRadius: scale(20),
     elevation: 8,
   },
   imageUploadBtn: {
-    marginBottom: 16,
-    borderRadius: 12,
+    marginBottom: scale(16),
+    borderRadius: scale(12),
     overflow: 'hidden',
   },
   imagePreviewContainer: {
@@ -548,36 +549,36 @@ const styles = StyleSheet.create({
   },
   imagePreview: {
     width: '100%',
-    height: 180,
-    borderRadius: 12,
+    height: scale(180),
+    borderRadius: scale(12),
   },
   removeImageBtn: {
     position: 'absolute',
-    top: 8,
-    right: 8,
+    top: scale(8),
+    right: scale(8),
     backgroundColor: 'white',
-    borderRadius: 12,
+    borderRadius: scale(12),
   },
   imagePlaceholder: {
     backgroundColor: C.bg,
     borderWidth: 2,
     borderColor: C.border,
     borderStyle: 'dashed',
-    borderRadius: 12,
-    height: 140,
+    borderRadius: scale(12),
+    height: scale(140),
     justifyContent: 'center',
     alignItems: 'center',
   },
   imagePlaceholderText: {
-    marginTop: 10,
+    marginTop: scale(10),
     color: C.text,
-    fontSize: 15,
+    fontSize: moderateScale(15),
     fontWeight: '600',
   },
   imagePlaceholderHint: {
-    marginTop: 4,
+    marginTop: scale(4),
     color: C.muted,
-    fontSize: 12,
+    fontSize: moderateScale(12),
   },
   inputBox: {
     flexDirection: 'row',
@@ -585,34 +586,34 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.border,
     backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingHorizontal: 14,
+    borderRadius: scale(12),
+    paddingHorizontal: scale(14),
     paddingVertical: Platform.OS === 'ios' ? 12 : 10,
-    marginBottom: 14,
+    marginBottom: scale(14),
   },
   inputIcon: {
-    marginRight: 10,
+    marginRight: scale(10),
   },
   input: {
     flex: 1,
     color: C.text,
-    fontSize: 15,
+    fontSize: moderateScale(15),
   },
   uploadContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     borderStyle: 'dashed',
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: scale(12),
     borderColor: C.primary,
-    padding: 14,
-    marginBottom: 16,
+    padding: scale(14),
+    marginBottom: scale(16),
     backgroundColor: '#fff',
   },
   uploadText: {
-    marginLeft: 10,
+    marginLeft: scale(10),
     color: C.primary,
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '600',
     flex: 1,
   },
@@ -620,40 +621,40 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     backgroundColor: '#FEF3C7',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 20,
+    borderRadius: scale(10),
+    padding: scale(12),
+    marginBottom: scale(20),
   },
   infoText: {
     flex: 1,
-    marginLeft: 8,
+    marginLeft: scale(8),
     color: '#92400E',
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: moderateScale(12),
+    lineHeight: moderateScale(18),
   },
   submitButtonContainer: {
-    borderRadius: 14,
+    borderRadius: scale(14),
     overflow: 'hidden',
   },
   submitButton: {
-    paddingVertical: 16,
-    borderRadius: 14,
+    paddingVertical: scale(16),
+    borderRadius: scale(14),
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
     shadowColor: C.primary,
-    shadowOffset: { width: 0, height: 6 },
+    shadowOffset: { width: 0, height: scale(6) },
     shadowOpacity: 0.4,
-    shadowRadius: 8,
+    shadowRadius: scale(8),
     elevation: 5,
   },
   submitText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: '700',
   },
   submitIcon: {
-    marginLeft: 10,
+    marginLeft: scale(10),
   },
 
   // Picker modal
@@ -664,34 +665,34 @@ const styles = StyleSheet.create({
   },
   pickerContainer: {
     backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: scale(20),
+    borderTopRightRadius: scale(20),
     maxHeight: '50%',
   },
   pickerHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: scale(20),
+    paddingVertical: scale(16),
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
-  pickerTitle: { fontSize: 18, fontWeight: '700', color: C.ink },
-  pickerList: { paddingHorizontal: 8 },
+  pickerTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink },
+  pickerList: { paddingHorizontal: scale(8) },
   pickerItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(14),
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
   pickerItemActive: { backgroundColor: '#FEE2E2' },
-  pickerItemText: { fontSize: 15, color: C.ink },
+  pickerItemText: { fontSize: moderateScale(15), color: C.ink },
   pickerItemTextActive: { color: C.primary, fontWeight: '600' },
-  pickerEmptyText: { fontSize: 14, color: C.muted, textAlign: 'center', paddingVertical: 20 },
+  pickerEmptyText: { fontSize: moderateScale(14), color: C.muted, textAlign: 'center', paddingVertical: scale(20) },
 });
 
 export default RestaurantOnboarding;

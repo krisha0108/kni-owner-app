@@ -14,6 +14,7 @@ import {
 import Icon from 'react-native-vector-icons/Ionicons';
 import { api } from '../api/client';
 
+import { scale, moderateScale } from '../utils/responsive';
 const C = {
   primary: '#EF3A3A',
   ink: '#1A1A1A',
@@ -216,7 +217,7 @@ export default function ForgotPasswordScreen({ navigation }) {
         {/* Header */}
         <View style={styles.iconContainer}>
           <View style={styles.iconCircle}>
-            <Icon name={getStepIcon()} size={36} color={C.primary} />
+            <Icon name={getStepIcon()} size={scale(36)} color={C.primary} />
           </View>
         </View>
 
@@ -227,7 +228,7 @@ export default function ForgotPasswordScreen({ navigation }) {
         {step === 'email' && (
           <View style={styles.formContainer}>
             <View style={styles.inputContainer}>
-              <Icon name="mail-outline" size={20} color="#666" style={styles.inputIcon} />
+              <Icon name="mail-outline" size={scale(20)} color="#666" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder="Email Address"
@@ -295,7 +296,7 @@ export default function ForgotPasswordScreen({ navigation }) {
         {step === 'password' && (
           <View style={styles.formContainer}>
             <View style={styles.inputContainer}>
-              <Icon name="lock-closed-outline" size={20} color="#666" style={styles.inputIcon} />
+              <Icon name="lock-closed-outline" size={scale(20)} color="#666" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder="New Password"
@@ -306,12 +307,12 @@ export default function ForgotPasswordScreen({ navigation }) {
                 autoCapitalize="none"
               />
               <TouchableOpacity onPress={() => setSecureNew(!secureNew)} style={styles.eyeIcon}>
-                <Icon name={secureNew ? 'eye-off-outline' : 'eye-outline'} size={20} color="#666" />
+                <Icon name={secureNew ? 'eye-off-outline' : 'eye-outline'} size={scale(20)} color="#666" />
               </TouchableOpacity>
             </View>
 
             <View style={styles.inputContainer}>
-              <Icon name="lock-closed-outline" size={20} color="#666" style={styles.inputIcon} />
+              <Icon name="lock-closed-outline" size={scale(20)} color="#666" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder="Confirm Password"
@@ -322,7 +323,7 @@ export default function ForgotPasswordScreen({ navigation }) {
                 autoCapitalize="none"
               />
               <TouchableOpacity onPress={() => setSecureConfirm(!secureConfirm)} style={styles.eyeIcon}>
-                <Icon name={secureConfirm ? 'eye-off-outline' : 'eye-outline'} size={20} color="#666" />
+                <Icon name={secureConfirm ? 'eye-off-outline' : 'eye-outline'} size={scale(20)} color="#666" />
               </TouchableOpacity>
             </View>
 
@@ -331,7 +332,7 @@ export default function ForgotPasswordScreen({ navigation }) {
               <View style={[styles.matchBox, newPassword === confirmPassword ? styles.matchBoxOk : styles.matchBoxBad]}>
                 <Icon
                   name={newPassword === confirmPassword ? 'checkmark-circle' : 'close-circle'}
-                  size={14}
+                  size={scale(14)}
                   color={newPassword === confirmPassword ? C.ok : C.danger}
                 />
                 <Text style={[styles.matchText, { color: newPassword === confirmPassword ? C.ok : C.danger }]}>
@@ -359,7 +360,7 @@ export default function ForgotPasswordScreen({ navigation }) {
           style={styles.backButton}
           onPress={() => navigation.navigate('RestaurantLogin')}
         >
-          <Icon name="arrow-back" size={16} color={C.muted} />
+          <Icon name="arrow-back" size={scale(16)} color={C.muted} />
           <Text style={styles.backText}>Back to Login</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -374,19 +375,19 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingVertical: 50,
+    paddingHorizontal: scale(24),
+    paddingVertical: scale(50),
     alignItems: 'center',
   },
   stepContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: scale(32),
   },
   stepDot: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: scale(32),
+    height: scale(32),
+    borderRadius: scale(16),
     backgroundColor: '#E5E7EB',
     justifyContent: 'center',
     alignItems: 'center',
@@ -398,7 +399,7 @@ const styles = StyleSheet.create({
     backgroundColor: `${C.primary}40`,
   },
   stepNumber: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '600',
     color: C.muted,
   },
@@ -406,38 +407,38 @@ const styles = StyleSheet.create({
     color: '#FFF',
   },
   stepLine: {
-    width: 40,
-    height: 2,
+    width: scale(40),
+    height: scale(2),
     backgroundColor: '#E5E7EB',
   },
   stepLineDone: {
     backgroundColor: C.primary,
   },
   iconContainer: {
-    marginBottom: 20,
+    marginBottom: scale(20),
   },
   iconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: scale(72),
+    height: scale(72),
+    borderRadius: scale(36),
     backgroundColor: `${C.primary}15`,
     justifyContent: 'center',
     alignItems: 'center',
   },
   title: {
-    fontSize: 26,
+    fontSize: moderateScale(26),
     fontWeight: 'bold',
     color: C.ink,
-    marginBottom: 10,
+    marginBottom: scale(10),
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: C.muted,
     textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 28,
-    paddingHorizontal: 10,
+    lineHeight: moderateScale(20),
+    marginBottom: scale(28),
+    paddingHorizontal: scale(10),
   },
   formContainer: {
     width: '100%',
@@ -446,38 +447,38 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: C.card,
-    borderRadius: 12,
+    borderRadius: scale(12),
     borderWidth: 1,
     borderColor: C.border,
-    paddingHorizontal: 16,
-    marginBottom: 16,
-    height: 56,
+    paddingHorizontal: scale(16),
+    marginBottom: scale(16),
+    height: scale(56),
   },
   inputIcon: {
-    marginRight: 12,
+    marginRight: scale(12),
   },
   input: {
     flex: 1,
-    fontSize: 16,
+    fontSize: moderateScale(16),
     color: C.ink,
   },
   eyeIcon: {
-    padding: 8,
+    padding: scale(8),
   },
   codeContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 10,
-    marginBottom: 24,
+    gap: scale(10),
+    marginBottom: scale(24),
   },
   codeInput: {
-    width: 48,
-    height: 56,
-    borderRadius: 12,
+    width: scale(48),
+    height: scale(56),
+    borderRadius: scale(12),
     borderWidth: 2,
     borderColor: C.border,
     backgroundColor: C.card,
-    fontSize: 24,
+    fontSize: moderateScale(24),
     fontWeight: 'bold',
     color: C.ink,
   },
@@ -487,15 +488,15 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     backgroundColor: C.primary,
-    borderRadius: 12,
-    height: 56,
+    borderRadius: scale(12),
+    height: scale(56),
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: scale(8),
     shadowColor: C.primary,
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: scale(4) },
     shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowRadius: scale(8),
     elevation: 4,
   },
   buttonDisabled: {
@@ -503,21 +504,21 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: '#FFF',
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: '600',
   },
   resendContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 20,
+    marginTop: scale(20),
   },
   resendLabel: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: C.muted,
   },
   resendLink: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: C.primary,
     fontWeight: '600',
   },
@@ -528,10 +529,10 @@ const styles = StyleSheet.create({
   matchBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 12,
-    gap: 6,
+    borderRadius: scale(8),
+    padding: scale(10),
+    marginBottom: scale(12),
+    gap: scale(6),
   },
   matchBoxOk: {
     backgroundColor: '#ECFDF5',
@@ -540,16 +541,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF2F2',
   },
   matchText: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
   },
   backButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 32,
-    gap: 6,
+    marginTop: scale(32),
+    gap: scale(6),
   },
   backText: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: C.muted,
   },
 });

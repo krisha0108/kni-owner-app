@@ -76,7 +76,7 @@
 //     <View style={st.faqItem}>
 //       <TouchableOpacity style={st.faqHead} onPress={() => setOpen(o => !o)} accessibilityRole="button">
 //         <Text style={st.faqQ}>{f.q}</Text>
-//         <Icon name={open ? 'chevron-up' : 'chevron-down'} size={18} color={C.ink} />
+//         <Icon name={open ? 'chevron-up' : 'chevron-down'} size={scale(18)} color={C.ink} />
 //       </TouchableOpacity>
 //       {open && <Text style={st.faqA}>{f.a}</Text>}
 //     </View>
@@ -98,10 +98,10 @@
 //   }, [pulse]);
 
 //   const ServiceChip = () => (
-//     <View style={[st.serviceChip, { width: 220 }]}>
+//     <View style={[st.serviceChip, { width: scale(220) }]}>
 //       <View style={{ flex: 1 }}>
 //         <Animated.View style={[sk.lineMd, { width: '70%', opacity: pulse }]} />
-//         <Animated.View style={[sk.lineSm, { width: 80, marginTop: 6, opacity: pulse }]} />
+//         <Animated.View style={[sk.lineSm, { width: scale(80), marginTop: scale(6), opacity: pulse }]} />
 //       </View>
 //       <Animated.View style={[sk.btnPill, { opacity: pulse }]} />
 //     </View>
@@ -111,15 +111,15 @@
 //     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top','left','right']}>
 //       <View style={{ backgroundColor: C.card, borderBottomLeftRadius: R, borderBottomRightRadius: R, overflow: 'hidden' }}>
 //         <Animated.View style={[sk.hero, { opacity: pulse }]} />
-//         <View style={[st.actionsWrap, { paddingTop: 8 }]}>
+//         <View style={[st.actionsWrap, { paddingTop: scale(8) }]}>
 //           <View style={sk.glassBtn} />
-//           <View style={[sk.glassBtn, { marginLeft: 8 }]} />
+//           <View style={[sk.glassBtn, { marginLeft: scale(8) }]} />
 //         </View>
-//         <View style={{ position: 'absolute', left: '5%', right: '5%', bottom: 70, height: 4, backgroundColor: '#FFFFFF55', borderRadius: 3 }} />
+//         <View style={{ position: 'absolute', left: '5%', right: '5%', bottom: scale(70), height: scale(4), backgroundColor: '#FFFFFF55', borderRadius: scale(3) }} />
 //         <View style={st.heroBottom}>
 //           <View style={{ flex: 1 }}>
 //             <Animated.View style={[sk.lineLg, { width: '60%', opacity: pulse }]} />
-//             <Animated.View style={[sk.lineSm, { width: 140, marginTop: 6, opacity: pulse }]} />
+//             <Animated.View style={[sk.lineSm, { width: scale(140), marginTop: scale(6), opacity: pulse }]} />
 //           </View>
 //           <View style={sk.ratingPill} />
 //         </View>
@@ -127,15 +127,15 @@
 
 //       <ScrollView contentContainerStyle={{ paddingBottom: insetsBottom + 100 }} showsVerticalScrollIndicator={false}>
 //         <View style={st.section}>
-//           <Animated.View style={[sk.h2, { width: 100, opacity: pulse }]} />
-//           <Animated.View style={[sk.para, { width: '95%', marginTop: 8, opacity: pulse }]} />
-//           <Animated.View style={[sk.para, { width: '85%', marginTop: 6, opacity: pulse }]} />
+//           <Animated.View style={[sk.h2, { width: scale(100), opacity: pulse }]} />
+//           <Animated.View style={[sk.para, { width: '95%', marginTop: scale(8), opacity: pulse }]} />
+//           <Animated.View style={[sk.para, { width: '85%', marginTop: scale(6), opacity: pulse }]} />
 //         </View>
 
 //         <View style={st.section}>
-//           <Animated.View style={[sk.h2, { width: 130, opacity: pulse }]} />
-//           <Animated.View style={[sk.lineXs, { width: 220, marginTop: 6, opacity: pulse }]} />
-//           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 16, marginTop: 10 }}>
+//           <Animated.View style={[sk.h2, { width: scale(130), opacity: pulse }]} />
+//           <Animated.View style={[sk.lineXs, { width: scale(220), marginTop: scale(6), opacity: pulse }]} />
+//           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: scale(16), marginTop: scale(10) }}>
 //             {[0,1,2].map(i => <ServiceChip key={i} />)}
 //           </ScrollView>
 //         </View>
@@ -143,8 +143,8 @@
 
 //       <View style={[st.cartBar, { paddingBottom: insetsBottom > 0 ? insetsBottom : 12 }]}>
 //         <View style={{ flex:1 }}>
-//           <Animated.View style={[sk.lineXs, { width: 120, opacity: pulse }]} />
-//           <Animated.View style={[sk.lineMd, { width: 80, marginTop:6, opacity: pulse }]} />
+//           <Animated.View style={[sk.lineXs, { width: scale(120), opacity: pulse }]} />
+//           <Animated.View style={[sk.lineMd, { width: scale(80), marginTop:scale(6), opacity: pulse }]} />
 //         </View>
 //         <View style={sk.primaryBtn} />
 //       </View>
@@ -588,20 +588,20 @@
 //   const renderService = useCallback(({ item: s }) => {
 //     const q = cart[s.id] || 0;
 //     return (
-//       <View style={[st.serviceChip, { width: 220 }]}>
+//       <View style={[st.serviceChip, { width: scale(220) }]}>
 //         <View style={{ flex: 1 }}>
 //           <Text style={st.serviceTitle}>{s.name}</Text>
 //           <Text style={st.servicePrice}>{Rs(s.price)}</Text>
 //         </View>
 //         {q === 0 ? (
 //           <TouchableOpacity onPress={() => add(s.id)} style={st.addBtnSm}>
-//             <Icon name="add" size={18} color="#fff" /><Text style={st.addTxt}>Add</Text>
+//             <Icon name="add" size={scale(18)} color="#fff" /><Text style={st.addTxt}>Add</Text>
 //           </TouchableOpacity>
 //         ) : (
 //           <View style={st.counterSm}>
-//             <TouchableOpacity onPress={() => sub(s.id)} style={st.counterBtnSm}><Icon name="remove" size={18} color={C.primary} /></TouchableOpacity>
+//             <TouchableOpacity onPress={() => sub(s.id)} style={st.counterBtnSm}><Icon name="remove" size={scale(18)} color={C.primary} /></TouchableOpacity>
 //             <Text style={st.qty}>{q}</Text>
-//             <TouchableOpacity onPress={() => add(s.id)} style={st.counterBtnSm}><Icon name="add" size={18} color={C.primary} /></TouchableOpacity>
+//             <TouchableOpacity onPress={() => add(s.id)} style={st.counterBtnSm}><Icon name="add" size={scale(18)} color={C.primary} /></TouchableOpacity>
 //           </View>
 //         )}
 //       </View>
@@ -621,11 +621,11 @@
 //         <ImageBackground
 //           source={{ uri: avatar }}
 //           style={st.techPic}
-//           imageStyle={{ borderRadius: 12 }}
+//           imageStyle={{ borderRadius: scale(12) }}
 //         />
-//         <View style={{ flex: 1, marginLeft: 10, minWidth: 0 }}>
+//         <View style={{ flex: 1, marginLeft: scale(10), minWidth: 0 }}>
 //           <Text style={st.techName} numberOfLines={1}>{t.name}</Text>
-//           <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+//           <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: scale(2) }}>
 //             <Text style={st.techJobs}>⭐ {rating.toFixed(1)} • {jobs}</Text>
 //           </View>
 //         </View>
@@ -657,11 +657,11 @@
 //   if (networkErr) {
 //     return (
 //       <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top','left','right']}>
-//         <View style={{ flex:1, alignItems:'center', justifyContent:'center', padding:24 }}>
-//           <Icon name="cloud-offline-outline" size={36} color={C.muted} />
-//           <Text style={{ color: C.ink, fontWeight: '800', fontSize: 16, marginTop: 8 }}>Couldn’t load product</Text>
-//           <Text style={{ color: C.muted, textAlign:'center', marginTop: 6 }}>{networkErr}</Text>
-//           <TouchableOpacity onPress={onRefresh} style={[st.outlineBtn, { marginTop: 14, paddingHorizontal: 18 }]}>
+//         <View style={{ flex:1, alignItems:'center', justifyContent:'center', padding:scale(24) }}>
+//           <Icon name="cloud-offline-outline" size={scale(36)} color={C.muted} />
+//           <Text style={{ color: C.ink, fontWeight: '800', fontSize: moderateScale(16), marginTop: scale(8) }}>Couldn’t load product</Text>
+//           <Text style={{ color: C.muted, textAlign:'center', marginTop: scale(6) }}>{networkErr}</Text>
+//           <TouchableOpacity onPress={onRefresh} style={[st.outlineBtn, { marginTop: scale(14), paddingHorizontal: scale(18) }]}>
 //             <Text style={st.outlineTxt}>Retry</Text>
 //           </TouchableOpacity>
 //         </View>
@@ -673,9 +673,9 @@
 //     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top', 'left', 'right']}>
 //       {/* Show banner if owner id missing */}
 //       {!ownerId && (
-//         <View style={{ backgroundColor:'#FFF7ED', padding:10 }}>
+//         <View style={{ backgroundColor:'#FFF7ED', padding:scale(10) }}>
 //           <Text style={{ color:'#B45309', fontWeight:'700' }}>Owner not set</Text>
-//           <Text style={{ color:'#92400E', marginTop:4, fontSize:12 }}>
+//           <Text style={{ color:'#92400E', marginTop:scale(4), fontSize:moderateScale(12) }}>
 //             Please login again. Cart won’t be saved to the server until we have your owner ID.
 //           </Text>
 //         </View>
@@ -683,20 +683,20 @@
 
 //       {/* HERO */}
 //       <View style={{ backgroundColor: C.card, borderBottomLeftRadius: R, borderBottomRightRadius: R, overflow: 'hidden' }}>
-//         <ImageBackground source={{ uri: (images[idx] || FALLBACK_IMAGES[0]) }} style={{ width: '100%', height: 260, justifyContent: 'flex-end' }}>
+//         <ImageBackground source={{ uri: (images[idx] || FALLBACK_IMAGES[0]) }} style={{ width: '100%', height: scale(260), justifyContent: 'flex-end' }}>
 //           <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.22)' }]} />
 
-//           <View style={[st.actionsWrap, { paddingTop: 8 }]}>
-//             <TouchableOpacity onPress={() => navigation.goBack()} style={st.glassBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-//               <Icon name="close" size={18} color={C.ink} />
+//           <View style={[st.actionsWrap, { paddingTop: scale(8) }]}>
+//             <TouchableOpacity onPress={() => navigation.goBack()} style={st.glassBtn} hitSlop={{ top: scale(8), bottom: scale(8), left: scale(8), right: scale(8) }}>
+//               <Icon name="close" size={scale(18)} color={C.ink} />
 //             </TouchableOpacity>
-//             <TouchableOpacity onPress={shareIt} style={[st.glassBtn, { marginLeft: 8 }]}>
-//               <Icon name="share-social-outline" size={18} color={C.ink} />
+//             <TouchableOpacity onPress={shareIt} style={[st.glassBtn, { marginLeft: scale(8) }]}>
+//               <Icon name="share-social-outline" size={scale(18)} color={C.ink} />
 //             </TouchableOpacity>
 //           </View>
 
-//           <View style={{ position: 'absolute', left: '5%', right: '5%', bottom: 70, height: 4, backgroundColor: '#FFFFFF55', borderRadius: 3, overflow: 'hidden' }}>
-//             <Animated.View style={{ height: 4, width: bar.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }), backgroundColor: '#fff' }} />
+//           <View style={{ position: 'absolute', left: '5%', right: '5%', bottom: scale(70), height: scale(4), backgroundColor: '#FFFFFF55', borderRadius: scale(3), overflow: 'hidden' }}>
+//             <Animated.View style={{ height: scale(4), width: bar.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }), backgroundColor: '#fff' }} />
 //           </View>
 
 //           <View style={st.heroBottom}>
@@ -704,7 +704,7 @@
 //               <Text style={st.title}>{prod.title}</Text>
 //               <Text style={st.subTitle}>{headerItem.category} • {headerItem.requests?.toLocaleString()} requests</Text>
 //             </View>
-//             <View style={st.ratingPill}><Icon name="star" size={14} color="#fff" /><Text style={st.ratingTxt}>{headerItem.rating}</Text></View>
+//             <View style={st.ratingPill}><Icon name="star" size={scale(14)} color="#fff" /><Text style={st.ratingTxt}>{headerItem.rating}</Text></View>
 //           </View>
 //         </ImageBackground>
 //       </View>
@@ -741,7 +741,7 @@
 //               renderItem={renderService}
 //               getItemLayout={getServiceLayout}
 //               showsHorizontalScrollIndicator={false}
-//               contentContainerStyle={{ paddingRight: 16 }}
+//               contentContainerStyle={{ paddingRight: scale(16) }}
 //             />
 //           )}
 //         </View>
@@ -752,16 +752,16 @@
 //           <View style={st.wrapPills}>
 //             {(prod.included || []).map((t, i) => (
 //               <View key={`in-${i}`} style={[st.pill, { backgroundColor: '#ECFDF5', borderColor: '#D1FAE5' }]}>
-//                 <Icon name="checkmark-circle" size={16} color={C.ok} /><Text style={st.pillTxt}>{t}</Text>
+//                 <Icon name="checkmark-circle" size={scale(16)} color={C.ok} /><Text style={st.pillTxt}>{t}</Text>
 //               </View>
 //             ))}
 //           </View>
 
-//           <Text style={[st.sectionTitle, { marginTop: 14 }]}>Not included</Text>
+//           <Text style={[st.sectionTitle, { marginTop: scale(14) }]}>Not included</Text>
 //           <View style={st.wrapPills}>
 //             {(prod.excluded || []).map((t, i) => (
 //               <View key={`ex-${i}`} style={[st.pill, { backgroundColor: '#FFF1F1', borderColor: '#FEE2E2' }]}>
-//                 <Icon name="close-circle" size={16} color={C.danger} /><Text style={st.pillTxt}>{t}</Text>
+//                 <Icon name="close-circle" size={scale(16)} color={C.danger} /><Text style={st.pillTxt}>{t}</Text>
 //               </View>
 //             ))}
 //           </View>
@@ -771,9 +771,9 @@
 //         <View style={st.section}>
 //           <Text style={st.sectionTitle}>Conditions</Text>
 //           {(prod.conditions || []).map((t, i) => (
-//             <View key={i} style={{ flexDirection: 'row', marginBottom: 10 }}>
-//               <Icon name="information-circle-outline" size={18} color={C.warn} />
-//               <Text style={[st.desc, { marginLeft: 8, marginTop: -2 }]}>{t}</Text>
+//             <View key={i} style={{ flexDirection: 'row', marginBottom: scale(10) }}>
+//               <Icon name="information-circle-outline" size={scale(18)} color={C.warn} />
+//               <Text style={[st.desc, { marginLeft: scale(8), marginTop: scale(-2) }]}>{t}</Text>
 //             </View>
 //           ))}
 //         </View>
@@ -789,7 +789,7 @@
 //                   {i < processSteps.length - 1 && <View style={st.stepLine} />}
 //                 </View>
 //                 <View style={st.stepCard}>
-//                   <View style={st.stepIconWrap}><Icon name={s.icon} size={16} color={C.primary} /></View>
+//                   <View style={st.stepIconWrap}><Icon name={s.icon} size={scale(16)} color={C.primary} /></View>
 //                   <View style={{ flex: 1 }}>
 //                     <Text style={st.stepTitle}>{s.title}</Text>
 //                     <Text style={st.stepDesc}>{s.desc}</Text>
@@ -811,8 +811,8 @@
 //               keyExtractor={keyTech}
 //               renderItem={renderTech}
 //               numColumns={2}
-//               columnWrapperStyle={{ gap: 10 }}
-//               contentContainerStyle={{ paddingBottom: 4 }}
+//               columnWrapperStyle={{ gap: scale(10) }}
+//               contentContainerStyle={{ paddingBottom: scale(4) }}
 //               scrollEnabled={false}
 //             />
 //           )}
@@ -832,10 +832,10 @@
 //           ) : (
 //             reviews.map((r) => (
 //               <View key={r.id} style={st.revCard}>
-//                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+//                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: scale(6) }}>
 //                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
 //                     <Text style={st.revName}>{r.name}</Text>
-//                     {!!r.when && <Text style={[st.sectionSub, { marginLeft: 8 }]}>{String(r.when).slice(0,10)}</Text>}
+//                     {!!r.when && <Text style={[st.sectionSub, { marginLeft: scale(8) }]}>{String(r.when).slice(0,10)}</Text>}
 //                   </View>
 //                   <Stars value={r.stars} />
 //                 </View>
@@ -862,7 +862,7 @@
 //               { icon: 'document-text-outline', label: 'Digital Invoice' },
 //             ].map((p) => (
 //               <View key={p.label} style={st.provide}>
-//                 <View style={st.provideIcon}><Icon name={p.icon} size={18} color={C.primary} /></View>
+//                 <View style={st.provideIcon}><Icon name={p.icon} size={scale(18)} color={C.primary} /></View>
 //                 <Text style={st.provideLbl}>{p.label}</Text>
 //               </View>
 //             ))}
@@ -897,87 +897,87 @@
 
 // /* ---------- STYLES ---------- */
 // const st = StyleSheet.create({
-//   actionsWrap: { position: 'absolute', top: 0, right: 12, flexDirection: 'row' },
+//   actionsWrap: { position: 'absolute', top: 0, right: scale(12), flexDirection: 'row' },
 //   glassBtn: {
-//     backgroundColor: '#FFFFFFEE', width: 38, height: 38, borderRadius: 12,
+//     backgroundColor: '#FFFFFFEE', width: scale(38), height: scale(38), borderRadius: scale(12),
 //     alignItems: 'center', justifyContent: 'center',
-//     borderWidth: 1, borderColor: '#FFFFFF99', shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 8, elevation: 3,
+//     borderWidth: 1, borderColor: '#FFFFFF99', shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: scale(8), elevation: 3,
 //   },
-//   heroBottom: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#FFFFFFEE' },
-//   title: { fontSize: 18, fontWeight: '800', color: C.ink },
-//   subTitle: { fontSize: 12, color: C.muted, marginTop: 2 },
-//   ratingPill: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.primary, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 },
-//   ratingTxt: { color: '#fff', fontWeight: '700', marginLeft: 6, fontSize: 12 },
+//   heroBottom: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(16), paddingVertical: scale(12), backgroundColor: '#FFFFFFEE' },
+//   title: { fontSize: moderateScale(18), fontWeight: '800', color: C.ink },
+//   subTitle: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(2) },
+//   ratingPill: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.primary, paddingHorizontal: scale(10), paddingVertical: scale(6), borderRadius: scale(999) },
+//   ratingTxt: { color: '#fff', fontWeight: '700', marginLeft: scale(6), fontSize: moderateScale(12) },
 
-//   section: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 6 },
-//   sectionTitle: { fontSize: 18, fontWeight: '800', color: C.ink, marginBottom: 8 },
-//   sectionSub: { fontSize: 12, color: C.muted, marginBottom: 8 },
-//   desc: { color: C.text, fontSize: 14, lineHeight: 20 },
+//   section: { paddingHorizontal: scale(16), paddingTop: scale(16), paddingBottom: scale(6) },
+//   sectionTitle: { fontSize: moderateScale(18), fontWeight: '800', color: C.ink, marginBottom: scale(8) },
+//   sectionSub: { fontSize: moderateScale(12), color: C.muted, marginBottom: scale(8) },
+//   desc: { color: C.text, fontSize: moderateScale(14), lineHeight: moderateScale(20) },
 
-//   serviceChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.card, borderRadius: 14, padding: 12, marginRight: 10, borderWidth: 1, borderColor: '#EEF2F7' },
-//   serviceTitle: { color: C.text, fontWeight: '700', fontSize: 14 },
-//   servicePrice: { color: C.ink, marginTop: 2, fontWeight: '700' },
-//   addBtnSm: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.primary, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, marginLeft: 10 },
-//   addTxt: { color: '#fff', fontWeight: '800', marginLeft: 6, fontSize: 12 },
-//   counterSm: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF1F1', borderRadius: 999, marginLeft: 10 },
-//   counterBtnSm: { paddingHorizontal: 10, paddingVertical: 6 },
-//   qty: { minWidth: 22, textAlign: 'center', fontWeight: '800', color: C.primary },
+//   serviceChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.card, borderRadius: scale(14), padding: scale(12), marginRight: scale(10), borderWidth: 1, borderColor: '#EEF2F7' },
+//   serviceTitle: { color: C.text, fontWeight: '700', fontSize: moderateScale(14) },
+//   servicePrice: { color: C.ink, marginTop: scale(2), fontWeight: '700' },
+//   addBtnSm: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.primary, paddingHorizontal: scale(12), paddingVertical: scale(8), borderRadius: scale(999), marginLeft: scale(10) },
+//   addTxt: { color: '#fff', fontWeight: '800', marginLeft: scale(6), fontSize: moderateScale(12) },
+//   counterSm: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF1F1', borderRadius: scale(999), marginLeft: scale(10) },
+//   counterBtnSm: { paddingHorizontal: scale(10), paddingVertical: scale(6) },
+//   qty: { minWidth: scale(22), textAlign: 'center', fontWeight: '800', color: C.primary },
 
-//   wrapPills: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-//   pill: { flexDirection: 'row', alignItems: 'center', borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1 },
-//   pillTxt: { marginLeft: 6, color: '#334155', fontSize: 12 },
+//   wrapPills: { flexDirection: 'row', flexWrap: 'wrap', gap: scale(8) },
+//   pill: { flexDirection: 'row', alignItems: 'center', borderRadius: scale(999), paddingHorizontal: scale(12), paddingVertical: scale(8), borderWidth: 1 },
+//   pillTxt: { marginLeft: scale(6), color: '#334155', fontSize: moderateScale(12) },
 
-//   stepper: { marginTop: 4 },
-//   stepRow: { flexDirection: 'row', marginBottom: 14 },
-//   stepRail: { width: 30, alignItems: 'center' },
-//   stepDot: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#FFE8E8', alignItems: 'center', justifyContent: 'center' },
-//   stepNum: { color: C.primary, fontWeight: '800', fontSize: 12 },
-//   stepLine: { width: 2, backgroundColor: '#E5E7EB', flex: 1, marginTop: 2, marginBottom: -2 },
-//   stepCard: { flex: 1, backgroundColor: C.card, borderRadius: 14, borderWidth: 1, borderColor: '#EEF2F7', padding: 12, flexDirection: 'row', alignItems: 'center' },
-//   stepIconWrap: { width: 34, height: 34, borderRadius: 12, backgroundColor: '#FFF1F1', alignItems: 'center', justifyContent: 'center', marginRight: 10 },
+//   stepper: { marginTop: scale(4) },
+//   stepRow: { flexDirection: 'row', marginBottom: scale(14) },
+//   stepRail: { width: scale(30), alignItems: 'center' },
+//   stepDot: { width: scale(24), height: scale(24), borderRadius: scale(12), backgroundColor: '#FFE8E8', alignItems: 'center', justifyContent: 'center' },
+//   stepNum: { color: C.primary, fontWeight: '800', fontSize: moderateScale(12) },
+//   stepLine: { width: scale(2), backgroundColor: '#E5E7EB', flex: 1, marginTop: scale(2), marginBottom: scale(-2) },
+//   stepCard: { flex: 1, backgroundColor: C.card, borderRadius: scale(14), borderWidth: 1, borderColor: '#EEF2F7', padding: scale(12), flexDirection: 'row', alignItems: 'center' },
+//   stepIconWrap: { width: scale(34), height: scale(34), borderRadius: scale(12), backgroundColor: '#FFF1F1', alignItems: 'center', justifyContent: 'center', marginRight: scale(10) },
 //   stepTitle: { color: C.text, fontWeight: '800' },
-//   stepDesc: { color: C.muted, marginTop: 2 },
+//   stepDesc: { color: C.muted, marginTop: scale(2) },
 
-//   techCard: { flex: 1, backgroundColor: C.card, borderRadius: 14, borderWidth: 1, borderColor: '#EEF2F7', padding: 10, marginBottom: 10, flexDirection: 'row', alignItems: 'center' },
-//   techPic: { width: 54, height: 54, borderRadius: 12 },
+//   techCard: { flex: 1, backgroundColor: C.card, borderRadius: scale(14), borderWidth: 1, borderColor: '#EEF2F7', padding: scale(10), marginBottom: scale(10), flexDirection: 'row', alignItems: 'center' },
+//   techPic: { width: scale(54), height: scale(54), borderRadius: scale(12) },
 //   techName: { color: C.text, fontWeight: '700' },
-//   techJobs: { color: C.muted, fontSize: 11 },
+//   techJobs: { color: C.muted, fontSize: moderateScale(11) },
 
-//   faqItem: { backgroundColor: C.card, borderRadius: 14, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: '#EEF2F7' },
+//   faqItem: { backgroundColor: C.card, borderRadius: scale(14), padding: scale(12), marginBottom: scale(10), borderWidth: 1, borderColor: '#EEF2F7' },
 //   faqHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-//   faqQ: { color: C.text, fontWeight: '700', fontSize: 14 },
-//   faqA: { color: C.muted, marginTop: 8, lineHeight: 20 },
+//   faqQ: { color: C.text, fontWeight: '700', fontSize: moderateScale(14) },
+//   faqA: { color: C.muted, marginTop: scale(8), lineHeight: moderateScale(20) },
 
-//   revCard: { backgroundColor: C.card, borderRadius: 14, borderWidth: 1, borderColor: '#EEF2F7', padding: 12, marginBottom: 10 },
+//   revCard: { backgroundColor: C.card, borderRadius: scale(14), borderWidth: 1, borderColor: '#EEF2F7', padding: scale(12), marginBottom: scale(10) },
 //   revName: { color: C.text, fontWeight: '700' },
-//   revTxt: { color: C.text, marginTop: 2 },
-//   outlineBtn:{ borderWidth:1, borderColor:'#CBD5E1', borderRadius:12, paddingVertical:12, alignItems:'center', marginTop:6, backgroundColor:'#fff' },
+//   revTxt: { color: C.text, marginTop: scale(2) },
+//   outlineBtn:{ borderWidth:1, borderColor:'#CBD5E1', borderRadius:scale(12), paddingVertical:scale(12), alignItems:'center', marginTop:scale(6), backgroundColor:'#fff' },
 //   outlineTxt:{ color:'#334155', fontWeight:'900' },
 
-//   provideRow: { flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginTop: 6 },
-//   provide: { width: '48%', backgroundColor: C.card, borderRadius: 14, borderWidth: 1, borderColor:'#EEF2F7', padding: 12, flexDirection: 'row', alignItems: 'center' },
-//   provideIcon: { width: 36, height: 36, borderRadius: 12, backgroundColor: '#FFE8E8', alignItems: 'center', justifyContent: 'center', marginRight: 10 },
+//   provideRow: { flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', gap: scale(10), marginTop: scale(6) },
+//   provide: { width: '48%', backgroundColor: C.card, borderRadius: scale(14), borderWidth: 1, borderColor:'#EEF2F7', padding: scale(12), flexDirection: 'row', alignItems: 'center' },
+//   provideIcon: { width: scale(36), height: scale(36), borderRadius: scale(12), backgroundColor: '#FFE8E8', alignItems: 'center', justifyContent: 'center', marginRight: scale(10) },
 //   provideLbl: { color: C.text, fontWeight: '700' },
 
-//   cartBar: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: '#fff', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 12, borderTopWidth: 1, borderColor: '#E5E7EB' },
-//   cartTop: { color: C.muted, fontSize: 12 },
-//   cartAmt: { color: C.ink, fontSize: 18, fontWeight: '800' },
-//   primaryBtn: { backgroundColor: C.primary, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 18 },
+//   cartBar: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: '#fff', flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(16), paddingTop: scale(12), borderTopWidth: 1, borderColor: '#E5E7EB' },
+//   cartTop: { color: C.muted, fontSize: moderateScale(12) },
+//   cartAmt: { color: C.ink, fontSize: moderateScale(18), fontWeight: '800' },
+//   primaryBtn: { backgroundColor: C.primary, borderRadius: scale(14), paddingVertical: scale(12), paddingHorizontal: scale(18) },
 //   primaryTxt: { color: '#fff', fontWeight: '800' },
 // });
 
 // /* ---------- Skeleton styles ---------- */
 // const sk = StyleSheet.create({
-//   hero: { height: 260, backgroundColor: '#E9EEF5' },
-//   glassBtn:{ backgroundColor:'#FFFFFFEE', width:38, height:38, borderRadius:12, borderWidth:1, borderColor:'#FFFFFF99' },
-//   ratingPill:{ width:90, height:28, borderRadius:999, backgroundColor:'#F1F5F9' },
-//   h2:{ height:20, borderRadius:8, backgroundColor:'#E9EEF5' },
-//   para:{ height:12, borderRadius:6, backgroundColor:'#E9EEF5' },
-//   lineLg:{ height:18, borderRadius:8, backgroundColor:'#E9EEF5' },
-//   lineMd:{ height:14, borderRadius:8, backgroundColor:'#E9EEF5' },
-//   lineSm:{ height:12, borderRadius:8, backgroundColor:'#E9EEF5' },
-//   lineXs:{ height:10, borderRadius:8, backgroundColor:'#E9EEF5' },
-//   btnPill:{ width:78, height:32, borderRadius:999, backgroundColor:'#F1F5F9', borderWidth:1, borderColor:'#E2E8F0', marginLeft:10 },
+//   hero: { height: scale(260), backgroundColor: '#E9EEF5' },
+//   glassBtn:{ backgroundColor:'#FFFFFFEE', width:scale(38), height:scale(38), borderRadius:scale(12), borderWidth:1, borderColor:'#FFFFFF99' },
+//   ratingPill:{ width:scale(90), height:scale(28), borderRadius:scale(999), backgroundColor:'#F1F5F9' },
+//   h2:{ height:scale(20), borderRadius:scale(8), backgroundColor:'#E9EEF5' },
+//   para:{ height:scale(12), borderRadius:scale(6), backgroundColor:'#E9EEF5' },
+//   lineLg:{ height:scale(18), borderRadius:scale(8), backgroundColor:'#E9EEF5' },
+//   lineMd:{ height:scale(14), borderRadius:scale(8), backgroundColor:'#E9EEF5' },
+//   lineSm:{ height:scale(12), borderRadius:scale(8), backgroundColor:'#E9EEF5' },
+//   lineXs:{ height:scale(10), borderRadius:scale(8), backgroundColor:'#E9EEF5' },
+//   btnPill:{ width:scale(78), height:scale(32), borderRadius:scale(999), backgroundColor:'#F1F5F9', borderWidth:1, borderColor:'#E2E8F0', marginLeft:scale(10) },
 // });
 // src/screens/RequestDetail.js
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -992,6 +992,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { api, IMAGE_BASE_URL } from '../api/client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { scale, moderateScale } from '../utils/responsive';
 // ---- debug helpers ----
 const DEBUG_IMG = true;
 const logImg = (...a) => DEBUG_IMG && console.log('[RD:image]', ...a);
@@ -1172,7 +1173,7 @@ const EnquiryModal = ({ visible, onClose, product, onSubmit, loading }) => {
             <View style={st.modalHeader}>
               <Text style={st.modalTitle}>Product Enquiry</Text>
               <TouchableOpacity onPress={onClose} style={st.closeButton}>
-                <Icon name="close" size={24} color={C.muted} />
+                <Icon name="close" size={scale(24)} color={C.muted} />
               </TouchableOpacity>
             </View>
             
@@ -1250,7 +1251,7 @@ const EnquiryModal = ({ visible, onClose, product, onSubmit, loading }) => {
                     <Text style={st.submitButtonText}>Submitting...</Text>
                   ) : (
                     <>
-                      <Icon name="send" size={16} color="#fff" style={st.buttonIcon} />
+                      <Icon name="send" size={scale(16)} color="#fff" style={st.buttonIcon} />
                       <Text style={st.submitButtonText}>Submit Enquiry</Text>
                     </>
                   )}
@@ -1271,7 +1272,7 @@ const FAQItem = React.memo(({ f }) => {
     <View style={st.faqItem}>
       <TouchableOpacity style={st.faqHead} onPress={() => setOpen(o => !o)} accessibilityRole="button">
         <Text style={st.faqQ}>{f.q}</Text>
-        <Icon name={open ? 'chevron-up' : 'chevron-down'} size={18} color={C.ink} />
+        <Icon name={open ? 'chevron-up' : 'chevron-down'} size={scale(18)} color={C.ink} />
       </TouchableOpacity>
       {open && <Text style={st.faqA}>{f.a}</Text>}
     </View>
@@ -1293,10 +1294,10 @@ function SkeletonRequestDetail({ insetsBottom }) {
   }, [pulse]);
 
   const ServiceChip = () => (
-    <View style={[st.serviceChip, { width: 220 }]}>
+    <View style={[st.serviceChip, { width: scale(220) }]}>
       <View style={{ flex: 1 }}>
         <Animated.View style={[sk.lineMd, { width: '70%', opacity: pulse }]} />
-        <Animated.View style={[sk.lineSm, { width: 80, marginTop: 6, opacity: pulse }]} />
+        <Animated.View style={[sk.lineSm, { width: scale(80), marginTop: scale(6), opacity: pulse }]} />
       </View>
       <Animated.View style={[sk.btnPill, { opacity: pulse }]} />
     </View>
@@ -1306,17 +1307,17 @@ function SkeletonRequestDetail({ insetsBottom }) {
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top','left','right']}>
       <View style={{ backgroundColor: C.card, borderBottomLeftRadius: R, borderBottomRightRadius: R, overflow: 'hidden' }}>
         <Animated.View style={[sk.hero, { opacity: pulse }]} />
-        <View style={[st.actionsWrap, { paddingTop: 8 }]}>
+        <View style={[st.actionsWrap, { paddingTop: scale(8) }]}>
           <View style={sk.glassBtn} />
-          <View style={[sk.glassBtn, { marginLeft: 8 }]} />
+          <View style={[sk.glassBtn, { marginLeft: scale(8) }]} />
         </View>
-        <View style={{ position: 'absolute', left: '5%', right: '5%', bottom: 70, height: 4, backgroundColor: '#FFFFFF55', borderRadius: 3 }} />
+        <View style={{ position: 'absolute', left: '5%', right: '5%', bottom: scale(70), height: scale(4), backgroundColor: '#FFFFFF55', borderRadius: scale(3) }} />
         <View style={st.heroBottom}>
           <View style={{ flex: 1 }}>
             <Animated.View style={[sk.lineLg, { width: '60%', opacity: pulse }]} />
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
-              <Animated.View style={[sk.lineMd, { width: 80, opacity: pulse }]} />
-              <Animated.View style={[sk.lineSm, { width: 140, marginLeft: 8, opacity: pulse }]} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: scale(6) }}>
+              <Animated.View style={[sk.lineMd, { width: scale(80), opacity: pulse }]} />
+              <Animated.View style={[sk.lineSm, { width: scale(140), marginLeft: scale(8), opacity: pulse }]} />
             </View>
           </View>
           <View style={sk.ratingPill} />
@@ -1325,15 +1326,15 @@ function SkeletonRequestDetail({ insetsBottom }) {
 
       <ScrollView contentContainerStyle={{ paddingBottom: insetsBottom + 100 }} showsVerticalScrollIndicator={false}>
         <View style={st.section}>
-          <Animated.View style={[sk.h2, { width: 100, opacity: pulse }]} />
-          <Animated.View style={[sk.para, { width: '95%', marginTop: 8, opacity: pulse }]} />
-          <Animated.View style={[sk.para, { width: '85%', marginTop: 6, opacity: pulse }]} />
+          <Animated.View style={[sk.h2, { width: scale(100), opacity: pulse }]} />
+          <Animated.View style={[sk.para, { width: '95%', marginTop: scale(8), opacity: pulse }]} />
+          <Animated.View style={[sk.para, { width: '85%', marginTop: scale(6), opacity: pulse }]} />
         </View>
 
         <View style={st.section}>
-          <Animated.View style={[sk.h2, { width: 130, opacity: pulse }]} />
-          <Animated.View style={[sk.lineXs, { width: 220, marginTop: 6, opacity: pulse }]} />
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 16, marginTop: 10 }}>
+          <Animated.View style={[sk.h2, { width: scale(130), opacity: pulse }]} />
+          <Animated.View style={[sk.lineXs, { width: scale(220), marginTop: scale(6), opacity: pulse }]} />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: scale(16), marginTop: scale(10) }}>
             {[0,1,2].map(i => <ServiceChip key={i} />)}
           </ScrollView>
         </View>
@@ -1341,8 +1342,8 @@ function SkeletonRequestDetail({ insetsBottom }) {
 
       <View style={[st.cartBar, { paddingBottom: insetsBottom > 0 ? insetsBottom : 12 }]}>
         <View style={{ flex:1 }}>
-          <Animated.View style={[sk.lineXs, { width: 120, opacity: pulse }]} />
-          <Animated.View style={[sk.lineMd, { width: 80, marginTop:6, opacity: pulse }]} />
+          <Animated.View style={[sk.lineXs, { width: scale(120), opacity: pulse }]} />
+          <Animated.View style={[sk.lineMd, { width: scale(80), marginTop:scale(6), opacity: pulse }]} />
         </View>
         <View style={sk.primaryBtn} />
       </View>
@@ -1970,11 +1971,11 @@ const handleEnquirySubmit = async (formData, product) => {
   if (networkErr) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top','left','right']}>
-        <View style={{ flex:1, alignItems:'center', justifyContent:'center', padding:24 }}>
-          <Icon name="cloud-offline-outline" size={36} color={C.muted} />
-          <Text style={{ color: C.ink, fontWeight: '800', fontSize: 16, marginTop: 8 }}>Couldn't load product</Text>
-          <Text style={{ color: C.muted, textAlign:'center', marginTop: 6 }}>{networkErr}</Text>
-          <TouchableOpacity onPress={onRefresh} style={[st.outlineBtn, { marginTop: 14, paddingHorizontal: 18 }]}>
+        <View style={{ flex:1, alignItems:'center', justifyContent:'center', padding:scale(24) }}>
+          <Icon name="cloud-offline-outline" size={scale(36)} color={C.muted} />
+          <Text style={{ color: C.ink, fontWeight: '800', fontSize: moderateScale(16), marginTop: scale(8) }}>Couldn't load product</Text>
+          <Text style={{ color: C.muted, textAlign:'center', marginTop: scale(6) }}>{networkErr}</Text>
+          <TouchableOpacity onPress={onRefresh} style={[st.outlineBtn, { marginTop: scale(14), paddingHorizontal: scale(18) }]}>
             <Text style={st.outlineTxt}>Retry</Text>
           </TouchableOpacity>
         </View>
@@ -1986,9 +1987,9 @@ const handleEnquirySubmit = async (formData, product) => {
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top', 'left', 'right']}>
       {/* Show banner if owner id missing */}
       {!ownerId && (
-        <View style={{ backgroundColor:'#FFF7ED', padding:10 }}>
+        <View style={{ backgroundColor:'#FFF7ED', padding:scale(10) }}>
           <Text style={{ color:'#B45309', fontWeight:'700' }}>Owner not set</Text>
-          <Text style={{ color:'#92400E', marginTop:4, fontSize:12 }}>
+          <Text style={{ color:'#92400E', marginTop:scale(4), fontSize:moderateScale(12) }}>
             Please login again. Cart won't be saved to the server until we have your owner ID.
           </Text>
         </View>
@@ -1999,17 +2000,17 @@ const handleEnquirySubmit = async (formData, product) => {
 <View style={{ backgroundColor: C.card, borderBottomLeftRadius: R, borderBottomRightRadius: R, overflow: 'hidden' }}>
   <ImageBackground
     source={{ uri: (images[idx] || FALLBACK_IMAGES[0]) }}
-    style={{ width: '100%', height: 260, justifyContent: 'flex-end' }}
+    style={{ width: '100%', height: scale(260), justifyContent: 'flex-end' }}
     onError={(e) => logImg('HERO onError for uri:', images[idx], e?.nativeEvent)}
   >
     <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.22)' }]} />
 
-    <View style={[st.actionsWrap, { paddingTop: 8 }]}>
-      <TouchableOpacity onPress={() => navigation.goBack()} style={st.glassBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-        <Icon name="close" size={18} color={C.ink} />
+    <View style={[st.actionsWrap, { paddingTop: scale(8) }]}>
+      <TouchableOpacity onPress={() => navigation.goBack()} style={st.glassBtn} hitSlop={{ top: scale(8), bottom: scale(8), left: scale(8), right: scale(8) }}>
+        <Icon name="close" size={scale(18)} color={C.ink} />
       </TouchableOpacity>
-      <TouchableOpacity onPress={shareIt} style={[st.glassBtn, { marginLeft: 8 }]}>
-        <Icon name="share-social-outline" size={18} color={C.ink} />
+      <TouchableOpacity onPress={shareIt} style={[st.glassBtn, { marginLeft: scale(8) }]}>
+        <Icon name="share-social-outline" size={scale(18)} color={C.ink} />
       </TouchableOpacity>
     </View>
 
@@ -2019,13 +2020,13 @@ const handleEnquirySubmit = async (formData, product) => {
         style={st.enquiryButtonHero}
         onPress={() => openEnquiryModal(prod)}
       >
-        <Icon name="mail-outline" size={16} color="#fff" />
+        <Icon name="mail-outline" size={scale(16)} color="#fff" />
         <Text style={st.enquiryButtonText}>Enquire Now</Text>
       </TouchableOpacity>
     </View>
 
-    <View style={{ position: 'absolute', left: '5%', right: '5%', bottom: 70, height: 4, backgroundColor: '#FFFFFF55', borderRadius: 3, overflow: 'hidden' }}>
-      <Animated.View style={{ height: 4, width: bar.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }), backgroundColor: '#fff' }} />
+    <View style={{ position: 'absolute', left: '5%', right: '5%', bottom: scale(70), height: scale(4), backgroundColor: '#FFFFFF55', borderRadius: scale(3), overflow: 'hidden' }}>
+      <Animated.View style={{ height: scale(4), width: bar.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }), backgroundColor: '#fff' }} />
     </View>
 
     <View style={st.heroBottom}>
@@ -2036,7 +2037,7 @@ const handleEnquirySubmit = async (formData, product) => {
         </View>
           <Text style={st.priceText}>{formatPrice(prod.price)}</Text>
       </View>
-      <View style={st.ratingPill}><Icon name="star" size={14} color="#fff" /><Text style={st.ratingTxt}>{headerItem.rating}</Text></View>
+      <View style={st.ratingPill}><Icon name="star" size={scale(14)} color="#fff" /><Text style={st.ratingTxt}>{headerItem.rating}</Text></View>
     </View>
   </ImageBackground>
 </View>
@@ -2060,7 +2061,7 @@ const handleEnquirySubmit = async (formData, product) => {
             style={st.enquiryButtonSection}
             onPress={() => openEnquiryModal(prod)}
           >
-            <Icon name="mail-outline" size={16} color="#fff" />
+            <Icon name="mail-outline" size={scale(16)} color="#fff" />
             <Text style={st.enquiryButtonText}>Enquire About This Product</Text>
           </TouchableOpacity>
         </View>
@@ -2082,26 +2083,26 @@ const handleEnquirySubmit = async (formData, product) => {
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ paddingRight: 16 }}
+              contentContainerStyle={{ paddingRight: scale(16) }}
             >
               {prod.services.map((s) => {
                 const sid = String(s.id);
                 const q = cart[sid] || 0;
                 return (
-                  <View key={`service-${sid}`} style={[st.serviceChip, { width: 220, marginRight: 10 }]}>
+                  <View key={`service-${sid}`} style={[st.serviceChip, { width: scale(220), marginRight: scale(10) }]}>
                     <View style={{ flex: 1 }}>
                       <Text style={st.serviceTitle}>{s.name}</Text>
                       <Text style={st.servicePrice}>{Rs(s.price)}</Text>
                     </View>
                     {q === 0 ? (
                       <TouchableOpacity onPress={() => add(sid)} style={st.addBtnSm}>
-                        <Icon name="add" size={18} color="#fff" /><Text style={st.addTxt}>Add</Text>
+                        <Icon name="add" size={scale(18)} color="#fff" /><Text style={st.addTxt}>Add</Text>
                       </TouchableOpacity>
                     ) : (
                       <View style={st.counterSm}>
-                        <TouchableOpacity onPress={() => sub(sid)} style={st.counterBtnSm}><Icon name="remove" size={18} color={C.primary} /></TouchableOpacity>
+                        <TouchableOpacity onPress={() => sub(sid)} style={st.counterBtnSm}><Icon name="remove" size={scale(18)} color={C.primary} /></TouchableOpacity>
                         <Text style={st.qty}>{q}</Text>
-                        <TouchableOpacity onPress={() => add(sid)} style={st.counterBtnSm}><Icon name="add" size={18} color={C.primary} /></TouchableOpacity>
+                        <TouchableOpacity onPress={() => add(sid)} style={st.counterBtnSm}><Icon name="add" size={scale(18)} color={C.primary} /></TouchableOpacity>
                       </View>
                     )}
                   </View>
@@ -2128,26 +2129,26 @@ const handleEnquirySubmit = async (formData, product) => {
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ paddingRight: 16 }}
+              contentContainerStyle={{ paddingRight: scale(16) }}
             >
               {prod.parts.map((p) => {
                 const key = `part:${p.id}`;
                 const q = cart[key] || 0;
                 return (
-                  <View key={`part-${p.id}`} style={[st.serviceChip, { width: 220, marginRight: 10, borderColor: '#FED7AA' }]}>
+                  <View key={`part-${p.id}`} style={[st.serviceChip, { width: scale(220), marginRight: scale(10), borderColor: '#FED7AA' }]}>
                     <View style={{ flex: 1 }}>
                       <Text style={st.serviceTitle}>{p.name}</Text>
                       <Text style={[st.servicePrice, { color: '#EA580C' }]}>{Rs(p.price)}</Text>
                     </View>
                     {q === 0 ? (
                       <TouchableOpacity onPress={() => addPart(p.id)} style={[st.addBtnSm, { backgroundColor: '#EA580C' }]}>
-                        <Icon name="add" size={18} color="#fff" /><Text style={st.addTxt}>Add</Text>
+                        <Icon name="add" size={scale(18)} color="#fff" /><Text style={st.addTxt}>Add</Text>
                       </TouchableOpacity>
                     ) : (
                       <View style={[st.counterSm, { backgroundColor: '#FFF7ED' }]}>
-                        <TouchableOpacity onPress={() => subPart(p.id)} style={st.counterBtnSm}><Icon name="remove" size={18} color="#EA580C" /></TouchableOpacity>
+                        <TouchableOpacity onPress={() => subPart(p.id)} style={st.counterBtnSm}><Icon name="remove" size={scale(18)} color="#EA580C" /></TouchableOpacity>
                         <Text style={[st.qty, { color: '#EA580C' }]}>{q}</Text>
-                        <TouchableOpacity onPress={() => addPart(p.id)} style={st.counterBtnSm}><Icon name="add" size={18} color="#EA580C" /></TouchableOpacity>
+                        <TouchableOpacity onPress={() => addPart(p.id)} style={st.counterBtnSm}><Icon name="add" size={scale(18)} color="#EA580C" /></TouchableOpacity>
                       </View>
                     )}
                   </View>
@@ -2163,16 +2164,16 @@ const handleEnquirySubmit = async (formData, product) => {
           <View style={st.wrapPills}>
             {(prod.included || []).map((t, i) => (
               <View key={`in-${i}`} style={[st.pill, { backgroundColor: '#ECFDF5', borderColor: '#D1FAE5' }]}>
-                <Icon name="checkmark-circle" size={16} color={C.ok} /><Text style={st.pillTxt}>{t}</Text>
+                <Icon name="checkmark-circle" size={scale(16)} color={C.ok} /><Text style={st.pillTxt}>{t}</Text>
               </View>
             ))}
           </View>
 
-          <Text style={[st.sectionTitle, { marginTop: 14 }]}>Not included</Text>
+          <Text style={[st.sectionTitle, { marginTop: scale(14) }]}>Not included</Text>
           <View style={st.wrapPills}>
             {(prod.excluded || []).map((t, i) => (
               <View key={`ex-${i}`} style={[st.pill, { backgroundColor: '#FFF1F1', borderColor: '#FEE2E2' }]}>
-                <Icon name="close-circle" size={16} color={C.danger} /><Text style={st.pillTxt}>{t}</Text>
+                <Icon name="close-circle" size={scale(16)} color={C.danger} /><Text style={st.pillTxt}>{t}</Text>
               </View>
             ))}
           </View>
@@ -2182,9 +2183,9 @@ const handleEnquirySubmit = async (formData, product) => {
         <View style={st.section}>
           <Text style={st.sectionTitle}>Conditions</Text>
           {(prod.conditions || []).map((t, i) => (
-            <View key={i} style={{ flexDirection: 'row', marginBottom: 10 }}>
-              <Icon name="information-circle-outline" size={18} color={C.warn} />
-              <Text style={[st.desc, { marginLeft: 8, marginTop: -2 }]}>{t}</Text>
+            <View key={i} style={{ flexDirection: 'row', marginBottom: scale(10) }}>
+              <Icon name="information-circle-outline" size={scale(18)} color={C.warn} />
+              <Text style={[st.desc, { marginLeft: scale(8), marginTop: scale(-2) }]}>{t}</Text>
             </View>
           ))}
         </View>
@@ -2200,7 +2201,7 @@ const handleEnquirySubmit = async (formData, product) => {
                   {i < processSteps.length - 1 && <View style={st.stepLine} />}
                 </View>
                 <View style={st.stepCard}>
-                  <View style={st.stepIconWrap}><Icon name={s.icon} size={16} color={C.primary} /></View>
+                  <View style={st.stepIconWrap}><Icon name={s.icon} size={scale(16)} color={C.primary} /></View>
                   <View style={{ flex: 1 }}>
                     <Text style={st.stepTitle}>{s.title}</Text>
                     <Text style={st.stepDesc}>{s.desc}</Text>
@@ -2223,7 +2224,7 @@ const handleEnquirySubmit = async (formData, product) => {
             style={st.enquiryButtonSection}
             onPress={() => openEnquiryModal(prod)}
           >
-            <Icon name="help-circle-outline" size={16} color="#fff" />
+            <Icon name="help-circle-outline" size={scale(16)} color="#fff" />
             <Text style={st.enquiryButtonText}>Still Have Questions? Enquire Now</Text>
           </TouchableOpacity>
         </View>
@@ -2236,10 +2237,10 @@ const handleEnquirySubmit = async (formData, product) => {
           ) : (
             reviews.map((r) => (
               <View key={r.id} style={st.revCard}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: scale(6) }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <Text style={st.revName}>{r.name}</Text>
-                    {!!r.when && <Text style={[st.sectionSub, { marginLeft: 8 }]}>{String(r.when).slice(0,10)}</Text>}
+                    {!!r.when && <Text style={[st.sectionSub, { marginLeft: scale(8) }]}>{String(r.when).slice(0,10)}</Text>}
                   </View>
                   <Stars value={r.stars} />
                 </View>
@@ -2268,7 +2269,7 @@ const handleEnquirySubmit = async (formData, product) => {
               { icon: 'document-text-outline', label: 'Digital Invoice' },
             ].map((p) => (
               <View key={p.label} style={st.provide}>
-                <View style={st.provideIcon}><Icon name={p.icon} size={18} color={C.primary} /></View>
+                <View style={st.provideIcon}><Icon name={p.icon} size={scale(18)} color={C.primary} /></View>
                 <Text style={st.provideLbl}>{p.label}</Text>
               </View>
             ))}
@@ -2312,43 +2313,43 @@ const handleEnquirySubmit = async (formData, product) => {
 
 /* ---------- STYLES ---------- */
 const st = StyleSheet.create({
-  actionsWrap: { position: 'absolute', top: 0, right: 12, flexDirection: 'row' },
+  actionsWrap: { position: 'absolute', top: 0, right: scale(12), flexDirection: 'row' },
   glassBtn: {
-    backgroundColor: '#FFFFFFEE', width: 38, height: 38, borderRadius: 12,
+    backgroundColor: '#FFFFFFEE', width: scale(38), height: scale(38), borderRadius: scale(12),
     alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: '#FFFFFF99', shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 8, elevation: 3,
+    borderWidth: 1, borderColor: '#FFFFFF99', shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: scale(8), elevation: 3,
   },
-  heroBottom: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#FFFFFFEE' },
-  title: { fontSize: 18, fontWeight: '800', color: C.ink },
-  subTitle: { fontSize: 12, color: C.muted, marginTop: 2 },
-  ratingPill: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.primary, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 },
-  ratingTxt: { color: '#fff', fontWeight: '700', marginLeft: 6, fontSize: 12 },
+  heroBottom: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(16), paddingVertical: scale(12), backgroundColor: '#FFFFFFEE' },
+  title: { fontSize: moderateScale(18), fontWeight: '800', color: C.ink },
+  subTitle: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(2) },
+  ratingPill: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.primary, paddingHorizontal: scale(10), paddingVertical: scale(6), borderRadius: scale(999) },
+  ratingTxt: { color: '#fff', fontWeight: '700', marginLeft: scale(6), fontSize: moderateScale(12) },
 
-  section: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 6 },
-  sectionTitle: { fontSize: 18, fontWeight: '800', color: C.ink, marginBottom: 8 },
-  sectionSub: { fontSize: 12, color: C.muted, marginBottom: 8 },
-  desc: { color: C.text, fontSize: 14, lineHeight: 20 },
+  section: { paddingHorizontal: scale(16), paddingTop: scale(16), paddingBottom: scale(6) },
+  sectionTitle: { fontSize: moderateScale(18), fontWeight: '800', color: C.ink, marginBottom: scale(8) },
+  sectionSub: { fontSize: moderateScale(12), color: C.muted, marginBottom: scale(8) },
+  desc: { color: C.text, fontSize: moderateScale(14), lineHeight: moderateScale(20) },
 
   // Price styles
   priceRatingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 2,
+    marginTop: scale(2),
     flexWrap: 'wrap',
   },
   priceText: {
     color: C.primary,
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: '800',
-    marginRight: 8,
+    marginRight: scale(8),
   },
 
   // Enquiry Button Styles
 heroEnquiryBtn: {
   position: 'absolute',
-  bottom: 115, // Position above the hero bottom content
-  left: 5,
-  right: 16,
+  bottom: scale(115), // Position above the hero bottom content
+  left: scale(5),
+  right: scale(16),
   alignItems: 'flex-start', // Align to left
 },
 enquiryButtonHero: {
@@ -2356,20 +2357,20 @@ enquiryButtonHero: {
   alignItems: 'center',
   justifyContent: 'center',
   backgroundColor: C.primary,
-  paddingVertical: 10,
-  paddingHorizontal: 16,
-  borderRadius: 20,
-  gap: 6,
+  paddingVertical: scale(10),
+  paddingHorizontal: scale(16),
+  borderRadius: scale(20),
+  gap: scale(6),
   shadowColor: '#000',
-  shadowOffset: { width: 0, height: 2 },
+  shadowOffset: { width: 0, height: scale(2) },
   shadowOpacity: 0.3,
-  shadowRadius: 4,
+  shadowRadius: scale(4),
   elevation: 5,
   alignSelf: 'flex-start', // Align to left
 },
 enquiryButtonText: {
   color: '#fff',
-  fontSize: 14,
+  fontSize: moderateScale(14),
   fontWeight: '700',
 },
 // Enquiry Button in Section Styles
@@ -2378,74 +2379,74 @@ enquiryButtonSection: {
   alignItems: 'center',
   justifyContent: 'center',
   backgroundColor: C.primary,
-  paddingVertical: 14,
-  paddingHorizontal: 20,
-  borderRadius: 14,
-  gap: 8,
-  marginTop: 16,
+  paddingVertical: scale(14),
+  paddingHorizontal: scale(20),
+  borderRadius: scale(14),
+  gap: scale(8),
+  marginTop: scale(16),
   borderWidth: 1,
   borderColor: '#E11D48',
   shadowColor: '#000',
-  shadowOffset: { width: 0, height: 2 },
+  shadowOffset: { width: 0, height: scale(2) },
   shadowOpacity: 0.1,
-  shadowRadius: 4,
+  shadowRadius: scale(4),
   elevation: 3,
 },
 enquiryButtonTextSection: {
   color: '#fff',
-  fontSize: 15,
+  fontSize: moderateScale(15),
   fontWeight: '700',
 },
 
-  serviceChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.card, borderRadius: 14, padding: 12, marginRight: 10, borderWidth: 1, borderColor: '#EEF2F7' },
-  serviceTitle: { color: C.text, fontWeight: '700', fontSize: 14 },
-  servicePrice: { color: C.ink, marginTop: 2, fontWeight: '700' },
-  addBtnSm: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.primary, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, marginLeft: 10 },
-  addTxt: { color: '#fff', fontWeight: '800', marginLeft: 6, fontSize: 12 },
-  counterSm: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF1F1', borderRadius: 999, marginLeft: 10 },
-  counterBtnSm: { paddingHorizontal: 10, paddingVertical: 6 },
-  qty: { minWidth: 22, textAlign: 'center', fontWeight: '800', color: C.primary },
+  serviceChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.card, borderRadius: scale(14), padding: scale(12), marginRight: scale(10), borderWidth: 1, borderColor: '#EEF2F7' },
+  serviceTitle: { color: C.text, fontWeight: '700', fontSize: moderateScale(14) },
+  servicePrice: { color: C.ink, marginTop: scale(2), fontWeight: '700' },
+  addBtnSm: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.primary, paddingHorizontal: scale(12), paddingVertical: scale(8), borderRadius: scale(999), marginLeft: scale(10) },
+  addTxt: { color: '#fff', fontWeight: '800', marginLeft: scale(6), fontSize: moderateScale(12) },
+  counterSm: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF1F1', borderRadius: scale(999), marginLeft: scale(10) },
+  counterBtnSm: { paddingHorizontal: scale(10), paddingVertical: scale(6) },
+  qty: { minWidth: scale(22), textAlign: 'center', fontWeight: '800', color: C.primary },
 
-  wrapPills: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  pill: { flexDirection: 'row', alignItems: 'center', borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1 },
-  pillTxt: { marginLeft: 6, color: '#334155', fontSize: 12 },
+  wrapPills: { flexDirection: 'row', flexWrap: 'wrap', gap: scale(8) },
+  pill: { flexDirection: 'row', alignItems: 'center', borderRadius: scale(999), paddingHorizontal: scale(12), paddingVertical: scale(8), borderWidth: 1 },
+  pillTxt: { marginLeft: scale(6), color: '#334155', fontSize: moderateScale(12) },
 
-  stepper: { marginTop: 4 },
-  stepRow: { flexDirection: 'row', marginBottom: 14 },
-  stepRail: { width: 30, alignItems: 'center' },
-  stepDot: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#FFE8E8', alignItems: 'center', justifyContent: 'center' },
-  stepNum: { color: C.primary, fontWeight: '800', fontSize: 12 },
-  stepLine: { width: 2, backgroundColor: '#E5E7EB', flex: 1, marginTop: 2, marginBottom: -2 },
-  stepCard: { flex: 1, backgroundColor: C.card, borderRadius: 14, borderWidth: 1, borderColor: '#EEF2F7', padding: 12, flexDirection: 'row', alignItems: 'center' },
-  stepIconWrap: { width: 34, height: 34, borderRadius: 12, backgroundColor: '#FFF1F1', alignItems: 'center', justifyContent: 'center', marginRight: 10 },
+  stepper: { marginTop: scale(4) },
+  stepRow: { flexDirection: 'row', marginBottom: scale(14) },
+  stepRail: { width: scale(30), alignItems: 'center' },
+  stepDot: { width: scale(24), height: scale(24), borderRadius: scale(12), backgroundColor: '#FFE8E8', alignItems: 'center', justifyContent: 'center' },
+  stepNum: { color: C.primary, fontWeight: '800', fontSize: moderateScale(12) },
+  stepLine: { width: scale(2), backgroundColor: '#E5E7EB', flex: 1, marginTop: scale(2), marginBottom: scale(-2) },
+  stepCard: { flex: 1, backgroundColor: C.card, borderRadius: scale(14), borderWidth: 1, borderColor: '#EEF2F7', padding: scale(12), flexDirection: 'row', alignItems: 'center' },
+  stepIconWrap: { width: scale(34), height: scale(34), borderRadius: scale(12), backgroundColor: '#FFF1F1', alignItems: 'center', justifyContent: 'center', marginRight: scale(10) },
   stepTitle: { color: C.text, fontWeight: '800' },
-  stepDesc: { color: C.muted, marginTop: 2 },
+  stepDesc: { color: C.muted, marginTop: scale(2) },
 
-  techCard: { flex: 1, backgroundColor: C.card, borderRadius: 14, borderWidth: 1, borderColor: '#EEF2F7', padding: 10, marginBottom: 10, flexDirection: 'row', alignItems: 'center' },
-  techPic: { width: 54, height: 54, borderRadius: 12 },
+  techCard: { flex: 1, backgroundColor: C.card, borderRadius: scale(14), borderWidth: 1, borderColor: '#EEF2F7', padding: scale(10), marginBottom: scale(10), flexDirection: 'row', alignItems: 'center' },
+  techPic: { width: scale(54), height: scale(54), borderRadius: scale(12) },
   techName: { color: C.text, fontWeight: '700' },
-  techJobs: { color: C.muted, fontSize: 11 },
+  techJobs: { color: C.muted, fontSize: moderateScale(11) },
 
-  faqItem: { backgroundColor: C.card, borderRadius: 14, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: '#EEF2F7' },
+  faqItem: { backgroundColor: C.card, borderRadius: scale(14), padding: scale(12), marginBottom: scale(10), borderWidth: 1, borderColor: '#EEF2F7' },
   faqHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  faqQ: { color: C.text, fontWeight: '700', fontSize: 14 },
-  faqA: { color: C.muted, marginTop: 8, lineHeight: 20 },
+  faqQ: { color: C.text, fontWeight: '700', fontSize: moderateScale(14) },
+  faqA: { color: C.muted, marginTop: scale(8), lineHeight: moderateScale(20) },
 
-  revCard: { backgroundColor: C.card, borderRadius: 14, borderWidth: 1, borderColor: '#EEF2F7', padding: 12, marginBottom: 10 },
+  revCard: { backgroundColor: C.card, borderRadius: scale(14), borderWidth: 1, borderColor: '#EEF2F7', padding: scale(12), marginBottom: scale(10) },
   revName: { color: C.text, fontWeight: '700' },
-  revTxt: { color: C.text, marginTop: 2 },
-  outlineBtn:{ borderWidth:1, borderColor:'#CBD5E1', borderRadius:12, paddingVertical:12, alignItems:'center', marginTop:6, backgroundColor:'#fff' },
+  revTxt: { color: C.text, marginTop: scale(2) },
+  outlineBtn:{ borderWidth:1, borderColor:'#CBD5E1', borderRadius:scale(12), paddingVertical:scale(12), alignItems:'center', marginTop:scale(6), backgroundColor:'#fff' },
   outlineTxt:{ color:'#334155', fontWeight:'900' },
 
-  provideRow: { flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginTop: 6 },
-  provide: { width: '48%', backgroundColor: C.card, borderRadius: 14, borderWidth: 1, borderColor:'#EEF2F7', padding: 12, flexDirection: 'row', alignItems: 'center' },
-  provideIcon: { width: 36, height: 36, borderRadius: 12, backgroundColor: '#FFE8E8', alignItems: 'center', justifyContent: 'center', marginRight: 10 },
+  provideRow: { flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', gap: scale(10), marginTop: scale(6) },
+  provide: { width: '48%', backgroundColor: C.card, borderRadius: scale(14), borderWidth: 1, borderColor:'#EEF2F7', padding: scale(12), flexDirection: 'row', alignItems: 'center' },
+  provideIcon: { width: scale(36), height: scale(36), borderRadius: scale(12), backgroundColor: '#FFE8E8', alignItems: 'center', justifyContent: 'center', marginRight: scale(10) },
   provideLbl: { color: C.text, fontWeight: '700' },
 
-  cartBar: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: '#fff', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 12, borderTopWidth: 1, borderColor: '#E5E7EB' },
-  cartTop: { color: C.muted, fontSize: 12 },
-  cartAmt: { color: C.ink, fontSize: 18, fontWeight: '800' },
-  primaryBtn: { backgroundColor: C.primary, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 18 },
+  cartBar: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: '#fff', flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(16), paddingTop: scale(12), borderTopWidth: 1, borderColor: '#E5E7EB' },
+  cartTop: { color: C.muted, fontSize: moderateScale(12) },
+  cartAmt: { color: C.ink, fontSize: moderateScale(18), fontWeight: '800' },
+  primaryBtn: { backgroundColor: C.primary, borderRadius: scale(14), paddingVertical: scale(12), paddingHorizontal: scale(18) },
   primaryTxt: { color: '#fff', fontWeight: '800' },
 
   // Modal Styles
@@ -2454,17 +2455,17 @@ enquiryButtonTextSection: {
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: scale(20),
   },
   modalContent: {
     backgroundColor: '#fff',
-    borderRadius: 20,
+    borderRadius: scale(20),
     width: '100%',
     maxHeight: '80%',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: scale(2) },
     shadowOpacity: 0.25,
-    shadowRadius: 10,
+    shadowRadius: scale(10),
     elevation: 5,
   },
   modalScroll: {
@@ -2474,69 +2475,69 @@ enquiryButtonTextSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    padding: scale(20),
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: moderateScale(20),
     fontWeight: '700',
     color: C.text,
     flex: 1,
   },
   closeButton: {
-    padding: 4,
+    padding: scale(4),
   },
   modalDescription: {
-    padding: 20,
+    padding: scale(20),
     paddingBottom: 0,
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: C.muted,
-    lineHeight: 20,
+    lineHeight: moderateScale(20),
   },
   productName: {
     color: C.primary,
     fontWeight: '600',
   },
   form: {
-    padding: 20,
+    padding: scale(20),
   },
   inputGroup: {
-    marginBottom: 16,
+    marginBottom: scale(16),
   },
   label: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '600',
     color: C.text,
-    marginBottom: 6,
+    marginBottom: scale(6),
   },
   input: {
     borderWidth: 1,
     borderColor: C.border,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
+    borderRadius: scale(10),
+    paddingHorizontal: scale(12),
+    paddingVertical: scale(10),
+    fontSize: moderateScale(16),
     color: C.text,
     backgroundColor: '#fff',
   },
   textArea: {
-    height: 100,
+    height: scale(100),
     textAlignVertical: 'top',
   },
   modalActions: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 20,
+    gap: scale(12),
+    marginTop: scale(20),
   },
   button: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: 10,
-    gap: 8,
+    paddingVertical: scale(12),
+    borderRadius: scale(10),
+    gap: scale(8),
   },
   cancelButton: {
     backgroundColor: '#F3F4F6',
@@ -2545,7 +2546,7 @@ enquiryButtonTextSection: {
   },
   cancelButtonText: {
     color: C.text,
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: '600',
   },
   submitButton: {
@@ -2556,41 +2557,41 @@ enquiryButtonTextSection: {
   },
   submitButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: '600',
   },
   buttonIcon: {
-    marginRight: 4,
+    marginRight: scale(4),
   },
 });
 
 /* ---------- Skeleton styles ---------- */
 const sk = StyleSheet.create({
-  hero: { height: 260, backgroundColor: '#E9EEF5' },
-  glassBtn:{ backgroundColor:'#FFFFFFEE', width:38, height:38, borderRadius:12, borderWidth:1, borderColor:'#FFFFFF99' },
-  ratingPill:{ width:90, height:28, borderRadius:999, backgroundColor:'#F1F5F9' },
-  h2:{ height:20, borderRadius:8, backgroundColor:'#E9EEF5' },
-  para:{ height:12, borderRadius:6, backgroundColor:'#E9EEF5' },
-  lineLg:{ height:18, borderRadius:8, backgroundColor:'#E9EEF5' },
-  lineMd:{ height:14, borderRadius:8, backgroundColor:'#E9EEF5' },
-  lineSm:{ height:12, borderRadius:8, backgroundColor:'#E9EEF5' },
-  lineXs:{ height:10, borderRadius:8, backgroundColor:'#E9EEF5' },
-  btnPill:{ width:78, height:32, borderRadius:999, backgroundColor:'#F1F5F9', borderWidth:1, borderColor:'#E2E8F0', marginLeft:10 },
+  hero: { height: scale(260), backgroundColor: '#E9EEF5' },
+  glassBtn:{ backgroundColor:'#FFFFFFEE', width:scale(38), height:scale(38), borderRadius:scale(12), borderWidth:1, borderColor:'#FFFFFF99' },
+  ratingPill:{ width:scale(90), height:scale(28), borderRadius:scale(999), backgroundColor:'#F1F5F9' },
+  h2:{ height:scale(20), borderRadius:scale(8), backgroundColor:'#E9EEF5' },
+  para:{ height:scale(12), borderRadius:scale(6), backgroundColor:'#E9EEF5' },
+  lineLg:{ height:scale(18), borderRadius:scale(8), backgroundColor:'#E9EEF5' },
+  lineMd:{ height:scale(14), borderRadius:scale(8), backgroundColor:'#E9EEF5' },
+  lineSm:{ height:scale(12), borderRadius:scale(8), backgroundColor:'#E9EEF5' },
+  lineXs:{ height:scale(10), borderRadius:scale(8), backgroundColor:'#E9EEF5' },
+  btnPill:{ width:scale(78), height:scale(32), borderRadius:scale(999), backgroundColor:'#F1F5F9', borderWidth:1, borderColor:'#E2E8F0', marginLeft:scale(10) },
 });
 
 const styles = StyleSheet.create({
   input: {
     borderWidth: 1,
     borderColor: C.border,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
+    borderRadius: scale(10),
+    paddingHorizontal: scale(12),
+    paddingVertical: scale(10),
+    fontSize: moderateScale(16),
     color: C.text,
     backgroundColor: '#fff',
   },
   textArea: {
-    height: 100,
+    height: scale(100),
     textAlignVertical: 'top',
   },
 });

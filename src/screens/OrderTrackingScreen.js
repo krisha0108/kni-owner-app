@@ -20,6 +20,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
+import { scale, moderateScale } from '../utils/responsive';
 const { width } = Dimensions.get('window');
 
 const C = {
@@ -113,7 +114,7 @@ function TimelineStep({ step, isLast }) {
       <View style={s.tlLeft}>
         {step.isCompleted ? (
           <LinearGradient colors={['#10B981', '#059669']} style={s.tlDotDone}>
-            <Icon name="checkmark" size={11} color="#fff" />
+            <Icon name="checkmark" size={scale(11)} color="#fff" />
           </LinearGradient>
         ) : step.isCurrent ? (
           <View style={s.tlDotCurrent}>
@@ -133,7 +134,7 @@ function TimelineStep({ step, isLast }) {
         {step.description && <Text style={s.tlDesc}>{step.description}</Text>}
         {step.date && (
           <View style={s.tlDatePill}>
-            <Icon name="calendar-outline" size={11} color={C.muted} />
+            <Icon name="calendar-outline" size={scale(11)} color={C.muted} />
             <Text style={s.tlDate}>{formatDateTime(step.date)}</Text>
           </View>
         )}
@@ -300,18 +301,18 @@ export default function OrderTrackingScreen({ navigation }) {
         <View style={s.cardBody}>
           <View style={s.cardTopRow}>
             <LinearGradient colors={ss.gradient} style={s.cardIconBox}>
-              <Icon name={ss.icon} size={16} color="#fff" />
+              <Icon name={ss.icon} size={scale(16)} color="#fff" />
             </LinearGradient>
             <View style={s.cardTopInfo}>
               <Text style={s.cardTitle} numberOfLines={1}>{item.equipment?.name || 'General Service'}</Text>
               <Text style={s.cardId}>#{item.id?.slice(0, 8)}</Text>
             </View>
-            <Icon name="chevron-forward" size={18} color={C.muted} />
+            <Icon name="chevron-forward" size={scale(18)} color={C.muted} />
           </View>
 
           <View style={s.cardBottomRow}>
             <View style={[s.statusPill, { backgroundColor: ss.bg }]}>
-              <Icon name={ss.icon} size={12} color={ss.color} />
+              <Icon name={ss.icon} size={scale(12)} color={ss.color} />
               <Text style={[s.statusPillText, { color: ss.color }]}>{ss.label}</Text>
             </View>
             <View style={s.cardMetaRight}>
@@ -322,7 +323,7 @@ export default function OrderTrackingScreen({ navigation }) {
 
           {item.slotStartDateTime && (
             <View style={s.scheduleRow}>
-              <Icon name="calendar" size={13} color={C.info} />
+              <Icon name="calendar" size={scale(13)} color={C.info} />
               <Text style={s.scheduleText}>Scheduled: {formatDate(item.slotStartDateTime)}</Text>
             </View>
           )}
@@ -345,18 +346,18 @@ export default function OrderTrackingScreen({ navigation }) {
         <View style={s.cardBody}>
           <View style={s.cardTopRow}>
             <LinearGradient colors={os.gradient} style={s.cardIconBox}>
-              <Icon name={os.icon} size={16} color="#fff" />
+              <Icon name={os.icon} size={scale(16)} color="#fff" />
             </LinearGradient>
             <View style={s.cardTopInfo}>
               <Text style={s.cardTitle} numberOfLines={1}>{itemCount} Item{itemCount !== 1 ? 's' : ''}</Text>
               <Text style={s.cardId}>#{item.id?.slice(0, 8)}</Text>
             </View>
-            <Icon name="chevron-forward" size={18} color={C.muted} />
+            <Icon name="chevron-forward" size={scale(18)} color={C.muted} />
           </View>
 
           <View style={s.cardBottomRow}>
             <View style={[s.statusPill, { backgroundColor: os.bg }]}>
-              <Icon name={os.icon} size={12} color={os.color} />
+              <Icon name={os.icon} size={scale(12)} color={os.color} />
               <Text style={[s.statusPillText, { color: os.color }]}>{os.label}</Text>
             </View>
             <View style={s.cardMetaRight}>
@@ -377,7 +378,7 @@ export default function OrderTrackingScreen({ navigation }) {
       >
         <Icon
           name={activeTab === 'services' ? 'construct' : 'bag'}
-          size={44}
+          size={scale(44)}
           color={activeTab === 'services' ? '#3B82F6' : '#7C3AED'}
         />
       </LinearGradient>
@@ -386,7 +387,7 @@ export default function OrderTrackingScreen({ navigation }) {
       </Text>
       <Text style={s.emptySubtitle}>No items match your current filters</Text>
       <TouchableOpacity style={s.emptyBtn} onPress={onRefresh}>
-        <Icon name="refresh" size={16} color={C.primary} />
+        <Icon name="refresh" size={scale(16)} color={C.primary} />
         <Text style={s.emptyBtnText}>Refresh</Text>
       </TouchableOpacity>
     </View>
@@ -397,10 +398,10 @@ export default function OrderTrackingScreen({ navigation }) {
       <SafeAreaView style={s.container}>
         <LinearGradient colors={[C.primary, C.primaryDark]} style={s.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={s.headerBtn}>
-            <Icon name="arrow-back" size={22} color="#fff" />
+            <Icon name="arrow-back" size={scale(22)} color="#fff" />
           </TouchableOpacity>
           <Text style={s.headerTitle}>Order Tracking</Text>
-          <View style={{ width: 38 }} />
+          <View style={{ width: scale(38) }} />
         </LinearGradient>
         <View style={s.loadingBox}>
           <ActivityIndicator size="large" color={C.primary} />
@@ -420,7 +421,7 @@ export default function OrderTrackingScreen({ navigation }) {
         style={s.header}
       >
         <TouchableOpacity onPress={() => navigation.goBack()} style={s.headerBtn}>
-          <Icon name="arrow-back" size={22} color="#fff" />
+          <Icon name="arrow-back" size={scale(22)} color="#fff" />
         </TouchableOpacity>
         <View style={s.headerCenter}>
           <Text style={s.headerTitle}>Order Tracking</Text>
@@ -431,7 +432,7 @@ export default function OrderTrackingScreen({ navigation }) {
           )}
         </View>
         <TouchableOpacity onPress={() => setMenuVisible(true)} style={s.headerBtn}>
-          <Icon name="menu" size={22} color="#fff" />
+          <Icon name="menu" size={scale(22)} color="#fff" />
         </TouchableOpacity>
       </LinearGradient>
 
@@ -443,7 +444,7 @@ export default function OrderTrackingScreen({ navigation }) {
           activeOpacity={restaurants.length > 1 ? 0.7 : 1}
         >
           <View style={s.restIconBox}>
-            <Icon name="restaurant" size={15} color={C.primary} />
+            <Icon name="restaurant" size={scale(15)} color={C.primary} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={s.restName} numberOfLines={1}>{currentRestaurant.name}</Text>
@@ -451,7 +452,7 @@ export default function OrderTrackingScreen({ navigation }) {
           </View>
           {restaurants.length > 1 && (
             <View style={s.restSwitch}>
-              <Icon name="swap-horizontal" size={14} color={C.primary} />
+              <Icon name="swap-horizontal" size={scale(14)} color={C.primary} />
               <Text style={s.restSwitchText}>Switch</Text>
             </View>
           )}
@@ -465,7 +466,7 @@ export default function OrderTrackingScreen({ navigation }) {
           onPress={() => setActiveTab('services')}
           activeOpacity={0.7}
         >
-          <Icon name="construct" size={16} color={activeTab === 'services' ? '#fff' : C.muted} />
+          <Icon name="construct" size={scale(16)} color={activeTab === 'services' ? '#fff' : C.muted} />
           <Text style={[s.tabText, activeTab === 'services' && s.tabTextActive]}>Services</Text>
           {activeServices > 0 && (
             <View style={[s.tabCountBadge, activeTab === 'services' && s.tabCountBadgeActive]}>
@@ -480,7 +481,7 @@ export default function OrderTrackingScreen({ navigation }) {
           onPress={() => setActiveTab('orders')}
           activeOpacity={0.7}
         >
-          <Icon name="bag" size={16} color={activeTab === 'orders' ? '#fff' : C.muted} />
+          <Icon name="bag" size={scale(16)} color={activeTab === 'orders' ? '#fff' : C.muted} />
           <Text style={[s.tabText, activeTab === 'orders' && s.tabTextActive]}>Orders</Text>
           {activeOrders > 0 && (
             <View style={[s.tabCountBadge, activeTab === 'orders' && s.tabCountBadgeActive]}>
@@ -495,7 +496,7 @@ export default function OrderTrackingScreen({ navigation }) {
       {/* Search & Filter - Fixed */}
       <View style={s.filterBar}>
         <View style={s.searchBox}>
-          <Icon name="search" size={17} color={C.muted} />
+          <Icon name="search" size={scale(17)} color={C.muted} />
           <TextInput
             style={s.searchInput}
             placeholder={activeTab === 'services' ? 'Search by ID or equipment...' : 'Search by order ID...'}
@@ -505,12 +506,12 @@ export default function OrderTrackingScreen({ navigation }) {
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Icon name="close-circle" size={17} color={C.muted} />
+              <Icon name="close-circle" size={scale(17)} color={C.muted} />
             </TouchableOpacity>
           )}
         </View>
         <TouchableOpacity style={s.filterBtn} onPress={() => setStatusPickerVisible(true)}>
-          <Icon name="funnel" size={15} color={C.primary} />
+          <Icon name="funnel" size={scale(15)} color={C.primary} />
           <Text style={s.filterBtnText} numberOfLines={1}>
             {currentStatusOptions.find(st => st.value === currentStatusFilter)?.label || 'Filter'}
           </Text>
@@ -559,10 +560,10 @@ export default function OrderTrackingScreen({ navigation }) {
             <View style={s.detailHeader}>
               <Text style={s.detailTitle}>Service Booking</Text>
               <TouchableOpacity onPress={() => setServiceDetailVisible(false)}>
-                <Icon name="close" size={24} color={C.ink} />
+                <Icon name="close" size={scale(24)} color={C.ink} />
               </TouchableOpacity>
             </View>
-            <ScrollView style={s.detailBody} contentContainerStyle={{ padding: 16, paddingBottom: 30 }} nestedScrollEnabled keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator bounces>
+            <ScrollView style={s.detailBody} contentContainerStyle={{ padding: scale(16), paddingBottom: scale(30) }} nestedScrollEnabled keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator bounces>
               {selectedService ? (
                 <>
                   {(() => {
@@ -570,7 +571,7 @@ export default function OrderTrackingScreen({ navigation }) {
                     return (
                       <LinearGradient colors={ss.gradient} style={s.modalStatusBanner}>
                         <View style={s.modalStatusIcon}>
-                          <Icon name={ss.icon} size={22} color={ss.color} />
+                          <Icon name={ss.icon} size={scale(22)} color={ss.color} />
                         </View>
                         <View>
                           <Text style={s.modalStatusLabel}>{ss.label}</Text>
@@ -582,7 +583,7 @@ export default function OrderTrackingScreen({ navigation }) {
                   <View style={s.modalSection}>
                     <View style={s.modalSectionHeader}>
                       <View style={[s.modalSectionIcon, { backgroundColor: '#EFF6FF' }]}>
-                        <Icon name="construct" size={16} color="#3B82F6" />
+                        <Icon name="construct" size={scale(16)} color="#3B82F6" />
                       </View>
                       <Text style={s.modalSectionTitle}>Service Details</Text>
                     </View>
@@ -605,7 +606,7 @@ export default function OrderTrackingScreen({ navigation }) {
                       </View>
                       <View style={[s.modalInfoRow, { borderBottomWidth: 0 }]}>
                         <Text style={s.modalInfoLabel}>Amount</Text>
-                        <Text style={[s.modalInfoValue, { color: C.primary, fontWeight: '800', fontSize: 18 }]}>
+                        <Text style={[s.modalInfoValue, { color: C.primary, fontWeight: '800', fontSize: moderateScale(18) }]}>
                           {formatPrice(selectedService.totalAmount)}
                         </Text>
                       </View>
@@ -615,13 +616,13 @@ export default function OrderTrackingScreen({ navigation }) {
                     <View style={s.modalSection}>
                       <View style={s.modalSectionHeader}>
                         <View style={[s.modalSectionIcon, { backgroundColor: '#FEF2F2' }]}>
-                          <Icon name="person" size={16} color={C.primary} />
+                          <Icon name="person" size={scale(16)} color={C.primary} />
                         </View>
                         <Text style={s.modalSectionTitle}>Assigned Engineer</Text>
                       </View>
                       <View style={s.engineerCardModal}>
                         <LinearGradient colors={[C.primary, C.primaryDark]} style={s.engineerAvatarModal}>
-                          <Icon name="person" size={22} color="#fff" />
+                          <Icon name="person" size={scale(22)} color="#fff" />
                         </LinearGradient>
                         <View style={{ flex: 1 }}>
                           <Text style={s.engineerNameModal}>
@@ -629,7 +630,7 @@ export default function OrderTrackingScreen({ navigation }) {
                           </Text>
                           {selectedService.engineerAssignments[0].engineer?.phone && (
                             <View style={s.engineerPhoneRow}>
-                              <Icon name="call" size={12} color={C.ok} />
+                              <Icon name="call" size={scale(12)} color={C.ok} />
                               <Text style={s.engineerPhoneModal}>
                                 {selectedService.engineerAssignments[0].engineer.phone}
                               </Text>
@@ -642,7 +643,7 @@ export default function OrderTrackingScreen({ navigation }) {
                   <View style={s.modalSection}>
                     <View style={s.modalSectionHeader}>
                       <View style={[s.modalSectionIcon, { backgroundColor: '#ECFDF5' }]}>
-                        <Icon name="git-branch" size={16} color="#059669" />
+                        <Icon name="git-branch" size={scale(16)} color="#059669" />
                       </View>
                       <Text style={s.modalSectionTitle}>Tracking Timeline</Text>
                     </View>
@@ -671,10 +672,10 @@ export default function OrderTrackingScreen({ navigation }) {
             <View style={s.detailHeader}>
               <Text style={s.detailTitle}>Marketplace Order</Text>
               <TouchableOpacity onPress={() => setOrderDetailVisible(false)}>
-                <Icon name="close" size={24} color={C.ink} />
+                <Icon name="close" size={scale(24)} color={C.ink} />
               </TouchableOpacity>
             </View>
-            <ScrollView style={s.detailBody} contentContainerStyle={{ padding: 16, paddingBottom: 30 }} nestedScrollEnabled keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator bounces>
+            <ScrollView style={s.detailBody} contentContainerStyle={{ padding: scale(16), paddingBottom: scale(30) }} nestedScrollEnabled keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator bounces>
               {selectedOrder ? (
                 <>
                   {(() => {
@@ -682,7 +683,7 @@ export default function OrderTrackingScreen({ navigation }) {
                     return (
                       <LinearGradient colors={os.gradient} style={s.modalStatusBanner}>
                         <View style={s.modalStatusIcon}>
-                          <Icon name={os.icon} size={22} color={os.color} />
+                          <Icon name={os.icon} size={scale(22)} color={os.color} />
                         </View>
                         <View>
                           <Text style={s.modalStatusLabel}>{os.label}</Text>
@@ -694,7 +695,7 @@ export default function OrderTrackingScreen({ navigation }) {
                   <View style={s.modalSection}>
                     <View style={s.modalSectionHeader}>
                       <View style={[s.modalSectionIcon, { backgroundColor: '#F5F3FF' }]}>
-                        <Icon name="bag" size={16} color="#7C3AED" />
+                        <Icon name="bag" size={scale(16)} color="#7C3AED" />
                       </View>
                       <Text style={s.modalSectionTitle}>Order Items</Text>
                     </View>
@@ -719,7 +720,7 @@ export default function OrderTrackingScreen({ navigation }) {
                   <View style={s.modalSection}>
                     <View style={s.modalSectionHeader}>
                       <View style={[s.modalSectionIcon, { backgroundColor: '#ECFDF5' }]}>
-                        <Icon name="git-branch" size={16} color="#059669" />
+                        <Icon name="git-branch" size={scale(16)} color="#059669" />
                       </View>
                       <Text style={s.modalSectionTitle}>Delivery Timeline</Text>
                     </View>
@@ -752,10 +753,10 @@ export default function OrderTrackingScreen({ navigation }) {
                 <Text style={s.modalSubtitle}>Select a status to filter</Text>
               </View>
               <TouchableOpacity onPress={() => setStatusPickerVisible(false)} style={s.modalCloseBtn}>
-                <Icon name="close" size={20} color={C.muted} />
+                <Icon name="close" size={scale(20)} color={C.muted} />
               </TouchableOpacity>
             </View>
-            <ScrollView style={{ padding: 16 }} contentContainerStyle={{ paddingBottom: 30 }}>
+            <ScrollView style={{ padding: scale(16) }} contentContainerStyle={{ paddingBottom: scale(30) }}>
               {currentStatusOptions.map((status) => {
                 const isSelected = status.value === currentStatusFilter;
                 return (
@@ -766,14 +767,14 @@ export default function OrderTrackingScreen({ navigation }) {
                     activeOpacity={0.7}
                   >
                     <View style={s.pickerOptionLeft}>
-                      <Icon name={status.icon} size={18} color={isSelected ? C.primary : C.muted} />
+                      <Icon name={status.icon} size={scale(18)} color={isSelected ? C.primary : C.muted} />
                       <Text style={[s.pickerOptionText, isSelected && s.pickerOptionTextSelected]}>
                         {status.label}
                       </Text>
                     </View>
                     {isSelected && (
                       <View style={s.pickerCheck}>
-                        <Icon name="checkmark" size={14} color="#fff" />
+                        <Icon name="checkmark" size={scale(14)} color="#fff" />
                       </View>
                     )}
                   </TouchableOpacity>
@@ -795,10 +796,10 @@ export default function OrderTrackingScreen({ navigation }) {
                 <Text style={s.modalSubtitle}>{restaurants.length} restaurants</Text>
               </View>
               <TouchableOpacity onPress={() => setRestaurantPickerVisible(false)} style={s.modalCloseBtn}>
-                <Icon name="close" size={20} color={C.muted} />
+                <Icon name="close" size={scale(20)} color={C.muted} />
               </TouchableOpacity>
             </View>
-            <ScrollView style={{ padding: 16 }} contentContainerStyle={{ paddingBottom: 30 }}>
+            <ScrollView style={{ padding: scale(16) }} contentContainerStyle={{ paddingBottom: scale(30) }}>
               {restaurants.map((restaurant) => {
                 const isSelected = restaurant.id === currentRestaurant?.id;
                 return (
@@ -812,7 +813,7 @@ export default function OrderTrackingScreen({ navigation }) {
                       colors={isSelected ? [C.primary, C.primaryDark] : ['#FEE2E2', '#FEE2E2']}
                       style={s.restOptionIcon}
                     >
-                      <Icon name="restaurant" size={18} color={isSelected ? '#fff' : C.primary} />
+                      <Icon name="restaurant" size={scale(18)} color={isSelected ? '#fff' : C.primary} />
                     </LinearGradient>
                     <View style={{ flex: 1 }}>
                       <Text style={[s.restOptionName, isSelected && { color: C.primary }]} numberOfLines={1}>
@@ -824,7 +825,7 @@ export default function OrderTrackingScreen({ navigation }) {
                     </View>
                     {isSelected && (
                       <View style={s.restSelectedCheck}>
-                        <Icon name="checkmark" size={14} color="#fff" />
+                        <Icon name="checkmark" size={scale(14)} color="#fff" />
                       </View>
                     )}
                   </TouchableOpacity>
@@ -849,13 +850,13 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(14),
   },
   headerBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+    width: scale(38),
+    height: scale(38),
+    borderRadius: scale(12),
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -863,68 +864,68 @@ const s = StyleSheet.create({
   headerCenter: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: scale(8),
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: moderateScale(18),
     fontWeight: '800',
     color: '#fff',
   },
   headerBadge: {
     backgroundColor: 'rgba(255,255,255,0.25)',
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 12,
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(3),
+    borderRadius: scale(12),
   },
   headerBadgeText: {
-    fontSize: 11,
+    fontSize: moderateScale(11),
     fontWeight: '700',
     color: '#fff',
   },
 
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  loadingText: { marginTop: 12, fontSize: 14, color: C.muted },
+  loadingText: { marginTop: scale(12), fontSize: moderateScale(14), color: C.muted },
 
   // Restaurant Banner
   restBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    gap: scale(10),
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(10),
     backgroundColor: '#FFF5F5',
     borderBottomWidth: 1,
     borderBottomColor: '#FEE2E2',
   },
   restIconBox: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
+    width: scale(32),
+    height: scale(32),
+    borderRadius: scale(10),
     backgroundColor: '#FEE2E2',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  restName: { fontSize: 14, fontWeight: '700', color: C.ink },
-  restSub: { fontSize: 11, color: C.muted, marginTop: 1 },
+  restName: { fontSize: moderateScale(14), fontWeight: '700', color: C.ink },
+  restSub: { fontSize: moderateScale(11), color: C.muted, marginTop: 1 },
   restSwitch: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    gap: scale(4),
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(5),
     backgroundColor: '#fff',
-    borderRadius: 16,
+    borderRadius: scale(16),
     borderWidth: 1.5,
     borderColor: C.primary,
   },
-  restSwitchText: { fontSize: 12, fontWeight: '700', color: C.primary },
+  restSwitchText: { fontSize: moderateScale(12), fontWeight: '700', color: C.primary },
 
   // Tabs
   tabBar: {
     flexDirection: 'row',
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    gap: scale(10),
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(10),
     backgroundColor: C.card,
     borderBottomWidth: 1,
     borderBottomColor: C.border,
@@ -934,9 +935,9 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 12,
+    gap: scale(6),
+    paddingVertical: scale(10),
+    borderRadius: scale(12),
     backgroundColor: '#F8FAFC',
     borderWidth: 1.5,
     borderColor: C.border,
@@ -945,26 +946,26 @@ const s = StyleSheet.create({
     backgroundColor: C.primary,
     borderColor: C.primary,
   },
-  tabText: { fontSize: 13, fontWeight: '700', color: C.muted },
+  tabText: { fontSize: moderateScale(13), fontWeight: '700', color: C.muted },
   tabTextActive: { color: '#fff' },
   tabCountBadge: {
     backgroundColor: '#FEF3C7',
-    paddingHorizontal: 6,
+    paddingHorizontal: scale(6),
     paddingVertical: 1,
-    borderRadius: 8,
+    borderRadius: scale(8),
   },
   tabCountBadgeActive: {
     backgroundColor: 'rgba(255,255,255,0.3)',
   },
-  tabCountText: { fontSize: 10, fontWeight: '700', color: '#D97706' },
+  tabCountText: { fontSize: moderateScale(10), fontWeight: '700', color: '#D97706' },
   tabCountTextActive: { color: '#fff' },
 
   // Filter Bar
   filterBar: {
     flexDirection: 'row',
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    gap: scale(10),
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(10),
     backgroundColor: C.card,
     borderBottomWidth: 1,
     borderBottomColor: '#EEEFF2',
@@ -973,82 +974,82 @@ const s = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: scale(8),
     backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
+    borderRadius: scale(12),
+    paddingHorizontal: scale(12),
+    paddingVertical: scale(9),
     borderWidth: 1,
     borderColor: C.border,
   },
-  searchInput: { flex: 1, fontSize: 13, color: C.text, padding: 0 },
+  searchInput: { flex: 1, fontSize: moderateScale(13), color: C.text, padding: 0 },
   filterBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
+    gap: scale(5),
+    paddingHorizontal: scale(12),
+    paddingVertical: scale(9),
     backgroundColor: '#FFF5F5',
-    borderRadius: 12,
+    borderRadius: scale(12),
     borderWidth: 1.5,
     borderColor: '#FECACA',
   },
-  filterBtnText: { fontSize: 12, fontWeight: '700', color: C.primary, maxWidth: 70 },
+  filterBtnText: { fontSize: moderateScale(12), fontWeight: '700', color: C.primary, maxWidth: scale(70) },
 
   // List Title
   listTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 4,
+    paddingHorizontal: scale(16),
+    paddingTop: scale(12),
+    paddingBottom: scale(4),
   },
-  listTitle: { fontSize: 15, fontWeight: '700', color: C.ink },
+  listTitle: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink },
   listCount: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     fontWeight: '600',
     color: C.muted,
     backgroundColor: '#F1F5F9',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
+    paddingHorizontal: scale(8),
+    paddingVertical: scale(3),
+    borderRadius: scale(8),
   },
 
-  list: { paddingHorizontal: 16, paddingBottom: 100, flexGrow: 1 },
+  list: { paddingHorizontal: scale(16), paddingBottom: scale(100), flexGrow: 1 },
 
   // Card
   card: {
     backgroundColor: C.card,
-    borderRadius: 16,
-    marginBottom: 12,
+    borderRadius: scale(16),
+    marginBottom: scale(12),
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: C.border,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: scale(2) },
     shadowOpacity: 0.04,
-    shadowRadius: 8,
+    shadowRadius: scale(8),
     elevation: 2,
   },
-  cardAccent: { height: 3 },
-  cardBody: { padding: 14 },
+  cardAccent: { height: scale(3) },
+  cardBody: { padding: scale(14) },
   cardTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 12,
+    gap: scale(12),
+    marginBottom: scale(12),
   },
   cardIconBox: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+    width: scale(38),
+    height: scale(38),
+    borderRadius: scale(12),
     alignItems: 'center',
     justifyContent: 'center',
   },
   cardTopInfo: { flex: 1 },
-  cardTitle: { fontSize: 15, fontWeight: '700', color: C.ink },
-  cardId: { fontSize: 11, color: C.muted, marginTop: 2 },
+  cardTitle: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink },
+  cardId: { fontSize: moderateScale(11), color: C.muted, marginTop: scale(2) },
   cardBottomRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1057,94 +1058,94 @@ const s = StyleSheet.create({
   statusPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
+    gap: scale(5),
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(5),
+    borderRadius: scale(8),
   },
-  statusPillText: { fontSize: 11, fontWeight: '700' },
+  statusPillText: { fontSize: moderateScale(11), fontWeight: '700' },
   cardMetaRight: { alignItems: 'flex-end' },
-  cardDate: { fontSize: 11, color: C.muted },
-  cardPrice: { fontSize: 15, fontWeight: '800', color: C.ink, marginTop: 2 },
+  cardDate: { fontSize: moderateScale(11), color: C.muted },
+  cardPrice: { fontSize: moderateScale(15), fontWeight: '800', color: C.ink, marginTop: scale(2) },
   scheduleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    marginTop: 10,
+    gap: scale(5),
+    marginTop: scale(10),
     backgroundColor: '#EFF6FF',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(6),
+    borderRadius: scale(8),
   },
-  scheduleText: { fontSize: 12, fontWeight: '600', color: C.info },
+  scheduleText: { fontSize: moderateScale(12), fontWeight: '600', color: C.info },
 
   // Empty State
-  emptyBox: { alignItems: 'center', paddingTop: 60, paddingBottom: 40 },
+  emptyBox: { alignItems: 'center', paddingTop: scale(60), paddingBottom: scale(40) },
   emptyCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: scale(100),
+    height: scale(100),
+    borderRadius: scale(50),
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: scale(20),
   },
-  emptyTitle: { fontSize: 18, fontWeight: '800', color: C.ink, marginBottom: 6 },
-  emptySubtitle: { fontSize: 14, color: C.muted, marginBottom: 20 },
+  emptyTitle: { fontSize: moderateScale(18), fontWeight: '800', color: C.ink, marginBottom: scale(6) },
+  emptySubtitle: { fontSize: moderateScale(14), color: C.muted, marginBottom: scale(20) },
   emptyBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
+    gap: scale(6),
+    paddingHorizontal: scale(20),
+    paddingVertical: scale(10),
+    borderRadius: scale(20),
     borderWidth: 1.5,
     borderColor: C.primary,
   },
-  emptyBtnText: { fontSize: 14, fontWeight: '600', color: C.primary },
+  emptyBtnText: { fontSize: moderateScale(14), fontWeight: '600', color: C.primary },
 
   // Detail Modal - exact copy from EquipmentProfileScreen
   detailOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  detailContent: { backgroundColor: C.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, height: '85%' },
+  detailContent: { backgroundColor: C.card, borderTopLeftRadius: scale(24), borderTopRightRadius: scale(24), height: '85%' },
   detailHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    padding: 16, borderBottomWidth: 1, borderBottomColor: C.border,
+    padding: scale(16), borderBottomWidth: 1, borderBottomColor: C.border,
   },
-  detailTitle: { fontSize: 18, fontWeight: '900', color: C.ink },
+  detailTitle: { fontSize: moderateScale(18), fontWeight: '900', color: C.ink },
   detailBody: { flex: 1 },
-  detailFooter: { padding: 16, borderTopWidth: 1, borderTopColor: C.border },
+  detailFooter: { padding: scale(16), borderTopWidth: 1, borderTopColor: C.border },
   detailCloseFullBtn: {
-    paddingVertical: 14,
+    paddingVertical: scale(14),
     backgroundColor: '#F1F5F9',
-    borderRadius: 12,
+    borderRadius: scale(12),
     alignItems: 'center',
   },
-  detailCloseBtnText: { fontSize: 14, fontWeight: '700', color: C.ink },
+  detailCloseBtnText: { fontSize: moderateScale(14), fontWeight: '700', color: C.ink },
 
   // Picker modal styles
   modalDragBar: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
+    width: scale(40),
+    height: scale(4),
+    borderRadius: scale(2),
     backgroundColor: '#D1D5DB',
     alignSelf: 'center',
-    marginTop: 12,
+    marginTop: scale(12),
   },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 14,
-    paddingBottom: 14,
+    paddingHorizontal: scale(20),
+    paddingTop: scale(14),
+    paddingBottom: scale(14),
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
-  modalTitle: { fontSize: 18, fontWeight: '800', color: C.ink },
-  modalSubtitle: { fontSize: 12, color: C.muted, marginTop: 1 },
+  modalTitle: { fontSize: moderateScale(18), fontWeight: '800', color: C.ink },
+  modalSubtitle: { fontSize: moderateScale(12), color: C.muted, marginTop: 1 },
   modalCloseBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: scale(36),
+    height: scale(36),
+    borderRadius: scale(18),
     backgroundColor: '#F3F4F6',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1154,41 +1155,41 @@ const s = StyleSheet.create({
   modalStatusBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
-    padding: 16,
-    borderRadius: 16,
-    marginBottom: 16,
+    gap: scale(14),
+    padding: scale(16),
+    borderRadius: scale(16),
+    marginBottom: scale(16),
   },
   modalStatusIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
+    width: scale(48),
+    height: scale(48),
+    borderRadius: scale(16),
     backgroundColor: 'rgba(255,255,255,0.9)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  modalStatusLabel: { fontSize: 18, fontWeight: '800', color: '#fff' },
-  modalStatusDate: { fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 2 },
+  modalStatusLabel: { fontSize: moderateScale(18), fontWeight: '800', color: '#fff' },
+  modalStatusDate: { fontSize: moderateScale(12), color: 'rgba(255,255,255,0.8)', marginTop: scale(2) },
 
   // Modal Section
-  modalSection: { marginBottom: 16 },
+  modalSection: { marginBottom: scale(16) },
   modalSectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginBottom: 12,
+    gap: scale(10),
+    marginBottom: scale(12),
   },
   modalSectionIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+    width: scale(34),
+    height: scale(34),
+    borderRadius: scale(10),
     alignItems: 'center',
     justifyContent: 'center',
   },
-  modalSectionTitle: { fontSize: 15, fontWeight: '800', color: C.ink },
+  modalSectionTitle: { fontSize: moderateScale(15), fontWeight: '800', color: C.ink },
   modalInfoCard: {
     backgroundColor: '#FAFBFC',
-    borderRadius: 14,
+    borderRadius: scale(14),
     borderWidth: 1,
     borderColor: C.border,
     overflow: 'hidden',
@@ -1197,80 +1198,80 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingHorizontal: scale(14),
+    paddingVertical: scale(12),
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },
-  modalInfoLabel: { fontSize: 13, color: C.muted, fontWeight: '500' },
-  modalInfoValue: { fontSize: 14, fontWeight: '600', color: C.ink, textAlign: 'right', flex: 1, marginLeft: 12 },
+  modalInfoLabel: { fontSize: moderateScale(13), color: C.muted, fontWeight: '500' },
+  modalInfoValue: { fontSize: moderateScale(14), fontWeight: '600', color: C.ink, textAlign: 'right', flex: 1, marginLeft: scale(12) },
 
   // Engineer Card in Modal
   engineerCardModal: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
-    padding: 14,
-    borderRadius: 14,
+    gap: scale(14),
+    padding: scale(14),
+    borderRadius: scale(14),
     backgroundColor: '#FAFBFC',
     borderWidth: 1,
     borderColor: C.border,
   },
   engineerAvatarModal: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
+    width: scale(48),
+    height: scale(48),
+    borderRadius: scale(16),
     alignItems: 'center',
     justifyContent: 'center',
   },
-  engineerNameModal: { fontSize: 15, fontWeight: '700', color: C.ink },
+  engineerNameModal: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink },
   engineerPhoneRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginTop: 4,
+    gap: scale(4),
+    marginTop: scale(4),
   },
-  engineerPhoneModal: { fontSize: 13, color: C.muted },
+  engineerPhoneModal: { fontSize: moderateScale(13), color: C.muted },
 
   // Order Items
   orderItemRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingHorizontal: scale(14),
+    paddingVertical: scale(12),
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },
-  orderItemName: { fontSize: 14, fontWeight: '600', color: C.ink },
-  orderItemQty: { fontSize: 12, color: C.muted, marginTop: 2 },
-  orderItemPrice: { fontSize: 14, fontWeight: '600', color: C.text },
+  orderItemName: { fontSize: moderateScale(14), fontWeight: '600', color: C.ink },
+  orderItemQty: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(2) },
+  orderItemPrice: { fontSize: moderateScale(14), fontWeight: '600', color: C.text },
   orderTotalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 14,
+    paddingHorizontal: scale(14),
+    paddingVertical: scale(14),
     backgroundColor: '#F8FAFC',
   },
-  orderTotalLabel: { fontSize: 14, fontWeight: '700', color: C.ink },
-  orderTotalPrice: { fontSize: 18, fontWeight: '800', color: C.primary },
+  orderTotalLabel: { fontSize: moderateScale(14), fontWeight: '700', color: C.ink },
+  orderTotalPrice: { fontSize: moderateScale(18), fontWeight: '800', color: C.primary },
 
   // Timeline
-  tlWrapper: { paddingLeft: 4 },
+  tlWrapper: { paddingLeft: scale(4) },
   tlRow: { flexDirection: 'row' },
-  tlLeft: { alignItems: 'center', marginRight: 14 },
+  tlLeft: { alignItems: 'center', marginRight: scale(14) },
   tlDotDone: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: scale(24),
+    height: scale(24),
+    borderRadius: scale(12),
     alignItems: 'center',
     justifyContent: 'center',
   },
   tlDotCurrent: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: scale(24),
+    height: scale(24),
+    borderRadius: scale(12),
     borderWidth: 3,
     borderColor: C.primary,
     backgroundColor: '#fff',
@@ -1278,45 +1279,45 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   tlDotCurrentInner: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: scale(8),
+    height: scale(8),
+    borderRadius: scale(4),
     backgroundColor: C.primary,
   },
   tlDotPending: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: scale(24),
+    height: scale(24),
+    borderRadius: scale(12),
     backgroundColor: '#F3F4F6',
     borderWidth: 2,
     borderColor: C.border,
   },
   tlLine: {
-    width: 2.5,
+    width: scale(2.5),
     flex: 1,
-    minHeight: 32,
+    minHeight: scale(32),
     backgroundColor: '#E5E7EB',
-    marginVertical: 3,
-    borderRadius: 2,
+    marginVertical: scale(3),
+    borderRadius: scale(2),
   },
   tlLineDone: { backgroundColor: '#10B981' },
-  tlContent: { flex: 1, paddingBottom: 20 },
-  tlTitle: { fontSize: 13, fontWeight: '600', color: C.muted },
+  tlContent: { flex: 1, paddingBottom: scale(20) },
+  tlTitle: { fontSize: moderateScale(13), fontWeight: '600', color: C.muted },
   tlTitleActive: { color: C.ink, fontWeight: '700' },
   tlTitleCurrent: { color: C.primary },
-  tlDesc: { fontSize: 12, color: C.muted, marginTop: 2 },
+  tlDesc: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(2) },
   tlDatePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginTop: 5,
+    gap: scale(4),
+    marginTop: scale(5),
     backgroundColor: '#F8FAFC',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+    paddingHorizontal: scale(8),
+    paddingVertical: scale(3),
+    borderRadius: scale(6),
     alignSelf: 'flex-start',
   },
-  tlDate: { fontSize: 11, color: C.muted },
+  tlDate: { fontSize: moderateScale(11), color: C.muted },
 
   // Picker Sheet
   pickerOverlay: {
@@ -1326,17 +1327,17 @@ const s = StyleSheet.create({
   },
   pickerSheet: {
     backgroundColor: C.card,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    borderTopLeftRadius: scale(28),
+    borderTopRightRadius: scale(28),
     maxHeight: '70%',
   },
   pickerOption: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 14,
-    marginBottom: 8,
-    borderRadius: 14,
+    padding: scale(14),
+    marginBottom: scale(8),
+    borderRadius: scale(14),
     borderWidth: 1.5,
     borderColor: C.border,
     backgroundColor: '#FAFBFC',
@@ -1348,14 +1349,14 @@ const s = StyleSheet.create({
   pickerOptionLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: scale(10),
   },
-  pickerOptionText: { fontSize: 15, fontWeight: '600', color: C.ink },
+  pickerOptionText: { fontSize: moderateScale(15), fontWeight: '600', color: C.ink },
   pickerOptionTextSelected: { color: C.primary },
   pickerCheck: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: scale(26),
+    height: scale(26),
+    borderRadius: scale(13),
     backgroundColor: C.primary,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1365,10 +1366,10 @@ const s = StyleSheet.create({
   restOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    padding: 14,
-    marginBottom: 10,
-    borderRadius: 14,
+    gap: scale(12),
+    padding: scale(14),
+    marginBottom: scale(10),
+    borderRadius: scale(14),
     borderWidth: 2,
     borderColor: C.border,
     backgroundColor: '#FAFBFC',
@@ -1378,18 +1379,18 @@ const s = StyleSheet.create({
     backgroundColor: '#FFF5F5',
   },
   restOptionIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
+    width: scale(42),
+    height: scale(42),
+    borderRadius: scale(14),
     alignItems: 'center',
     justifyContent: 'center',
   },
-  restOptionName: { fontSize: 15, fontWeight: '700', color: C.ink },
-  restOptionAddr: { fontSize: 12, color: C.muted, marginTop: 2 },
+  restOptionName: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink },
+  restOptionAddr: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(2) },
   restSelectedCheck: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: scale(26),
+    height: scale(26),
+    borderRadius: scale(13),
     backgroundColor: C.primary,
     alignItems: 'center',
     justifyContent: 'center',

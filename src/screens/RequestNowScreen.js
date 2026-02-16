@@ -15,6 +15,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
+import { scale, moderateScale } from '../utils/responsive';
 /* ---------- MONEY & UPI HELPERS ---------- */
 const toAmount = (n) => Math.round(Number(n || 0) * 100) / 100;
 const formatAmount = (n) => Number(n || 0);
@@ -1001,8 +1002,8 @@ export default function RequestNow({ navigation, route }) {
     const options = {
       mediaType: 'photo',
       quality: 0.8,
-      maxWidth: 1024,
-      maxHeight: 1024,
+      maxWidth: scale(1024),
+      maxHeight: scale(1024),
     };
 
     launchImageLibrary(options, (response) => {
@@ -1361,25 +1362,25 @@ export default function RequestNow({ navigation, route }) {
       return (
         <View style={[st.serviceRow, isSel ? (isPart ? { backgroundColor: '#FFF7ED' } : st.serviceRowActive) : null]}>
           <TouchableOpacity onPress={() => toggleOne(pid, item.item_type, item.item_id)} style={[st.check, isSel && (isPart ? { backgroundColor: '#EA580C' } : st.checkActive)]}>
-            {isSel ? <Icon name="checkmark" size={12} color="#fff" /> : null}
+            {isSel ? <Icon name="checkmark" size={scale(12)} color="#fff" /> : null}
           </TouchableOpacity>
 
           <View style={{ flexDirection: 'row', alignItems: 'flex-start', flex: 1, flexWrap: 'wrap' }}>
-            {isPart && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#EA580C', marginRight: 6, marginTop: 5 }} />}
+            {isPart && <View style={{ width: scale(6), height: scale(6), borderRadius: scale(3), backgroundColor: '#EA580C', marginRight: scale(6), marginTop: scale(5) }} />}
             <Text style={[st.serviceTxt, { flex: 1 }, !isSel && { color: C.muted }]}>{item.name}</Text>
           </View>
 
           {q > 0 ? (
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <TouchableOpacity onPress={() => decQty(pid, getCartKey(item))} style={[st.counterBtnSm, { marginRight: 4 }]}>
-                <Icon name="remove" size={18} color={accentColor} />
+              <TouchableOpacity onPress={() => decQty(pid, getCartKey(item))} style={[st.counterBtnSm, { marginRight: scale(4) }]}>
+                <Icon name="remove" size={scale(18)} color={accentColor} />
               </TouchableOpacity>
               <Text style={[st.qtyBadge, !isSel && { color: '#94A3B8' }]}>{`×${q}`}</Text>
-              <TouchableOpacity onPress={() => incQty(pid, getCartKey(item))} style={[st.counterBtnSm, { marginLeft: 4 }]}>
-                <Icon name="add" size={18} color={accentColor} />
+              <TouchableOpacity onPress={() => incQty(pid, getCartKey(item))} style={[st.counterBtnSm, { marginLeft: scale(4) }]}>
+                <Icon name="add" size={scale(18)} color={accentColor} />
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => removeLine(pid, getCartKey(item))} style={[st.counterBtnSm, { marginLeft: 6 }]}>
-                <Icon name="trash-outline" size={18} color={C.danger} />
+              <TouchableOpacity onPress={() => removeLine(pid, getCartKey(item))} style={[st.counterBtnSm, { marginLeft: scale(6) }]}>
+                <Icon name="trash-outline" size={scale(18)} color={C.danger} />
               </TouchableOpacity>
             </View>
           ) : null}
@@ -1393,11 +1394,11 @@ export default function RequestNow({ navigation, route }) {
     const itemTotalCard = useMemo(()=>items.reduce((s,it)=>s+it.lineTotal,0),[items]);
 
     return (
-      <View style={[st.cardProd, { width: SCREEN_W - 32, marginRight: 12 }]}>
-        <ImageBackground source={{ uri: meta.heroImage }} style={st.hero} imageStyle={{ borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
+      <View style={[st.cardProd, { width: SCREEN_W - 32, marginRight: scale(12) }]}>
+        <ImageBackground source={{ uri: meta.heroImage }} style={st.hero} imageStyle={{ borderTopLeftRadius: scale(16), borderTopRightRadius: scale(16) }}>
           <View style={st.badgeRow}>
             <View style={[st.badge, { backgroundColor: '#FFEAEA' }]}>
-              <Icon name="snow-outline" size={14} color={C.danger} />
+              <Icon name="snow-outline" size={scale(14)} color={C.danger} />
               <Text style={st.badgeTxt}>{meta.category}</Text>
             </View>
             <TouchableOpacity
@@ -1418,23 +1419,23 @@ export default function RequestNow({ navigation, route }) {
               }}
               style={[st.badge, isAllSelectedInCard ? st.badgeSelectedOn : st.badgeSelectedOff]}
             >
-              <Icon name={isAllSelectedInCard ? 'checkmark-circle' : 'ellipse-outline'} size={14} color={isAllSelectedInCard ? '#fff' : C.ink} />
+              <Icon name={isAllSelectedInCard ? 'checkmark-circle' : 'ellipse-outline'} size={scale(14)} color={isAllSelectedInCard ? '#fff' : C.ink} />
               <Text style={[st.badgeTxt, isAllSelectedInCard ? { color: '#fff' } : { color: C.ink }]}>{'Selected'}</Text>
             </TouchableOpacity>
           </View>
         </ImageBackground>
 
-        <View style={{ padding: 12 }}>
+        <View style={{ padding: scale(12) }}>
           <Text style={st.prodTitle}>{meta.productTitle}</Text>
           {!!meta.subtitle && <Text style={st.prodSub}>{meta.subtitle}</Text>}
 
-          <View style={{ marginTop: 8 }}>
+          <View style={{ marginTop: scale(8) }}>
             {loadingInit && items.length === 0 ? (
-              <View style={{ paddingVertical: 12, alignItems: 'center' }}>
+              <View style={{ paddingVertical: scale(12), alignItems: 'center' }}>
                 <ActivityIndicator color={C.primary} />
               </View>
             ) : items.length === 0 ? (
-              <View style={{ paddingVertical: 4 }}>
+              <View style={{ paddingVertical: scale(4) }}>
                 <Text style={st.subtle}>No items selected.</Text>
               </View>
             ) : (
@@ -1456,23 +1457,23 @@ export default function RequestNow({ navigation, route }) {
       {/* Header */}
       <View style={st.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={st.hBtn}>
-          <Icon name="chevron-back" size={22} color={C.ink} />
+          <Icon name="chevron-back" size={scale(22)} color={C.ink} />
         </TouchableOpacity>
         <Text style={st.hTitle}>Your cart</Text>
-        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
-          <Icon name="menu" size={22} color="#1D2254" />
+        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
+          <Icon name="menu" size={scale(22)} color="#1D2254" />
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 180 }}>
         {/* HORIZONTAL CARDS */}
-        <View style={{ paddingHorizontal: 16, marginTop: 8 }}>
+        <View style={{ paddingHorizontal: scale(16), marginTop: scale(8) }}>
           {loadingInit ? (
-            <View style={{ paddingVertical: 12, alignItems: 'center' }}>
+            <View style={{ paddingVertical: scale(12), alignItems: 'center' }}>
               <ActivityIndicator color={C.primary} />
             </View>
           ) : cards.length === 0 ? (
-            <View style={{ paddingVertical: 12, alignItems: 'center' }}>
+            <View style={{ paddingVertical: scale(12), alignItems: 'center' }}>
               <Text style={st.subtle}>No services selected.</Text>
             </View>
           ) : (
@@ -1484,7 +1485,7 @@ export default function RequestNow({ navigation, route }) {
               decelerationRate="fast"
               snapToAlignment="start"
               snapToInterval={SCREEN_W - 32 + 12}
-              contentContainerStyle={{ paddingRight: 16 }}
+              contentContainerStyle={{ paddingRight: scale(16) }}
             >
               {cards.map((card) => (
                 <ProductCard key={`pc-${card.pid}`} card={card} />
@@ -1495,23 +1496,23 @@ export default function RequestNow({ navigation, route }) {
 
         {/* Equipment Services/Parts Selection */}
         {selectedEquipment && (
-          <View style={[st.card, { marginHorizontal: 16, marginTop: 16 }]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-              <Icon name="construct-outline" size={20} color={C.primary} />
-              <Text style={[st.cardTitle, { marginBottom: 0, marginLeft: 8 }]}>
+          <View style={[st.card, { marginHorizontal: scale(16), marginTop: scale(16) }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: scale(12) }}>
+              <Icon name="construct-outline" size={scale(20)} color={C.primary} />
+              <Text style={[st.cardTitle, { marginBottom: 0, marginLeft: scale(8) }]}>
                 Services for {selectedEquipment.categoryName || selectedEquipment.name}
               </Text>
             </View>
 
             {loadingEquipmentServices ? (
-              <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+              <View style={{ paddingVertical: scale(20), alignItems: 'center' }}>
                 <ActivityIndicator color={C.primary} />
-                <Text style={{ color: C.muted, marginTop: 8 }}>Loading services...</Text>
+                <Text style={{ color: C.muted, marginTop: scale(8) }}>Loading services...</Text>
               </View>
             ) : equipmentServices.length === 0 && equipmentParts.length === 0 ? (
-              <View style={{ paddingVertical: 20, alignItems: 'center' }}>
-                <Icon name="alert-circle-outline" size={32} color={C.muted} />
-                <Text style={{ color: C.muted, marginTop: 8, textAlign: 'center' }}>
+              <View style={{ paddingVertical: scale(20), alignItems: 'center' }}>
+                <Icon name="alert-circle-outline" size={scale(32)} color={C.muted} />
+                <Text style={{ color: C.muted, marginTop: scale(8), textAlign: 'center' }}>
                   No services or parts available for this equipment category.
                 </Text>
               </View>
@@ -1519,8 +1520,8 @@ export default function RequestNow({ navigation, route }) {
               <>
                 {/* Services List */}
                 {equipmentServices.length > 0 && (
-                  <View style={{ marginBottom: 16 }}>
-                    <Text style={{ fontSize: 13, fontWeight: '700', color: C.ink, marginBottom: 8 }}>
+                  <View style={{ marginBottom: scale(16) }}>
+                    <Text style={{ fontSize: moderateScale(13), fontWeight: '700', color: C.ink, marginBottom: scale(8) }}>
                       Available Services ({equipmentServices.length})
                     </Text>
                     {equipmentServices.map((service) => {
@@ -1534,37 +1535,37 @@ export default function RequestNow({ navigation, route }) {
                             flexDirection: 'row',
                             alignItems: 'center',
                             justifyContent: 'space-between',
-                            paddingVertical: 12,
-                            paddingHorizontal: 12,
+                            paddingVertical: scale(12),
+                            paddingHorizontal: scale(12),
                             backgroundColor: isInCart ? '#FEF2F2' : C.bg,
-                            borderRadius: 10,
-                            marginBottom: 8,
+                            borderRadius: scale(10),
+                            marginBottom: scale(8),
                             borderWidth: 1,
                             borderColor: isInCart ? C.primary : C.border,
                           }}
                           onPress={() => addEquipmentServiceToCart(service)}
                         >
                           <View style={{ flex: 1 }}>
-                            <Text style={{ fontSize: 14, fontWeight: '600', color: C.ink }}>{service.name || service.title}</Text>
+                            <Text style={{ fontSize: moderateScale(14), fontWeight: '600', color: C.ink }}>{service.name || service.title}</Text>
                             {service.description && (
-                              <Text style={{ fontSize: 12, color: C.muted, marginTop: 2 }} numberOfLines={2}>
+                              <Text style={{ fontSize: moderateScale(12), color: C.muted, marginTop: scale(2) }} numberOfLines={2}>
                                 {service.description}
                               </Text>
                             )}
                           </View>
-                          <View style={{ alignItems: 'flex-end', marginLeft: 12 }}>
-                            <Text style={{ fontSize: 14, fontWeight: '700', color: C.primary }}>
+                          <View style={{ alignItems: 'flex-end', marginLeft: scale(12) }}>
+                            <Text style={{ fontSize: moderateScale(14), fontWeight: '700', color: C.primary }}>
                               {Rs(service.price || 0)}
                             </Text>
                             {isInCart ? (
-                              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-                                <Icon name="checkmark-circle" size={14} color={C.ok} />
-                                <Text style={{ fontSize: 11, color: C.ok, marginLeft: 4 }}>Added</Text>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: scale(4) }}>
+                                <Icon name="checkmark-circle" size={scale(14)} color={C.ok} />
+                                <Text style={{ fontSize: moderateScale(11), color: C.ok, marginLeft: scale(4) }}>Added</Text>
                               </View>
                             ) : (
-                              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-                                <Icon name="add-circle-outline" size={14} color={C.primary} />
-                                <Text style={{ fontSize: 11, color: C.primary, marginLeft: 4 }}>Add</Text>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: scale(4) }}>
+                                <Icon name="add-circle-outline" size={scale(14)} color={C.primary} />
+                                <Text style={{ fontSize: moderateScale(11), color: C.primary, marginLeft: scale(4) }}>Add</Text>
                               </View>
                             )}
                           </View>
@@ -1577,7 +1578,7 @@ export default function RequestNow({ navigation, route }) {
                 {/* Parts List */}
                 {equipmentParts.length > 0 && (
                   <View>
-                    <Text style={{ fontSize: 13, fontWeight: '700', color: C.ink, marginBottom: 8 }}>
+                    <Text style={{ fontSize: moderateScale(13), fontWeight: '700', color: C.ink, marginBottom: scale(8) }}>
                       Available Parts ({equipmentParts.length})
                     </Text>
                     {equipmentParts.map((part) => {
@@ -1591,40 +1592,40 @@ export default function RequestNow({ navigation, route }) {
                             flexDirection: 'row',
                             alignItems: 'center',
                             justifyContent: 'space-between',
-                            paddingVertical: 12,
-                            paddingHorizontal: 12,
+                            paddingVertical: scale(12),
+                            paddingHorizontal: scale(12),
                             backgroundColor: isInCart ? '#FFF7ED' : C.bg,
-                            borderRadius: 10,
-                            marginBottom: 8,
+                            borderRadius: scale(10),
+                            marginBottom: scale(8),
                             borderWidth: 1,
                             borderColor: isInCart ? '#EA580C' : C.border,
                           }}
                           onPress={() => addEquipmentPartToCart(part)}
                         >
                           <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#EA580C', marginRight: 8 }} />
+                            <View style={{ width: scale(8), height: scale(8), borderRadius: scale(4), backgroundColor: '#EA580C', marginRight: scale(8) }} />
                             <View style={{ flex: 1 }}>
-                              <Text style={{ fontSize: 14, fontWeight: '600', color: C.ink }}>{part.name || part.title}</Text>
+                              <Text style={{ fontSize: moderateScale(14), fontWeight: '600', color: C.ink }}>{part.name || part.title}</Text>
                               {part.description && (
-                                <Text style={{ fontSize: 12, color: C.muted, marginTop: 2 }} numberOfLines={2}>
+                                <Text style={{ fontSize: moderateScale(12), color: C.muted, marginTop: scale(2) }} numberOfLines={2}>
                                   {part.description}
                                 </Text>
                               )}
                             </View>
                           </View>
-                          <View style={{ alignItems: 'flex-end', marginLeft: 12 }}>
-                            <Text style={{ fontSize: 14, fontWeight: '700', color: '#EA580C' }}>
+                          <View style={{ alignItems: 'flex-end', marginLeft: scale(12) }}>
+                            <Text style={{ fontSize: moderateScale(14), fontWeight: '700', color: '#EA580C' }}>
                               {Rs(part.price || 0)}
                             </Text>
                             {isInCart ? (
-                              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-                                <Icon name="checkmark-circle" size={14} color={C.ok} />
-                                <Text style={{ fontSize: 11, color: C.ok, marginLeft: 4 }}>Added</Text>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: scale(4) }}>
+                                <Icon name="checkmark-circle" size={scale(14)} color={C.ok} />
+                                <Text style={{ fontSize: moderateScale(11), color: C.ok, marginLeft: scale(4) }}>Added</Text>
                               </View>
                             ) : (
-                              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-                                <Icon name="add-circle-outline" size={14} color={'#EA580C'} />
-                                <Text style={{ fontSize: 11, color: '#EA580C', marginLeft: 4 }}>Add</Text>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: scale(4) }}>
+                                <Icon name="add-circle-outline" size={scale(14)} color={'#EA580C'} />
+                                <Text style={{ fontSize: moderateScale(11), color: '#EA580C', marginLeft: scale(4) }}>Add</Text>
                               </View>
                             )}
                           </View>
@@ -1639,7 +1640,7 @@ export default function RequestNow({ navigation, route }) {
         )}
 
         {/* Payment summary */}
-        <View style={[st.card, { marginHorizontal: 16 }]}>
+        <View style={[st.card, { marginHorizontal: scale(16) }]}>
           <Text style={st.cardTitle}>Payment summary</Text>
 
           <View style={st.row}>
@@ -1666,7 +1667,7 @@ export default function RequestNow({ navigation, route }) {
         </View>
 
         {/* Tip selector */}
-        <View style={[st.card, { marginHorizontal: 16 }]}>
+        <View style={[st.card, { marginHorizontal: scale(16) }]}>
           <Text style={st.cardTitle}>Add a tip to thank the Professional</Text>
           <View style={st.tipRow}>
             {[50,75,100].map(v=>{
@@ -1694,9 +1695,9 @@ export default function RequestNow({ navigation, route }) {
         </View>
 
         {/* Problem Description */}
-        <View style={[st.card, { marginHorizontal: 16 }]}>
+        <View style={[st.card, { marginHorizontal: scale(16) }]}>
           <Text style={st.cardTitle}>Describe the Problem</Text>
-          <Text style={{ fontSize: 13, color: C.muted, marginBottom: 10 }}>
+          <Text style={{ fontSize: moderateScale(13), color: C.muted, marginBottom: scale(10) }}>
             Tell us what's wrong with your equipment
           </Text>
           <TextInput
@@ -1707,11 +1708,11 @@ export default function RequestNow({ navigation, route }) {
               backgroundColor: '#F9FAFB',
               borderWidth: 1,
               borderColor: '#E5E7EB',
-              borderRadius: 10,
-              padding: 12,
-              fontSize: 15,
+              borderRadius: scale(10),
+              padding: scale(12),
+              fontSize: moderateScale(15),
               color: C.text,
-              minHeight: 80,
+              minHeight: scale(80),
               textAlignVertical: 'top',
             }}
             multiline
@@ -1720,9 +1721,9 @@ export default function RequestNow({ navigation, route }) {
         </View>
 
         {/* Address row */}
-        <View style={[st.addrCard, { marginHorizontal: 16 }]}>
+        <View style={[st.addrCard, { marginHorizontal: scale(16) }]}>
           <View style={{ flexDirection:'row', alignItems:'center', flex:1 }}>
-            <Icon name="home-outline" size={18} color={C.ink} />
+            <Icon name="home-outline" size={scale(18)} color={C.ink} />
             <Text style={st.addrTxt}>
               <Text style={{ fontWeight:'800' }}>{` ${address.label} — `}</Text>
               {address.line1 || 'Add address'}
@@ -1730,7 +1731,7 @@ export default function RequestNow({ navigation, route }) {
             </Text>
           </View>
           <TouchableOpacity onPress={() => { setAddrLabel(address.label); setAddrLine1(address.line1); setAddrModal(true); }} style={st.addrEdit}>
-            <Icon name="create-outline" size={16} color={C.ink} />
+            <Icon name="create-outline" size={scale(16)} color={C.ink} />
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -1743,7 +1744,7 @@ export default function RequestNow({ navigation, route }) {
           onPress={()=>setDateModal(true)}
           style={[st.selectBtn, !selectedItems.length && {opacity:0.6}]}
         >
-          <Icon name="calendar-outline" size={18} color="#fff" />
+          <Icon name="calendar-outline" size={scale(18)} color="#fff" />
           <Text style={st.selectTxt}>Select slot</Text>
         </TouchableOpacity>
       </View>
@@ -1757,10 +1758,10 @@ export default function RequestNow({ navigation, route }) {
             {!!savedAddresses.length && (
               <>
                 <Text style={[st.inputLbl,{marginTop:0}]}>Saved addresses</Text>
-                <View style={{marginBottom:8}}>
+                <View style={{marginBottom:scale(8)}}>
                   {savedAddresses.map((a, idx)=>(
                     <TouchableOpacity key={`saved-${idx}`} onPress={()=>selectSavedAddress(a)} style={st.savedAddrRow}>
-                      <Icon name="location-outline" size={16} color={C.ink}/>
+                      <Icon name="location-outline" size={scale(16)} color={C.ink}/>
                       <Text style={st.savedAddrTxt}><Text style={{fontWeight:'800'}}>{a.label}</Text>{` — ${a.line1}`}</Text>
                     </TouchableOpacity>
                   ))}
@@ -1776,15 +1777,15 @@ export default function RequestNow({ navigation, route }) {
               value={addrLine1}
               onChangeText={setAddrLine1}
               placeholder="Flat / Building / Street / Landmark"
-              style={[st.input,{height:80,textAlignVertical:'top',paddingTop:12}]}
+              style={[st.input,{height:scale(80),textAlignVertical:'top',paddingTop:scale(12)}]}
               multiline placeholderTextColor="#9CA3AF"
             />
 
-            <View style={{ flexDirection:'row', justifyContent:'flex-end', marginTop: 10 }}>
+            <View style={{ flexDirection:'row', justifyContent:'flex-end', marginTop: scale(10) }}>
               <TouchableOpacity onPress={()=>setAddrModal(false)} style={[st.btn,{backgroundColor:'#F1F5F9'}]}>
                 <Text style={[st.btnTxt,{color:C.ink}]}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={saveAddress} style={[st.btn,{backgroundColor:C.primary,marginLeft:8}]}>
+              <TouchableOpacity onPress={saveAddress} style={[st.btn,{backgroundColor:C.primary,marginLeft:scale(8)}]}>
                 <Text style={[st.btnTxt,{color:'#fff'}]}>Save</Text>
               </TouchableOpacity>
             </View>
@@ -1798,7 +1799,7 @@ export default function RequestNow({ navigation, route }) {
           <View style={st.sheetLarge}>
             <View style={{ flexDirection:'row', justifyContent:'space-between', alignItems:'center' }}>
               <Text style={st.sheetTitle}>Select a date</Text>
-              <TouchableOpacity onPress={()=>setDateModal(false)} style={st.closePill}><Icon name="close" size={18} color={C.ink} /></TouchableOpacity>
+              <TouchableOpacity onPress={()=>setDateModal(false)} style={st.closePill}><Icon name="close" size={scale(18)} color={C.ink} /></TouchableOpacity>
             </View>
             <Text style={st.subtle}>Next 30 days</Text>
 
@@ -1831,28 +1832,28 @@ export default function RequestNow({ navigation, route }) {
           <View style={st.sheetLarge}>
             <View style={{ flexDirection:'row', justifyContent:'space-between', alignItems:'center' }}>
               <Text style={st.sheetTitle}>Select your restaurant</Text>
-              <View style={{ flexDirection:'row', alignItems:'center', gap:8 }}>
+              <View style={{ flexDirection:'row', alignItems:'center', gap:scale(8) }}>
                 <TouchableOpacity onPress={fetchRestaurants} style={st.refreshPill}>
-                  <Icon name="refresh" size={16} color={C.ink} />
+                  <Icon name="refresh" size={scale(16)} color={C.ink} />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={()=>setRestModal(false)} style={st.closePill}>
-                  <Icon name="close" size={18} color={C.ink} />
+                  <Icon name="close" size={scale(18)} color={C.ink} />
                 </TouchableOpacity>
               </View>
             </View>
 
             {loadingR ? (
-              <View style={{ paddingVertical: 20, alignItems:'center' }}>
+              <View style={{ paddingVertical: scale(20), alignItems:'center' }}>
                 <ActivityIndicator color={C.primary} />
               </View>
             ) : restaurants.length === 0 ? (
-              <View style={{ paddingVertical: 20, alignItems:'center', paddingHorizontal: 12 }}>
+              <View style={{ paddingVertical: scale(20), alignItems:'center', paddingHorizontal: scale(12) }}>
                 <Text style={[st.subtle, { textAlign: 'center' }]}>
                   {restError || 'No restaurants found for your account.'}
                 </Text>
               </View>
             ) : (
-              <ScrollView style={{ marginTop: 8, maxHeight: 420 }}>
+              <ScrollView style={{ marginTop: scale(8), maxHeight: scale(420) }}>
                 {restaurants.map((r, idx)=>{
                   const active = restSel===r.id;
                   const disabled = !r.approved;
@@ -1872,7 +1873,7 @@ export default function RequestNow({ navigation, route }) {
                       <Text style={st.restAddr}>{r.addr}</Text>
                       {!!r.fssai && <Text style={st.restFssai}>FSSAI: {r.fssai}</Text>}
                       <View style={[st.badgeSmall,{backgroundColor:r.approved?'#E7F9EF':'#FFEDEE'}]}>
-                        <Icon name={r.approved?'shield-checkmark':'information'} size={14} color={r.approved?C.ok:C.danger}/>
+                        <Icon name={r.approved?'shield-checkmark':'information'} size={scale(14)} color={r.approved?C.ok:C.danger}/>
                         <Text style={[st.badgeSmallTxt,{color:r.approved?C.ok:C.danger}]}>{r.approved?'Approved':'Not approved'}</Text>
                       </View>
                     </TouchableOpacity>
@@ -1917,7 +1918,7 @@ export default function RequestNow({ navigation, route }) {
                   <Text style={st.sheetTitle}>Complete Payment</Text>
 
                   {/* QR section */}
-                  <View style={{ alignItems: 'center', marginVertical: 16 }}>
+                  <View style={{ alignItems: 'center', marginVertical: scale(16) }}>
                     {paymentSettings?.qrCodeImageUrl ? (
                       <Image
                         source={{ uri: paymentSettings.qrCodeImageUrl.startsWith('http')
@@ -1926,7 +1927,7 @@ export default function RequestNow({ navigation, route }) {
                         style={{
                           width: Dimensions.get('window').width * 0.5,
                           height: Dimensions.get('window').width * 0.5,
-                          borderRadius: 10,
+                          borderRadius: scale(10),
                           backgroundColor: '#fff',
                         }}
                         resizeMode="contain"
@@ -1935,35 +1936,35 @@ export default function RequestNow({ navigation, route }) {
                       <View style={{
                         width: Dimensions.get('window').width * 0.5,
                         height: Dimensions.get('window').width * 0.5,
-                        borderRadius: 10,
+                        borderRadius: scale(10),
                         backgroundColor: '#F5F7FA',
                         alignItems: 'center',
                         justifyContent: 'center',
                       }}>
-                        <Icon name="qr-code-outline" size={48} color={C.muted} />
-                        <Text style={{ marginTop: 8, color: C.muted, fontSize: 12 }}>
+                        <Icon name="qr-code-outline" size={scale(48)} color={C.muted} />
+                        <Text style={{ marginTop: scale(8), color: C.muted, fontSize: moderateScale(12) }}>
                           QR not configured
                         </Text>
                       </View>
                     )}
-                    <Text style={{ marginTop: 6, color: C.ink, fontWeight: '800' }}>
+                    <Text style={{ marginTop: scale(6), color: C.ink, fontWeight: '800' }}>
                       Amount: ₹ {payable.toFixed(2)}
                     </Text>
                     {paymentSettings?.accountHolderName && (
-                      <Text style={{ marginTop: 4, color: C.muted }}>
+                      <Text style={{ marginTop: scale(4), color: C.muted }}>
                         Pay to: {paymentSettings.accountHolderName}
                       </Text>
                     )}
-                    <Text style={{ marginTop: 12, color: C.muted, textAlign: 'center' }}>
+                    <Text style={{ marginTop: scale(12), color: C.muted, textAlign: 'center' }}>
                       Scan the QR code using your preferred UPI app
                     </Text>
                   </View>
 
                   {/* Copyable UPI ID */}
-                  <View style={{ marginVertical: 16 }}>
+                  <View style={{ marginVertical: scale(16) }}>
                     {paymentSettings ? (
                       <>
-                        <Text style={[st.inputLbl, { marginBottom: 8 }]}>
+                        <Text style={[st.inputLbl, { marginBottom: scale(8) }]}>
                           Or send payment to UPI ID:
                         </Text>
                         <View
@@ -1973,37 +1974,37 @@ export default function RequestNow({ navigation, route }) {
                             backgroundColor: '#F8FAFC',
                             borderWidth: 1,
                             borderColor: '#E5E7EB',
-                            borderRadius: 10,
-                            padding: 12,
-                            marginBottom: 8,
+                            borderRadius: scale(10),
+                            padding: scale(12),
+                            marginBottom: scale(8),
                           }}
                         >
-                          <Text style={{ flex: 1, color: C.ink, fontWeight: '600', fontSize: 16 }}>
+                          <Text style={{ flex: 1, color: C.ink, fontWeight: '600', fontSize: moderateScale(16) }}>
                             {paymentSettings.upiId}
                           </Text>
                           <TouchableOpacity
                             onPress={copyUpiId}
                             style={{
-                              paddingHorizontal: 12,
-                              paddingVertical: 6,
+                              paddingHorizontal: scale(12),
+                              paddingVertical: scale(6),
                               backgroundColor: C.primary,
-                              borderRadius: 6,
+                              borderRadius: scale(6),
                             }}
                           >
-                            <Text style={{ color: '#fff', fontWeight: '600', fontSize: 14 }}>
+                            <Text style={{ color: '#fff', fontWeight: '600', fontSize: moderateScale(14) }}>
                               Copy
                             </Text>
                           </TouchableOpacity>
                         </View>
-                        <Text style={{ fontSize: 12, color: C.muted, marginBottom: 4 }}>
+                        <Text style={{ fontSize: moderateScale(12), color: C.muted, marginBottom: scale(4) }}>
                           Account: {paymentSettings.accountHolderName}
                         </Text>
-                        <Text style={{ fontSize: 12, color: C.muted, textAlign: 'center' }}>
+                        <Text style={{ fontSize: moderateScale(12), color: C.muted, textAlign: 'center' }}>
                           Tap "Copy" and paste in your UPI app to pay ₹{payable.toFixed(2)}
                         </Text>
                       </>
                     ) : (
-                      <Text style={{ fontSize: 12, color: C.warn, textAlign: 'center' }}>
+                      <Text style={{ fontSize: moderateScale(12), color: C.warn, textAlign: 'center' }}>
                         Payment settings not configured. Please contact admin.
                       </Text>
                     )}
@@ -2015,41 +2016,41 @@ export default function RequestNow({ navigation, route }) {
                       backgroundColor: '#FFF7ED',
                       borderWidth: 1,
                       borderColor: '#FDBA74',
-                      borderRadius: 10,
-                      padding: 12,
-                      marginVertical: 8,
+                      borderRadius: scale(10),
+                      padding: scale(12),
+                      marginVertical: scale(8),
                     }}
                   >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                      <Icon name="warning-outline" size={16} color="#EA580C" />
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: scale(4) }}>
+                      <Icon name="warning-outline" size={scale(16)} color="#EA580C" />
                       <Text
                         style={{
-                          marginLeft: 6,
+                          marginLeft: scale(6),
                           color: '#EA580C',
                           fontWeight: '700',
-                          fontSize: 14,
+                          fontSize: moderateScale(14),
                         }}
                       >
                         Payment Screenshot Required
                       </Text>
                     </View>
-                    <Text style={{ fontSize: 12, color: '#EA580C', lineHeight: 16 }}>
+                    <Text style={{ fontSize: moderateScale(12), color: '#EA580C', lineHeight: moderateScale(16) }}>
                       You must upload a screenshot of your payment confirmation for the request
                       to be processed.
                     </Text>
                   </View>
 
                   {/* Screenshot upload */}
-                  <Text style={[st.inputLbl, { marginTop: 16 }]}>
+                  <Text style={[st.inputLbl, { marginTop: scale(16) }]}>
                     Upload Payment Screenshot (Required)
                   </Text>
                   {paymentScreenshot ? (
                     <View
                       style={{
-                        height: 120,
-                        borderRadius: 10,
+                        height: scale(120),
+                        borderRadius: scale(10),
                         overflow: 'hidden',
-                        marginVertical: 8,
+                        marginVertical: scale(8),
                         position: 'relative',
                       }}
                     >
@@ -2061,47 +2062,47 @@ export default function RequestNow({ navigation, route }) {
                       <TouchableOpacity
                         style={{
                           position: 'absolute',
-                          top: 8,
-                          right: 8,
+                          top: scale(8),
+                          right: scale(8),
                           backgroundColor: 'rgba(0,0,0,0.7)',
-                          borderRadius: 15,
-                          width: 30,
-                          height: 30,
+                          borderRadius: scale(15),
+                          width: scale(30),
+                          height: scale(30),
                           alignItems: 'center',
                           justifyContent: 'center',
                         }}
                         onPress={() => setPaymentScreenshot(null)}
                       >
-                        <Icon name="close" size={16} color="#fff" />
+                        <Icon name="close" size={scale(16)} color="#fff" />
                       </TouchableOpacity>
                     </View>
                   ) : (
                     <TouchableOpacity
                       style={{
-                        height: 120,
+                        height: scale(120),
                         borderWidth: 2,
                         borderColor: '#E5E7EB',
                         borderStyle: 'dashed',
-                        borderRadius: 10,
+                        borderRadius: scale(10),
                         backgroundColor: '#F9FAFB',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        marginVertical: 8,
+                        marginVertical: scale(8),
                       }}
                       onPress={pickScreenshot}
                     >
-                      <Icon name="cloud-upload-outline" size={32} color={C.muted} />
-                      <Text style={{ marginTop: 8, color: C.muted, fontWeight: '600' }}>
+                      <Icon name="cloud-upload-outline" size={scale(32)} color={C.muted} />
+                      <Text style={{ marginTop: scale(8), color: C.muted, fontWeight: '600' }}>
                         Tap to Upload Screenshot
                       </Text>
-                      <Text style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>
+                      <Text style={{ fontSize: moderateScale(12), color: C.muted, marginTop: scale(4) }}>
                         PNG, JPG up to 5MB
                       </Text>
                     </TouchableOpacity>
                   )}
 
                   {/* Notes */}
-                  <Text style={[st.inputLbl, { marginTop: 16 }]}>
+                  <Text style={[st.inputLbl, { marginTop: scale(16) }]}>
                     Additional Notes (Optional)
                   </Text>
                   <TextInput
@@ -2111,14 +2112,14 @@ export default function RequestNow({ navigation, route }) {
                     style={[
                       st.input,
                       {
-                        height: 80,
+                        height: scale(80),
                         textAlignVertical: 'top',
-                        paddingTop: 12,
+                        paddingTop: scale(12),
                         borderWidth: 1,
                         borderColor: '#E5E7EB',
-                        borderRadius: 10,
+                        borderRadius: scale(10),
                         backgroundColor: '#F9FAFB',
-                        fontSize: 15,
+                        fontSize: moderateScale(15),
                       },
                     ]
                     }
@@ -2132,7 +2133,7 @@ export default function RequestNow({ navigation, route }) {
                   style={{
                     flexDirection: 'row',
                     justifyContent: 'space-between',
-                    marginTop: 8,
+                    marginTop: scale(8),
                   }}
                 >
                   <TouchableOpacity
@@ -2140,16 +2141,16 @@ export default function RequestNow({ navigation, route }) {
                     style={{
                       backgroundColor: '#F1F5F9',
                       flex: 1,
-                      marginRight: 8,
-                      borderRadius: 10,
-                      paddingVertical: 14,
+                      marginRight: scale(8),
+                      borderRadius: scale(10),
+                      paddingVertical: scale(14),
                     }}
                   >
                     <Text
                       style={{
                         color: C.ink,
                         textAlign: 'center',
-                        fontSize: 16,
+                        fontSize: moderateScale(16),
                         fontWeight: '600',
                       }}
                     >
@@ -2164,9 +2165,9 @@ export default function RequestNow({ navigation, route }) {
                       {
                         backgroundColor: C.primary,
                         flex: 1,
-                        marginLeft: 8,
-                        borderRadius: 10,
-                        paddingVertical: 14,
+                        marginLeft: scale(8),
+                        borderRadius: scale(10),
+                        paddingVertical: scale(14),
                       },
                       (!hasScreenshot || savingReq) && { opacity: 0.6 }
                     ]}
@@ -2178,7 +2179,7 @@ export default function RequestNow({ navigation, route }) {
                         style={{
                           color: '#fff',
                           textAlign: 'center',
-                          fontSize: 16,
+                          fontSize: moderateScale(16),
                           fontWeight: '600',
                         }}
                       >
@@ -2199,7 +2200,7 @@ export default function RequestNow({ navigation, route }) {
           <View style={st.upiCopiedCard}>
             <View style={st.upiCopiedHeader}>
               <View style={st.upiCopiedIconWrap}>
-                <Icon name="copy" size={28} color="#fff"/>
+                <Icon name="copy" size={scale(28)} color="#fff"/>
               </View>
               <Text style={st.upiCopiedTitle}>UPI ID Copied</Text>
             </View>
@@ -2234,7 +2235,7 @@ export default function RequestNow({ navigation, route }) {
       <Modal visible={successModal} transparent animationType="fade" onRequestClose={()=>setSuccessModal(false)}>
         <View style={st.modalBackdropCenter}>
           <View style={st.successCard}>
-            <View style={st.successIconWrap}><Icon name="checkmark" size={36} color="#fff"/></View>
+            <View style={st.successIconWrap}><Icon name="checkmark" size={scale(36)} color="#fff"/></View>
             <Text style={st.successTitle}>Congratulations 🎉</Text>
             <Text style={st.successMsg}>
               We'll notify you when a service engineer is available on your selected date and will arrive at your restaurant.
@@ -2256,137 +2257,137 @@ export default function RequestNow({ navigation, route }) {
 
 /* ---------- STYLES ---------- */
 const st = StyleSheet.create({
-  header:{ flexDirection:'row', alignItems:'center', justifyContent:'space-between', paddingHorizontal:8, paddingTop:6, paddingBottom:8, backgroundColor:C.bg },
-  hBtn:{ width:40, height:40, alignItems:'center', justifyContent:'center' },
-  hTitle:{ color:C.ink, fontWeight:'800', fontSize:22 },
+  header:{ flexDirection:'row', alignItems:'center', justifyContent:'space-between', paddingHorizontal:scale(8), paddingTop:scale(6), paddingBottom:scale(8), backgroundColor:C.bg },
+  hBtn:{ width:scale(40), height:scale(40), alignItems:'center', justifyContent:'center' },
+  hTitle:{ color:C.ink, fontWeight:'800', fontSize:moderateScale(22) },
 
-  card:{ backgroundColor:C.card, borderRadius:16, borderWidth:1, borderColor:'#EEF2F7', padding:12, marginBottom:12 },
-  cardTitle:{ color:C.ink, fontWeight:'900', fontSize:18, marginBottom:6 },
+  card:{ backgroundColor:C.card, borderRadius:scale(16), borderWidth:1, borderColor:'#EEF2F7', padding:scale(12), marginBottom:scale(12) },
+  cardTitle:{ color:C.ink, fontWeight:'900', fontSize:moderateScale(18), marginBottom:scale(6) },
 
-  cardProd:{ borderRadius:16, overflow:'hidden', backgroundColor:C.card, borderWidth:1, borderColor:'#EEF2F7', marginBottom:14 },
-  hero:{ height:120, width:'100%' },
-  badgeRow:{ position:'absolute', left:12, right:12, top:10, flexDirection:'row', justifyContent:'space-between' },
-  badge:{ flexDirection:'row', alignItems:'center', paddingHorizontal:10, paddingVertical:6, borderRadius:999 },
-  badgeTxt:{ marginLeft:6, fontWeight:'800', color:C.ink },
+  cardProd:{ borderRadius:scale(16), overflow:'hidden', backgroundColor:C.card, borderWidth:1, borderColor:'#EEF2F7', marginBottom:scale(14) },
+  hero:{ height:scale(120), width:'100%' },
+  badgeRow:{ position:'absolute', left:scale(12), right:scale(12), top:scale(10), flexDirection:'row', justifyContent:'space-between' },
+  badge:{ flexDirection:'row', alignItems:'center', paddingHorizontal:scale(10), paddingVertical:scale(6), borderRadius:scale(999) },
+  badgeTxt:{ marginLeft:scale(6), fontWeight:'800', color:C.ink },
   badgeSelectedOn:{ backgroundColor:C.primary },
   badgeSelectedOff:{ backgroundColor:'#FFFFFF', borderWidth:1, borderColor:'#E5E7EB' },
 
-  prodTitle:{ color:C.ink, fontWeight:'900', fontSize:20, marginTop:6 },
-  prodSub:{ color:C.muted, marginTop:2 },
+  prodTitle:{ color:C.ink, fontWeight:'900', fontSize:moderateScale(20), marginTop:scale(6) },
+  prodSub:{ color:C.muted, marginTop:scale(2) },
 
-  serviceRow:{ flexDirection:'row', alignItems:'center', borderColor:'#E6E9F0', borderWidth:1, paddingVertical:10, paddingHorizontal:12, borderRadius:12, backgroundColor:'#fff', marginBottom:8 },
+  serviceRow:{ flexDirection:'row', alignItems:'center', borderColor:'#E6E9F0', borderWidth:1, paddingVertical:scale(10), paddingHorizontal:scale(12), borderRadius:scale(12), backgroundColor:'#fff', marginBottom:scale(8) },
   serviceRowActive:{ backgroundColor:'#FFF7F7' },
-  check:{ width:18, height:18, borderRadius:6, borderWidth:1, borderColor:'#CBD5E1', alignItems:'center', justifyContent:'center', marginRight:8, backgroundColor:'#fff' },
+  check:{ width:scale(18), height:scale(18), borderRadius:scale(6), borderWidth:1, borderColor:'#CBD5E1', alignItems:'center', justifyContent:'center', marginRight:scale(8), backgroundColor:'#fff' },
   checkActive:{ backgroundColor:C.primary, borderColor:C.primary },
 
   serviceTxt:{ color:C.ink, fontWeight:'800', flexShrink: 1 },
-  qtyBadge:{ marginLeft:8, color:C.muted, fontWeight:'800' },
+  qtyBadge:{ marginLeft:scale(8), color:C.muted, fontWeight:'800' },
   serviceAmt:{ color:C.ink, fontWeight:'900' },
 
-  totalLine:{ flexDirection:'row', justifyContent:'space-between', alignItems:'center', marginTop:10 },
+  totalLine:{ flexDirection:'row', justifyContent:'space-between', alignItems:'center', marginTop:scale(10) },
   equipLbl:{ color:C.muted }, equipVal:{ color:C.ink, fontWeight:'900' },
 
-  row:{ flexDirection:'row', alignItems:'center', justifyContent:'space-between', paddingVertical:6 },
+  row:{ flexDirection:'row', alignItems:'center', justifyContent:'space-between', paddingVertical:scale(6) },
   rowLbl:{ color:C.ink, fontWeight:'600' }, rowVal:{ color:C.ink, fontWeight:'700' },
-  hr:{ height:1, backgroundColor:'#E5E7EB', marginVertical:8 },
+  hr:{ height:1, backgroundColor:'#E5E7EB', marginVertical:scale(8) },
 
-  payableLbl:{ color:C.ink, fontWeight:'900', fontSize:16 },
-  payableVal:{ color:C.ink, fontWeight:'900', fontSize:16 },
+  payableLbl:{ color:C.ink, fontWeight:'900', fontSize:moderateScale(16) },
+  payableVal:{ color:C.ink, fontWeight:'900', fontSize:moderateScale(16) },
 
-  tipRow:{ flexDirection:'row', alignItems:'center', gap:10, marginTop:6 },
-  tipBtnBase:{ paddingVertical:10, paddingHorizontal:16, borderRadius:999, position:'relative' },
+  tipRow:{ flexDirection:'row', alignItems:'center', gap:scale(10), marginTop:scale(6) },
+  tipBtnBase:{ paddingVertical:scale(10), paddingHorizontal:scale(16), borderRadius:scale(999), position:'relative' },
   tipBtn:{ borderWidth:1, borderColor:'#E5E7EB', backgroundColor:'#fff' },
   tipBtnActive:{ backgroundColor:'#F6FEF8', borderColor:'#CFF7DC' },
   tipTxt:{ color:C.ink, fontWeight:'800' }, tipTxtActive:{ color:C.ok },
   tipPopularFlat:{ backgroundColor:'#F6FEF8', borderWidth:1, borderColor:'#CFF7DC' },
   tipPopularActive:{ backgroundColor:'#EFFFF5', borderColor:'#B7F0CE' },
   tipPopularTxt:{ color:C.ok },
-  tipNote:{ color:C.muted, marginTop:8 },
+  tipNote:{ color:C.muted, marginTop:scale(8) },
 
-  addrCard:{ flexDirection:'row', alignItems:'center', padding:12, borderRadius:16, backgroundColor:C.card, borderWidth:1, borderColor:'#EEF2F7' },
-  addrTxt:{ color:C.ink, marginLeft:8, flex:1 },
-  addrEdit:{ padding:8, borderRadius:8, backgroundColor:'#F1F5F9' },
+  addrCard:{ flexDirection:'row', alignItems:'center', padding:scale(12), borderRadius:scale(16), backgroundColor:C.card, borderWidth:1, borderColor:'#EEF2F7' },
+  addrTxt:{ color:C.ink, marginLeft:scale(8), flex:1 },
+  addrEdit:{ padding:scale(8), borderRadius:scale(8), backgroundColor:'#F1F5F9' },
 
-  bottomBar:{ position:'absolute', left:0, right:0, bottom:0, backgroundColor:'#fff', flexDirection:'row', alignItems:'center', justifyContent:'space-between', paddingHorizontal:16, paddingTop:12, borderTopWidth:1, borderColor:'#E5E7EB' },
+  bottomBar:{ position:'absolute', left:0, right:0, bottom:0, backgroundColor:'#fff', flexDirection:'row', alignItems:'center', justifyContent:'space-between', paddingHorizontal:scale(16), paddingTop:scale(12), borderTopWidth:1, borderColor:'#E5E7EB' },
   bottomLeft:{ color:C.ink, fontWeight:'900' },
-  selectBtn:{ backgroundColor:C.primary, borderRadius:12, paddingVertical:12, paddingHorizontal:16, flexDirection:'row', alignItems:'center' },
-  selectTxt:{ color:'#fff', fontWeight:'900', marginLeft:8 },
+  selectBtn:{ backgroundColor:C.primary, borderRadius:scale(12), paddingVertical:scale(12), paddingHorizontal:scale(16), flexDirection:'row', alignItems:'center' },
+  selectTxt:{ color:'#fff', fontWeight:'900', marginLeft:scale(8) },
 
   modalBackdrop:{ flex:1, backgroundColor:'rgba(0,0,0,0.35)', justifyContent:'flex-end' },
-  modalBackdropCenter:{ flex:1, backgroundColor:'rgba(0,0,0,0.35)', alignItems:'center', justifyContent:'center', padding:20 },
+  modalBackdropCenter:{ flex:1, backgroundColor:'rgba(0,0,0,0.35)', alignItems:'center', justifyContent:'center', padding:scale(20) },
 
-  sheet:{ backgroundColor:'#fff', borderTopLeftRadius:18, borderTopRightRadius:18, padding:16, ...Platform.select({ ios:{ shadowColor:'#000', shadowOpacity:0.2, shadowRadius:10 }, android:{ elevation:12 } }) },
-  sheetLarge:{ backgroundColor:'#fff', borderTopLeftRadius:18, borderTopRightRadius:18, padding:16, maxHeight:'80%', ...Platform.select({ ios:{ shadowColor:'#000', shadowOpacity:0.2, shadowRadius:10 }, android:{ elevation:12 } }) },
-  sheetTitle:{ color:C.ink, fontWeight:'900', fontSize:20, marginBottom:4 },
-  closePill:{ width:34, height:34, borderRadius:12, backgroundColor:'#F1F5F9', alignItems:'center', justifyContent:'center' },
-  refreshPill:{ width:34, height:34, borderRadius:12, backgroundColor:'#F1F5F9', alignItems:'center', justifyContent:'center', marginRight:8 },
+  sheet:{ backgroundColor:'#fff', borderTopLeftRadius:scale(18), borderTopRightRadius:scale(18), padding:scale(16), ...Platform.select({ ios:{ shadowColor:'#000', shadowOpacity:0.2, shadowRadius:scale(10) }, android:{ elevation:12 } }) },
+  sheetLarge:{ backgroundColor:'#fff', borderTopLeftRadius:scale(18), borderTopRightRadius:scale(18), padding:scale(16), maxHeight:'80%', ...Platform.select({ ios:{ shadowColor:'#000', shadowOpacity:0.2, shadowRadius:scale(10) }, android:{ elevation:12 } }) },
+  sheetTitle:{ color:C.ink, fontWeight:'900', fontSize:moderateScale(20), marginBottom:scale(4) },
+  closePill:{ width:scale(34), height:scale(34), borderRadius:scale(12), backgroundColor:'#F1F5F9', alignItems:'center', justifyContent:'center' },
+  refreshPill:{ width:scale(34), height:scale(34), borderRadius:scale(12), backgroundColor:'#F1F5F9', alignItems:'center', justifyContent:'center', marginRight:scale(8) },
 
-  inputLbl:{ color:C.muted, marginTop:8, marginBottom:4 },
-  input:{ borderWidth:1, borderColor:'#E5E7EB', borderRadius:12, paddingHorizontal:12, height:46, color:C.ink, backgroundColor:'#fff' },
-  btn:{ paddingHorizontal:14, paddingVertical:10, borderRadius:12 }, btnTxt:{ fontWeight:'900' },
+  inputLbl:{ color:C.muted, marginTop:scale(8), marginBottom:scale(4) },
+  input:{ borderWidth:1, borderColor:'#E5E7EB', borderRadius:scale(12), paddingHorizontal:scale(12), height:scale(46), color:C.ink, backgroundColor:'#fff' },
+  btn:{ paddingHorizontal:scale(14), paddingVertical:scale(10), borderRadius:scale(12) }, btnTxt:{ fontWeight:'900' },
 
-  savedAddrRow:{ flexDirection:'row', alignItems:'center', paddingVertical:8, paddingHorizontal:10, borderRadius:12, borderWidth:1, borderColor:'#E5E7EB', backgroundColor:'#fff', marginBottom:8 },
-  savedAddrTxt:{ color:C.ink, marginLeft:8, flex:1 },
+  savedAddrRow:{ flexDirection:'row', alignItems:'center', paddingVertical:scale(8), paddingHorizontal:scale(10), borderRadius:scale(12), borderWidth:1, borderColor:'#E5E7EB', backgroundColor:'#fff', marginBottom:scale(8) },
+  savedAddrTxt:{ color:C.ink, marginLeft:scale(8), flex:1 },
 
-  daysRow:{ flexDirection:'row', justifyContent:'space-between', marginTop:8, marginBottom:8, paddingHorizontal:6 },
-  dayLbl:{ width:34, textAlign:'center', color:C.muted, fontWeight:'700' },
+  daysRow:{ flexDirection:'row', justifyContent:'space-between', marginTop:scale(8), marginBottom:scale(8), paddingHorizontal:scale(6) },
+  dayLbl:{ width:scale(34), textAlign:'center', color:C.muted, fontWeight:'700' },
   grid:{ flexDirection:'row', flexWrap:'wrap', justifyContent:'space-between' },
-  cell:{ width:46, height:46, borderRadius:12, backgroundColor:'#F8FAFC', alignItems:'center', justifyContent:'center', marginBottom:12, borderWidth:1, borderColor:'#E5E7EB' },
+  cell:{ width:scale(46), height:scale(46), borderRadius:scale(12), backgroundColor:'#F8FAFC', alignItems:'center', justifyContent:'center', marginBottom:scale(12), borderWidth:1, borderColor:'#E5E7EB' },
   cellActive:{ backgroundColor:'#EF3A3A11', borderColor:C.primary },
   cellTxt:{ color:C.ink, fontWeight:'800' },
   cellTxtActive:{ color:C.primary },
 
-  continueBtn:{ marginTop:6, backgroundColor:C.primary, borderRadius:16, alignItems:'center', paddingVertical:14 },
+  continueBtn:{ marginTop:scale(6), backgroundColor:C.primary, borderRadius:scale(16), alignItems:'center', paddingVertical:scale(14) },
   continueTxt:{ color:'#fff', fontWeight:'900' },
 
-  restCard:{ borderWidth:1, borderColor:'#EEF2F7', padding:14, borderRadius:16, backgroundColor:'#fff', marginBottom:12 },
-  restName:{ color:C.ink, fontWeight:'900', fontSize:18 },
-  restAddr:{ color:C.muted, marginTop:2 },
-  restFssai:{ color:C.muted, marginTop:2 },
-  badgeSmall:{ flexDirection:'row', alignItems:'center', alignSelf:'flex-start', paddingHorizontal:10, paddingVertical:6, borderRadius:999, marginTop:10 },
-  badgeSmallTxt:{ marginLeft:6, fontWeight:'800' },
+  restCard:{ borderWidth:1, borderColor:'#EEF2F7', padding:scale(14), borderRadius:scale(16), backgroundColor:'#fff', marginBottom:scale(12) },
+  restName:{ color:C.ink, fontWeight:'900', fontSize:moderateScale(18) },
+  restAddr:{ color:C.muted, marginTop:scale(2) },
+  restFssai:{ color:C.muted, marginTop:scale(2) },
+  badgeSmall:{ flexDirection:'row', alignItems:'center', alignSelf:'flex-start', paddingHorizontal:scale(10), paddingVertical:scale(6), borderRadius:scale(999), marginTop:scale(10) },
+  badgeSmallTxt:{ marginLeft:scale(6), fontWeight:'800' },
 
-  successCard:{ width:'100%', maxWidth:520, backgroundColor:'#fff', borderRadius:22, paddingVertical:22, paddingHorizontal:18 },
-  successIconWrap:{ alignSelf:'center', width:86, height:86, borderRadius:18, backgroundColor:'#22C55E', alignItems:'center', justifyContent:'center', marginBottom:10 },
-  successTitle:{ textAlign:'center', color:C.ink, fontSize:22, fontWeight:'900', marginBottom:8 },
-  successMsg:{ textAlign:'center', color:C.text, lineHeight:22, marginHorizontal:6 },
-  successBtn:{ alignSelf:'center', marginTop:18, backgroundColor:C.primary, paddingVertical:12, paddingHorizontal:28, borderRadius:16 },
-  successBtnTxt:{ color:'#fff', fontWeight:'900', fontSize:16 },
+  successCard:{ width:'100%', maxWidth:scale(520), backgroundColor:'#fff', borderRadius:scale(22), paddingVertical:scale(22), paddingHorizontal:scale(18) },
+  successIconWrap:{ alignSelf:'center', width:scale(86), height:scale(86), borderRadius:scale(18), backgroundColor:'#22C55E', alignItems:'center', justifyContent:'center', marginBottom:scale(10) },
+  successTitle:{ textAlign:'center', color:C.ink, fontSize:moderateScale(22), fontWeight:'900', marginBottom:scale(8) },
+  successMsg:{ textAlign:'center', color:C.text, lineHeight:moderateScale(22), marginHorizontal:scale(6) },
+  successBtn:{ alignSelf:'center', marginTop:scale(18), backgroundColor:C.primary, paddingVertical:scale(12), paddingHorizontal:scale(28), borderRadius:scale(16) },
+  successBtnTxt:{ color:'#fff', fontWeight:'900', fontSize:moderateScale(16) },
 
   subtle: { color: '#9CA3AF' },
-  counterBtnSm:{ width:28, height:28, borderRadius:8, backgroundColor:'#FFF2F2', alignItems:'center', justifyContent:'center', borderWidth:1, borderColor:'#FEE2E2' },
+  counterBtnSm:{ width:scale(28), height:scale(28), borderRadius:scale(8), backgroundColor:'#FFF2F2', alignItems:'center', justifyContent:'center', borderWidth:1, borderColor:'#FEE2E2' },
 
   upiCopiedCard: {
     width: '90%',
-    maxWidth: 400,
+    maxWidth: scale(400),
     backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 24,
+    borderRadius: scale(20),
+    padding: scale(24),
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: scale(4),
     },
     shadowOpacity: 0.25,
-    shadowRadius: 12,
+    shadowRadius: scale(12),
     elevation: 8,
   },
   upiCopiedHeader: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: scale(20),
   },
   upiCopiedIconWrap: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: scale(60),
+    height: scale(60),
+    borderRadius: scale(30),
     backgroundColor: '#10B981',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: scale(12),
   },
   upiCopiedTitle: {
-    fontSize: 22,
+    fontSize: moderateScale(22),
     fontWeight: '800',
     color: C.ink,
     textAlign: 'center',
@@ -2395,58 +2396,58 @@ const st = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     borderWidth: 2,
     borderColor: '#E5E7EB',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    borderRadius: scale(12),
+    padding: scale(16),
+    marginBottom: scale(16),
     width: '100%',
   },
   upiIdText: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: '700',
     color: C.ink,
     textAlign: 'center',
     letterSpacing: 0.5,
   },
   upiCopiedSubtitle: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: '600',
     color: '#10B981',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: scale(8),
   },
   upiCopiedInstruction: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: C.muted,
     textAlign: 'center',
-    marginBottom: 12,
-    lineHeight: 20,
+    marginBottom: scale(12),
+    lineHeight: moderateScale(20),
   },
   amountBox: {
     backgroundColor: '#FFFBEB',
     borderWidth: 2,
     borderColor: '#F59E0B',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    marginBottom: 24,
+    borderRadius: scale(12),
+    paddingVertical: scale(12),
+    paddingHorizontal: scale(24),
+    marginBottom: scale(24),
   },
   amountText: {
-    fontSize: 20,
+    fontSize: moderateScale(20),
     fontWeight: '800',
     color: '#D97706',
     textAlign: 'center',
   },
   upiCopiedBtn: {
     backgroundColor: C.primary,
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderRadius: 12,
+    paddingVertical: scale(14),
+    paddingHorizontal: scale(32),
+    borderRadius: scale(12),
     width: '100%',
     alignItems: 'center',
   },
   upiCopiedBtnText: {
     color: '#fff',
     fontWeight: '700',
-    fontSize: 16,
+    fontSize: moderateScale(16),
   },
 });

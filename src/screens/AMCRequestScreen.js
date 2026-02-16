@@ -68,9 +68,30 @@ export default function AMCRequestScreen({ navigation }) {
   const [categories, setCategories] = useState([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
 
+  // Active AMC check
+  const [activeAMC, setActiveAMC] = useState(null);
+  const [checkingAMC, setCheckingAMC] = useState(false);
+
   useEffect(() => {
     if (selectedRestaurantId) setRestaurantId(selectedRestaurantId);
   }, [selectedRestaurantId]);
+
+  // Check if selected restaurant already has active AMC
+  useEffect(() => {
+    if (!restaurantId) {
+      setActiveAMC(null);
+      return;
+    }
+    setCheckingAMC(true);
+    setActiveAMC(null);
+    api.get(`/owner/amc-contracts?restaurantId=${restaurantId}`)
+      .then(r => {
+        const active = (r.data?.data || []).find(c => c.status === 'ACTIVE');
+        setActiveAMC(active || null);
+      })
+      .catch(() => {})
+      .finally(() => setCheckingAMC(false));
+  }, [restaurantId]);
 
   useEffect(() => {
     setCategoriesLoading(true);
@@ -101,7 +122,7 @@ export default function AMCRequestScreen({ navigation }) {
   const selectedRestaurant = restaurants?.find(r => r.id === restaurantId);
 
   const canContinue = step === 1
-    ? restaurantId && kitchenType && selectedCategories.length > 0
+    ? restaurantId && kitchenType && selectedCategories.length > 0 && !activeAMC && !checkingAMC
     : step === 2
     ? planType && visitFrequency && preferredStartDate
     : true;
@@ -144,7 +165,7 @@ export default function AMCRequestScreen({ navigation }) {
       {restaurants?.length > 1 && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Icon name="restaurant-outline" size={20} color={C.purple} />
+            <Icon name="restaurant-outline" size={scale(20)} color={C.purple} />
             <Text style={styles.sectionTitle}>Select Restaurant</Text>
           </View>
           {restaurants.map(r => (
@@ -153,31 +174,50 @@ export default function AMCRequestScreen({ navigation }) {
               style={[styles.optionCard, restaurantId === r.id && styles.optionCardActive]}
               onPress={() => setRestaurantId(r.id)}
             >
-              <Icon name={restaurantId === r.id ? 'radio-button-on' : 'radio-button-off'} size={20} color={restaurantId === r.id ? C.purple : C.muted} />
+              <Icon name={restaurantId === r.id ? 'radio-button-on' : 'radio-button-off'} size={scale(20)} color={restaurantId === r.id ? C.purple : C.muted} />
               <Text style={[styles.optionText, restaurantId === r.id && { color: C.purple, fontWeight: '700' }]}>{r.name}</Text>
             </TouchableOpacity>
           ))}
         </View>
       )}
 
+      {/* Active AMC Warning */}
+      {checkingAMC && restaurantId ? (
+        <View style={styles.amcCheckingBanner}>
+          <ActivityIndicator size="small" color={C.purple} />
+          <Text style={styles.amcCheckingText}>Checking existing AMC...</Text>
+        </View>
+      ) : null}
+      {activeAMC ? (
+        <View style={styles.amcActiveBanner}>
+          <Icon name="alert-circle" size={scale(20)} color={C.danger} />
+          <View style={{ flex: 1, marginLeft: scale(8) }}>
+            <Text style={styles.amcActiveTitle}>AMC Already Active</Text>
+            <Text style={styles.amcActiveText}>
+              Contract {activeAMC.contractNumber} is active for this restaurant. You can renew from contract details.
+            </Text>
+          </View>
+        </View>
+      ) : null}
+
       {/* Kitchen Type */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Icon name="business-outline" size={20} color={C.purple} />
+          <Icon name="business-outline" size={scale(20)} color={C.purple} />
           <Text style={styles.sectionTitle}>Kitchen Type</Text>
         </View>
         <TouchableOpacity style={styles.dropdownBtn} onPress={() => setKitchenModal(true)}>
           <Text style={kitchenType ? styles.dropdownText : styles.dropdownPlaceholder}>
             {kitchenType ? KITCHEN_TYPES.find(k => k.key === kitchenType)?.label : 'Select kitchen type'}
           </Text>
-          <Icon name="chevron-down" size={20} color={C.muted} />
+          <Icon name="chevron-down" size={scale(20)} color={C.muted} />
         </TouchableOpacity>
       </View>
 
       {/* Equipment Categories */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Icon name="cube-outline" size={20} color={C.purple} />
+          <Icon name="cube-outline" size={scale(20)} color={C.purple} />
           <Text style={styles.sectionTitle}>Equipment Categories</Text>
         </View>
         {categoriesLoading ? (
@@ -192,7 +232,7 @@ export default function AMCRequestScreen({ navigation }) {
                   style={[styles.chip, isSelected && styles.chipActive]}
                   onPress={() => toggleCategory(cat.id)}
                 >
-                  <Icon name={isSelected ? 'checkmark-circle' : 'add-circle-outline'} size={16} color={isSelected ? '#fff' : C.purple} />
+                  <Icon name={isSelected ? 'checkmark-circle' : 'add-circle-outline'} size={scale(16)} color={isSelected ? '#fff' : C.purple} />
                   <Text style={[styles.chipText, isSelected && styles.chipTextActive]}>{cat.name}</Text>
                 </TouchableOpacity>
               );
@@ -210,7 +250,7 @@ export default function AMCRequestScreen({ navigation }) {
       {/* Plan Type */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Icon name="shield-outline" size={20} color={C.purple} />
+          <Icon name="shield-outline" size={scale(20)} color={C.purple} />
           <Text style={styles.sectionTitle}>Select Plan</Text>
         </View>
         {PLAN_TYPES.map(plan => (
@@ -220,14 +260,14 @@ export default function AMCRequestScreen({ navigation }) {
             onPress={() => setPlanType(plan.key)}
           >
             <View style={[styles.planIconBox, { backgroundColor: plan.bg }]}>
-              <Icon name={plan.icon} size={24} color={plan.color} />
+              <Icon name={plan.icon} size={scale(24)} color={plan.color} />
             </View>
             <View style={styles.planInfo}>
               <Text style={styles.planLabel}>{plan.label}</Text>
               <Text style={styles.planDesc}>{plan.desc}</Text>
             </View>
             {planType === plan.key && (
-              <Icon name="checkmark-circle" size={24} color={C.purple} />
+              <Icon name="checkmark-circle" size={scale(24)} color={C.purple} />
             )}
           </TouchableOpacity>
         ))}
@@ -236,7 +276,7 @@ export default function AMCRequestScreen({ navigation }) {
       {/* Visit Frequency */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Icon name="repeat-outline" size={20} color={C.purple} />
+          <Icon name="repeat-outline" size={scale(20)} color={C.purple} />
           <Text style={styles.sectionTitle}>Visit Frequency</Text>
         </View>
         <View style={styles.freqRow}>
@@ -255,15 +295,15 @@ export default function AMCRequestScreen({ navigation }) {
       {/* Start Date */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Icon name="calendar-outline" size={20} color={C.purple} />
+          <Icon name="calendar-outline" size={scale(20)} color={C.purple} />
           <Text style={styles.sectionTitle}>Preferred Start Date</Text>
         </View>
         <TouchableOpacity style={styles.dropdownBtn} onPress={() => setDateModal(true)}>
-          <Icon name="calendar" size={20} color={C.purple} />
+          <Icon name="calendar" size={scale(20)} color={C.purple} />
           <Text style={preferredStartDate ? styles.dropdownText : styles.dropdownPlaceholder}>
             {preferredStartDate ? preferredStartDate.toDateString() : 'Tap to select date'}
           </Text>
-          <Icon name="chevron-forward" size={20} color={C.muted} />
+          <Icon name="chevron-forward" size={scale(20)} color={C.muted} />
         </TouchableOpacity>
       </View>
 
@@ -277,7 +317,7 @@ export default function AMCRequestScreen({ navigation }) {
       <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Icon name="document-text-outline" size={20} color={C.purple} />
+            <Icon name="document-text-outline" size={scale(20)} color={C.purple} />
             <Text style={styles.sectionTitle}>Review Your Request</Text>
           </View>
 
@@ -319,7 +359,7 @@ export default function AMCRequestScreen({ navigation }) {
         {/* Notes */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Icon name="create-outline" size={20} color={C.purple} />
+            <Icon name="create-outline" size={scale(20)} color={C.purple} />
             <Text style={styles.sectionTitle}>Notes (Optional)</Text>
           </View>
           <TextInput
@@ -346,11 +386,11 @@ export default function AMCRequestScreen({ navigation }) {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => step > 1 ? setStep(step - 1) : navigation.goBack()} style={styles.headerBackBtn}>
-          <Icon name="arrow-back" size={22} color={C.ink} />
+          <Icon name="arrow-back" size={scale(22)} color={C.ink} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>New AMC Request</Text>
-        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
-          <Icon name="menu" size={22} color={C.ink} />
+        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
+          <Icon name="menu" size={scale(22)} color={C.ink} />
         </TouchableOpacity>
       </View>
 
@@ -363,7 +403,7 @@ export default function AMCRequestScreen({ navigation }) {
             <View key={s} style={styles.progressItem}>
               <View style={[styles.progressDot, isActive && styles.progressDotActive, isCompleted && styles.progressDotCompleted]}>
                 {isCompleted ? (
-                  <Icon name="checkmark" size={14} color="#fff" />
+                  <Icon name="checkmark" size={scale(14)} color="#fff" />
                 ) : (
                   <Text style={[styles.progressNum, (isActive || isCompleted) && styles.progressNumActive]}>{s}</Text>
                 )}
@@ -387,11 +427,11 @@ export default function AMCRequestScreen({ navigation }) {
       {step === 3 && renderStep3()}
 
       {/* Footer */}
-      <View style={[styles.footer, { bottom: 100 + Math.max(insets.bottom, 10) + 20 }]}>
+      <View style={[styles.footer, { bottom: scale(100) + Math.max(insets.bottom, scale(10)) + scale(20) }]}>
         <View style={styles.footerContent}>
           {step > 1 && (
             <TouchableOpacity style={styles.footerBackBtn} onPress={() => setStep(step - 1)}>
-              <Icon name="arrow-back" size={20} color={C.ink} />
+              <Icon name="arrow-back" size={scale(20)} color={C.ink} />
             </TouchableOpacity>
           )}
           <TouchableOpacity
@@ -404,7 +444,7 @@ export default function AMCRequestScreen({ navigation }) {
             ) : (
               <>
                 <Text style={styles.continueBtnText}>{step === 3 ? 'Submit Request' : 'Continue'}</Text>
-                <Icon name={step === 3 ? 'checkmark-circle' : 'arrow-forward'} size={18} color="#fff" />
+                <Icon name={step === 3 ? 'checkmark-circle' : 'arrow-forward'} size={scale(18)} color="#fff" />
               </>
             )}
           </TouchableOpacity>
@@ -418,7 +458,7 @@ export default function AMCRequestScreen({ navigation }) {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Kitchen Type</Text>
               <TouchableOpacity onPress={() => setKitchenModal(false)} style={styles.modalCloseBtn}>
-                <Icon name="close" size={22} color={C.ink} />
+                <Icon name="close" size={scale(22)} color={C.ink} />
               </TouchableOpacity>
             </View>
             {KITCHEN_TYPES.map(kt => (
@@ -427,7 +467,7 @@ export default function AMCRequestScreen({ navigation }) {
                 style={[styles.modalOption, kitchenType === kt.key && styles.modalOptionActive]}
                 onPress={() => { setKitchenType(kt.key); setKitchenModal(false); }}
               >
-                <Icon name={kitchenType === kt.key ? 'radio-button-on' : 'radio-button-off'} size={20} color={kitchenType === kt.key ? C.purple : C.muted} />
+                <Icon name={kitchenType === kt.key ? 'radio-button-on' : 'radio-button-off'} size={scale(20)} color={kitchenType === kt.key ? C.purple : C.muted} />
                 <Text style={[styles.modalOptionText, kitchenType === kt.key && { color: C.purple }]}>{kt.label}</Text>
               </TouchableOpacity>
             ))}
@@ -442,7 +482,7 @@ export default function AMCRequestScreen({ navigation }) {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Start Date</Text>
               <TouchableOpacity onPress={() => setDateModal(false)} style={styles.modalCloseBtn}>
-                <Icon name="close" size={22} color={C.ink} />
+                <Icon name="close" size={scale(22)} color={C.ink} />
               </TouchableOpacity>
             </View>
             <View style={styles.calendarHeader}>
@@ -490,6 +530,28 @@ export default function AMCRequestScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
+
+  // Active AMC Warning
+  amcCheckingBanner: {
+    flexDirection: 'row', alignItems: 'center', padding: scale(12),
+    marginHorizontal: scale(16), marginTop: scale(8),
+    backgroundColor: '#F3F4F6', borderRadius: scale(10),
+  },
+  amcCheckingText: {
+    fontSize: moderateScale(13), color: C.muted, marginLeft: scale(8),
+  },
+  amcActiveBanner: {
+    flexDirection: 'row', alignItems: 'flex-start', padding: scale(12),
+    marginHorizontal: scale(16), marginTop: scale(8),
+    backgroundColor: '#FEF2F2', borderRadius: scale(10),
+    borderWidth: 1, borderColor: '#FECACA',
+  },
+  amcActiveTitle: {
+    fontSize: moderateScale(14), fontWeight: '700', color: C.danger,
+  },
+  amcActiveText: {
+    fontSize: moderateScale(12), color: '#991B1B', marginTop: scale(2), lineHeight: moderateScale(17),
+  },
 
   // Header
   header: {

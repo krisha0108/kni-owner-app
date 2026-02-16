@@ -11,6 +11,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { api, IMAGE_BASE_URL } from '../api/client';
 
+import { scale, moderateScale } from '../utils/responsive';
 const toStorageUrl = (u) => {
   if (!u) return '';
   const s = String(u).trim();
@@ -171,18 +172,18 @@ export default function SupportTicketDetail({ navigation, route }) {
       <LinearGradient colors={[C.primary, C.primaryDark]} style={st.headerGrad}>
         <View style={st.headerLeft}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={st.hBtn}>
-            <Icon name="chevron-back" size={20} color="#fff" />
+            <Icon name="chevron-back" size={scale(20)} color="#fff" />
           </TouchableOpacity>
           <Text style={st.hTitle} numberOfLines={1}>Ticket</Text>
         </View>
-        <View style={{ flexDirection: 'row', gap: 8 }}>
+        <View style={{ flexDirection: 'row', gap: scale(8) }}>
           {canDelete && (
             <TouchableOpacity onPress={deleteTicket} style={[st.hBtn, { backgroundColor: 'rgba(255,100,100,0.3)' }]}>
-              <Icon name="trash-outline" size={18} color="#fff" />
+              <Icon name="trash-outline" size={scale(18)} color="#fff" />
             </TouchableOpacity>
           )}
           <TouchableOpacity onPress={callSupport} style={st.hBtn}>
-            <Icon name="call-outline" size={18} color="#fff" />
+            <Icon name="call-outline" size={scale(18)} color="#fff" />
           </TouchableOpacity>
         </View>
       </LinearGradient>
@@ -194,7 +195,7 @@ export default function SupportTicketDetail({ navigation, route }) {
         showsVerticalScrollIndicator={false}
       >
         {loading ? (
-          <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
+          <View style={{ paddingHorizontal: scale(16), paddingTop: scale(12) }}>
             <Animated.View style={[st.skelHero, { opacity: pulse }]} />
             <Animated.View style={[st.skelLine, { opacity: pulse, width: '70%' }]} />
             <Animated.View style={[st.skelCard, { opacity: pulse }]} />
@@ -206,40 +207,40 @@ export default function SupportTicketDetail({ navigation, route }) {
               <LinearGradient colors={M.gradient} style={st.cardAccent} />
               <View style={st.cardInner}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <View style={{ flex: 1, paddingRight: 12 }}>
+                  <View style={{ flex: 1, paddingRight: scale(12) }}>
                     <Text style={st.title}>{ticket?.title || 'Support ticket'}</Text>
                     <View style={st.metaRow}>
                       <View style={st.metaItem}>
-                        <Icon name="finger-print-outline" size={12} color={C.muted} />
+                        <Icon name="finger-print-outline" size={scale(12)} color={C.muted} />
                         <Text style={st.metaText}>#{ticket?.id}</Text>
                       </View>
                       <View style={st.metaItem}>
-                        <Icon name="calendar-outline" size={12} color={C.muted} />
+                        <Icon name="calendar-outline" size={scale(12)} color={C.muted} />
                         <Text style={st.metaText}>{fmt(ticket?.created)}</Text>
                       </View>
                     </View>
                     <View style={st.metaRow}>
                       <View style={st.metaItem}>
-                        <Icon name="folder-outline" size={12} color={C.muted} />
+                        <Icon name="folder-outline" size={scale(12)} color={C.muted} />
                         <Text style={st.metaText}>{ticket?.category}</Text>
                       </View>
                       {ticket?.equipment && ticket.equipment !== '-' && (
                         <View style={st.metaItem}>
-                          <Icon name="hardware-chip-outline" size={12} color={C.muted} />
+                          <Icon name="hardware-chip-outline" size={scale(12)} color={C.muted} />
                           <Text style={st.metaText}>{ticket.equipment}</Text>
                         </View>
                       )}
                     </View>
                   </View>
                   <LinearGradient colors={M.gradient} style={st.badge}>
-                    <Icon name={M.icon} size={13} color="#fff" />
+                    <Icon name={M.icon} size={scale(13)} color="#fff" />
                     <Text style={st.badgeTxt}>{M.label}</Text>
                   </LinearGradient>
                 </View>
 
                 {/* Image strip */}
                 {attachmentsTop.length > 0 && (
-                  <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+                  <View style={{ flexDirection: 'row', gap: scale(8), marginTop: scale(12) }}>
                     {attachmentsTop.map((uri, i) => (
                       <TouchableOpacity key={uri + i} onPress={() => setViewer(uri)} style={st.thumb}>
                         <Image source={{ uri }} style={{ width: '100%', height: '100%' }} />
@@ -255,7 +256,7 @@ export default function SupportTicketDetail({ navigation, route }) {
               <View style={st.infoBanner}>
                 <LinearGradient colors={['#FFF7ED', '#FFFBEB']} style={st.infoBannerInner}>
                   <View style={st.infoBannerIcon}>
-                    <Icon name="time-outline" size={14} color={C.warn} />
+                    <Icon name="time-outline" size={scale(14)} color={C.warn} />
                   </View>
                   <Text style={st.infoText}>
                     {ticket?.status === 'seen' && !adminHasSentMessage
@@ -270,7 +271,7 @@ export default function SupportTicketDetail({ navigation, route }) {
               <View style={st.infoBanner}>
                 <LinearGradient colors={['#ECFDF5', '#F0FDF4']} style={st.infoBannerInner}>
                   <View style={[st.infoBannerIcon, { backgroundColor: '#D1FAE5' }]}>
-                    <Icon name="checkmark-done-outline" size={14} color={C.ok} />
+                    <Icon name="checkmark-done-outline" size={scale(14)} color={C.ok} />
                   </View>
                   <Text style={st.infoText}>This ticket is closed. You can view history below.</Text>
                 </LinearGradient>
@@ -279,17 +280,17 @@ export default function SupportTicketDetail({ navigation, route }) {
 
             {/* Conversation */}
             <View style={st.sectionTitleRow}>
-              <Icon name="chatbubbles-outline" size={16} color={C.ink} />
+              <Icon name="chatbubbles-outline" size={scale(16)} color={C.ink} />
               <Text style={st.sectionTitle}>Conversation</Text>
               <View style={st.threadCountBadge}>
                 <Text style={st.threadCountText}>{thread.length}</Text>
               </View>
               <View style={st.sectionLine} />
             </View>
-            <View style={{ paddingHorizontal: 16 }}>
+            <View style={{ paddingHorizontal: scale(16) }}>
               {thread.length === 0 ? (
                 <View style={st.noMsgBox}>
-                  <Icon name="chatbox-outline" size={28} color={C.muted} />
+                  <Icon name="chatbox-outline" size={scale(28)} color={C.muted} />
                   <Text style={st.noMsgText}>No messages yet</Text>
                 </View>
               ) : (
@@ -304,10 +305,10 @@ export default function SupportTicketDetail({ navigation, route }) {
       <View style={[st.composerWrap, { paddingBottom: Math.max(insets.bottom, 10) }]}>
         <View style={[st.composerCard, (!canChat || closed) && { opacity: 0.55 }]}>
           <TouchableOpacity onPress={pickPhotos} disabled={!canChat || closed} style={st.attachBtn} activeOpacity={0.8}>
-            <Icon name="images-outline" size={18} color={C.primary} />
+            <Icon name="images-outline" size={scale(18)} color={C.primary} />
           </TouchableOpacity>
 
-          <View style={{ flex: 1, paddingRight: 48 }}>
+          <View style={{ flex: 1, paddingRight: scale(48) }}>
             <TextInput
               placeholder={canChat ? "Write an update..." : closed ? "Ticket closed" :
                 ticket?.status === 'seen' && !adminHasSentMessage ? "Wait for admin's first message" : "Locked until work starts"}
@@ -319,12 +320,12 @@ export default function SupportTicketDetail({ navigation, route }) {
               multiline
             />
             {draftPhotos.length > 0 && (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingTop: 8 }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingTop: scale(8) }}>
                 {draftPhotos.map(p => (
                   <View key={p.uri} style={st.draftBox}>
                     <Image source={{ uri: p.uri }} style={st.draftImg} />
                     <TouchableOpacity onPress={() => removeDraft(p.uri)} style={st.draftDel}>
-                      <Icon name="close" size={12} color="#fff" />
+                      <Icon name="close" size={scale(12)} color="#fff" />
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -336,13 +337,13 @@ export default function SupportTicketDetail({ navigation, route }) {
             onPress={sendUpdate}
             disabled={!canChat || closed || (!text.trim() && draftPhotos.length === 0)}
             activeOpacity={0.9}
-            style={{ position: 'absolute', right: 10, bottom: 10 }}
+            style={{ position: 'absolute', right: scale(10), bottom: scale(10) }}
           >
             <LinearGradient
               colors={(!canChat || closed || (!text.trim() && draftPhotos.length === 0)) ? ['#E2E8F0', '#E2E8F0'] : [C.primary, C.primaryDark]}
               style={st.fabSend}
             >
-              <Icon name="paper-plane" size={16} color="#fff" />
+              <Icon name="paper-plane" size={scale(16)} color="#fff" />
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -352,14 +353,14 @@ export default function SupportTicketDetail({ navigation, route }) {
       <Modal visible={askDelete} transparent animationType="fade" onRequestClose={() => setAskDelete(false)}>
         <View style={st.overlay}>
           <View style={st.sheet}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: scale(6) }}>
               <LinearGradient colors={['#F87171', '#DC2626']} style={st.sheetIcon}>
-                <Icon name="trash" size={16} color="#fff" />
+                <Icon name="trash" size={scale(16)} color="#fff" />
               </LinearGradient>
               <Text style={st.sheetTitle}>Delete ticket?</Text>
             </View>
             <Text style={st.sheetSub}>Only pending tickets can be deleted. This action cannot be undone.</Text>
-            <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+            <View style={{ flexDirection: 'row', gap: scale(10), marginTop: scale(12) }}>
               <TouchableOpacity onPress={() => setAskDelete(false)} style={[st.outBtn, { flex: 1 }]}>
                 <Text style={st.outTxt}>No, keep</Text>
               </TouchableOpacity>
@@ -377,9 +378,9 @@ export default function SupportTicketDetail({ navigation, route }) {
       <Modal visible={!!viewer} transparent animationType="fade" onRequestClose={() => setViewer(null)}>
         <View style={st.viewer}>
           <TouchableOpacity onPress={() => setViewer(null)} style={st.viewerClose}>
-            <Icon name="close" size={20} color="#fff" />
+            <Icon name="close" size={scale(20)} color="#fff" />
           </TouchableOpacity>
-          <Image source={{ uri: viewer }} style={{ width: W * 0.92, height: W * 1.1, borderRadius: 16 }} resizeMode="contain" />
+          <Image source={{ uri: viewer }} style={{ width: W * 0.92, height: W * 1.1, borderRadius: scale(16) }} resizeMode="contain" />
         </View>
       </Modal>
     </SafeAreaView>
@@ -393,7 +394,7 @@ function Message({ m, onImage }) {
     return (
       <View style={st.sysRow}>
         <LinearGradient colors={[meta.gradient[0] + '20', meta.gradient[1] + '15']} style={st.sysBadge}>
-          <Icon name={meta.icon} size={12} color={meta.gradient[1]} />
+          <Icon name={meta.icon} size={scale(12)} color={meta.gradient[1]} />
           <Text style={[st.sysTxt, { color: meta.gradient[1] }]}>{STATUS[m.status]?.label || 'Updated'}</Text>
         </LinearGradient>
         {!!m.text && <Text style={st.sysNote}>{m.text}</Text>}
@@ -417,7 +418,7 @@ function Message({ m, onImage }) {
         <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.bubble, st.bubbleOwner]}>
           {!!m.text && <Text style={[st.msgText, { color: '#fff' }]}>{m.text}</Text>}
           {!!m.photos?.length && (
-            <View style={{ flexDirection: 'row', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+            <View style={{ flexDirection: 'row', gap: scale(6), marginTop: scale(6), flexWrap: 'wrap' }}>
               {m.photos.map((uri, i) => (
                 <TouchableOpacity key={uri + i} onPress={() => onImage(uri)} style={st.msgImgBox}>
                   <Image source={{ uri }} style={st.msgImg} />
@@ -431,7 +432,7 @@ function Message({ m, onImage }) {
         <View style={[st.bubble, st.bubbleSupport]}>
           {!!m.text && <Text style={st.msgText}>{m.text}</Text>}
           {!!m.photos?.length && (
-            <View style={{ flexDirection: 'row', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+            <View style={{ flexDirection: 'row', gap: scale(6), marginTop: scale(6), flexWrap: 'wrap' }}>
               {m.photos.map((uri, i) => (
                 <TouchableOpacity key={uri + i} onPress={() => onImage(uri)} style={st.msgImgBox}>
                   <Image source={{ uri }} style={st.msgImg} />
@@ -444,7 +445,7 @@ function Message({ m, onImage }) {
       )}
       {isOwner && (
         <View style={st.avatarSmOwner}>
-          <Icon name="person" size={12} color="#fff" />
+          <Icon name="person" size={scale(12)} color="#fff" />
         </View>
       )}
     </View>
@@ -456,157 +457,157 @@ const st = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(10),
   },
-  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: scale(10) },
   hBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+    width: scale(38),
+    height: scale(38),
+    borderRadius: scale(12),
     backgroundColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  hTitle: { color: '#fff', fontWeight: '900', fontSize: 22 },
+  hTitle: { color: '#fff', fontWeight: '900', fontSize: moderateScale(22) },
 
-  skelHero: { height: 120, backgroundColor: '#E9EEF5', borderRadius: R, marginBottom: 10 },
-  skelLine: { height: 14, backgroundColor: '#E9EEF5', borderRadius: 8, marginBottom: 10 },
-  skelCard: { height: 120, backgroundColor: '#E9EEF5', borderRadius: R },
+  skelHero: { height: scale(120), backgroundColor: '#E9EEF5', borderRadius: R, marginBottom: scale(10) },
+  skelLine: { height: scale(14), backgroundColor: '#E9EEF5', borderRadius: scale(8), marginBottom: scale(10) },
+  skelCard: { height: scale(120), backgroundColor: '#E9EEF5', borderRadius: R },
 
   card: {
     backgroundColor: C.card,
     borderRadius: R,
     borderWidth: 1,
     borderColor: '#EEF2F7',
-    marginHorizontal: 16,
-    marginTop: 12,
+    marginHorizontal: scale(16),
+    marginTop: scale(12),
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
+    shadowOffset: { width: 0, height: scale(3) },
     shadowOpacity: 0.06,
-    shadowRadius: 10,
+    shadowRadius: scale(10),
     elevation: 3,
   },
-  cardAccent: { height: 4 },
-  cardInner: { padding: 14 },
-  title: { color: C.text, fontWeight: '900', fontSize: 18 },
-  metaRow: { flexDirection: 'row', gap: 12, marginTop: 6, flexWrap: 'wrap' },
-  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  metaText: { color: C.muted, fontSize: 12, fontWeight: '500' },
-  badge: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 },
-  badgeTxt: { fontWeight: '800', fontSize: 11, color: '#fff' },
+  cardAccent: { height: scale(4) },
+  cardInner: { padding: scale(14) },
+  title: { color: C.text, fontWeight: '900', fontSize: moderateScale(18) },
+  metaRow: { flexDirection: 'row', gap: scale(12), marginTop: scale(6), flexWrap: 'wrap' },
+  metaItem: { flexDirection: 'row', alignItems: 'center', gap: scale(4) },
+  metaText: { color: C.muted, fontSize: moderateScale(12), fontWeight: '500' },
+  badge: { flexDirection: 'row', alignItems: 'center', gap: scale(5), paddingHorizontal: scale(10), paddingVertical: scale(6), borderRadius: scale(999) },
+  badgeTxt: { fontWeight: '800', fontSize: moderateScale(11), color: '#fff' },
 
-  thumb: { width: 64, height: 64, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#EEF2F7' },
+  thumb: { width: scale(64), height: scale(64), borderRadius: scale(12), overflow: 'hidden', borderWidth: 1, borderColor: '#EEF2F7' },
 
-  infoBanner: { marginHorizontal: 16, marginTop: 10 },
+  infoBanner: { marginHorizontal: scale(16), marginTop: scale(10) },
   infoBannerInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    borderRadius: 14,
-    gap: 10,
+    padding: scale(12),
+    borderRadius: scale(14),
+    gap: scale(10),
     borderWidth: 1,
     borderColor: '#FED7AA',
   },
   infoBannerIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
+    width: scale(28),
+    height: scale(28),
+    borderRadius: scale(8),
     backgroundColor: '#FEF3C7',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  infoText: { flex: 1, color: C.text, fontSize: 13, lineHeight: 18 },
+  infoText: { flex: 1, color: C.text, fontSize: moderateScale(13), lineHeight: moderateScale(18) },
 
   sectionTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    marginTop: 16,
-    marginBottom: 10,
-    gap: 8,
+    paddingHorizontal: scale(16),
+    marginTop: scale(16),
+    marginBottom: scale(10),
+    gap: scale(8),
   },
-  sectionTitle: { color: C.ink, fontWeight: '900', fontSize: 16 },
+  sectionTitle: { color: C.ink, fontWeight: '900', fontSize: moderateScale(16) },
   threadCountBadge: {
     backgroundColor: '#FEF2F2',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
+    paddingHorizontal: scale(8),
+    paddingVertical: scale(2),
+    borderRadius: scale(10),
   },
-  threadCountText: { fontSize: 11, fontWeight: '800', color: C.primary },
+  threadCountText: { fontSize: moderateScale(11), fontWeight: '800', color: C.primary },
   sectionLine: { flex: 1, height: 1, backgroundColor: '#E5E7EB' },
 
-  noMsgBox: { alignItems: 'center', paddingVertical: 30, gap: 8 },
-  noMsgText: { color: C.muted, fontSize: 13 },
+  noMsgBox: { alignItems: 'center', paddingVertical: scale(30), gap: scale(8) },
+  noMsgText: { color: C.muted, fontSize: moderateScale(13) },
 
   // Conversation
-  msgRow: { flexDirection: 'row', alignItems: 'flex-end', marginVertical: 6 },
-  avatarSm: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#E5E7EB', alignItems: 'center', justifyContent: 'center', marginHorizontal: 6 },
-  avatarImg: { width: 24, height: 24, borderRadius: 12 },
-  avatarSmOwner: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#FCA5A5', alignItems: 'center', justifyContent: 'center', marginHorizontal: 6 },
+  msgRow: { flexDirection: 'row', alignItems: 'flex-end', marginVertical: scale(6) },
+  avatarSm: { width: scale(24), height: scale(24), borderRadius: scale(12), backgroundColor: '#E5E7EB', alignItems: 'center', justifyContent: 'center', marginHorizontal: scale(6) },
+  avatarImg: { width: scale(24), height: scale(24), borderRadius: scale(12) },
+  avatarSmOwner: { width: scale(24), height: scale(24), borderRadius: scale(12), backgroundColor: '#FCA5A5', alignItems: 'center', justifyContent: 'center', marginHorizontal: scale(6) },
 
-  bubble: { maxWidth: W * 0.76, borderRadius: 16, padding: 12 },
-  bubbleOwner: { borderTopRightRadius: 6 },
-  bubbleSupport: { backgroundColor: C.card, borderWidth: 1, borderColor: '#EEF2F7', borderTopLeftRadius: 6 },
-  msgText: { color: C.text, fontSize: 14, lineHeight: 20 },
-  msgTime: { marginTop: 6, fontSize: 11, color: '#94A3B8' },
-  msgImgBox: { width: 96, height: 96, borderRadius: 10, overflow: 'hidden', borderWidth: 1, borderColor: '#E5E7EB' },
+  bubble: { maxWidth: W * 0.76, borderRadius: scale(16), padding: scale(12) },
+  bubbleOwner: { borderTopRightRadius: scale(6) },
+  bubbleSupport: { backgroundColor: C.card, borderWidth: 1, borderColor: '#EEF2F7', borderTopLeftRadius: scale(6) },
+  msgText: { color: C.text, fontSize: moderateScale(14), lineHeight: moderateScale(20) },
+  msgTime: { marginTop: scale(6), fontSize: moderateScale(11), color: '#94A3B8' },
+  msgImgBox: { width: scale(96), height: scale(96), borderRadius: scale(10), overflow: 'hidden', borderWidth: 1, borderColor: '#E5E7EB' },
   msgImg: { width: '100%', height: '100%' },
 
-  sysRow: { alignItems: 'center', marginVertical: 10, paddingHorizontal: 16 },
-  sysBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999 },
-  sysTxt: { fontWeight: '800', fontSize: 12 },
-  sysNote: { color: C.muted, marginTop: 6, textAlign: 'center' },
-  sysTime: { color: '#94A3B8', fontSize: 11, marginTop: 6 },
+  sysRow: { alignItems: 'center', marginVertical: scale(10), paddingHorizontal: scale(16) },
+  sysBadge: { flexDirection: 'row', alignItems: 'center', gap: scale(6), paddingHorizontal: scale(12), paddingVertical: scale(7), borderRadius: scale(999) },
+  sysTxt: { fontWeight: '800', fontSize: moderateScale(12) },
+  sysNote: { color: C.muted, marginTop: scale(6), textAlign: 'center' },
+  sysTime: { color: '#94A3B8', fontSize: moderateScale(11), marginTop: scale(6) },
 
   // Composer
   composerWrap: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
     backgroundColor: C.card,
     borderTopWidth: 1, borderColor: '#EEF2F7',
-    paddingHorizontal: 12, paddingTop: 8,
+    paddingHorizontal: scale(12), paddingTop: scale(8),
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -3 },
+    shadowOffset: { width: 0, height: scale(-3) },
     shadowOpacity: 0.05,
-    shadowRadius: 8,
+    shadowRadius: scale(8),
     elevation: 5,
   },
   composerCard: {
-    flexDirection: 'row', alignItems: 'flex-end', padding: 10,
-    backgroundColor: C.card, borderRadius: 18,
+    flexDirection: 'row', alignItems: 'flex-end', padding: scale(10),
+    backgroundColor: C.card, borderRadius: scale(18),
     borderWidth: 1, borderColor: '#EEF2F7',
   },
   attachBtn: {
-    width: 38, height: 38, borderRadius: 12,
+    width: scale(38), height: scale(38), borderRadius: scale(12),
     borderWidth: 1, borderColor: '#FECACA',
     backgroundColor: '#FEF2F2',
-    alignItems: 'center', justifyContent: 'center', marginRight: 8,
+    alignItems: 'center', justifyContent: 'center', marginRight: scale(8),
   },
   composerInput: {
-    color: C.text, fontSize: 15, lineHeight: 20,
-    minHeight: 20, maxHeight: 120, paddingTop: 4, paddingBottom: 4,
+    color: C.text, fontSize: moderateScale(15), lineHeight: moderateScale(20),
+    minHeight: scale(20), maxHeight: scale(120), paddingTop: scale(4), paddingBottom: scale(4),
   },
   fabSend: {
-    width: 40, height: 40, borderRadius: 20,
+    width: scale(40), height: scale(40), borderRadius: scale(20),
     alignItems: 'center', justifyContent: 'center',
   },
 
-  draftBox: { width: 56, height: 56, borderRadius: 10, overflow: 'hidden', borderWidth: 1, borderColor: '#E5E7EB', marginRight: 8 },
+  draftBox: { width: scale(56), height: scale(56), borderRadius: scale(10), overflow: 'hidden', borderWidth: 1, borderColor: '#E5E7EB', marginRight: scale(8) },
   draftImg: { width: '100%', height: '100%' },
-  draftDel: { position: 'absolute', top: 4, right: 4, backgroundColor: 'rgba(0,0,0,0.55)', width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  draftDel: { position: 'absolute', top: scale(4), right: scale(4), backgroundColor: 'rgba(0,0,0,0.55)', width: scale(18), height: scale(18), borderRadius: scale(9), alignItems: 'center', justifyContent: 'center' },
 
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16 },
-  sheet: { width: W * 0.86, backgroundColor: C.card, borderRadius: R, padding: 16, borderWidth: 1, borderColor: '#EEF2F7' },
-  sheetIcon: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginRight: 10 },
-  sheetTitle: { color: C.ink, fontWeight: '900', fontSize: 18 },
-  sheetSub: { color: C.muted, marginTop: 2, lineHeight: 18 },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center', paddingHorizontal: scale(16) },
+  sheet: { width: W * 0.86, backgroundColor: C.card, borderRadius: R, padding: scale(16), borderWidth: 1, borderColor: '#EEF2F7' },
+  sheetIcon: { width: scale(34), height: scale(34), borderRadius: scale(10), alignItems: 'center', justifyContent: 'center', marginRight: scale(10) },
+  sheetTitle: { color: C.ink, fontWeight: '900', fontSize: moderateScale(18) },
+  sheetSub: { color: C.muted, marginTop: scale(2), lineHeight: moderateScale(18) },
 
-  dangerBtn: { borderRadius: 12, paddingVertical: 12, alignItems: 'center', justifyContent: 'center' },
+  dangerBtn: { borderRadius: scale(12), paddingVertical: scale(12), alignItems: 'center', justifyContent: 'center' },
   dangerTxt: { color: '#fff', fontWeight: '900' },
-  outBtn: { borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 12, paddingVertical: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: C.card },
+  outBtn: { borderWidth: 1, borderColor: '#E2E8F0', borderRadius: scale(12), paddingVertical: scale(12), alignItems: 'center', justifyContent: 'center', backgroundColor: C.card },
   outTxt: { color: C.ink, fontWeight: '900' },
 
   viewer: { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', alignItems: 'center', justifyContent: 'center' },
-  viewerClose: { position: 'absolute', top: 18, right: 18, width: 36, height: 36, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
+  viewerClose: { position: 'absolute', top: scale(18), right: scale(18), width: scale(36), height: scale(36), borderRadius: scale(12), backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
 });

@@ -21,6 +21,7 @@ import { RestaurantSelectorBar } from '../components/RestaurantSelector';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
+import { scale, moderateScale } from '../utils/responsive';
 const C = {
   primary: '#EF3A3A',
   ink: '#1D2254',
@@ -265,12 +266,12 @@ export default function TeamManagementScreen({ navigation }) {
           <View style={styles.memberInfo}>
             <Text style={styles.memberName}>{userName}</Text>
             <View style={styles.emailRow}>
-              <Icon name="mail-outline" size={12} color={C.muted} />
+              <Icon name="mail-outline" size={scale(12)} color={C.muted} />
               <Text style={styles.memberEmail}>{userEmail}</Text>
             </View>
             {userPhone && (
               <View style={styles.emailRow}>
-                <Icon name="call-outline" size={12} color={C.muted} />
+                <Icon name="call-outline" size={scale(12)} color={C.muted} />
                 <Text style={styles.memberEmail}>{userPhone}</Text>
               </View>
             )}
@@ -316,7 +317,7 @@ export default function TeamManagementScreen({ navigation }) {
             style={[styles.actionBtn, { backgroundColor: '#EFF6FF' }]}
             onPress={() => openEditModal(item)}
           >
-            <Icon name="create-outline" size={16} color={C.info} />
+            <Icon name="create-outline" size={scale(16)} color={C.info} />
             <Text style={[styles.actionBtnText, { color: C.info }]}>Edit Role</Text>
           </TouchableOpacity>
 
@@ -324,7 +325,7 @@ export default function TeamManagementScreen({ navigation }) {
             style={[styles.actionBtn, { backgroundColor: '#FEF2F2' }]}
             onPress={() => removeMember(item)}
           >
-            <Icon name="trash-outline" size={16} color={C.danger} />
+            <Icon name="trash-outline" size={scale(16)} color={C.danger} />
             <Text style={[styles.actionBtnText, { color: C.danger }]}>Remove</Text>
           </TouchableOpacity>
         </View>
@@ -338,7 +339,7 @@ export default function TeamManagementScreen({ navigation }) {
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Icon name="arrow-back" size={22} color={C.ink} />
+            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>Team Management</Text>
@@ -346,7 +347,7 @@ export default function TeamManagementScreen({ navigation }) {
           </View>
           <View style={styles.headerActions}>
             <TouchableOpacity style={styles.headerIconBtn} onPress={() => setMenuVisible(true)}>
-              <Icon name="menu" size={20} color={C.ink} />
+              <Icon name="menu" size={scale(20)} color={C.ink} />
             </TouchableOpacity>
           </View>
         </View>
@@ -363,7 +364,7 @@ export default function TeamManagementScreen({ navigation }) {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Icon name="arrow-back" size={22} color={C.ink} />
+          <Icon name="arrow-back" size={scale(22)} color={C.ink} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>Team Management</Text>
@@ -371,10 +372,10 @@ export default function TeamManagementScreen({ navigation }) {
         </View>
         <View style={styles.headerActions}>
           <TouchableOpacity onPress={openInviteModal} style={styles.headerIconBtn}>
-            <Icon name="person-add" size={20} color={C.primary} />
+            <Icon name="person-add" size={scale(20)} color={C.primary} />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.headerIconBtn}>
-            <Icon name="menu" size={20} color={C.ink} />
+            <Icon name="menu" size={scale(20)} color={C.ink} />
           </TouchableOpacity>
         </View>
       </View>
@@ -384,7 +385,7 @@ export default function TeamManagementScreen({ navigation }) {
 
       {/* Description Card */}
       <View style={styles.descCard}>
-        <Icon name="people" size={24} color={C.info} />
+        <Icon name="people" size={scale(24)} color={C.info} />
         <View style={styles.descContent}>
           <Text style={styles.descTitle}>Manage Team Access</Text>
           <Text style={styles.descText}>
@@ -410,14 +411,14 @@ export default function TeamManagementScreen({ navigation }) {
         ListEmptyComponent={
           <View style={styles.emptyBox}>
             <View style={styles.emptyIconBox}>
-              <Icon name="people-outline" size={48} color={C.muted} />
+              <Icon name="people-outline" size={scale(48)} color={C.muted} />
             </View>
             <Text style={styles.emptyTitle}>No Team Members Yet</Text>
             <Text style={styles.emptyText}>
               Invite members to collaborate on your restaurant
             </Text>
             <TouchableOpacity style={styles.emptyBtn} onPress={openInviteModal}>
-              <Icon name="person-add-outline" size={18} color="#fff" />
+              <Icon name="person-add-outline" size={scale(18)} color="#fff" />
               <Text style={styles.emptyBtnText}>Invite Member</Text>
             </TouchableOpacity>
           </View>
@@ -431,7 +432,7 @@ export default function TeamManagementScreen({ navigation }) {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Invite Team Member</Text>
               <TouchableOpacity onPress={() => setInviteModalVisible(false)}>
-                <Icon name="close" size={24} color={C.ink} />
+                <Icon name="close" size={scale(24)} color={C.ink} />
               </TouchableOpacity>
             </View>
 
@@ -485,7 +486,7 @@ export default function TeamManagementScreen({ navigation }) {
                     >
                       <Icon
                         name={role.icon}
-                        size={20}
+                        size={scale(20)}
                         color={isSelected ? role.color : C.muted}
                       />
                       <View style={styles.roleOptionInfo}>
@@ -500,7 +501,7 @@ export default function TeamManagementScreen({ navigation }) {
                         <Text style={styles.roleOptionDesc}>{role.description}</Text>
                       </View>
                       {isSelected && (
-                        <Icon name="checkmark-circle" size={20} color={role.color} />
+                        <Icon name="checkmark-circle" size={scale(20)} color={role.color} />
                       )}
                     </TouchableOpacity>
                   );
@@ -524,7 +525,7 @@ export default function TeamManagementScreen({ navigation }) {
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
                   <>
-                    <Icon name="send" size={16} color="#fff" />
+                    <Icon name="send" size={scale(16)} color="#fff" />
                     <Text style={styles.submitBtnText}>Send Invite</Text>
                   </>
                 )}
@@ -541,7 +542,7 @@ export default function TeamManagementScreen({ navigation }) {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Update Role</Text>
               <TouchableOpacity onPress={() => setEditModalVisible(false)}>
-                <Icon name="close" size={24} color={C.ink} />
+                <Icon name="close" size={scale(24)} color={C.ink} />
               </TouchableOpacity>
             </View>
 
@@ -568,7 +569,7 @@ export default function TeamManagementScreen({ navigation }) {
                     >
                       <Icon
                         name={role.icon}
-                        size={20}
+                        size={scale(20)}
                         color={isSelected ? role.color : C.muted}
                       />
                       <View style={styles.roleOptionInfo}>
@@ -583,7 +584,7 @@ export default function TeamManagementScreen({ navigation }) {
                         <Text style={styles.roleOptionDesc}>{role.description}</Text>
                       </View>
                       {isSelected && (
-                        <Icon name="checkmark-circle" size={20} color={role.color} />
+                        <Icon name="checkmark-circle" size={scale(20)} color={role.color} />
                       )}
                     </TouchableOpacity>
                   );
@@ -628,50 +629,50 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(12),
     backgroundColor: C.card,
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
   backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(10),
     backgroundColor: C.bg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerCenter: {
     flex: 1,
-    marginLeft: 12,
+    marginLeft: scale(12),
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: moderateScale(18),
     fontWeight: '700',
     color: C.ink,
   },
   headerSubtitle: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     color: C.muted,
-    marginTop: 2,
+    marginTop: scale(2),
   },
   headerActions: {
     flexDirection: 'row',
   },
   headerIconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(10),
     backgroundColor: C.bg,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 8,
+    marginLeft: scale(8),
   },
   inviteBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(12),
     backgroundColor: C.primary,
     alignItems: 'center',
     justifyContent: 'center',
@@ -680,13 +681,13 @@ const styles = StyleSheet.create({
   restaurantBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    gap: scale(8),
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(10),
     backgroundColor: '#FEF2F2',
   },
   restaurantName: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '600',
     color: C.primary,
   },
@@ -694,26 +695,26 @@ const styles = StyleSheet.create({
   descCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginHorizontal: 16,
-    marginTop: 16,
-    padding: 16,
+    gap: scale(12),
+    marginHorizontal: scale(16),
+    marginTop: scale(16),
+    padding: scale(16),
     backgroundColor: '#EFF6FF',
-    borderRadius: 12,
+    borderRadius: scale(12),
   },
   descContent: {
     flex: 1,
   },
   descTitle: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '700',
     color: C.ink,
-    marginBottom: 2,
+    marginBottom: scale(2),
   },
   descText: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     color: C.info,
-    lineHeight: 16,
+    lineHeight: moderateScale(16),
   },
 
   loadingBox: {
@@ -722,149 +723,149 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   loadingText: {
-    marginTop: 12,
-    fontSize: 14,
+    marginTop: scale(12),
+    fontSize: moderateScale(14),
     color: C.muted,
   },
 
   listContent: {
-    padding: 16,
+    padding: scale(16),
   },
 
   // Member Card
   memberCard: {
     backgroundColor: C.card,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: scale(16),
+    padding: scale(16),
+    marginBottom: scale(12),
     borderWidth: 1,
     borderColor: C.border,
   },
   memberHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 16,
+    gap: scale(12),
+    marginBottom: scale(16),
   },
   avatarBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
+    width: scale(48),
+    height: scale(48),
+    borderRadius: scale(12),
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
-    fontSize: 20,
+    fontSize: moderateScale(20),
     fontWeight: '700',
   },
   memberInfo: {
     flex: 1,
   },
   memberName: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: '700',
     color: C.ink,
   },
   emailRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginTop: 2,
+    gap: scale(4),
+    marginTop: scale(2),
   },
   memberEmail: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     color: C.muted,
   },
 
   detailsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginBottom: 16,
+    marginBottom: scale(16),
   },
   detailItem: {
     width: '50%',
-    marginBottom: 12,
+    marginBottom: scale(12),
   },
   detailLabel: {
-    fontSize: 11,
+    fontSize: moderateScale(11),
     fontWeight: '600',
     color: C.muted,
     textTransform: 'uppercase',
-    marginBottom: 4,
+    marginBottom: scale(4),
   },
   detailValue: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     fontWeight: '600',
     color: C.text,
   },
   badge: {
     alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(4),
+    borderRadius: scale(20),
   },
   badgeText: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     fontWeight: '700',
   },
 
   actionsRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: scale(10),
   },
   actionBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 10,
+    gap: scale(6),
+    paddingVertical: scale(10),
+    borderRadius: scale(10),
   },
   actionBtnText: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     fontWeight: '600',
   },
 
   // Empty State
   emptyBox: {
     alignItems: 'center',
-    paddingTop: 60,
-    paddingHorizontal: 32,
+    paddingTop: scale(60),
+    paddingHorizontal: scale(32),
   },
   emptyIconBox: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: scale(80),
+    height: scale(80),
+    borderRadius: scale(40),
     backgroundColor: '#F3F4F6',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: scale(16),
   },
   emptyTitle: {
-    fontSize: 18,
+    fontSize: moderateScale(18),
     fontWeight: '700',
     color: C.ink,
-    marginBottom: 8,
+    marginBottom: scale(8),
   },
   emptyText: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: C.muted,
     textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 24,
+    lineHeight: moderateScale(20),
+    marginBottom: scale(24),
   },
   emptyBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
+    gap: scale(8),
+    paddingHorizontal: scale(20),
+    paddingVertical: scale(12),
+    borderRadius: scale(12),
     backgroundColor: C.primary,
   },
   emptyBtnText: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '700',
     color: '#fff',
   },
@@ -877,63 +878,63 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: C.card,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: scale(24),
+    borderTopRightRadius: scale(24),
     maxHeight: '90%',
   },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: scale(20),
+    paddingVertical: scale(16),
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: moderateScale(18),
     fontWeight: '700',
     color: C.ink,
   },
   modalBody: {
-    padding: 20,
+    padding: scale(20),
   },
   modalFooter: {
     flexDirection: 'row',
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    gap: scale(12),
+    paddingHorizontal: scale(20),
+    paddingVertical: scale(16),
     borderTopWidth: 1,
     borderTopColor: C.border,
   },
 
   inputLabel: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     fontWeight: '600',
     color: C.muted,
-    marginBottom: 8,
-    marginTop: 16,
+    marginBottom: scale(8),
+    marginTop: scale(16),
   },
   input: {
     backgroundColor: C.bg,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 15,
+    borderRadius: scale(12),
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(14),
+    fontSize: moderateScale(15),
     color: C.text,
     borderWidth: 1,
     borderColor: C.border,
   },
 
   roleSelector: {
-    gap: 10,
+    gap: scale(10),
   },
   roleOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    padding: 14,
-    borderRadius: 12,
+    gap: scale(12),
+    padding: scale(14),
+    borderRadius: scale(12),
     borderWidth: 2,
     borderColor: C.border,
     backgroundColor: C.bg,
@@ -942,42 +943,42 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   roleOptionLabel: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '700',
     color: C.text,
   },
   roleOptionDesc: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     color: C.muted,
-    marginTop: 2,
+    marginTop: scale(2),
   },
 
   editMemberInfo: {
-    padding: 16,
+    padding: scale(16),
     backgroundColor: C.bg,
-    borderRadius: 12,
-    marginBottom: 8,
+    borderRadius: scale(12),
+    marginBottom: scale(8),
   },
   editMemberName: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: '700',
     color: C.ink,
   },
   editMemberEmail: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     color: C.muted,
-    marginTop: 2,
+    marginTop: scale(2),
   },
 
   cancelBtn: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingVertical: scale(14),
+    borderRadius: scale(12),
     backgroundColor: C.bg,
     alignItems: 'center',
   },
   cancelBtnText: {
-    fontSize: 15,
+    fontSize: moderateScale(15),
     fontWeight: '700',
     color: C.ink,
   },
@@ -986,13 +987,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: 12,
+    gap: scale(8),
+    paddingVertical: scale(14),
+    borderRadius: scale(12),
     backgroundColor: C.primary,
   },
   submitBtnText: {
-    fontSize: 15,
+    fontSize: moderateScale(15),
     fontWeight: '700',
     color: '#fff',
   },
@@ -1001,36 +1002,36 @@ const styles = StyleSheet.create({
   switchBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: scale(4),
     marginLeft: 'auto',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(4),
     backgroundColor: '#fff',
-    borderRadius: 16,
+    borderRadius: scale(16),
     borderWidth: 1,
     borderColor: C.primary,
   },
   switchText: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     fontWeight: '600',
     color: C.primary,
   },
   pickerContent: {
     backgroundColor: C.card,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: scale(24),
+    borderTopRightRadius: scale(24),
     maxHeight: '70%',
   },
   pickerBody: {
-    padding: 16,
+    padding: scale(16),
   },
   restaurantOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    padding: 14,
-    marginBottom: 10,
-    borderRadius: 12,
+    gap: scale(12),
+    padding: scale(14),
+    marginBottom: scale(10),
+    borderRadius: scale(12),
     borderWidth: 2,
     borderColor: C.border,
     backgroundColor: C.bg,
@@ -1040,9 +1041,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF2F2',
   },
   restaurantIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: scale(44),
+    height: scale(44),
+    borderRadius: scale(12),
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FEE2E2',
@@ -1054,7 +1055,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   restaurantOptionName: {
-    fontSize: 15,
+    fontSize: moderateScale(15),
     fontWeight: '700',
     color: C.ink,
   },
@@ -1062,8 +1063,8 @@ const styles = StyleSheet.create({
     color: C.primary,
   },
   restaurantOptionAddress: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     color: C.muted,
-    marginTop: 2,
+    marginTop: scale(2),
   },
 });

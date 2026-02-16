@@ -19,6 +19,7 @@ import { RestaurantSelectorBar } from '../components/RestaurantSelector';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
+import { scale, moderateScale } from '../utils/responsive';
 const C = {
   primary: '#EF3A3A',
   ink: '#1D2254',
@@ -215,11 +216,11 @@ export default function ExpenseReportsScreen({ navigation }) {
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Icon name="arrow-back" size={22} color={C.ink} />
+            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Expense Reports</Text>
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
-            <Icon name="menu" size={22} color="#1D2254" />
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
+            <Icon name="menu" size={scale(22)} color="#1D2254" />
           </TouchableOpacity>
         </View>
         <View style={styles.loadingBox}>
@@ -235,7 +236,7 @@ export default function ExpenseReportsScreen({ navigation }) {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Icon name="arrow-back" size={22} color={C.ink} />
+          <Icon name="arrow-back" size={scale(22)} color={C.ink} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Expense Reports</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -243,10 +244,10 @@ export default function ExpenseReportsScreen({ navigation }) {
             onPress={() => navigation.navigate('Expenses')}
             style={styles.backBtn}
           >
-            <Icon name="list-outline" size={22} color={C.primary} />
+            <Icon name="list-outline" size={scale(22)} color={C.primary} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
-            <Icon name="menu" size={22} color="#1D2254" />
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
+            <Icon name="menu" size={scale(22)} color="#1D2254" />
           </TouchableOpacity>
         </View>
       </View>
@@ -263,7 +264,7 @@ export default function ExpenseReportsScreen({ navigation }) {
         {/* Month Navigator - Premium Design */}
         <View style={styles.monthNav}>
           <TouchableOpacity style={styles.navBtn} onPress={() => changeMonth(-1)}>
-            <Icon name="chevron-back" size={18} color={C.ink} />
+            <Icon name="chevron-back" size={scale(18)} color={C.ink} />
             <Text style={styles.navBtnText}>Previous</Text>
           </TouchableOpacity>
           <View style={styles.monthDisplay}>
@@ -280,7 +281,7 @@ export default function ExpenseReportsScreen({ navigation }) {
             </Text>
             <Icon
               name="chevron-forward"
-              size={18}
+              size={scale(18)}
               color={isCurrentMonth() ? C.border : C.ink}
             />
           </TouchableOpacity>
@@ -288,7 +289,7 @@ export default function ExpenseReportsScreen({ navigation }) {
 
         {!report ? (
           <View style={styles.noDataCard}>
-            <Icon name="document-text-outline" size={48} color={C.muted} />
+            <Icon name="document-text-outline" size={scale(48)} color={C.muted} />
             <Text style={styles.noDataTitle}>No Data Available</Text>
             <Text style={styles.noDataText}>
               No expenses recorded for {MONTH_NAMES[selectedMonth - 1]} {selectedYear}
@@ -325,7 +326,7 @@ export default function ExpenseReportsScreen({ navigation }) {
                 <View style={styles.changeRow}>
                   <Icon
                     name={report.comparison?.changeAmount >= 0 ? 'trending-up' : 'trending-down'}
-                    size={20}
+                    size={scale(20)}
                     color={report.comparison?.changeAmount >= 0 ? C.danger : C.ok}
                   />
                   <Text style={[
@@ -370,7 +371,7 @@ export default function ExpenseReportsScreen({ navigation }) {
                     <View style={styles.categoryHeader}>
                       <View style={styles.categoryLeft}>
                         <View style={[styles.categoryDot, { backgroundColor: category.color }]} />
-                        <Icon name={category.icon} size={18} color={category.color} />
+                        <Icon name={category.icon} size={scale(18)} color={category.color} />
                         <Text style={styles.categoryName}>{category.label}</Text>
                       </View>
                       <View style={styles.categoryRight}>
@@ -416,7 +417,7 @@ export default function ExpenseReportsScreen({ navigation }) {
 
             {categoryData.length === 0 && (
               <View style={styles.noDataCard}>
-                <Icon name="pie-chart-outline" size={48} color={C.muted} />
+                <Icon name="pie-chart-outline" size={scale(48)} color={C.muted} />
                 <Text style={styles.noDataTitle}>No Category Data</Text>
                 <Text style={styles.noDataText}>
                   No expenses categorized for this month
@@ -426,7 +427,7 @@ export default function ExpenseReportsScreen({ navigation }) {
           </>
         )}
 
-        <View style={{ height: 100 }} />
+        <View style={{ height: scale(100) }} />
       </ScrollView>
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
       <KniBottomNav navigation={navigation} />
@@ -437,146 +438,146 @@ export default function ExpenseReportsScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  loadingText: { marginTop: 12, fontSize: 14, color: C.muted },
+  loadingText: { marginTop: scale(12), fontSize: moderateScale(14), color: C.muted },
 
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(12),
     backgroundColor: C.card,
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
   backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(12),
     backgroundColor: C.bg,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerTitle: { fontSize: 18, fontWeight: '900', color: C.ink },
+  headerTitle: { fontSize: moderateScale(18), fontWeight: '900', color: C.ink },
 
-  scrollContent: { paddingBottom: 32 },
+  scrollContent: { paddingBottom: scale(32) },
 
   // Month Navigator - Premium Design
   monthNav: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(16),
     backgroundColor: C.card,
-    marginHorizontal: 16,
-    marginTop: 16,
-    borderRadius: 16,
+    marginHorizontal: scale(16),
+    marginTop: scale(16),
+    borderRadius: scale(16),
     borderWidth: 1,
     borderColor: C.border,
   },
   navBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12,
+    gap: scale(6),
+    paddingHorizontal: scale(14),
+    paddingVertical: scale(10),
+    borderRadius: scale(12),
     backgroundColor: C.bg,
     borderWidth: 1,
     borderColor: C.border,
   },
   navBtnDisabled: { opacity: 0.4 },
-  navBtnText: { fontSize: 13, fontWeight: '600', color: C.ink },
+  navBtnText: { fontSize: moderateScale(13), fontWeight: '600', color: C.ink },
   navBtnTextDisabled: { color: C.muted },
   monthDisplay: { alignItems: 'center' },
-  monthText: { fontSize: 22, fontWeight: '900', color: C.ink },
-  yearText: { fontSize: 14, color: C.muted, marginTop: 2 },
+  monthText: { fontSize: moderateScale(22), fontWeight: '900', color: C.ink },
+  yearText: { fontSize: moderateScale(14), color: C.muted, marginTop: scale(2) },
 
   noDataCard: {
     backgroundColor: C.card,
-    marginHorizontal: 16,
-    marginTop: 16,
-    borderRadius: 16,
-    padding: 32,
+    marginHorizontal: scale(16),
+    marginTop: scale(16),
+    borderRadius: scale(16),
+    padding: scale(32),
     alignItems: 'center',
     borderWidth: 1,
     borderColor: C.border,
   },
-  noDataTitle: { fontSize: 16, fontWeight: '700', color: C.ink, marginTop: 12 },
-  noDataText: { fontSize: 14, color: C.muted, textAlign: 'center', marginTop: 8 },
+  noDataTitle: { fontSize: moderateScale(16), fontWeight: '700', color: C.ink, marginTop: scale(12) },
+  noDataText: { fontSize: moderateScale(14), color: C.muted, textAlign: 'center', marginTop: scale(8) },
 
-  summaryRow: { paddingHorizontal: 16, marginTop: 16 },
+  summaryRow: { paddingHorizontal: scale(16), marginTop: scale(16) },
   summaryCard: {
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: scale(16),
+    padding: scale(20),
     alignItems: 'center',
   },
-  summaryLabel: { fontSize: 13, color: C.muted, fontWeight: '600' },
-  summaryValue: { fontSize: 32, fontWeight: '900', marginTop: 4 },
-  summarySubtext: { fontSize: 12, color: C.muted, marginTop: 4 },
+  summaryLabel: { fontSize: moderateScale(13), color: C.muted, fontWeight: '600' },
+  summaryValue: { fontSize: moderateScale(32), fontWeight: '900', marginTop: scale(4) },
+  summarySubtext: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(4) },
 
   comparisonRow: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    gap: 12,
-    marginTop: 12,
+    paddingHorizontal: scale(16),
+    gap: scale(12),
+    marginTop: scale(12),
   },
   comparisonCard: {
     backgroundColor: C.card,
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: scale(16),
+    padding: scale(16),
     alignItems: 'center',
     borderWidth: 1,
     borderColor: C.border,
   },
-  comparisonLabel: { fontSize: 12, color: C.muted, fontWeight: '600' },
-  comparisonValue: { fontSize: 20, fontWeight: '700', color: C.ink, marginTop: 4 },
-  comparisonSubtext: { fontSize: 11, color: C.muted, marginTop: 4 },
-  changeRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
-  changeValue: { fontSize: 20, fontWeight: '700' },
+  comparisonLabel: { fontSize: moderateScale(12), color: C.muted, fontWeight: '600' },
+  comparisonValue: { fontSize: moderateScale(20), fontWeight: '700', color: C.ink, marginTop: scale(4) },
+  comparisonSubtext: { fontSize: moderateScale(11), color: C.muted, marginTop: scale(4) },
+  changeRow: { flexDirection: 'row', alignItems: 'center', gap: scale(4), marginTop: scale(4) },
+  changeValue: { fontSize: moderateScale(20), fontWeight: '700' },
 
   card: {
     backgroundColor: C.card,
-    marginHorizontal: 16,
-    marginTop: 16,
-    borderRadius: 16,
-    padding: 16,
+    marginHorizontal: scale(16),
+    marginTop: scale(16),
+    borderRadius: scale(16),
+    padding: scale(16),
     borderWidth: 1,
     borderColor: C.border,
   },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: C.ink, marginBottom: 16 },
+  cardTitle: { fontSize: moderateScale(16), fontWeight: '700', color: C.ink, marginBottom: scale(16) },
 
-  categoryItem: { marginBottom: 16 },
+  categoryItem: { marginBottom: scale(16) },
   categoryHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: scale(8),
   },
-  categoryLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  categoryDot: { width: 10, height: 10, borderRadius: 5 },
-  categoryName: { fontSize: 14, fontWeight: '600', color: C.text },
+  categoryLeft: { flexDirection: 'row', alignItems: 'center', gap: scale(8) },
+  categoryDot: { width: scale(10), height: scale(10), borderRadius: scale(5) },
+  categoryName: { fontSize: moderateScale(14), fontWeight: '600', color: C.text },
   categoryRight: { alignItems: 'flex-end' },
-  categoryAmount: { fontSize: 14, fontWeight: '700', color: C.ink },
-  categoryPercent: { fontSize: 11, color: C.muted },
+  categoryAmount: { fontSize: moderateScale(14), fontWeight: '700', color: C.ink },
+  categoryPercent: { fontSize: moderateScale(11), color: C.muted },
   progressBar: {
-    height: 8,
+    height: scale(8),
     backgroundColor: C.bg,
-    borderRadius: 4,
+    borderRadius: scale(4),
     overflow: 'hidden',
   },
-  progressFill: { height: '100%', borderRadius: 4 },
+  progressFill: { height: '100%', borderRadius: scale(4) },
 
   categoryGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: scale(12),
   },
   categoryGridItem: {
     width: '47%',
-    padding: 12,
-    borderRadius: 12,
+    padding: scale(12),
+    borderRadius: scale(12),
     backgroundColor: C.bg,
     borderWidth: 1,
     borderColor: C.border,
@@ -584,20 +585,20 @@ const styles = StyleSheet.create({
   categoryGridHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 8,
+    gap: scale(6),
+    marginBottom: scale(8),
   },
-  categoryDotSmall: { width: 8, height: 8, borderRadius: 4 },
-  categoryGridName: { fontSize: 12, fontWeight: '600', color: C.text, flex: 1 },
-  categoryGridAmount: { fontSize: 16, fontWeight: '700', color: C.ink, marginBottom: 4 },
+  categoryDotSmall: { width: scale(8), height: scale(8), borderRadius: scale(4) },
+  categoryGridName: { fontSize: moderateScale(12), fontWeight: '600', color: C.text, flex: 1 },
+  categoryGridAmount: { fontSize: moderateScale(16), fontWeight: '700', color: C.ink, marginBottom: scale(4) },
   categoryGridBadge: {
     alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
+    paddingHorizontal: scale(8),
+    paddingVertical: scale(2),
+    borderRadius: scale(6),
     backgroundColor: C.card,
     borderWidth: 1,
     borderColor: C.border,
   },
-  categoryGridPercent: { fontSize: 11, fontWeight: '600', color: C.muted },
+  categoryGridPercent: { fontSize: moderateScale(11), fontWeight: '600', color: C.muted },
 });

@@ -14,6 +14,7 @@ import { api, IMAGE_BASE_URL } from '../api/client';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
+import { scale, moderateScale } from '../utils/responsive';
 const C = { primary:'#EF3A3A', ink:'#1D2254', bg:'#F5F7FA', card:'#FFFFFF',
   text:'#0F172A', muted:'#6B7280', border:'#E5E7EB', ok:'#10B981', warn:'#F59E0B', danger:'#EF4444' };
 const R = 20;
@@ -62,9 +63,9 @@ function useToast() {
     >
       <Icon
         name={toast.type==='success' ? 'checkmark-circle-outline' : toast.type==='error' ? 'alert-circle-outline' : 'information-circle-outline'}
-        size={18}
+        size={scale(18)}
         color="#fff"
-        style={{ marginRight:8 }}
+        style={{ marginRight:scale(8) }}
       />
       <Text style={st.toastTxt}>{toast.msg}</Text>
     </Animated.View>
@@ -405,20 +406,20 @@ export default function RestaurantsScreen({ navigation }) {
   return (
     <SafeAreaView style={{flex:1, backgroundColor:C.bg}} edges={['top','left','right']}>
       {/* Header */}
-      <View style={[st.header,{paddingTop:6}]}>
+      <View style={[st.header,{paddingTop:scale(6)}]}>
         <TouchableOpacity onPress={()=>navigation.goBack?.()} style={st.hBtn}>
-          <Icon name="chevron-back" size={20} color={C.ink}/>
+          <Icon name="chevron-back" size={scale(20)} color={C.ink}/>
         </TouchableOpacity>
         <Text style={st.hTitle}>Restaurants</Text>
-        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
-          <Icon name="menu" size={22} color="#1D2254" />
+        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
+          <Icon name="menu" size={scale(22)} color="#1D2254" />
         </TouchableOpacity>
       </View>
 
       {/* Search + Filters */}
-      <View style={{paddingHorizontal:16}}>
+      <View style={{paddingHorizontal:scale(16)}}>
         <View style={st.searchWrap}>
-          <Icon name="search" size={18} color="#94A3B8"/>
+          <Icon name="search" size={scale(18)} color="#94A3B8"/>
           <TextInput
             placeholder="Search restaurants..."
             placeholderTextColor="#94A3B8"
@@ -428,19 +429,19 @@ export default function RestaurantsScreen({ navigation }) {
           />
           {!!query && (
             <TouchableOpacity onPress={()=>setQuery('')} style={st.clearBtn}>
-              <Icon name="close-circle" size={18} color="#B0B8C4"/>
+              <Icon name="close-circle" size={scale(18)} color="#B0B8C4"/>
             </TouchableOpacity>
           )}
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{paddingVertical:10}}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{paddingVertical:scale(10)}}>
           {['all','approved','pending','rejected'].map(s=>{
             const on = filter===s;
             const ss = statusStyles(s==='all'?'approved':s);
             const icon = s==='approved'?'checkmark-circle' : s==='pending'?'time-outline' : s==='rejected'?'close-circle' : 'grid';
             return (
               <TouchableOpacity key={s} onPress={()=>setFilter(s)} style={[st.filterChip, on&&{borderColor:ss.fg, backgroundColor:ss.bg}]}>
-                <Icon name={s==='all'?'grid':icon} size={14} color={on?ss.fg:'#64748B'}/>
+                <Icon name={s==='all'?'grid':icon} size={scale(14)} color={on?ss.fg:'#64748B'}/>
                 <Text style={[st.filterTxt,on&&{color:ss.fg}]}>{s==='all'?'All':ss.label}</Text>
               </TouchableOpacity>
             );
@@ -451,7 +452,7 @@ export default function RestaurantsScreen({ navigation }) {
       {/* List */}
       <ScrollView
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} tintColor={C.primary}/>}
-        contentContainerStyle={{ padding:16, paddingBottom: insets.bottom + 24 }}
+        contentContainerStyle={{ padding:scale(16), paddingBottom: insets.bottom + 24 }}
         showsVerticalScrollIndicator={false}
       >
         {loading ? (
@@ -478,7 +479,7 @@ export default function RestaurantsScreen({ navigation }) {
             <View style={st.modalHeader}>
               <Text style={st.modalTitle}>{form?.id?'Edit hotel':'Add hotel'}</Text>
               <TouchableOpacity onPress={()=>setFormOpen(false)} style={st.close}>
-                <Icon name="close" size={18} color={C.ink}/>
+                <Icon name="close" size={scale(18)} color={C.ink}/>
               </TouchableOpacity>
             </View>
 
@@ -490,10 +491,10 @@ export default function RestaurantsScreen({ navigation }) {
                 {key:'fssai',   label:'FSSAI No.', icon:'document-text-outline', placeholder:'14-digit FSSAI'},
                 {key:'desc',    label:'Tagline / Description', icon:'reader-outline', placeholder:'Short description'},
               ].map(f=>(
-                <View key={f.key} style={{marginBottom:12}}>
+                <View key={f.key} style={{marginBottom:scale(12)}}>
                   <Text style={st.inputLbl}>{f.label}</Text>
                   <View style={st.inputWrap}>
-                    <Icon name={f.icon} size={16} color="#9CA3AF" />
+                    <Icon name={f.icon} size={scale(16)} color="#9CA3AF" />
                     <TextInput
                       value={form[f.key]}
                       onChangeText={(t)=>setForm(v=>({...v,[f.key]:t}))}
@@ -507,52 +508,52 @@ export default function RestaurantsScreen({ navigation }) {
               ))}
 
               {/* Images */}
-              <Text style={[st.inputLbl,{marginTop:6}]}>Images</Text>
+              <Text style={[st.inputLbl,{marginTop:scale(6)}]}>Images</Text>
 
               {/* Main image */}
-              <View style={{marginBottom:12}}>
+              <View style={{marginBottom:scale(12)}}>
                 <Text style={st.subLbl}>Main Image</Text>
-                <View style={{flexDirection:'row', alignItems:'center', gap:10}}>
+                <View style={{flexDirection:'row', alignItems:'center', gap:scale(10)}}>
                   <TouchableOpacity onPress={()=>pickImage('main')} style={st.previewWrap}>
                     {form.main ? (
                       <Image source={{uri:form.main}} style={st.previewImg}/>
                     ) : (
-                      <View style={st.previewEmpty}><Icon name="image-outline" size={20} color="#9CA3AF"/></View>
+                      <View style={st.previewEmpty}><Icon name="image-outline" size={scale(20)} color="#9CA3AF"/></View>
                     )}
                   </TouchableOpacity>
                   {!!form.main && (
                     <TouchableOpacity onPress={()=>clearImg('main')} style={st.outlineMini}>
-                      <Icon name="close-circle" size={16} color={C.danger}/>
+                      <Icon name="close-circle" size={scale(16)} color={C.danger}/>
                       <Text style={st.outlineMiniTxt}>Clear</Text>
                     </TouchableOpacity>
                   )}
                   <TouchableOpacity onPress={()=>pickImage('main')} style={st.pickerBtn}>
-                    <Icon name="images-outline" size={16} color="#fff"/><Text style={st.pickerTxt}>Pick</Text>
+                    <Icon name="images-outline" size={scale(16)} color="#fff"/><Text style={st.pickerTxt}>Pick</Text>
                   </TouchableOpacity>
                 </View>
               </View>
 
               {/* 3 gallery images */}
-              <View style={{marginBottom:12}}>
+              <View style={{marginBottom:scale(12)}}>
                 <Text style={st.subLbl}>Gallery Images (up to 3)</Text>
-                <View style={{flexDirection:'row', alignItems:'center', gap:10}}>
+                <View style={{flexDirection:'row', alignItems:'center', gap:scale(10)}}>
                   {[{k:'img1'},{k:'img2'},{k:'img3'}].map((slot)=>(
                     <TouchableOpacity key={slot.k} onPress={pickMultipleImages} style={st.previewWrap}>
                       {form[slot.k] ? (
                         <Image source={{uri:form[slot.k]}} style={st.previewImg}/>
                       ) : (
-                        <View style={st.previewEmpty}><Icon name="image-outline" size={20} color="#9CA3AF"/></View>
+                        <View style={st.previewEmpty}><Icon name="image-outline" size={scale(20)} color="#9CA3AF"/></View>
                       )}
                     </TouchableOpacity>
                   ))}
                 </View>
-                <View style={{flexDirection:'row', gap:10, marginTop:8}}>
+                <View style={{flexDirection:'row', gap:scale(10), marginTop:scale(8)}}>
                   <TouchableOpacity onPress={pickMultipleImages} style={st.pickerBtn}>
-                    <Icon name="images-outline" size={16} color="#fff"/><Text style={st.pickerTxt}>Pick 1–3</Text>
+                    <Icon name="images-outline" size={scale(16)} color="#fff"/><Text style={st.pickerTxt}>Pick 1–3</Text>
                   </TouchableOpacity>
                   {(form.img1||form.img2||form.img3) ? (
                     <TouchableOpacity onPress={()=>setForm(f=>({...f, img1:'', img2:'', img3:''}))} style={st.outlineMini}>
-                      <Icon name="close-circle" size={16} color={C.danger}/>
+                      <Icon name="close-circle" size={scale(16)} color={C.danger}/>
                       <Text style={st.outlineMiniTxt}>Clear all</Text>
                     </TouchableOpacity>
                   ) : null}
@@ -560,58 +561,58 @@ export default function RestaurantsScreen({ navigation }) {
               </View>
 
               {/* Business card */}
-              <View style={{marginBottom:12}}>
+              <View style={{marginBottom:scale(12)}}>
                 <Text style={st.subLbl}>Business Card Image</Text>
-                <View style={{flexDirection:'row', alignItems:'center', gap:10}}>
+                <View style={{flexDirection:'row', alignItems:'center', gap:scale(10)}}>
                   <TouchableOpacity onPress={()=>pickImage('card')} style={st.previewWrap}>
                     {form.card ? (
                       <Image source={{uri:form.card}} style={st.previewImg}/>
                     ) : (
-                      <View style={st.previewEmpty}><Icon name="image-outline" size={20} color="#9CA3AF"/></View>
+                      <View style={st.previewEmpty}><Icon name="image-outline" size={scale(20)} color="#9CA3AF"/></View>
                     )}
                   </TouchableOpacity>
                   {!!form.card && (
                     <TouchableOpacity onPress={()=>clearImg('card')} style={st.outlineMini}>
-                      <Icon name="close-circle" size={16} color={C.danger}/>
+                      <Icon name="close-circle" size={scale(16)} color={C.danger}/>
                       <Text style={st.outlineMiniTxt}>Clear</Text>
                     </TouchableOpacity>
                   )}
                   <TouchableOpacity onPress={()=>pickImage('card')} style={st.pickerBtn}>
-                    <Icon name="images-outline" size={16} color="#fff"/><Text style={st.pickerTxt}>Pick</Text>
+                    <Icon name="images-outline" size={scale(16)} color="#fff"/><Text style={st.pickerTxt}>Pick</Text>
                   </TouchableOpacity>
                 </View>
               </View>
 
               {/* PDF picker */}
-              <Text style={[st.inputLbl,{marginTop:6}]}>FSSAI certificate (PDF) <Text style={{color:'#EF4444'}}>*</Text></Text>
-              <View style={{gap:8, marginBottom:12}}>
-                <View style={{flexDirection:'row', alignItems:'center', gap:10}}>
+              <Text style={[st.inputLbl,{marginTop:scale(6)}]}>FSSAI certificate (PDF) <Text style={{color:'#EF4444'}}>*</Text></Text>
+              <View style={{gap:scale(8), marginBottom:scale(12)}}>
+                <View style={{flexDirection:'row', alignItems:'center', gap:scale(10)}}>
                   <TouchableOpacity onPress={pickPDF} style={[st.pdfIcon,{backgroundColor:'#FFF1F1'}]}>
-                    <Icon name="document-text-outline" size={20} color={C.primary}/>
+                    <Icon name="document-text-outline" size={scale(20)} color={C.primary}/>
                   </TouchableOpacity>
                   <TouchableOpacity onPress={pickPDF} style={st.pickerBtn}>
-                    <Icon name="document-text-outline" size={16} color="#fff"/>
+                    <Icon name="document-text-outline" size={scale(16)} color="#fff"/>
                     <Text style={st.pickerTxt}>Pick PDF</Text>
                   </TouchableOpacity>
                   {!!form.fssaiPdf && (
                     <TouchableOpacity onPress={()=>setForm(f=>({...f, fssaiPdf:'', fssaiPdfName:''}))} style={st.outlineMini}>
-                      <Icon name="close-circle" size={16} color={C.danger}/>
+                      <Icon name="close-circle" size={scale(16)} color={C.danger}/>
                       <Text style={st.outlineMiniTxt}>Clear</Text>
                     </TouchableOpacity>
                   )}
                 </View>
                 {!!form.fssaiPdfName && (
                   <View style={st.filePill}>
-                    <Icon name="document-attach-outline" size={14} color="#0F172A" />
+                    <Icon name="document-attach-outline" size={scale(14)} color="#0F172A" />
                     <Text style={st.filePillTxt} numberOfLines={1}>{form.fssaiPdfName}</Text>
                   </View>
                 )}
               </View>
 
-              <TouchableOpacity onPress={saveForm} style={[st.primaryBtn,{marginTop:10}]}>
+              <TouchableOpacity onPress={saveForm} style={[st.primaryBtn,{marginTop:scale(10)}]}>
                 <Text style={st.primaryTxt}>{form?.id?'Save changes':'Add hotel'}</Text>
               </TouchableOpacity>
-              <View style={{height:8}}/>
+              <View style={{height:scale(8)}}/>
             </ScrollView>
           </View>
         </View>
@@ -622,11 +623,11 @@ export default function RestaurantsScreen({ navigation }) {
         <View style={st.overlay}>
           <View style={st.confirmCard}>
             <View style={{alignItems:'center'}}>
-              <View style={st.warnIcon}><Icon name="trash-outline" size={20} color="#fff"/></View>
+              <View style={st.warnIcon}><Icon name="trash-outline" size={scale(20)} color="#fff"/></View>
               <Text style={st.confirmTitle}>Delete hotel?</Text>
               <Text style={st.confirmSub}>This will permanently remove "{toDelete?.name}".</Text>
             </View>
-            <View style={{flexDirection:'row', gap:10, marginTop:14}}>
+            <View style={{flexDirection:'row', gap:scale(10), marginTop:scale(14)}}>
               <TouchableOpacity onPress={()=>setConfirmOpen(false)} style={[st.outlineBtn,{flex:1}]}>
                 <Text style={st.outlineTxt}>No, keep it</Text>
               </TouchableOpacity>
@@ -673,7 +674,7 @@ function SkeletonRestaurantCard() {
       </Animated.View>
 
       {/* Body */}
-      <View style={{ padding: 12 }}>
+      <View style={{ padding: scale(12) }}>
         <Animated.View style={[st.skelTitleLine, { opacity: pulse }]} />
         <Animated.View style={[st.skelAddrLine, { opacity: pulse }]} />
         <Animated.View style={[st.skelDescLine, { opacity: pulse }]} />
@@ -681,15 +682,15 @@ function SkeletonRestaurantCard() {
 
         <View style={st.metaRow}>
           <View style={st.skelMetaChip} />
-          <View style={[st.skelMetaChip, { width: 120 }]} />
+          <View style={[st.skelMetaChip, { width: scale(120) }]} />
           <View style={{ flex: 1 }} />
-          <View style={{ width: 80, height: 20 }} />
+          <View style={{ width: scale(80), height: scale(20) }} />
         </View>
 
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 10 }}>
-          <View style={[st.skelActionPill, { width: 90 }]} />
-          <View style={[st.skelActionPill, { width: 90 }]} />
-          <View style={[st.skelActionPill, { width: 100 }]} />
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: scale(10), marginTop: scale(10) }}>
+          <View style={[st.skelActionPill, { width: scale(90) }]} />
+          <View style={[st.skelActionPill, { width: scale(90) }]} />
+          <View style={[st.skelActionPill, { width: scale(100) }]} />
         </View>
       </View>
     </View>
@@ -719,13 +720,13 @@ function RestaurantCard({ r, onView, onEdit, onDelete, onFSSAI, openPdf }) {
           <Image source={{uri: r.photos[0]}} style={st.mainImg} />
         ) : (
           <View style={[st.mainImg, {backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center'}]}>
-            <Icon name="restaurant" size={40} color="#ccc" />
+            <Icon name="restaurant" size={scale(40)} color="#ccc" />
           </View>
         )}
         
         {/* Status Badge */}
         <View style={[st.statusPill,{backgroundColor:s.bg}]}>
-          <Icon name={r.status==='approved'?'checkmark-circle':r.status==='pending'?'time-outline':'close-circle'} size={14} color={s.fg}/>
+          <Icon name={r.status==='approved'?'checkmark-circle':r.status==='pending'?'time-outline':'close-circle'} size={scale(14)} color={s.fg}/>
           <Text style={[st.statusTxt,{color:s.fg}]}>{s.label}</Text>
         </View>
 
@@ -745,21 +746,21 @@ function RestaurantCard({ r, onView, onEdit, onDelete, onFSSAI, openPdf }) {
       </View>
 
       {/* Content */}
-      <View style={{padding:12}}>
+      <View style={{padding:scale(12)}}>
         <Text style={st.title} numberOfLines={1}>{r.name}</Text>
         <Text style={st.addr} numberOfLines={1}>{r.address}</Text>
         <Text style={st.desc} numberOfLines={2}>{r.desc}</Text>
 
         <View style={st.metaRow}>
           <View style={{flex:1}}/>
-          <TouchableOpacity onPress={onView} style={st.linkBtn}><Text style={st.linkTxt}>View</Text><Icon name="chevron-forward" size={16} color={C.primary}/></TouchableOpacity>
+          <TouchableOpacity onPress={onView} style={st.linkBtn}><Text style={st.linkTxt}>View</Text><Icon name="chevron-forward" size={scale(16)} color={C.primary}/></TouchableOpacity>
         </View>
 
-        <View style={{flexDirection:'row', flexWrap:'wrap', gap:10, marginTop:10}}>
+        <View style={{flexDirection:'row', flexWrap:'wrap', gap:scale(10), marginTop:scale(10)}}>
           {/* Edit button - only show if restaurant is not approved */}
           {r.status !== 'approved' && (
             <TouchableOpacity onPress={onEdit} style={st.actionMini}>
-              <Icon name="create-outline" size={16} color={C.primary}/>
+              <Icon name="create-outline" size={scale(16)} color={C.primary}/>
               <Text style={st.actionTxt}>Edit</Text>
             </TouchableOpacity>
           )}
@@ -771,7 +772,7 @@ function RestaurantCard({ r, onView, onEdit, onDelete, onFSSAI, openPdf }) {
               console.log("📄 PDF URL:", r.fssaiPdf);
               openPdf(r.fssaiPdf);
             }} style={[st.actionMini,{backgroundColor:'#EEF2FF',borderColor:'#DBEAFE'}]}>
-              <Icon name="document-outline" size={16} color="#475569"/>
+              <Icon name="document-outline" size={scale(16)} color="#475569"/>
               <Text style={[st.actionTxt,{color:'#1E293B'}]}>FSSAI</Text>
             </TouchableOpacity>
           )}
@@ -779,7 +780,7 @@ function RestaurantCard({ r, onView, onEdit, onDelete, onFSSAI, openPdf }) {
           {/* Delete button - only show if restaurant is not approved */}
           {r.status !== 'approved' && (
             <TouchableOpacity onPress={onDelete} style={[st.actionMini,{backgroundColor:'#FEF2F2',borderColor:'#FCA5A5'}]}>
-              <Icon name="trash-outline" size={16} color={C.danger}/>
+              <Icon name="trash-outline" size={scale(16)} color={C.danger}/>
               <Text style={[st.actionTxt,{color:C.danger}]}>Delete</Text>
             </TouchableOpacity>
           )}
@@ -792,169 +793,169 @@ function RestaurantCard({ r, onView, onEdit, onDelete, onFSSAI, openPdf }) {
 
 /* ---------------------- STYLES ---------------------- */
 const st = StyleSheet.create({
-  header:{ flexDirection:'row', alignItems:'center', justifyContent:'space-between', paddingHorizontal:16, paddingBottom:8 },
-  hBtn:{ width:38, height:38, borderRadius:12, borderWidth:1, borderColor:'#EEF2F7', backgroundColor:'#fff', alignItems:'center', justifyContent:'center' },
-  hTitle:{ color:C.ink, fontWeight:'900', fontSize:24 },
+  header:{ flexDirection:'row', alignItems:'center', justifyContent:'space-between', paddingHorizontal:scale(16), paddingBottom:scale(8) },
+  hBtn:{ width:scale(38), height:scale(38), borderRadius:scale(12), borderWidth:1, borderColor:'#EEF2F7', backgroundColor:'#fff', alignItems:'center', justifyContent:'center' },
+  hTitle:{ color:C.ink, fontWeight:'900', fontSize:moderateScale(24) },
 
-  searchWrap:{ flexDirection:'row', alignItems:'center', backgroundColor:'#fff', borderRadius:999, paddingHorizontal:14, borderWidth:1, borderColor:'#E5E7EB', height:48, shadowColor:'#000', shadowOpacity:0.04, shadowRadius:8, elevation:2 },
-  searchInput:{ flex:1, marginLeft:10, color:C.ink },
-  clearBtn:{ marginLeft:6 },
+  searchWrap:{ flexDirection:'row', alignItems:'center', backgroundColor:'#fff', borderRadius:scale(999), paddingHorizontal:scale(14), borderWidth:1, borderColor:'#E5E7EB', height:scale(48), shadowColor:'#000', shadowOpacity:0.04, shadowRadius:scale(8), elevation:2 },
+  searchInput:{ flex:1, marginLeft:scale(10), color:C.ink },
+  clearBtn:{ marginLeft:scale(6) },
 
-  filterChip:{ flexDirection:'row', alignItems:'center', gap:6, paddingHorizontal:12, paddingVertical:8, borderRadius:999, borderWidth:1, borderColor:'#E5E7EB', backgroundColor:'#fff', marginRight:8 },
-  filterTxt:{ color:'#334155', fontWeight:'800', fontSize:12 },
+  filterChip:{ flexDirection:'row', alignItems:'center', gap:scale(6), paddingHorizontal:scale(12), paddingVertical:scale(8), borderRadius:scale(999), borderWidth:1, borderColor:'#E5E7EB', backgroundColor:'#fff', marginRight:scale(8) },
+  filterTxt:{ color:'#334155', fontWeight:'800', fontSize:moderateScale(12) },
 
-  card:{ backgroundColor:C.card, borderRadius:R, borderWidth:1, borderColor:'#EEF2F7', overflow:'hidden', marginBottom:14, shadowColor:'#000', shadowOpacity:0.04, shadowRadius:8, elevation:3 },
-  mainImg:{ width:'100%', height:180 },
+  card:{ backgroundColor:C.card, borderRadius:R, borderWidth:1, borderColor:'#EEF2F7', overflow:'hidden', marginBottom:scale(14), shadowColor:'#000', shadowOpacity:0.04, shadowRadius:scale(8), elevation:3 },
+  mainImg:{ width:'100%', height:scale(180) },
 
-  thumbRow:{ position:'absolute', right:12, bottom:12, flexDirection:'row', gap:8 },
-  thumbWrap:{ width:56, height:56, borderRadius:12, backgroundColor:'#fff', padding:2,
-    borderWidth:1, borderColor:'#E2E8F0', shadowColor:'#000', shadowOpacity:0.12, shadowRadius:6, elevation:4, overflow:'hidden' },
-  thumb:{ width:'100%', height:'100%', borderRadius:10 },
-  moreOverlay:{ ...StyleSheet.absoluteFillObject, backgroundColor:'rgba(0,0,0,0.45)', alignItems:'center', justifyContent:'center', borderRadius:10 },
-  moreTxt:{ color:'#fff', fontWeight:'900', fontSize:12 },
+  thumbRow:{ position:'absolute', right:scale(12), bottom:scale(12), flexDirection:'row', gap:scale(8) },
+  thumbWrap:{ width:scale(56), height:scale(56), borderRadius:scale(12), backgroundColor:'#fff', padding:scale(2),
+    borderWidth:1, borderColor:'#E2E8F0', shadowColor:'#000', shadowOpacity:0.12, shadowRadius:scale(6), elevation:4, overflow:'hidden' },
+  thumb:{ width:'100%', height:'100%', borderRadius:scale(10) },
+  moreOverlay:{ ...StyleSheet.absoluteFillObject, backgroundColor:'rgba(0,0,0,0.45)', alignItems:'center', justifyContent:'center', borderRadius:scale(10) },
+  moreTxt:{ color:'#fff', fontWeight:'900', fontSize:moderateScale(12) },
 
-  statusPill:{ position:'absolute', left:12, top:12, flexDirection:'row', alignItems:'center', gap:6, paddingHorizontal:12, paddingVertical:6, borderRadius:999 },
-  statusTxt:{ fontWeight:'800', fontSize:12 },
+  statusPill:{ position:'absolute', left:scale(12), top:scale(12), flexDirection:'row', alignItems:'center', gap:scale(6), paddingHorizontal:scale(12), paddingVertical:scale(6), borderRadius:scale(999) },
+  statusTxt:{ fontWeight:'800', fontSize:moderateScale(12) },
 
-  title:{ color:C.text, fontWeight:'900', fontSize:20, marginTop:6 },
-  addr:{ color:C.muted, marginTop:2 },
-  desc:{ color:C.text, marginTop:6 },
-  metaRow:{ flexDirection:'row', alignItems:'center', marginTop:10 },
-  metaChip:{ flexDirection:'row', alignItems:'center', backgroundColor:'#F8FAFC', borderWidth:1, borderColor:'#EEF2F7', paddingHorizontal:10, paddingVertical:6, borderRadius:999, marginRight:8 },
-  metaTxt:{ color:C.ink, fontWeight:'800', fontSize:12 },
+  title:{ color:C.text, fontWeight:'900', fontSize:moderateScale(20), marginTop:scale(6) },
+  addr:{ color:C.muted, marginTop:scale(2) },
+  desc:{ color:C.text, marginTop:scale(6) },
+  metaRow:{ flexDirection:'row', alignItems:'center', marginTop:scale(10) },
+  metaChip:{ flexDirection:'row', alignItems:'center', backgroundColor:'#F8FAFC', borderWidth:1, borderColor:'#EEF2F7', paddingHorizontal:scale(10), paddingVertical:scale(6), borderRadius:scale(999), marginRight:scale(8) },
+  metaTxt:{ color:C.ink, fontWeight:'800', fontSize:moderateScale(12) },
   linkBtn:{ flexDirection:'row', alignItems:'center' },
-  linkTxt:{ color:C.primary, fontWeight:'900', marginRight:4 },
-  actionMini:{ flexDirection:'row', alignItems:'center', gap:6, backgroundColor:'#FFF1F1', borderWidth:1, borderColor:'#FECACA', paddingHorizontal:12, paddingVertical:10, borderRadius:12 },
+  linkTxt:{ color:C.primary, fontWeight:'900', marginRight:scale(4) },
+  actionMini:{ flexDirection:'row', alignItems:'center', gap:scale(6), backgroundColor:'#FFF1F1', borderWidth:1, borderColor:'#FECACA', paddingHorizontal:scale(12), paddingVertical:scale(10), borderRadius:scale(12) },
   actionTxt:{ color:C.primary, fontWeight:'900' },
 
   // modal shells
-  overlay:{ flex:1, backgroundColor:'rgba(0,0,0,0.35)', alignItems:'center', justifyContent:'center', paddingHorizontal:16 },
-  modalCard:{ width: W*0.9, maxWidth: 560, height: H*0.7, backgroundColor:'#fff', borderRadius:R, padding:16, borderWidth:1, borderColor:'#EEF2F7' },
-  modalHeader:{ flexDirection:'row', alignItems:'center', justifyContent:'space-between', marginBottom:8 },
-  modalTitle:{ color:C.ink, fontWeight:'900', fontSize:18 },
-  close:{ width:36, height:36, borderRadius:12, backgroundColor:'#F3F4F6', alignItems:'center', justifyContent:'center' },
+  overlay:{ flex:1, backgroundColor:'rgba(0,0,0,0.35)', alignItems:'center', justifyContent:'center', paddingHorizontal:scale(16) },
+  modalCard:{ width: W*0.9, maxWidth: scale(560), height: H*0.7, backgroundColor:'#fff', borderRadius:R, padding:scale(16), borderWidth:1, borderColor:'#EEF2F7' },
+  modalHeader:{ flexDirection:'row', alignItems:'center', justifyContent:'space-between', marginBottom:scale(8) },
+  modalTitle:{ color:C.ink, fontWeight:'900', fontSize:moderateScale(18) },
+  close:{ width:scale(36), height:scale(36), borderRadius:scale(12), backgroundColor:'#F3F4F6', alignItems:'center', justifyContent:'center' },
 
-  inputLbl:{ color:C.muted, marginBottom:6, fontSize:12, fontWeight:'700' },
-  subLbl:{ color:'#64748B', marginBottom:6, fontSize:12, fontWeight:'700' },
+  inputLbl:{ color:C.muted, marginBottom:scale(6), fontSize:moderateScale(12), fontWeight:'700' },
+  subLbl:{ color:'#64748B', marginBottom:scale(6), fontSize:moderateScale(12), fontWeight:'700' },
 
-  inputWrap:{ backgroundColor:'#fff', borderRadius:12, borderWidth:1, borderColor:'#EEF2F7', paddingHorizontal:10, paddingVertical:10, flexDirection:'row', alignItems:'center' },
-  inputField:{ marginLeft:8, color:C.text, flex:1 },
+  inputWrap:{ backgroundColor:'#fff', borderRadius:scale(12), borderWidth:1, borderColor:'#EEF2F7', paddingHorizontal:scale(10), paddingVertical:scale(10), flexDirection:'row', alignItems:'center' },
+  inputField:{ marginLeft:scale(8), color:C.text, flex:1 },
 
-  pickRow:{ flexDirection:'row', alignItems:'center', gap:8 },
-  previewWrap:{ width:72, height:72, borderRadius:12, borderWidth:2, borderColor:'#fff',
-    shadowColor:'#000', shadowOpacity:0.12, shadowRadius:6, elevation:4, overflow:'hidden', backgroundColor:'#F1F5F9', alignItems:'center', justifyContent:'center' },
+  pickRow:{ flexDirection:'row', alignItems:'center', gap:scale(8) },
+  previewWrap:{ width:scale(72), height:scale(72), borderRadius:scale(12), borderWidth:2, borderColor:'#fff',
+    shadowColor:'#000', shadowOpacity:0.12, shadowRadius:scale(6), elevation:4, overflow:'hidden', backgroundColor:'#F1F5F9', alignItems:'center', justifyContent:'center' },
   previewImg:{ width:'100%', height:'100%' },
   previewEmpty:{ flex:1, alignItems:'center', justifyContent:'center' },
 
-  pdfIcon:{ width:56, height:56, borderRadius:12, borderWidth:2, borderColor:'#fff', backgroundColor:'#FFF1F1', alignItems:'center', justifyContent:'center',
-    shadowColor:'#000', shadowOpacity:0.12, shadowRadius:6, elevation:4 },
+  pdfIcon:{ width:scale(56), height:scale(56), borderRadius:scale(12), borderWidth:2, borderColor:'#fff', backgroundColor:'#FFF1F1', alignItems:'center', justifyContent:'center',
+    shadowColor:'#000', shadowOpacity:0.12, shadowRadius:scale(6), elevation:4 },
 
-  pickerBtn:{ flexDirection:'row', alignItems:'center', gap:6, backgroundColor:C.primary, paddingHorizontal:12, paddingVertical:10, borderRadius:12 },
+  pickerBtn:{ flexDirection:'row', alignItems:'center', gap:scale(6), backgroundColor:C.primary, paddingHorizontal:scale(12), paddingVertical:scale(10), borderRadius:scale(12) },
   pickerTxt:{ color:'#fff', fontWeight:'900' },
 
-  outlineMini:{ flexDirection:'row', alignItems:'center', gap:6, borderWidth:1, borderColor:'#CBD5E1', paddingHorizontal:10, paddingVertical:8, borderRadius:12, backgroundColor:'#fff' },
-  outlineMiniTxt:{ color:'#334155', fontWeight:'800', fontSize:12 },
+  outlineMini:{ flexDirection:'row', alignItems:'center', gap:scale(6), borderWidth:1, borderColor:'#CBD5E1', paddingHorizontal:scale(10), paddingVertical:scale(8), borderRadius:scale(12), backgroundColor:'#fff' },
+  outlineMiniTxt:{ color:'#334155', fontWeight:'800', fontSize:moderateScale(12) },
 
-  primaryBtn:{ backgroundColor:C.primary, borderRadius:14, paddingVertical:12, alignItems:'center' },
+  primaryBtn:{ backgroundColor:C.primary, borderRadius:scale(14), paddingVertical:scale(12), alignItems:'center' },
   primaryTxt:{ color:'#fff', fontWeight:'900' },
 
   // file pill (PDF name)
-  filePill:{ flexDirection:'row', alignItems:'center', gap:6, backgroundColor:'#F1F5F9', borderWidth:1, borderColor:'#E2E8F0', paddingVertical:8, paddingHorizontal:10, borderRadius:10, maxWidth:'100%' },
+  filePill:{ flexDirection:'row', alignItems:'center', gap:scale(6), backgroundColor:'#F1F5F9', borderWidth:1, borderColor:'#E2E8F0', paddingVertical:scale(8), paddingHorizontal:scale(10), borderRadius:scale(10), maxWidth:'100%' },
   filePillTxt:{ color:'#0F172A', fontWeight:'700', flexShrink:1 },
 
   // confirm
-  confirmCard:{ width:W*0.85, maxWidth:500, backgroundColor:'#fff', borderRadius:R, padding:16, borderWidth:1, borderColor:'#EEF2F7' },
-  warnIcon:{ width:44, height:44, borderRadius:14, backgroundColor:C.danger, alignItems:'center', justifyContent:'center', marginBottom:8 },
-  confirmTitle:{ color:C.ink, fontWeight:'900', fontSize:18 },
-  confirmSub:{ color:C.muted, textAlign:'center', marginTop:6 },
+  confirmCard:{ width:W*0.85, maxWidth:scale(500), backgroundColor:'#fff', borderRadius:R, padding:scale(16), borderWidth:1, borderColor:'#EEF2F7' },
+  warnIcon:{ width:scale(44), height:scale(44), borderRadius:scale(14), backgroundColor:C.danger, alignItems:'center', justifyContent:'center', marginBottom:scale(8) },
+  confirmTitle:{ color:C.ink, fontWeight:'900', fontSize:moderateScale(18) },
+  confirmSub:{ color:C.muted, textAlign:'center', marginTop:scale(6) },
 
-  outlineBtn:{ borderWidth:1, borderColor:'#CBD5E1', borderRadius:12, paddingVertical:12, alignItems:'center' },
+  outlineBtn:{ borderWidth:1, borderColor:'#CBD5E1', borderRadius:scale(12), paddingVertical:scale(12), alignItems:'center' },
   outlineTxt:{ color:'#334155', fontWeight:'900' },
-  dangerBtn:{ backgroundColor:'#FEE2E2', borderColor:'#FECACA', borderWidth:1, borderRadius:12, paddingVertical:12, alignItems:'center' },
+  dangerBtn:{ backgroundColor:'#FEE2E2', borderColor:'#FECACA', borderWidth:1, borderRadius:scale(12), paddingVertical:scale(12), alignItems:'center' },
   dangerTxt:{ color:C.danger, fontWeight:'900' },
 
   /* ====== SKELETON (mirrors real card) ====== */
   skelHero: {
     width: '100%',
-    height: 180,
+    height: scale(180),
     backgroundColor: '#E9EEF5',
     position: 'relative',
   },
   skelStatusPill: {
     position: 'absolute',
-    left: 12,
-    top: 12,
-    height: 28,
-    width: 98,
-    borderRadius: 999,
+    left: scale(12),
+    top: scale(12),
+    height: scale(28),
+    width: scale(98),
+    borderRadius: scale(999),
     backgroundColor: '#E6EEF7',
   },
   skelThumbRow: {
     position: 'absolute',
-    right: 12,
-    bottom: 12,
+    right: scale(12),
+    bottom: scale(12),
     flexDirection: 'row',
-    gap: 8,
+    gap: scale(8),
   },
   skelThumb: {
-    width: 56,
-    height: 56,
-    borderRadius: 12,
+    width: scale(56),
+    height: scale(56),
+    borderRadius: scale(12),
     backgroundColor: '#F1F5F9',
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
   skelThumbMore: {
-    width: 56,
-    height: 56,
-    borderRadius: 12,
+    width: scale(56),
+    height: scale(56),
+    borderRadius: scale(12),
     backgroundColor: '#E2E8F0',
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
 
   skelTitleLine: {
-    marginTop: 6,
-    height: 18,
-    borderRadius: 6,
+    marginTop: scale(6),
+    height: scale(18),
+    borderRadius: scale(6),
     backgroundColor: '#E9EEF5',
     width: '70%',
   },
   skelAddrLine: {
-    marginTop: 8,
-    height: 12,
-    borderRadius: 6,
+    marginTop: scale(8),
+    height: scale(12),
+    borderRadius: scale(6),
     backgroundColor: '#E9EEF5',
     width: '55%',
   },
   skelDescLine: {
-    marginTop: 8,
-    height: 12,
-    borderRadius: 6,
+    marginTop: scale(8),
+    height: scale(12),
+    borderRadius: scale(6),
     backgroundColor: '#E9EEF5',
     width: '95%',
   },
   skelDescLineShort: {
-    marginTop: 6,
-    height: 12,
-    borderRadius: 6,
+    marginTop: scale(6),
+    height: scale(12),
+    borderRadius: scale(6),
     backgroundColor: '#E9EEF5',
     width: '80%',
   },
 
   skelMetaChip: {
-    height: 28,
-    width: 90,
-    borderRadius: 999,
+    height: scale(28),
+    width: scale(90),
+    borderRadius: scale(999),
     backgroundColor: '#F1F5F9',
     borderWidth: 1,
     borderColor: '#EEF2F7',
-    marginRight: 8,
+    marginRight: scale(8),
   },
 
   skelActionPill: {
-    height: 38,
-    borderRadius: 12,
+    height: scale(38),
+    borderRadius: scale(12),
     backgroundColor: '#F3F4F6',
     borderWidth: 1,
     borderColor: '#E5E7EB',
@@ -963,17 +964,17 @@ const st = StyleSheet.create({
   // Toast
   toastWrap:{
     position:'absolute',
-    bottom:24,
+    bottom:scale(24),
     alignSelf:'center',
     maxWidth: W*0.9,
-    borderRadius:14,
-    paddingVertical:10,
-    paddingHorizontal:14,
+    borderRadius:scale(14),
+    paddingVertical:scale(10),
+    paddingHorizontal:scale(14),
     flexDirection:'row',
     alignItems:'center',
     shadowColor:'#000',
     shadowOpacity:0.15,
-    shadowRadius:12,
+    shadowRadius:scale(12),
     elevation:6,
   },
   toastTxt:{ color:'#fff', fontWeight:'800', flexShrink:1 }

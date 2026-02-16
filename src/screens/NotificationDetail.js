@@ -7,6 +7,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import Icon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 
+import { scale, moderateScale } from '../utils/responsive';
 const { width: W } = Dimensions.get('window');
 
 const C = {
@@ -50,14 +51,14 @@ export default function NotificationDetail({ navigation, route }) {
       <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top', 'left', 'right']}>
         <LinearGradient colors={[C.primary, C.primaryDark]} style={st.headerGrad}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={st.hBtn}>
-            <Icon name="chevron-back" size={20} color="#fff" />
+            <Icon name="chevron-back" size={scale(20)} color="#fff" />
           </TouchableOpacity>
           <Text style={st.hTitle}>Notification</Text>
-          <View style={{ width: 38 }} />
+          <View style={{ width: scale(38) }} />
         </LinearGradient>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 }}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: scale(32) }}>
           <LinearGradient colors={['#FEE2E2', '#FECACA']} style={st.emptyIcon}>
-            <Icon name="alert-circle-outline" size={40} color={C.primary} />
+            <Icon name="alert-circle-outline" size={scale(40)} color={C.primary} />
           </LinearGradient>
           <Text style={st.emptyTitle}>Notification Not Found</Text>
           <Text style={st.emptyText}>This notification may have been removed or is no longer available.</Text>
@@ -85,20 +86,20 @@ export default function NotificationDetail({ navigation, route }) {
       {/* Gradient Header */}
       <LinearGradient colors={[C.primary, C.primaryDark]} style={st.headerGrad}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={st.hBtn}>
-          <Icon name="chevron-back" size={20} color="#fff" />
+          <Icon name="chevron-back" size={scale(20)} color="#fff" />
         </TouchableOpacity>
         <Text style={st.hTitle}>Notification</Text>
-        <View style={{ width: 38 }} />
+        <View style={{ width: scale(38) }} />
       </LinearGradient>
 
       <ScrollView
-        contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + (actionButton ? 100 : 24) }}
+        contentContainerStyle={{ padding: scale(16), paddingBottom: insets.bottom + (actionButton ? 100 : 24) }}
         showsVerticalScrollIndicator={false}
       >
         {/* Gradient Icon */}
         <View style={st.iconContainer}>
           <LinearGradient colors={typeConfig.gradient} style={st.iconCircle}>
-            <Icon name={typeConfig.ic} size={36} color="#fff" />
+            <Icon name={typeConfig.ic} size={scale(36)} color="#fff" />
           </LinearGradient>
         </View>
 
@@ -108,7 +109,7 @@ export default function NotificationDetail({ navigation, route }) {
             colors={[typeConfig.gradient[0] + '25', typeConfig.gradient[1] + '15']}
             style={st.typeBadge}
           >
-            <Icon name={typeConfig.ic} size={13} color={typeConfig.gradient[1]} />
+            <Icon name={typeConfig.ic} size={scale(13)} color={typeConfig.gradient[1]} />
             <Text style={[st.typeBadgeText, { color: typeConfig.gradient[1] }]}>{typeConfig.label}</Text>
           </LinearGradient>
         </View>
@@ -123,7 +124,7 @@ export default function NotificationDetail({ navigation, route }) {
             style={st.messageAccent}
           />
           <View style={st.messageInner}>
-            <Icon name="chatbox-ellipses-outline" size={16} color={C.muted} style={{ marginBottom: 8 }} />
+            <Icon name="chatbox-ellipses-outline" size={scale(16)} color={C.muted} style={{ marginBottom: scale(8) }} />
             <Text style={st.message}>{notification.body}</Text>
           </View>
         </View>
@@ -132,7 +133,7 @@ export default function NotificationDetail({ navigation, route }) {
         <View style={st.metaCard}>
           <View style={st.metaRow}>
             <View style={st.metaIconBg}>
-              <Icon name="time-outline" size={14} color={C.primary} />
+              <Icon name="time-outline" size={scale(14)} color={C.primary} />
             </View>
             <View>
               <Text style={st.metaLabel}>Received</Text>
@@ -150,7 +151,7 @@ export default function NotificationDetail({ navigation, route }) {
           <View style={st.metaDivider} />
           <View style={st.metaRow}>
             <View style={st.metaIconBg}>
-              <Icon name="pricetag-outline" size={14} color={C.primary} />
+              <Icon name="pricetag-outline" size={scale(14)} color={C.primary} />
             </View>
             <View>
               <Text style={st.metaLabel}>Category</Text>
@@ -162,11 +163,11 @@ export default function NotificationDetail({ navigation, route }) {
               <View style={st.metaDivider} />
               <View style={st.metaRow}>
                 <View style={st.metaIconBg}>
-                  <Icon name="finger-print-outline" size={14} color={C.primary} />
+                  <Icon name="finger-print-outline" size={scale(14)} color={C.primary} />
                 </View>
                 <View>
                   <Text style={st.metaLabel}>Reference ID</Text>
-                  <Text style={[st.metaValue, { fontFamily: 'monospace', fontSize: 12 }]}>
+                  <Text style={[st.metaValue, { fontFamily: 'monospace', fontSize: moderateScale(12) }]}>
                     #{String(notification.meta.notificationId).slice(0, 12)}
                   </Text>
                 </View>
@@ -184,9 +185,9 @@ export default function NotificationDetail({ navigation, route }) {
             onPress={() => navigation.navigate(actionButton.screen, actionButton.params)}
           >
             <LinearGradient colors={[C.primary, C.primaryDark]} style={st.actionBtn}>
-              <Icon name={actionButton.icon} size={18} color="#fff" />
+              <Icon name={actionButton.icon} size={scale(18)} color="#fff" />
               <Text style={st.actionBtnText}>{actionButton.label}</Text>
-              <Icon name="arrow-forward" size={18} color="#fff" />
+              <Icon name="arrow-forward" size={scale(18)} color="#fff" />
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -200,157 +201,157 @@ const st = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(14),
   },
   hBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+    width: scale(38),
+    height: scale(38),
+    borderRadius: scale(12),
     backgroundColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   hTitle: {
     color: '#fff',
-    fontSize: 20,
+    fontSize: moderateScale(20),
     fontWeight: '900',
   },
 
   emptyIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: scale(80),
+    height: scale(80),
+    borderRadius: scale(40),
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: scale(16),
   },
   emptyTitle: {
-    fontSize: 18,
+    fontSize: moderateScale(18),
     fontWeight: '900',
     color: C.ink,
-    marginBottom: 8,
+    marginBottom: scale(8),
   },
   emptyText: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: C.muted,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: moderateScale(20),
   },
 
   iconContainer: {
     alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 20,
+    marginTop: scale(20),
+    marginBottom: scale(20),
   },
   iconCircle: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
+    width: scale(88),
+    height: scale(88),
+    borderRadius: scale(44),
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
+    shadowOffset: { width: 0, height: scale(6) },
     shadowOpacity: 0.15,
-    shadowRadius: 12,
+    shadowRadius: scale(12),
     elevation: 8,
   },
 
   typeLabelRow: {
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: scale(16),
   },
   typeBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 999,
+    gap: scale(6),
+    paddingHorizontal: scale(14),
+    paddingVertical: scale(7),
+    borderRadius: scale(999),
   },
   typeBadgeText: {
     fontWeight: '800',
-    fontSize: 13,
+    fontSize: moderateScale(13),
   },
 
   title: {
     color: C.ink,
-    fontSize: 22,
+    fontSize: moderateScale(22),
     fontWeight: '900',
     textAlign: 'center',
-    marginBottom: 20,
-    lineHeight: 30,
+    marginBottom: scale(20),
+    lineHeight: moderateScale(30),
   },
 
   messageCard: {
     backgroundColor: C.card,
-    borderRadius: 18,
+    borderRadius: scale(18),
     borderWidth: 1,
     borderColor: '#EEF2F7',
     overflow: 'hidden',
-    marginBottom: 16,
+    marginBottom: scale(16),
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
+    shadowOffset: { width: 0, height: scale(3) },
     shadowOpacity: 0.06,
-    shadowRadius: 10,
+    shadowRadius: scale(10),
     elevation: 3,
   },
   messageAccent: {
-    height: 4,
+    height: scale(4),
   },
   messageInner: {
-    padding: 20,
+    padding: scale(20),
     alignItems: 'center',
   },
   message: {
     color: C.text,
-    fontSize: 15,
-    lineHeight: 24,
+    fontSize: moderateScale(15),
+    lineHeight: moderateScale(24),
     textAlign: 'center',
   },
 
   metaCard: {
     backgroundColor: C.card,
-    borderRadius: 16,
+    borderRadius: scale(16),
     borderWidth: 1,
     borderColor: '#EEF2F7',
-    padding: 16,
+    padding: scale(16),
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: scale(2) },
     shadowOpacity: 0.04,
-    shadowRadius: 8,
+    shadowRadius: scale(8),
     elevation: 2,
   },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingVertical: 4,
+    gap: scale(12),
+    paddingVertical: scale(4),
   },
   metaIconBg: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
+    width: scale(32),
+    height: scale(32),
+    borderRadius: scale(10),
     backgroundColor: '#FEF2F2',
     alignItems: 'center',
     justifyContent: 'center',
   },
   metaLabel: {
-    fontSize: 11,
+    fontSize: moderateScale(11),
     fontWeight: '600',
     color: C.muted,
     marginBottom: 1,
   },
   metaValue: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '700',
     color: C.ink,
   },
   metaDivider: {
     height: 1,
     backgroundColor: '#F1F5F9',
-    marginVertical: 10,
-    marginLeft: 44,
+    marginVertical: scale(10),
+    marginLeft: scale(44),
   },
 
   bottomBar: {
@@ -361,25 +362,25 @@ const st = StyleSheet.create({
     backgroundColor: C.card,
     borderTopWidth: 1,
     borderTopColor: '#EEF2F7',
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingHorizontal: scale(16),
+    paddingTop: scale(12),
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -3 },
+    shadowOffset: { width: 0, height: scale(-3) },
     shadowOpacity: 0.06,
-    shadowRadius: 8,
+    shadowRadius: scale(8),
     elevation: 5,
   },
   actionBtn: {
-    borderRadius: 14,
-    paddingVertical: 15,
+    borderRadius: scale(14),
+    paddingVertical: scale(15),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
+    gap: scale(10),
   },
   actionBtnText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: moderateScale(16),
     fontWeight: '900',
   },
 });
