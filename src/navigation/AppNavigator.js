@@ -106,7 +106,7 @@ export default function AppNavigator() {
     const checkAuthState = async () => {
       try {
         const token = await AsyncStorage.getItem('userToken');
-        const userData = await AsyncStorage.getItem('user');
+        const userData = await AsyncStorage.getItem('userData');
 
         // Wait 2.5 seconds to allow splash animation
         await new Promise(resolve => setTimeout(resolve, 2500));

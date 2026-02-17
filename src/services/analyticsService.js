@@ -1,6 +1,6 @@
 import { api } from '../api/client';
 import RNFS from 'react-native-fs';
-import { Platform, Alert } from 'react-native';
+import { Platform, Alert, Share } from 'react-native';
 import FileViewer from 'react-native-file-viewer';
 
 /**
@@ -307,8 +307,6 @@ export const openPDF = async (filePath) => {
  */
 export const sharePDF = async (filePath) => {
   try {
-    const { Share } = require('react-native');
-
     await Share.share({
       url: Platform.OS === 'ios' ? filePath : `file://${filePath}`,
       title: 'Share Report',
