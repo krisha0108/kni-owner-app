@@ -358,13 +358,17 @@ export default function KhatabookScreen({ navigation }) {
               key={action.key}
               style={st.actionCard}
               onPress={() => navigation.navigate(action.key)}
-              activeOpacity={0.85}
+              activeOpacity={0.8}
             >
-              <LinearGradient colors={action.gradient} style={st.actionIconBox}>
-                <Icon name={action.icon} size={scale(22)} color="#fff" />
+              <LinearGradient
+                colors={action.gradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={st.actionIconBox}
+              >
+                <Icon name={action.icon} size={scale(24)} color="#fff" />
               </LinearGradient>
               <Text style={st.actionLabel}>{action.label}</Text>
-              <Icon name="chevron-forward" size={scale(16)} color={C.muted} />
             </TouchableOpacity>
           ))}
         </View>
@@ -728,36 +732,37 @@ const st = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     paddingHorizontal: scale(16),
-    gap: scale(10),
+    justifyContent: 'space-between',
+    rowGap: scale(10),
   },
   actionCard: {
-    width: (W - 42) / 2,
-    flexDirection: 'row',
+    width: '48%',
     alignItems: 'center',
-    gap: scale(10),
     backgroundColor: C.card,
-    borderRadius: scale(14),
-    padding: scale(14),
+    borderRadius: scale(12),
+    paddingVertical: scale(12),
+    paddingHorizontal: scale(8),
     borderWidth: 1,
     borderColor: C.border,
     shadowColor: C.shadow,
-    shadowOffset: { width: 0, height: scale(2) },
-    shadowOpacity: 0.06,
-    shadowRadius: scale(6),
-    elevation: 2,
+    shadowOffset: { width: 0, height: scale(1) },
+    shadowOpacity: 0.05,
+    shadowRadius: scale(4),
+    elevation: 1,
   },
   actionIconBox: {
-    width: scale(40),
-    height: scale(40),
-    borderRadius: scale(12),
+    width: scale(36),
+    height: scale(36),
+    borderRadius: scale(10),
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: scale(6),
   },
   actionLabel: {
-    flex: 1,
-    fontSize: moderateScale(14),
+    fontSize: moderateScale(12),
     fontWeight: '700',
     color: C.ink,
+    textAlign: 'center',
   },
 
   // ═══ Breakdown Card ═══

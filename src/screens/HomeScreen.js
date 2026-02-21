@@ -49,7 +49,7 @@ const getStatusColor = (s) =>
 const QA = [
   { icon: 'calendar-outline', label: 'Bookings', grad: ['#FF6B6B', '#EF3A3A'], screen: 'MyBookings' },
   { icon: 'storefront-outline', label: 'Restaurants', grad: ['#818CF8', '#6366F1'], screen: 'MyRestaurants' },
-  { icon: 'construct-outline', label: 'Equipment', grad: ['#34D399', '#10B981'], screen: 'MyEquipment' },
+  { icon: 'cash-outline', label: 'Expenses', grad: ['#34D399', '#10B981'], screen: 'Expenses' },
   { icon: 'headset-outline', label: 'Support', grad: ['#FBBF24', '#F59E0B'], screen: 'SupportCenter' },
 ];
 
@@ -414,14 +414,6 @@ export default function HomeScreen({ navigation }) {
             </TouchableOpacity>
             <TouchableOpacity onPress={() => navigation.navigate?.('Notifications')} style={st.headerBtn}>
               <Icon name="notifications-outline" size={scale(18)} color="#fff" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => navigation.navigate?.('Cart')} style={st.headerBtn}>
-              <Icon name="cart-outline" size={scale(18)} color="#fff" />
-              {cartCount > 0 && (
-                <View style={st.cartBadge}>
-                  <Text style={st.cartBadgeTxt}>{cartCount > 99 ? '99+' : cartCount}</Text>
-                </View>
-              )}
             </TouchableOpacity>
           </View>
         </View>

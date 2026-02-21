@@ -64,8 +64,6 @@ const MENU_SECTIONS = [
     title: 'Services',
     items: [
       { icon: 'folder-outline', label: 'Category Request', screen: 'CategoryRequest' },
-      { icon: 'layers-outline', label: 'Request Services', screen: 'ServiceRequest' },
-      { icon: 'cart-outline', label: 'My Cart', screen: 'Cart' },
     ],
   },
   {

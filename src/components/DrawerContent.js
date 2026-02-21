@@ -44,8 +44,6 @@ const MENU_ITEMS = [
 
   // Services
   { name: 'Category Request', screen: 'CategoryRequest', icon: 'folder-outline', section: 'services' },
-  { name: 'Request Services', screen: 'Request', icon: 'layers-outline', section: 'services' },
-  { name: 'My Cart', screen: 'Cart', icon: 'cart-outline', section: 'services' },
 
   // Bookings
   { name: 'My Bookings', screen: 'MyBookings', icon: 'calendar-outline', section: 'bookings' },
