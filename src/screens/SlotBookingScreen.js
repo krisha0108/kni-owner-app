@@ -9,7 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRestaurant } from '../context/RestaurantContext';
-import { scale, moderateScale, isTablet, getContainerMaxWidth } from '../utils/responsive';
+import { scale, verticalScale, moderateScale, isTablet, getContainerMaxWidth } from '../utils/responsive';
 
 const C = {
   primary: '#EF3A3A',
@@ -210,7 +210,7 @@ export default function SlotBookingScreen({ navigation, route }) {
             <Icon name="arrow-back" size={22} color={C.ink} />
           </TouchableOpacity>
           <Text style={st.headerTitle}>Book a Slot</Text>
-          <View style={{ width: 40 }} />
+          <View style={{ width: scale(40) }} />
         </View>
         <View style={st.loadingContainer}>
           <ActivityIndicator size="large" color={C.primary} />
@@ -226,7 +226,7 @@ export default function SlotBookingScreen({ navigation, route }) {
           <Icon name="arrow-back" size={22} color={C.ink} />
         </TouchableOpacity>
         <Text style={st.headerTitle}>Book a Slot</Text>
-        <View style={{ width: 40 }} />
+        <View style={{ width: scale(40) }} />
       </View>
 
       {/* Progress Indicator */}
@@ -251,7 +251,7 @@ export default function SlotBookingScreen({ navigation, route }) {
         <Text style={[st.progressLabel, step === 4 && st.progressLabelActive]}>Confirm</Text>
       </View>
 
-      <ScrollView style={st.content} showsVerticalScrollIndicator={false}>
+      <ScrollView style={st.content} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: scale(120) }}>
         {/* Step 1: Select Restaurant */}
         {step === 1 && (
           <View style={st.stepContainer}>
@@ -458,7 +458,6 @@ export default function SlotBookingScreen({ navigation, route }) {
           </View>
         )}
 
-        <View style={{ height: 120 }} />
       </ScrollView>
 
       {/* Bottom Actions */}
@@ -524,7 +523,7 @@ const st = StyleSheet.create({
   optionCard: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: C.card,
     borderRadius: scale(16), padding: scale(16), marginBottom: scale(12),
-    borderWidth: 2, borderColor: C.border
+    borderWidth: scale(2), borderColor: C.border
   },
   optionCardActive: { borderColor: C.primary, backgroundColor: '#FFF7F7' },
   optionIcon: {
@@ -544,7 +543,7 @@ const st = StyleSheet.create({
   dateCard: {
     alignItems: 'center', paddingHorizontal: scale(16), paddingVertical: scale(12),
     backgroundColor: C.card, borderRadius: scale(16), marginRight: scale(10),
-    borderWidth: 2, borderColor: C.border, minWidth: scale(70)
+    borderWidth: scale(2), borderColor: C.border, minWidth: scale(70)
   },
   dateCardActive: { borderColor: C.primary, backgroundColor: C.primary },
   dateTag: { fontSize: moderateScale(9), fontWeight: '700', color: C.warn, marginBottom: scale(4) },

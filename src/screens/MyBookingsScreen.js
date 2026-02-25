@@ -170,7 +170,7 @@ export default function MyBookingsScreen({ navigation }) {
         style={[
           styles.bookingCard,
           isTabletDevice && { width: (width - 48) / 2 - 6 },
-          isTabletDevice && index % 2 === 0 && { marginRight: 12 },
+          isTabletDevice && index % 2 === 0 && { marginRight: scale(12) },
         ]}
         onPress={() => navigation.navigate('BookingDetail', { bookingId: item.id })}
         activeOpacity={0.7}

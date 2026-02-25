@@ -25,7 +25,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
   TextInput, ActivityIndicator, Alert, Modal, Image,
-  useWindowDimensions,
+  useWindowDimensions, Dimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -36,6 +36,7 @@ import { useRestaurant } from '../context/RestaurantContext';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 import { scale, moderateScale, isTablet, getContainerMaxWidth } from '../utils/responsive';
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // Constants - matching owner web
 const GST_RATE = 0.18;
@@ -447,7 +448,7 @@ export default function ServiceRequestScreen({ navigation, route }) {
               </View>
             )}
 
-            <View style={{ height: 240 }} />
+            <View style={{ height: scale(240) }} />
           </ScrollView>
         );
 
@@ -508,7 +509,7 @@ export default function ServiceRequestScreen({ navigation, route }) {
               />
             </View>
 
-            <View style={{ height: 240 }} />
+            <View style={{ height: scale(240) }} />
           </ScrollView>
         );
 
@@ -638,7 +639,7 @@ export default function ServiceRequestScreen({ navigation, route }) {
               </TouchableOpacity>
             </View>
 
-            <View style={{ height: 240 }} />
+            <View style={{ height: scale(240) }} />
           </ScrollView>
         );
 
@@ -754,7 +755,7 @@ export default function ServiceRequestScreen({ navigation, route }) {
             <Icon name="arrow-back" size={22} color={C.ink} />
           </TouchableOpacity>
           <Text style={st.headerTitle}>Request Service</Text>
-          <View style={{ width: 40 }} />
+          <View style={{ width: scale(40) }} />
         </View>
         <View style={st.errorContainer}>
           <Icon name="alert-circle-outline" size={64} color={C.muted} />
@@ -781,7 +782,7 @@ export default function ServiceRequestScreen({ navigation, route }) {
           <Icon name="arrow-back" size={22} color={C.ink} />
         </TouchableOpacity>
         <Text style={st.headerTitle}>Request Service</Text>
-        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: 8 }}>
+        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
           <Icon name="menu" size={22} color={C.ink} />
         </TouchableOpacity>
       </View>
@@ -1054,7 +1055,7 @@ const st = StyleSheet.create({
   // Upload
   uploadLabel: { fontSize: moderateScale(14), fontWeight: '600', color: C.ink, marginBottom: scale(8) },
   uploadBox: {
-    borderWidth: 2, borderColor: C.border, borderStyle: 'dashed', borderRadius: scale(12),
+    borderWidth: scale(2), borderColor: C.border, borderStyle: 'dashed', borderRadius: scale(12),
     padding: scale(24), alignItems: 'center', justifyContent: 'center', backgroundColor: C.card
   },
   uploadText: { fontSize: moderateScale(14), color: C.muted, marginTop: scale(8) },
@@ -1082,9 +1083,9 @@ const st = StyleSheet.create({
     borderTopLeftRadius: scale(20), borderTopRightRadius: scale(20),
     paddingHorizontal: scale(16), paddingVertical: scale(14),
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
+    shadowOffset: { width: 0, height: -scale(4) },
     shadowOpacity: 0.1,
-    shadowRadius: 12,
+    shadowRadius: scale(12),
     elevation: 10,
   },
   footerSummary: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
@@ -1118,7 +1119,7 @@ const st = StyleSheet.create({
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   modalSheet: {
     backgroundColor: C.card, borderTopLeftRadius: scale(24), borderTopRightRadius: scale(24),
-    padding: scale(20), maxHeight: '80%'
+    padding: scale(20), maxHeight: SCREEN_HEIGHT * 0.8
   },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: scale(20) },
   modalTitle: { fontSize: moderateScale(20), fontWeight: '800', color: C.ink },
@@ -1139,7 +1140,7 @@ const st = StyleSheet.create({
     marginBottom: scale(4)
   },
   calendarCellActive: { backgroundColor: C.primary, borderRadius: scale(10) },
-  calendarCellToday: { borderWidth: 2, borderColor: C.primary, borderRadius: scale(10) },
+  calendarCellToday: { borderWidth: scale(2), borderColor: C.primary, borderRadius: scale(10) },
   calendarCellText: { fontSize: moderateScale(14), fontWeight: '600', color: C.ink },
   calendarCellTextActive: { color: '#fff' },
 });

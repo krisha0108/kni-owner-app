@@ -25,6 +25,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api, getImageUrl } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRestaurant } from '../context/RestaurantContext';
@@ -32,7 +33,7 @@ import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
 import { scale, moderateScale } from '../utils/responsive';
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const CARD_WIDTH = (SCREEN_WIDTH - 48) / 2;
 
 // App Theme Color Palette
@@ -90,7 +91,6 @@ export default function MarketplaceScreen({ navigation }) {
   const [menuVisible, setMenuVisible] = useState(false);
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [deliveryNotes, setDeliveryNotes] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Animate cart button when items added
   const animateCart = () => {
@@ -100,11 +100,58 @@ export default function MarketplaceScreen({ navigation }) {
     ]).start();
   };
 
-  const loadData = useCallback(async () => {
+  // ========== CART PERSISTENCE ==========
+  const CART_STORAGE_KEY = `@marketplace_cart_${selectedRestaurantId || 'none'}`;
+  const cartLoadedRef = useRef(false);
+
+  // Restore cart from AsyncStorage when restaurant changes
+  useEffect(() => {
+    if (!selectedRestaurantId) return;
+    cartLoadedRef.current = false;
+    const restoreCart = async () => {
+      try {
+        const saved = await AsyncStorage.getItem(`@marketplace_cart_${selectedRestaurantId}`);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setCart(parsed);
+          } else {
+            setCart([]);
+          }
+        } else {
+          setCart([]);
+        }
+      } catch (e) {
+        console.log('Cart restore error:', e);
+        setCart([]);
+      } finally {
+        cartLoadedRef.current = true;
+      }
+    };
+    restoreCart();
+  }, [selectedRestaurantId]);
+
+  // Save cart to AsyncStorage whenever it changes
+  useEffect(() => {
+    if (!selectedRestaurantId || !cartLoadedRef.current) return;
+    const saveCart = async () => {
+      try {
+        await AsyncStorage.setItem(
+          `@marketplace_cart_${selectedRestaurantId}`,
+          JSON.stringify(cart)
+        );
+      } catch (e) {
+        console.log('Cart save error:', e);
+      }
+    };
+    saveCart();
+  }, [cart, selectedRestaurantId]);
+
+  const loadData = useCallback(async (showLoader = true) => {
     if (!selectedRestaurantId) return;
 
     try {
-      setLoading(true);
+      if (showLoader) setLoading(true);
       const params = new URLSearchParams();
       params.append('restaurantId', selectedRestaurantId);
       if (selectedCategory && selectedCategory !== 'all') {
@@ -138,9 +185,26 @@ export default function MarketplaceScreen({ navigation }) {
 
   useFocusEffect(
     useCallback(() => {
+      // Background refresh - no loading spinner (keeps cart visible)
       if (selectedRestaurantId) {
-        loadData();
+        loadData(false);
       }
+      // Check if a vendor was paid - remove their items from cart
+      const checkPaidVendor = async () => {
+        try {
+          const paidVendorId = await AsyncStorage.getItem('@marketplace_paid_vendor');
+          if (paidVendorId) {
+            setCart(prev => prev.filter(item => {
+              const vid = item.product.vendor?.id || item.product.vendorId || 'unknown';
+              return vid !== paidVendorId;
+            }));
+            await AsyncStorage.removeItem('@marketplace_paid_vendor');
+          }
+        } catch (e) {
+          // ignore
+        }
+      };
+      checkPaidVendor();
     }, [selectedRestaurantId, loadData])
   );
 
@@ -187,66 +251,69 @@ export default function MarketplaceScreen({ navigation }) {
   const getCartTotal = () => cart.reduce((total, item) => total + item.product.price * item.quantity, 0);
   const getCartItemQuantity = (productId) => cart.find(i => i.product.id === productId)?.quantity || 0;
 
-  const handlePlaceOrder = async () => {
-    if (!selectedRestaurantId) return Alert.alert('Error', 'Please select a restaurant');
-    if (cart.length === 0) return Alert.alert('Error', 'Cart is empty');
-    if (!deliveryAddress.trim()) return Alert.alert('Error', 'Please enter delivery address');
-
-    const vendorGroups = cart.reduce((groups, item) => {
-      const vendorId = item.product.vendor?.id || item.product.vendorId || 'unknown';
-      if (!groups[vendorId]) groups[vendorId] = [];
-      groups[vendorId].push(item);
-      return groups;
-    }, {});
-
-    setIsSubmitting(true);
-    try {
-      const orderPromises = Object.entries(vendorGroups).map(([vendorId, items]) =>
-        api.post('/owner/marketplace/orders', {
-          restaurantId: selectedRestaurantId,
-          vendorId,
-          items: items.map(item => ({ productId: item.product.id, qty: item.quantity })),
-          deliveryAddress: deliveryAddress.trim(),
-          notes: deliveryNotes.trim() || undefined,
-        })
-      );
-
-      const responses = await Promise.all(orderPromises);
-      const allSuccess = responses.every(res => res.data.ok);
-
-      if (allSuccess) {
-        Alert.alert('Order Placed!', `${responses.length} order(s) placed successfully`, [
-          { text: 'View Orders', onPress: () => navigation.navigate('MarketplaceOrders') },
-          { text: 'Continue Shopping' }
-        ]);
-        setCart([]);
-        setOrderModalVisible(false);
-        setDeliveryAddress('');
-        setDeliveryNotes('');
-      } else {
-        Alert.alert('Error', 'Some orders failed to place');
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to place order');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const filteredProducts = products.filter(p =>
     !search || p.name.toLowerCase().includes(search.toLowerCase())
   );
 
   // ==================== RENDER COMPONENTS ====================
 
+  // Group cart items by vendor for the order modal
+  const getVendorGroups = () => {
+    const groups = {};
+    cart.forEach(item => {
+      const vendorId = item.product.vendor?.id || item.product.vendorId || 'unknown';
+      const vendorNameVal = typeof item.product.vendor === 'object' ? item.product.vendor?.name : 'Unknown Vendor';
+      const isAdmin = item.product.isAdminStore === true;
+      if (!groups[vendorId]) {
+        groups[vendorId] = {
+          vendorId,
+          vendorName: isAdmin ? 'KNI Official Store' : vendorNameVal,
+          isAdminStore: isAdmin,
+          items: [],
+          total: 0,
+        };
+      }
+      groups[vendorId].items.push(item);
+      groups[vendorId].total += item.product.price * item.quantity;
+    });
+    return Object.values(groups);
+  };
+
+  const handlePayAndOrder = (vendorGroup) => {
+    if (!selectedRestaurantId) return Alert.alert('Error', 'Please select a restaurant');
+    if (!deliveryAddress.trim()) return Alert.alert('Error', 'Please enter delivery address');
+
+    // Close modal first, then navigate
+    setOrderModalVisible(false);
+
+    // Navigate to payment screen with vendor's items + callback to remove from cart on success
+    navigation.navigate('MarketplacePayment', {
+      vendorId: vendorGroup.vendorId,
+      vendorName: vendorGroup.vendorName,
+      isAdminStore: vendorGroup.isAdminStore,
+      items: vendorGroup.items.map(item => ({
+        product: item.product,
+        id: item.product.id,
+        productId: item.product.id,
+        name: item.product.name,
+        price: item.product.price,
+        quantity: item.quantity,
+      })),
+      restaurantId: selectedRestaurantId,
+      deliveryAddress: deliveryAddress.trim(),
+      deliveryNotes: deliveryNotes.trim(),
+    });
+  };
+
   const renderProductCard = ({ item, index }) => {
     const cartQty = getCartItemQuantity(item.id);
     const stockQty = item.stockQuantity || 0;
     const inStock = stockQty > 0;
     const vendorName = typeof item.vendor === 'object' ? item.vendor?.name : item.vendor;
+    const isAdmin = item.isAdminStore === true;
 
     return (
-      <View style={[st.productCard, { marginLeft: index % 2 === 0 ? 16 : 8, marginRight: index % 2 === 1 ? 16 : 8 }]}>
+      <View style={[st.productCard, isAdmin && st.adminProductCard, { marginLeft: index % 2 === 0 ? 16 : 8, marginRight: index % 2 === 1 ? 16 : 8 }]}>
         {/* Product Image */}
         <View style={st.productImageContainer}>
           {item.imageUrl || item.image ? (
@@ -254,6 +321,14 @@ export default function MarketplaceScreen({ navigation }) {
           ) : (
             <View style={st.productImagePlaceholder}>
               <Icon name="cube-outline" size={scale(32)} color={C.muted} />
+            </View>
+          )}
+
+          {/* KNI Official Badge */}
+          {isAdmin && (
+            <View style={st.kniBadge}>
+              <Icon name="shield-checkmark" size={scale(10)} color="#fff" />
+              <Text style={st.kniBadgeText}>KNI Official</Text>
             </View>
           )}
 
@@ -275,8 +350,8 @@ export default function MarketplaceScreen({ navigation }) {
 
           {vendorName && (
             <View style={st.vendorRow}>
-              <Icon name="storefront" size={scale(11)} color={C.success} />
-              <Text style={st.vendorName} numberOfLines={1}>{vendorName}</Text>
+              <Icon name={isAdmin ? 'shield-checkmark' : 'storefront'} size={scale(11)} color={isAdmin ? '#2563EB' : C.success} />
+              <Text style={[st.vendorName, isAdmin && st.adminVendorName]} numberOfLines={1}>{vendorName}</Text>
             </View>
           )}
 
@@ -336,6 +411,68 @@ export default function MarketplaceScreen({ navigation }) {
     </View>
   );
 
+  // ==================== FLOATING CART COMPONENT (reusable) ====================
+  const renderFloatingCart = () => {
+    if (cart.length === 0) return null;
+    return (
+      <Animated.View style={[st.floatingCart, { transform: [{ scale: cartAnimation }] }]}>
+        {/* Mini item preview strip */}
+        <View style={st.cartPreviewStrip}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.cartPreviewScroll}>
+            {cart.map((item) => (
+              <View key={item.product.id} style={st.cartPreviewItem}>
+                {item.product.imageUrl ? (
+                  <Image source={{ uri: getImageUrl(item.product.imageUrl) }} style={st.cartPreviewImg} />
+                ) : (
+                  <View style={[st.cartPreviewImg, st.cartPreviewImgPlaceholder]}>
+                    <Icon name="cube" size={scale(12)} color={C.muted} />
+                  </View>
+                )}
+                <View style={st.cartPreviewQtyBadge}>
+                  <Text style={st.cartPreviewQtyText}>{item.quantity}</Text>
+                </View>
+              </View>
+            ))}
+          </ScrollView>
+          <Text style={st.cartPreviewVendorText}>
+            {getVendorGroups().length} vendor{getVendorGroups().length !== 1 ? 's' : ''}
+          </Text>
+        </View>
+
+        {/* Main cart button */}
+        <TouchableOpacity
+          style={st.floatingCartBtn}
+          onPress={() => setOrderModalVisible(true)}
+          activeOpacity={0.9}
+        >
+          <LinearGradient
+            colors={[C.gradient1, C.gradient2]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={st.floatingCartGradient}
+          >
+            <View style={st.floatingCartLeft}>
+              <View style={st.cartIconContainer}>
+                <Icon name="cart" size={scale(22)} color="#fff" />
+                <View style={st.cartBadge}>
+                  <Text style={st.cartBadgeText}>{cart.length}</Text>
+                </View>
+              </View>
+              <View>
+                <Text style={st.cartItemsText}>{cart.length} item{cart.length > 1 ? 's' : ''}</Text>
+                <Text style={st.cartTotalText}>{formatPrice(getCartTotal())}</Text>
+              </View>
+            </View>
+            <View style={st.floatingCartRight}>
+              <Text style={st.viewCartText}>View Cart</Text>
+              <Icon name="arrow-forward" size={scale(18)} color="#fff" />
+            </View>
+          </LinearGradient>
+        </TouchableOpacity>
+      </Animated.View>
+    );
+  };
+
   // ==================== LOADING STATE ====================
   if ((loading || restaurantsLoading) && !refreshing) {
     return (
@@ -348,6 +485,7 @@ export default function MarketplaceScreen({ navigation }) {
           <ActivityIndicator size="large" color={C.primary} />
           <Text style={st.loadingText}>Loading products...</Text>
         </View>
+        {renderFloatingCart()}
         <KniBottomNav navigation={navigation} active="request" />
       </SafeAreaView>
     );
@@ -496,42 +634,10 @@ export default function MarketplaceScreen({ navigation }) {
         }
       />
 
-      {/* Floating Cart Button */}
-      {cart.length > 0 && (
-        <Animated.View style={[st.floatingCart, { transform: [{ scale: cartAnimation }] }]}>
-          <TouchableOpacity
-            style={st.floatingCartBtn}
-            onPress={() => setOrderModalVisible(true)}
-            activeOpacity={0.9}
-          >
-            <LinearGradient
-              colors={[C.gradient1, C.gradient2]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={st.floatingCartGradient}
-            >
-              <View style={st.floatingCartLeft}>
-                <View style={st.cartIconContainer}>
-                  <Icon name="cart" size={scale(22)} color="#fff" />
-                  <View style={st.cartBadge}>
-                    <Text style={st.cartBadgeText}>{cart.length}</Text>
-                  </View>
-                </View>
-                <View>
-                  <Text style={st.cartItemsText}>{cart.length} item{cart.length > 1 ? 's' : ''}</Text>
-                  <Text style={st.cartTotalText}>{formatPrice(getCartTotal())}</Text>
-                </View>
-              </View>
-              <View style={st.floatingCartRight}>
-                <Text style={st.viewCartText}>View Cart</Text>
-                <Icon name="arrow-forward" size={scale(18)} color="#fff" />
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
-        </Animated.View>
-      )}
+      {/* Floating Cart Button with Item Preview */}
+      {renderFloatingCart()}
 
-      {/* Order Modal */}
+      {/* Order Modal - Vendor-wise Cart */}
       <Modal visible={orderModalVisible} animationType="slide" transparent>
         <View style={st.modalOverlay}>
           <View style={st.modalContainer}>
@@ -539,7 +645,7 @@ export default function MarketplaceScreen({ navigation }) {
             <View style={st.modalHeader}>
               <View>
                 <Text style={st.modalTitle}>Your Cart</Text>
-                <Text style={st.modalSubtitle}>{cart.length} items</Text>
+                <Text style={st.modalSubtitle}>{cart.length} item{cart.length !== 1 ? 's' : ''} from {getVendorGroups().length} vendor{getVendorGroups().length !== 1 ? 's' : ''}</Text>
               </View>
               <TouchableOpacity style={st.modalCloseBtn} onPress={() => setOrderModalVisible(false)}>
                 <Icon name="close" size={scale(24)} color={C.ink} />
@@ -552,44 +658,7 @@ export default function MarketplaceScreen({ navigation }) {
               showsVerticalScrollIndicator={true}
               bounces={true}
             >
-              {/* Cart Items */}
-              {cart.map((item, index) => (
-                <View key={item.product.id} style={st.cartItem}>
-                  <View style={st.cartItemImage}>
-                    {item.product.imageUrl ? (
-                      <Image source={{ uri: getImageUrl(item.product.imageUrl) }} style={st.cartItemImg} />
-                    ) : (
-                      <View style={st.cartItemImgPlaceholder}>
-                        <Icon name="cube" size={scale(20)} color={C.muted} />
-                      </View>
-                    )}
-                  </View>
-                  <View style={st.cartItemInfo}>
-                    <Text style={st.cartItemName} numberOfLines={2}>{item.product.name}</Text>
-                    <Text style={st.cartItemPrice}>{formatPrice(item.product.price)}</Text>
-                  </View>
-                  <View style={st.cartItemQty}>
-                    <TouchableOpacity
-                      style={st.cartQtyBtn}
-                      onPress={() => updateCartQuantity(item.product.id, -1)}
-                    >
-                      <Icon name="remove" size={scale(16)} color={C.primary} />
-                    </TouchableOpacity>
-                    <Text style={st.cartQtyText}>{item.quantity}</Text>
-                    <TouchableOpacity
-                      style={st.cartQtyBtn}
-                      onPress={() => updateCartQuantity(item.product.id, 1)}
-                    >
-                      <Icon name="add" size={scale(16)} color={C.primary} />
-                    </TouchableOpacity>
-                  </View>
-                  <Text style={st.cartItemTotal}>
-                    {formatPrice(item.product.price * item.quantity)}
-                  </Text>
-                </View>
-              ))}
-
-              {/* Delivery Details */}
+              {/* Delivery Details - Common for all vendors */}
               <View style={st.deliverySection}>
                 <Text style={st.deliverySectionTitle}>Delivery Details</Text>
 
@@ -613,35 +682,97 @@ export default function MarketplaceScreen({ navigation }) {
                   onChangeText={setDeliveryNotes}
                 />
               </View>
+
+              {/* Vendor Groups */}
+              {getVendorGroups().map((group) => (
+                <View key={group.vendorId} style={[st.vendorGroupCard, group.isAdminStore && st.vendorGroupCardAdmin]}>
+                  {/* Vendor Header */}
+                  <View style={st.vendorGroupHeader}>
+                    <View style={st.vendorGroupNameRow}>
+                      <Icon
+                        name={group.isAdminStore ? 'shield-checkmark' : 'storefront'}
+                        size={scale(18)}
+                        color={group.isAdminStore ? '#2563EB' : C.success}
+                      />
+                      <Text style={st.vendorGroupName}>{group.vendorName}</Text>
+                      {group.isAdminStore && (
+                        <View style={st.kniOfficialTag}>
+                          <Text style={st.kniOfficialTagText}>Official</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={st.vendorGroupItemCount}>{group.items.length} item{group.items.length !== 1 ? 's' : ''}</Text>
+                  </View>
+
+                  {/* Items */}
+                  {group.items.map((item) => (
+                    <View key={item.product.id} style={st.cartItem}>
+                      <View style={st.cartItemImage}>
+                        {item.product.imageUrl ? (
+                          <Image source={{ uri: getImageUrl(item.product.imageUrl) }} style={st.cartItemImg} />
+                        ) : (
+                          <View style={st.cartItemImgPlaceholder}>
+                            <Icon name="cube" size={scale(20)} color={C.muted} />
+                          </View>
+                        )}
+                      </View>
+                      <View style={st.cartItemInfo}>
+                        <Text style={st.cartItemName} numberOfLines={2}>{item.product.name}</Text>
+                        <Text style={st.cartItemPrice}>{formatPrice(item.product.price)}</Text>
+                      </View>
+                      <View style={st.cartItemQty}>
+                        <TouchableOpacity
+                          style={st.cartQtyBtn}
+                          onPress={() => updateCartQuantity(item.product.id, -1)}
+                        >
+                          <Icon name="remove" size={scale(16)} color={C.primary} />
+                        </TouchableOpacity>
+                        <Text style={st.cartQtyText}>{item.quantity}</Text>
+                        <TouchableOpacity
+                          style={st.cartQtyBtn}
+                          onPress={() => updateCartQuantity(item.product.id, 1)}
+                        >
+                          <Icon name="add" size={scale(16)} color={C.primary} />
+                        </TouchableOpacity>
+                      </View>
+                      <Text style={st.cartItemTotal}>
+                        {formatPrice(item.product.price * item.quantity)}
+                      </Text>
+                    </View>
+                  ))}
+
+                  {/* Vendor Subtotal + Pay Button */}
+                  <View style={st.vendorGroupFooter}>
+                    <View style={st.vendorSubtotalRow}>
+                      <Text style={st.vendorSubtotalLabel}>Subtotal</Text>
+                      <Text style={st.vendorSubtotalAmount}>{formatPrice(group.total)}</Text>
+                    </View>
+                    <TouchableOpacity
+                      style={st.payOrderBtn}
+                      onPress={() => handlePayAndOrder(group)}
+                    >
+                      <LinearGradient
+                        colors={[C.gradient1, C.gradient2]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={st.payOrderGradient}
+                      >
+                        <Icon name="card" size={scale(18)} color="#fff" />
+                        <Text style={st.payOrderText}>Pay & Order</Text>
+                        <Icon name="arrow-forward" size={scale(16)} color="#fff" />
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
             </ScrollView>
 
-            {/* Modal Footer */}
+            {/* Modal Footer - Grand Total */}
             <View style={st.modalFooter}>
               <View style={st.totalSection}>
-                <Text style={st.totalLabel}>Total Amount</Text>
+                <Text style={st.totalLabel}>Grand Total</Text>
                 <Text style={st.totalAmount}>{formatPrice(getCartTotal())}</Text>
               </View>
-              <TouchableOpacity
-                style={[st.placeOrderBtn, isSubmitting && st.placeOrderBtnDisabled]}
-                onPress={handlePlaceOrder}
-                disabled={isSubmitting}
-              >
-                <LinearGradient
-                  colors={[C.gradient1, C.gradient2]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={st.placeOrderGradient}
-                >
-                  {isSubmitting ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <>
-                      <Text style={st.placeOrderText}>Place Order</Text>
-                      <Icon name="arrow-forward" size={scale(20)} color="#fff" />
-                    </>
-                  )}
-                </LinearGradient>
-              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -655,7 +786,7 @@ export default function MarketplaceScreen({ navigation }) {
 
 // ==================== STYLES ====================
 const st = StyleSheet.create({
-  container: { flex: 1, backgroundColor: C.bg },
+  container: { flex: 1, backgroundColor: C.bg, paddingBottom: scale(100) },
 
   // Hero Section
   heroSection: {
@@ -811,6 +942,31 @@ const st = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: C.bg,
+  },
+  adminProductCard: {
+    borderWidth: 1.5,
+    borderColor: '#93C5FD',
+  },
+  kniBadge: {
+    position: 'absolute',
+    top: scale(6),
+    right: scale(6),
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(3),
+    backgroundColor: '#2563EB',
+    paddingHorizontal: scale(6),
+    paddingVertical: scale(3),
+    borderRadius: scale(4),
+  },
+  kniBadgeText: {
+    fontSize: moderateScale(8),
+    fontWeight: '700',
+    color: '#fff',
+  },
+  adminVendorName: {
+    color: '#2563EB',
+    fontWeight: '600',
   },
   outOfStockBadge: {
     position: 'absolute',
@@ -978,8 +1134,71 @@ const st = StyleSheet.create({
     left: scale(16),
     right: scale(16),
   },
+  cartPreviewStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: C.card,
+    borderRadius: scale(14),
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    paddingHorizontal: scale(12),
+    paddingVertical: scale(8),
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    borderColor: C.border,
+    shadowColor: C.shadow,
+    shadowOffset: { width: 0, height: scale(-2) },
+    shadowOpacity: 0.08,
+    shadowRadius: scale(4),
+    elevation: 4,
+  },
+  cartPreviewScroll: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(6),
+    flex: 1,
+    marginRight: scale(8),
+  },
+  cartPreviewItem: {
+    position: 'relative',
+  },
+  cartPreviewImg: {
+    width: scale(34),
+    height: scale(34),
+    borderRadius: scale(8),
+    backgroundColor: C.bg,
+  },
+  cartPreviewImgPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cartPreviewQtyBadge: {
+    position: 'absolute',
+    top: scale(-4),
+    right: scale(-4),
+    backgroundColor: C.primary,
+    borderRadius: scale(8),
+    minWidth: scale(16),
+    height: scale(16),
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: scale(3),
+  },
+  cartPreviewQtyText: {
+    fontSize: moderateScale(9),
+    fontWeight: '700',
+    color: '#fff',
+  },
+  cartPreviewVendorText: {
+    fontSize: moderateScale(11),
+    fontWeight: '600',
+    color: C.muted,
+  },
   floatingCartBtn: {
     borderRadius: scale(16),
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
     overflow: 'hidden',
     shadowColor: C.primary,
     shadowOffset: { width: 0, height: scale(8) },
@@ -1048,7 +1267,7 @@ const st = StyleSheet.create({
     backgroundColor: C.card,
     borderTopLeftRadius: scale(24),
     borderTopRightRadius: scale(24),
-    maxHeight: '85%',
+    maxHeight: SCREEN_HEIGHT * 0.85,
     flex: 0,
   },
   modalHeader: {
@@ -1235,6 +1454,93 @@ const st = StyleSheet.create({
   },
   placeOrderText: {
     fontSize: moderateScale(16),
+    fontWeight: '700',
+    color: '#fff',
+  },
+
+  // Vendor Group Card in Modal
+  vendorGroupCard: {
+    backgroundColor: C.bg,
+    borderRadius: scale(16),
+    marginTop: scale(16),
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  vendorGroupCardAdmin: {
+    borderColor: '#93C5FD',
+    backgroundColor: '#F0F7FF',
+  },
+  vendorGroupHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: scale(14),
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+    backgroundColor: C.card,
+  },
+  vendorGroupNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(6),
+    flex: 1,
+  },
+  vendorGroupName: {
+    fontSize: moderateScale(15),
+    fontWeight: '700',
+    color: C.ink,
+  },
+  kniOfficialTag: {
+    backgroundColor: '#2563EB',
+    paddingHorizontal: scale(6),
+    paddingVertical: scale(2),
+    borderRadius: scale(4),
+  },
+  kniOfficialTagText: {
+    fontSize: moderateScale(9),
+    fontWeight: '700',
+    color: '#fff',
+  },
+  vendorGroupItemCount: {
+    fontSize: moderateScale(12),
+    color: C.muted,
+  },
+  vendorGroupFooter: {
+    padding: scale(14),
+    backgroundColor: C.card,
+    borderTopWidth: 1,
+    borderTopColor: C.border,
+  },
+  vendorSubtotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: scale(12),
+  },
+  vendorSubtotalLabel: {
+    fontSize: moderateScale(14),
+    fontWeight: '600',
+    color: C.muted,
+  },
+  vendorSubtotalAmount: {
+    fontSize: moderateScale(18),
+    fontWeight: '800',
+    color: C.ink,
+  },
+  payOrderBtn: {
+    borderRadius: scale(12),
+    overflow: 'hidden',
+  },
+  payOrderGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: scale(12),
+    gap: scale(8),
+  },
+  payOrderText: {
+    fontSize: moderateScale(15),
     fontWeight: '700',
     color: '#fff',
   },

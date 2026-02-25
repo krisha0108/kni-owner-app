@@ -13,15 +13,15 @@ class UploadService {
    * @param {string} fileName - Optional file name
    * @returns {Promise<string>} Uploaded file URL
    */
-  async uploadImage(fileUri, fileName = 'upload.jpg') {
+  async uploadImage(fileUri, fileName = 'upload.jpg', fileType = 'image/jpeg') {
     try {
       console.log('📤 Uploading image:', fileUri);
 
-      // Create FormData
+      // Create FormData - use actual file type from picker for reliability
       const formData = new FormData();
       formData.append('file', {
         uri: fileUri,
-        type: 'image/jpeg',
+        type: fileType,
         name: fileName,
       });
 
@@ -118,10 +118,10 @@ class UploadService {
    * @param {string} fileUri - Local file URI
    * @returns {Promise<string>} Uploaded file URL
    */
-  async uploadPaymentProof(fileUri) {
+  async uploadPaymentProof(fileUri, fileType = 'image/jpeg', originalName = null) {
     try {
-      const fileName = `payment-proof-${Date.now()}.jpg`;
-      return await this.uploadImage(fileUri, fileName);
+      const fileName = originalName || `payment-proof-${Date.now()}.jpg`;
+      return await this.uploadImage(fileUri, fileName, fileType);
     } catch (error) {
       throw error;
     }

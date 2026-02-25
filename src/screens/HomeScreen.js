@@ -383,7 +383,7 @@ export default function HomeScreen({ navigation }) {
       {/* ══════ GRADIENT HEADER ══════ */}
       <LinearGradient
         colors={[C.primary, C.primaryDark]}
-        style={[st.headerGrad, { paddingTop: insets.top + 10 }]}
+        style={[st.headerGrad, { paddingTop: insets.top + scale(10) }]}
       >
         <View style={st.headerRow}>
           <TouchableOpacity onPress={() => setMenuVisible(true)} style={st.headerBtn}>
@@ -424,7 +424,7 @@ export default function HomeScreen({ navigation }) {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} tintColor={C.primary} />
         }
-        contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + scale(120) }}
         showsVerticalScrollIndicator={false}
       >
         {showSkel ? (
@@ -448,7 +448,7 @@ export default function HomeScreen({ navigation }) {
                   <ImageBackground
                     source={{ uri: bannerImgUri }}
                     style={st.bannerImg}
-                    imageStyle={{ borderRadius: 20 }}
+                    imageStyle={{ borderRadius: scale(20) }}
                   >
                     <LinearGradient
                       colors={['transparent', 'rgba(0,0,0,0.6)']}
@@ -1311,7 +1311,7 @@ const st = StyleSheet.create({
     flex: 1,
     paddingVertical: scale(9),
     borderRadius: scale(10),
-    borderWidth: 1.2,
+    borderWidth: scale(1.2),
     borderColor: C.border,
     backgroundColor: C.bg,
     alignItems: 'center',
@@ -1579,7 +1579,7 @@ const st = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
+    borderWidth: scale(2),
     borderColor: 'rgba(255,255,255,0.3)',
   },
   guideTitle: {

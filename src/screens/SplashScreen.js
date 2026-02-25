@@ -3,12 +3,11 @@ import {
   View, Text, StyleSheet, StatusBar, Animated, Dimensions
 } from 'react-native';
 import LottieView from 'lottie-react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { scale, moderateScale } from '../utils/responsive';
 const { width, height } = Dimensions.get('window');
 
-const SplashScreen = ({ navigation }) => {
+const SplashScreen = () => {
   const logoAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
@@ -36,16 +35,9 @@ const SplashScreen = ({ navigation }) => {
       ).start(),
     ]).start();
 
-const timer = setTimeout(async () => {
-   const token = await AsyncStorage.getItem('userToken');
-    if (token) {
-      navigation.replace('MainApp'); // Already logged in
-    } else {
-      navigation.replace('Onboarding'); // Not logged in
-    }    }, 3000);
-
-    return () => clearTimeout(timer);
-  }, [logoAnim, scaleAnim, rotateAnim, navigation]);
+    // Navigation is handled by AppNavigator's checkAuthState.
+    // SplashScreen is purely visual - no navigation logic here.
+  }, [logoAnim, scaleAnim, rotateAnim]);
 
   const rotateInterpolate = rotateAnim.interpolate({
     inputRange: [0, 1],

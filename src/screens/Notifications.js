@@ -387,7 +387,7 @@ export default function Notifications({ navigation }) {
       {/* ─── Content ─── */}
       {loading ? (
         <ScrollView
-          contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+          contentContainerStyle={{ paddingBottom: insets.bottom + scale(100) }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} />}
           showsVerticalScrollIndicator={false}
         >
@@ -400,7 +400,7 @@ export default function Notifications({ navigation }) {
           stickySectionHeadersEnabled={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} />}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+          contentContainerStyle={{ paddingBottom: insets.bottom + scale(100) }}
           renderSectionHeader={({ section: { title, data } }) => (
             <View style={st.sectionHeaderRow}>
               <View style={st.sectionDot} />

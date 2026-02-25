@@ -19,6 +19,7 @@ import {
   RefreshControl,
   Modal,
   KeyboardAvoidingView,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -27,6 +28,7 @@ import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
 import { scale, moderateScale } from '../utils/responsive';
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 // Premium Color Palette
 const C = {
   primary: '#EF3A3A',
@@ -572,7 +574,7 @@ const st = StyleSheet.create({
     backgroundColor: C.card,
     borderTopLeftRadius: scale(24),
     borderTopRightRadius: scale(24),
-    maxHeight: '85%',
+    maxHeight: SCREEN_HEIGHT * 0.85,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -652,7 +654,7 @@ const st = StyleSheet.create({
     padding: scale(16),
     borderTopWidth: 1,
     borderTopColor: C.border,
-    paddingBottom: Platform.OS === 'ios' ? 30 : 16,
+    paddingBottom: Platform.OS === 'ios' ? scale(30) : scale(16),
   },
   cancelBtn: {
     flex: 1,

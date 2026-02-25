@@ -18,6 +18,7 @@ import {
   TextInput,
   useWindowDimensions,
   StatusBar,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -28,6 +29,7 @@ import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
 import { scale, moderateScale } from '../utils/responsive';
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 // Premium Color Palette
 const C = {
   primary: '#EF3A3A',
@@ -875,7 +877,7 @@ const st = StyleSheet.create({
     backgroundColor: C.card,
     borderTopLeftRadius: scale(24),
     borderTopRightRadius: scale(24),
-    maxHeight: '85%',
+    maxHeight: SCREEN_HEIGHT * 0.85,
   },
   modalHeader: {
     flexDirection: 'row',

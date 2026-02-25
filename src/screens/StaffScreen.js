@@ -320,7 +320,7 @@ export default function StaffScreen({ navigation }) {
 
         {/* Actions */}
         <View style={st.cardActions}>
-          <TouchableOpacity style={[st.actionBtn, { backgroundColor: C.infoLight }]} onPress={() => { setSelectedStaff(item); handleEdit(); }}>
+          <TouchableOpacity style={[st.actionBtn, { backgroundColor: C.infoLight }]} onPress={() => openForm(item)}>
             <Icon name="pencil" size={scale(16)} color={C.info} />
             <Text style={[st.actionBtnText, { color: C.info }]}>Edit</Text>
           </TouchableOpacity>

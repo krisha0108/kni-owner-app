@@ -191,7 +191,7 @@ export default function SupportTicketDetail({ navigation, route }) {
       {/* Body */}
       <ScrollView
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} tintColor={C.primary} />}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + scale(120) }}
         showsVerticalScrollIndicator={false}
       >
         {loading ? (

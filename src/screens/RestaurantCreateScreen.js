@@ -12,6 +12,7 @@ import {
   Platform,
   Image,
   Modal,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -21,6 +22,7 @@ import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
 import { scale, moderateScale } from '../utils/responsive';
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const C = {
   primary: '#EF3A3A',
   ink: '#1D2254',
@@ -584,7 +586,7 @@ const styles = StyleSheet.create({
     backgroundColor: C.card,
     borderTopLeftRadius: scale(20),
     borderTopRightRadius: scale(20),
-    maxHeight: '50%',
+    maxHeight: SCREEN_HEIGHT * 0.5,
   },
   pickerHeader: {
     flexDirection: 'row',

@@ -21,7 +21,7 @@ import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
 import { scale, moderateScale } from '../utils/responsive';
-const { width } = Dimensions.get('window');
+const { width, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const C = {
   primary: '#EF3A3A',
@@ -1329,7 +1329,7 @@ const s = StyleSheet.create({
     backgroundColor: C.card,
     borderTopLeftRadius: scale(28),
     borderTopRightRadius: scale(28),
-    maxHeight: '70%',
+    maxHeight: SCREEN_HEIGHT * 0.7,
   },
   pickerOption: {
     flexDirection: 'row',

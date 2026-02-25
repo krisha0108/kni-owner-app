@@ -8,7 +8,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
   TextInput, ActivityIndicator, Alert, Modal, StatusBar,
-  useWindowDimensions,
+  useWindowDimensions, Dimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -17,6 +17,7 @@ import { useRestaurant } from '../context/RestaurantContext';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 import { scale, moderateScale } from '../utils/responsive';
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const C = {
   primary: '#EF3A3A', ink: '#1D2254', text: '#0F172A', muted: '#6B7280',
@@ -692,7 +693,7 @@ const styles = StyleSheet.create({
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   modalSheet: {
     backgroundColor: C.card, borderTopLeftRadius: scale(24), borderTopRightRadius: scale(24),
-    padding: scale(20), maxHeight: '80%',
+    padding: scale(20), maxHeight: SCREEN_HEIGHT * 0.8,
   },
   modalHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: scale(20),

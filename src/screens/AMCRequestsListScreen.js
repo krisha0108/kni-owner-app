@@ -141,7 +141,7 @@ export default function AMCRequestsListScreen({ navigation }) {
         style={[
           styles.requestCard,
           isTabletDevice && { width: (width - 48) / 2 - 6 },
-          isTabletDevice && index % 2 === 0 && { marginRight: 12 },
+          isTabletDevice && index % 2 === 0 && { marginRight: scale(12) },
         ]}
         onPress={() => navigation.navigate('AMCRequestDetail', { requestId: item.id })}
         activeOpacity={0.7}

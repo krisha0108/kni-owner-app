@@ -13,6 +13,7 @@ import {
   ScrollView,
   Alert,
   useWindowDimensions,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -23,6 +24,8 @@ import { RestaurantSelectorBar } from '../components/RestaurantSelector';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 import { scale, moderateScale, isTablet, getContainerMaxWidth } from '../utils/responsive';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const C = {
   primary: '#EF3A3A',
@@ -458,7 +461,7 @@ export default function RequestScreen({ navigation }) {
         renderItem={renderProductCard}
         numColumns={2}
         columnWrapperStyle={styles.row}
-        contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 100 }]}
+        contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + scale(100) }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} />}
         ListEmptyComponent={
           <View style={styles.emptyBox}>
@@ -760,7 +763,7 @@ const styles = StyleSheet.create({
     backgroundColor: C.card,
     borderTopLeftRadius: scale(24),
     borderTopRightRadius: scale(24),
-    maxHeight: '85%',
+    maxHeight: SCREEN_HEIGHT * 0.85,
   },
   modalHeader: {
     flexDirection: 'row',

@@ -8,7 +8,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl,
   ActivityIndicator, Modal, TextInput, ScrollView, Alert, Image,
-  StatusBar, useWindowDimensions, Platform,
+  StatusBar, useWindowDimensions, Platform, KeyboardAvoidingView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
@@ -469,6 +469,7 @@ export default function ExpensesScreen({ navigation }) {
       {/* Add/Edit Modal - Full screen (no transparent) to fix Android scroll */}
       <Modal visible={modalVisible} animationType="slide" onRequestClose={() => setModalVisible(false)}>
         <SafeAreaView style={{ flex: 1, backgroundColor: C.card }} edges={['top']}>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
             {/* Modal Header */}
             <LinearGradient colors={[C.gradient1, C.gradient2]} style={st.modalHeader}>
               <Text style={st.modalTitle}>{form.id ? 'Edit Expense' : 'Add Expense'}</Text>
@@ -581,6 +582,7 @@ export default function ExpensesScreen({ navigation }) {
                 )}
               </TouchableOpacity>
             </View>
+          </KeyboardAvoidingView>
         </SafeAreaView>
       </Modal>
 

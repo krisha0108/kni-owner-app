@@ -24,7 +24,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { api, getImageUrl } from '../api/client';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
-import { scale, moderateScale, isTablet } from '../utils/responsive';
+import { scale, verticalScale, moderateScale, isTablet } from '../utils/responsive';
 
 const C = {
   primary: '#EF3A3A',
@@ -654,7 +654,7 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(18),
     fontWeight: '700',
     color: '#fff',
-    letterSpacing: 1,
+    letterSpacing: scale(1),
   },
   menuBtn: {
     width: scale(40),
@@ -729,9 +729,9 @@ const styles = StyleSheet.create({
     padding: scale(16),
     marginBottom: scale(16),
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: scale(2) },
     shadowOpacity: 0.05,
-    shadowRadius: 8,
+    shadowRadius: scale(8),
     elevation: 2,
   },
   sectionTitle: {
@@ -757,7 +757,7 @@ const styles = StyleSheet.create({
     height: scale(32),
     borderRadius: scale(16),
     backgroundColor: C.bg,
-    borderWidth: 2,
+    borderWidth: scale(2),
     borderColor: C.border,
     alignItems: 'center',
     justifyContent: 'center',
@@ -770,7 +770,7 @@ const styles = StyleSheet.create({
   timelineCircleCurrent: {
     backgroundColor: '#fff',
     borderColor: C.primary,
-    borderWidth: 3,
+    borderWidth: scale(3),
   },
   timelineLabel: {
     fontSize: moderateScale(9),
@@ -791,7 +791,7 @@ const styles = StyleSheet.create({
     top: scale(15),
     left: '50%',
     right: '-50%',
-    height: 2,
+    height: scale(2),
     backgroundColor: C.border,
     zIndex: -1,
   },
@@ -806,9 +806,9 @@ const styles = StyleSheet.create({
     marginBottom: scale(16),
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: scale(2) },
     shadowOpacity: 0.05,
-    shadowRadius: 8,
+    shadowRadius: scale(8),
     elevation: 2,
   },
   cardHeader: {
@@ -1065,7 +1065,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: scale(14),
     marginTop: scale(10),
-    borderTopWidth: 2,
+    borderTopWidth: scale(2),
     borderTopColor: C.border,
   },
   totalLabel: {
@@ -1115,12 +1115,12 @@ const styles = StyleSheet.create({
     borderRadius: scale(16),
     marginBottom: scale(16),
     overflow: 'hidden',
-    borderWidth: 2,
+    borderWidth: scale(2),
     borderColor: '#FCD34D',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: scale(2) },
     shadowOpacity: 0.05,
-    shadowRadius: 8,
+    shadowRadius: scale(8),
     elevation: 3,
   },
   pinHeader: {
@@ -1144,7 +1144,7 @@ const styles = StyleSheet.create({
   pinDisplay: {
     backgroundColor: '#FFFFFF',
     borderRadius: scale(12),
-    borderWidth: 2,
+    borderWidth: scale(2),
     borderColor: '#FCD34D',
     paddingVertical: scale(14),
     paddingHorizontal: scale(32),
@@ -1154,7 +1154,7 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(36),
     fontWeight: '800',
     color: '#92400E',
-    letterSpacing: 16,
+    letterSpacing: scale(16),
     textAlign: 'center',
   },
   pinWarning: {

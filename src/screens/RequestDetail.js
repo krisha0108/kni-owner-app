@@ -984,7 +984,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   View, Text, StyleSheet, Image, ImageBackground, Animated, Easing,
   TouchableOpacity, ScrollView, FlatList, Share, RefreshControl, Alert,
-  Modal, TextInput
+  Modal, TextInput, Dimensions
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -993,6 +993,7 @@ import { api, IMAGE_BASE_URL } from '../api/client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { scale, moderateScale } from '../utils/responsive';
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 // ---- debug helpers ----
 const DEBUG_IMG = true;
 const logImg = (...a) => DEBUG_IMG && console.log('[RD:image]', ...a);
@@ -1324,7 +1325,7 @@ function SkeletonRequestDetail({ insetsBottom }) {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingBottom: insetsBottom + 100 }} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={{ paddingBottom: insetsBottom + scale(100) }} showsVerticalScrollIndicator={false}>
         <View style={st.section}>
           <Animated.View style={[sk.h2, { width: scale(100), opacity: pulse }]} />
           <Animated.View style={[sk.para, { width: '95%', marginTop: scale(8), opacity: pulse }]} />
@@ -2043,7 +2044,7 @@ const handleEnquirySubmit = async (formData, product) => {
 </View>
 
       <ScrollView
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + scale(100) }}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         onScrollBeginDrag={() => bar.stopAnimation()}
@@ -2278,7 +2279,7 @@ const handleEnquirySubmit = async (formData, product) => {
       </ScrollView>
 
       {/* Sticky cart */}
-      <View style={[st.cartBar, { paddingBottom: insets.bottom > 0 ? insets.bottom : 12 }]}>
+      <View style={[st.cartBar, { paddingBottom: insets.bottom > 0 ? insets.bottom : scale(12) }]}>
         <View style={{ flex: 1 }}>
           <Text style={st.cartTop}>{totals.items ? `${totals.items} item${totals.items > 1 ? 's' : ''}` : 'No items added'}</Text>
           <Text style={st.cartAmt}>{Rs(totals.amt)}</Text>
@@ -2461,7 +2462,7 @@ enquiryButtonTextSection: {
     backgroundColor: '#fff',
     borderRadius: scale(20),
     width: '100%',
-    maxHeight: '80%',
+    maxHeight: SCREEN_HEIGHT * 0.8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: scale(2) },
     shadowOpacity: 0.25,
@@ -2469,7 +2470,7 @@ enquiryButtonTextSection: {
     elevation: 5,
   },
   modalScroll: {
-    maxHeight: '100%',
+    maxHeight: SCREEN_HEIGHT * 0.95,
   },
   modalHeader: {
     flexDirection: 'row',

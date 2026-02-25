@@ -136,7 +136,7 @@ export default function EditOwnerProfile() {
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ padding: scale(16), paddingBottom: insets.bottom + 40 }}>
+          contentContainerStyle={{ padding: scale(16), paddingBottom: insets.bottom + scale(40) }}>
 
           {/* ===== AVATAR PREVIEW ===== */}
           <View style={st.avatarSection}>

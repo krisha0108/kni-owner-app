@@ -22,7 +22,7 @@ import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
 import { scale, moderateScale } from '../utils/responsive';
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const CARD_WIDTH = (SCREEN_WIDTH - 48) / 2;
 
 // Premium Color Palette (Consistent with Marketplace)
@@ -901,7 +901,7 @@ const st = StyleSheet.create({
 
   // Modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContainer: { backgroundColor: C.card, borderTopLeftRadius: scale(24), borderTopRightRadius: scale(24), maxHeight: '90%' },
+  modalContainer: { backgroundColor: C.card, borderTopLeftRadius: scale(24), borderTopRightRadius: scale(24), maxHeight: SCREEN_HEIGHT * 0.9 },
   modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: scale(20), paddingVertical: scale(16), borderTopLeftRadius: scale(24), borderTopRightRadius: scale(24) },
   modalTitle: { fontSize: moderateScale(18), fontWeight: '700', color: '#fff' },
   modalCloseBtn: { width: scale(36), height: scale(36), borderRadius: scale(10), backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
@@ -945,7 +945,7 @@ const st = StyleSheet.create({
   saveBtnText: { fontSize: moderateScale(15), fontWeight: '700', color: '#fff' },
 
   // Picker Modal
-  pickerModal: { backgroundColor: C.card, borderTopLeftRadius: scale(24), borderTopRightRadius: scale(24), maxHeight: '70%' },
+  pickerModal: { backgroundColor: C.card, borderTopLeftRadius: scale(24), borderTopRightRadius: scale(24), maxHeight: SCREEN_HEIGHT * 0.7 },
   pickerModalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: scale(20), borderBottomWidth: 1, borderBottomColor: C.border },
   pickerModalTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink },
   pickerList: { padding: scale(16) },

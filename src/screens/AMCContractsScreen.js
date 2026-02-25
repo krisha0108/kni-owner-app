@@ -127,7 +127,7 @@ export default function AMCContractsScreen({ navigation }) {
         style={[
           styles.contractCard,
           isTabletDevice && { width: (width - 48) / 2 - 6 },
-          isTabletDevice && index % 2 === 0 && { marginRight: 12 },
+          isTabletDevice && index % 2 === 0 && { marginRight: scale(12) },
         ]}
         onPress={() => navigation.navigate('AMCContractDetail', { contractId: item.id })}
         activeOpacity={0.7}

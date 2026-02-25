@@ -49,7 +49,7 @@ const DeleteAccountModal = ({ visible, onClose, user }) => {
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={modalBase.overlay}>
-        <View style={[modalBase.sheet, { maxHeight: '90%' }]}>
+        <View style={[modalBase.sheet, { maxHeight: H * 0.9 }]}>
           <View style={modalBase.header}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(10) }}>
               <LinearGradient colors={['#FEE2E2', '#FECACA']} style={modalBase.headerIcon}>
@@ -428,7 +428,7 @@ export default function ProfileScreen({ navigation }) {
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
         scrollEventThrottle={16}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} tintColor={C.primary} progressViewOffset={HERO_H} />}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + scale(120) }}
         showsVerticalScrollIndicator={false}
         stickyHeaderIndices={[1]}
       >
@@ -446,7 +446,7 @@ export default function ProfileScreen({ navigation }) {
           <LinearGradient colors={['rgba(29,34,84,0.25)', 'transparent']} style={st.blobB} />
 
           {/* Top buttons INSIDE hero (scrolls with image) */}
-          <View style={[st.heroTopBar, { paddingTop: insets.top + 8 }]}>
+          <View style={[st.heroTopBar, { paddingTop: insets.top + scale(8) }]}>
             <View style={st.heroBrand}>
               <Icon name="person" size={scale(14)} color="#fff" />
               <Text style={st.heroBrandText}>Profile</Text>
@@ -907,7 +907,7 @@ const st = StyleSheet.create({
 /* ===== MODAL BASE STYLES ===== */
 const modalBase = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  sheet: { backgroundColor: '#fff', borderTopLeftRadius: scale(24), borderTopRightRadius: scale(24), maxHeight: '85%' },
+  sheet: { backgroundColor: '#fff', borderTopLeftRadius: scale(24), borderTopRightRadius: scale(24), maxHeight: H * 0.85 },
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     padding: scale(20), borderBottomWidth: 1, borderBottomColor: '#F1F5F9',

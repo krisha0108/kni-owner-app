@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  RefreshControl, ActivityIndicator, Alert, Modal, TextInput, Image, Switch, Platform
+  RefreshControl, ActivityIndicator, Alert, Modal, TextInput, Image, Switch, Platform, KeyboardAvoidingView
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -832,6 +832,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
       {/* Create AMC Modal */}
       <Modal visible={showAmcModal} animationType="slide" transparent>
         <View style={st.modalOverlay}>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <View style={st.modalContent}>
             <View style={st.modalHeader}>
               <Text style={st.modalTitle}>Create AMC Plan</Text>
@@ -959,6 +960,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
               </TouchableOpacity>
             </View>
           </View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
 
@@ -998,6 +1000,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
       {/* Service Booking Modal */}
       <Modal visible={showServiceModal} animationType="slide" transparent>
         <View style={st.modalOverlay}>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <View style={st.modalContent}>
             <View style={st.modalHeader}>
               <Text style={st.modalTitle}>Request Service</Text>
@@ -1132,6 +1135,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
               </TouchableOpacity>
             </View>
           </View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
 

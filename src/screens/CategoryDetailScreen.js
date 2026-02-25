@@ -341,7 +341,7 @@ const st = StyleSheet.create({
   tabText: { fontSize: moderateScale(13), fontWeight: '600', color: C.muted },
   tabTextActive: { color: C.ink },
 
-  listContent: { padding: scale(16), paddingBottom: scale(100) },
+  listContent: { padding: scale(16), paddingBottom: scale(160) },
 
   itemCard: {
     backgroundColor: C.card, borderRadius: scale(16), padding: scale(16), marginBottom: scale(12),

@@ -153,7 +153,7 @@ export default function MarketplaceProductScreen({ navigation, route }) {
         </View>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: scale(120) }}>
         {/* Product Image */}
         {product.image ? (
           <Image source={{ uri: product.image }} style={styles.productImage} resizeMode="cover" />
@@ -215,7 +215,6 @@ export default function MarketplaceProductScreen({ navigation, route }) {
           )}
         </View>
 
-        <View style={{ height: scale(120) }} />
       </ScrollView>
 
       {/* Bottom Bar */}

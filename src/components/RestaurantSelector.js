@@ -9,11 +9,14 @@ import {
   StyleSheet,
   ActivityIndicator,
   useWindowDimensions,
+  Dimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useRestaurant } from '../context/RestaurantContext';
 import { scale, moderateScale, isTablet, getContainerMaxWidth } from '../utils/responsive';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const C = {
   primary: '#EF3A3A',
@@ -402,7 +405,7 @@ const styles = StyleSheet.create({
     backgroundColor: C.card,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    maxHeight: '70%',
+    maxHeight: SCREEN_HEIGHT * 0.7,
   },
   modalHeader: {
     flexDirection: 'row',

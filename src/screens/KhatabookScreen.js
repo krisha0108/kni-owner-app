@@ -311,7 +311,7 @@ export default function KhatabookScreen({ navigation }) {
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} />}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + scale(100) }}
       >
         {/* ─── Revenue / Expense Mini Cards ─── */}
         <View style={st.miniCardsRow}>

@@ -452,7 +452,7 @@ export default function RestaurantsScreen({ navigation }) {
       {/* List */}
       <ScrollView
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} tintColor={C.primary}/>}
-        contentContainerStyle={{ padding:scale(16), paddingBottom: insets.bottom + 24 }}
+        contentContainerStyle={{ padding:scale(16), paddingBottom: insets.bottom + scale(24) }}
         showsVerticalScrollIndicator={false}
       >
         {loading ? (

@@ -64,6 +64,7 @@ const startOfDay = (d)=>{ const x=new Date(d); x.setHours(0,0,0,0); return x; };
 const addDays = (d,n)=>{ const x=new Date(d); x.setDate(x.getDate()+n); return x; };
 
 const SCREEN_W = Dimensions.get('window').width;
+const SCREEN_H = Dimensions.get('window').height;
 
 export default function RequestNow({ navigation, route }) {
   const insets = useSafeAreaInsets();
@@ -1465,7 +1466,7 @@ export default function RequestNow({ navigation, route }) {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 180 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + scale(180) }}>
         {/* HORIZONTAL CARDS */}
         <View style={{ paddingHorizontal: scale(16), marginTop: scale(8) }}>
           {loadingInit ? (
@@ -1737,7 +1738,7 @@ export default function RequestNow({ navigation, route }) {
       </ScrollView>
 
       {/* Bottom bar */}
-      <View style={[st.bottomBar, { paddingBottom: insets.bottom > 0 ? insets.bottom : 12 }]}>
+      <View style={[st.bottomBar, { paddingBottom: insets.bottom > 0 ? insets.bottom : scale(12) }]}>
         <Text style={st.bottomLeft}>{`${selectedItems.length} selected • ${Rs(payable)}`}</Text>
         <TouchableOpacity
           disabled={!selectedItems.length}
@@ -1912,7 +1913,7 @@ export default function RequestNow({ navigation, route }) {
                   showsVerticalScrollIndicator={false}
                   contentContainerStyle={{
                     flexGrow: 1,
-                    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+                    paddingBottom: Platform.OS === 'ios' ? scale(40) : scale(20),
                   }}
                 >
                   <Text style={st.sheetTitle}>Complete Payment</Text>
@@ -2317,7 +2318,7 @@ const st = StyleSheet.create({
   modalBackdropCenter:{ flex:1, backgroundColor:'rgba(0,0,0,0.35)', alignItems:'center', justifyContent:'center', padding:scale(20) },
 
   sheet:{ backgroundColor:'#fff', borderTopLeftRadius:scale(18), borderTopRightRadius:scale(18), padding:scale(16), ...Platform.select({ ios:{ shadowColor:'#000', shadowOpacity:0.2, shadowRadius:scale(10) }, android:{ elevation:12 } }) },
-  sheetLarge:{ backgroundColor:'#fff', borderTopLeftRadius:scale(18), borderTopRightRadius:scale(18), padding:scale(16), maxHeight:'80%', ...Platform.select({ ios:{ shadowColor:'#000', shadowOpacity:0.2, shadowRadius:scale(10) }, android:{ elevation:12 } }) },
+  sheetLarge:{ backgroundColor:'#fff', borderTopLeftRadius:scale(18), borderTopRightRadius:scale(18), padding:scale(16), maxHeight:SCREEN_H * 0.8, ...Platform.select({ ios:{ shadowColor:'#000', shadowOpacity:0.2, shadowRadius:scale(10) }, android:{ elevation:12 } }) },
   sheetTitle:{ color:C.ink, fontWeight:'900', fontSize:moderateScale(20), marginBottom:scale(4) },
   closePill:{ width:scale(34), height:scale(34), borderRadius:scale(12), backgroundColor:'#F1F5F9', alignItems:'center', justifyContent:'center' },
   refreshPill:{ width:scale(34), height:scale(34), borderRadius:scale(12), backgroundColor:'#F1F5F9', alignItems:'center', justifyContent:'center', marginRight:scale(8) },

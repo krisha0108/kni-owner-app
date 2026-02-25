@@ -62,6 +62,7 @@ import MarketplaceScreen from '../screens/MarketplaceScreen';
 import MarketplaceProductScreen from '../screens/MarketplaceProductScreen';
 import MarketplaceOrdersScreen from '../screens/MarketplaceOrdersScreen';
 import MarketplaceCartScreen from '../screens/MarketplaceCartScreen';
+import MarketplacePaymentScreen from '../screens/MarketplacePaymentScreen';
 
 // Profile & Support
 import ProfileScreen from '../screens/ProfileScreen';
@@ -106,12 +107,13 @@ export default function AppNavigator() {
     const checkAuthState = async () => {
       try {
         const token = await AsyncStorage.getItem('userToken');
-        const userData = await AsyncStorage.getItem('userData');
+        // Check both possible keys - screens save as 'user', authService saves as 'userData'
+        const userData = await AsyncStorage.getItem('user') || await AsyncStorage.getItem('userData');
 
         // Wait 2.5 seconds to allow splash animation
         await new Promise(resolve => setTimeout(resolve, 2500));
 
-        if (token && userData) {
+        if (token) {
           api.defaults.headers.common.Authorization = `Bearer ${token}`;
           setInitialRoute('Home');
         } else {
@@ -168,6 +170,7 @@ export default function AppNavigator() {
         <Stack.Screen name="MarketplaceProduct" component={MarketplaceProductScreen} />
         <Stack.Screen name="MarketplaceOrders" component={MarketplaceOrdersScreen} />
         <Stack.Screen name="MarketplaceCart" component={MarketplaceCartScreen} />
+        <Stack.Screen name="MarketplacePayment" component={MarketplacePaymentScreen} />
 
         {/* Equipment & Service Screens */}
         <Stack.Screen name="MyEquipment" component={MyEquipmentScreen} />

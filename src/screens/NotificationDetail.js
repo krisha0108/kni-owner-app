@@ -93,7 +93,7 @@ export default function NotificationDetail({ navigation, route }) {
       </LinearGradient>
 
       <ScrollView
-        contentContainerStyle={{ padding: scale(16), paddingBottom: insets.bottom + (actionButton ? 100 : 24) }}
+        contentContainerStyle={{ padding: scale(16), paddingBottom: insets.bottom + (actionButton ? scale(100) : scale(24)) }}
         showsVerticalScrollIndicator={false}
       >
         {/* Gradient Icon */}
@@ -179,7 +179,7 @@ export default function NotificationDetail({ navigation, route }) {
 
       {/* Action Button */}
       {actionButton && (
-        <View style={[st.bottomBar, { paddingBottom: insets.bottom + 16 }]}>
+        <View style={[st.bottomBar, { paddingBottom: insets.bottom + scale(16) }]}>
           <TouchableOpacity
             activeOpacity={0.85}
             onPress={() => navigation.navigate(actionButton.screen, actionButton.params)}

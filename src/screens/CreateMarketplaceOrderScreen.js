@@ -12,8 +12,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { api } from '../api/client';
-import { useFocusEffect } from '@react-navigation/native';
 import { useRestaurant } from '../context/RestaurantContext';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
@@ -47,7 +45,6 @@ export default function CreateMarketplaceOrderScreen({ navigation, route }) {
     loadRestaurants,
   } = useRestaurant();
 
-  const [submitting, setSubmitting] = useState(false);
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
   const [deliveryNotes, setDeliveryNotes] = useState('');
   const [step, setStep] = useState(1); // 1: Select Restaurant, 2: Review & Confirm
@@ -89,86 +86,60 @@ export default function CreateMarketplaceOrderScreen({ navigation, route }) {
     if (step > 1) setStep(step - 1);
   };
 
-  const handlePlaceOrder = async () => {
+  // Group items by vendor
+  const getVendorGroups = () => {
+    const groups = {};
+    cartItems.forEach(item => {
+      const vendorId = item.vendorId;
+      if (!vendorId) return;
+      if (!groups[vendorId]) {
+        groups[vendorId] = {
+          vendorId,
+          vendorName: item.vendorName || 'Unknown Vendor',
+          isAdminStore: item.isAdminStore === true,
+          items: [],
+          total: 0,
+        };
+      }
+      groups[vendorId].items.push(item);
+      groups[vendorId].total += (item.price || 0) * (item.quantity || 1);
+    });
+    return Object.values(groups);
+  };
+
+  const handlePayAndOrder = async (vendorGroup) => {
     if (!selectedRestaurant) {
       Alert.alert('Error', 'Please select a restaurant');
       return;
     }
 
-    if (cartItems.length === 0) {
-      Alert.alert('Error', 'Your cart is empty');
-      return;
-    }
+    // Navigate to payment screen
+    navigation.navigate('MarketplacePayment', {
+      vendorId: vendorGroup.vendorId,
+      vendorName: vendorGroup.vendorName,
+      isAdminStore: vendorGroup.isAdminStore,
+      items: vendorGroup.items.map(item => ({
+        id: item.productId || item.id,
+        productId: item.productId || item.id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+      })),
+      restaurantId: selectedRestaurant.id,
+      deliveryAddress: selectedRestaurant.address || '',
+      deliveryNotes: deliveryNotes.trim(),
+    });
 
-    setSubmitting(true);
+    // Remove paid vendor's items from AsyncStorage cart
     try {
-      // Group items by vendor
-      const itemsByVendor = {};
-      cartItems.forEach(item => {
-        const vendorId = item.vendorId;
-        if (!vendorId) return;
-        if (!itemsByVendor[vendorId]) {
-          itemsByVendor[vendorId] = [];
-        }
-        itemsByVendor[vendorId].push(item);
-      });
-
-      // Create separate orders for each vendor
-      const vendorIds = Object.keys(itemsByVendor);
-      if (vendorIds.length === 0) {
-        throw new Error('No valid items in cart');
-      }
-
-      let lastResponse = null;
-      for (const vendorId of vendorIds) {
-        const vendorItems = itemsByVendor[vendorId];
-        const payload = {
-          restaurantId: selectedRestaurant.id,
-          vendorId: vendorId,
-          items: vendorItems.map(item => ({
-            productId: item.productId || item.id,
-            qty: item.quantity,
-          })),
-        };
-
-        lastResponse = await api.post('/owner/marketplace/orders', payload);
-        if (!lastResponse.data.ok) {
-          throw new Error(lastResponse.data.error || 'Failed to place order');
-        }
-      }
-
-      const response = lastResponse;
-
-      if (response.data.ok) {
-        // Clear the marketplace cart from AsyncStorage
-        try {
-          await AsyncStorage.removeItem(CART_STORAGE_KEY);
-        } catch (e) {
-          // Ignore cart clear errors
-        }
-
-        Alert.alert(
-          'Order Placed!',
-          'Your marketplace order has been placed successfully. You can track it in your orders.',
-          [
-            {
-              text: 'View Orders',
-              onPress: () => navigation.navigate('MarketplaceOrders'),
-            },
-            {
-              text: 'OK',
-              onPress: () => navigation.navigate('Home'),
-            },
-          ]
-        );
+      const remaining = cartItems.filter(item => item.vendorId !== vendorGroup.vendorId);
+      if (remaining.length > 0) {
+        await AsyncStorage.setItem(CART_STORAGE_KEY, JSON.stringify(remaining));
       } else {
-        throw new Error(response.data.error || 'Failed to place order');
+        await AsyncStorage.removeItem(CART_STORAGE_KEY);
       }
-    } catch (error) {
-      console.log('Order error:', error);
-      Alert.alert('Error', error.response?.data?.error || error.message || 'Failed to place order. Please try again.');
-    } finally {
-      setSubmitting(false);
+    } catch (e) {
+      // Ignore cart update errors
     }
   };
 
@@ -313,11 +284,11 @@ export default function CreateMarketplaceOrderScreen({ navigation, route }) {
           </View>
         )}
 
-        {/* Step 2: Review & Confirm */}
+        {/* Step 2: Review & Pay */}
         {step === 2 && (
           <View style={styles.stepContainer}>
-            <Text style={styles.stepTitle}>Review Your Order</Text>
-            <Text style={styles.stepSubtitle}>Confirm the details before placing order</Text>
+            <Text style={styles.stepTitle}>Review & Pay</Text>
+            <Text style={styles.stepSubtitle}>Pay each vendor separately to place your orders</Text>
 
             {/* Delivery Info */}
             <View style={styles.summaryCard}>
@@ -337,34 +308,53 @@ export default function CreateMarketplaceOrderScreen({ navigation, route }) {
               )}
             </View>
 
-            {/* Order Items */}
-            <View style={styles.summaryCard}>
-              <View style={styles.summaryHeader}>
-                <Icon name="cart" size={scale(20)} color={C.primary} />
-                <Text style={styles.summaryHeaderText}>Order Items ({totalItems})</Text>
-              </View>
-              {cartItems.map((item, index) => (
-                <View key={item.id || index} style={styles.orderItem}>
-                  <View style={styles.orderItemInfo}>
-                    <Text style={styles.orderItemName}>{item.name}</Text>
-                    <Text style={styles.orderItemQty}>Qty: {item.quantity}</Text>
-                  </View>
-                  <Text style={styles.orderItemPrice}>
-                    ₹{(item.price * item.quantity).toFixed(2)}
-                  </Text>
+            {/* Vendor-wise Order Groups */}
+            {getVendorGroups().map((group) => (
+              <View key={group.vendorId} style={[styles.summaryCard, group.isAdminStore && styles.adminVendorCard]}>
+                <View style={styles.summaryHeader}>
+                  <Icon
+                    name={group.isAdminStore ? 'shield-checkmark' : 'storefront'}
+                    size={scale(20)}
+                    color={group.isAdminStore ? '#2563EB' : C.ok}
+                  />
+                  <Text style={styles.summaryHeaderText}>{group.vendorName}</Text>
+                  {group.isAdminStore && (
+                    <View style={styles.officialTag}>
+                      <Text style={styles.officialTagText}>Official</Text>
+                    </View>
+                  )}
                 </View>
-              ))}
-              <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>Total Amount</Text>
-                <Text style={styles.totalValue}>₹{totalAmount.toFixed(2)}</Text>
+                {group.items.map((item, index) => (
+                  <View key={item.id || index} style={styles.orderItem}>
+                    <View style={styles.orderItemInfo}>
+                      <Text style={styles.orderItemName}>{item.name}</Text>
+                      <Text style={styles.orderItemQty}>Qty: {item.quantity}</Text>
+                    </View>
+                    <Text style={styles.orderItemPrice}>
+                      ₹{(item.price * item.quantity).toFixed(2)}
+                    </Text>
+                  </View>
+                ))}
+                <View style={styles.totalRow}>
+                  <Text style={styles.totalLabel}>Subtotal</Text>
+                  <Text style={styles.totalValue}>₹{group.total.toFixed(2)}</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.payVendorBtn}
+                  onPress={() => handlePayAndOrder(group)}
+                >
+                  <Icon name="card" size={scale(18)} color="#fff" />
+                  <Text style={styles.payVendorBtnText}>Pay & Order</Text>
+                  <Icon name="arrow-forward" size={scale(16)} color="#fff" />
+                </TouchableOpacity>
               </View>
-            </View>
+            ))}
 
             {/* Info Note */}
             <View style={styles.infoBox}>
               <Icon name="information-circle" size={scale(20)} color={C.info} />
               <Text style={styles.infoText}>
-                Payment will be collected upon delivery or as per your payment terms with the vendor.
+                Pay each vendor separately via QR/UPI. After payment verification, your order will be automatically created.
               </Text>
             </View>
           </View>
@@ -381,22 +371,16 @@ export default function CreateMarketplaceOrderScreen({ navigation, route }) {
             <Text style={styles.backButtonText}>Back</Text>
           </TouchableOpacity>
         )}
-        <TouchableOpacity
-          style={[styles.nextButton, !canProceed() && styles.nextButtonDisabled]}
-          onPress={step === 2 ? handlePlaceOrder : nextStep}
-          disabled={!canProceed() || submitting}
-        >
-          {submitting ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <>
-              <Text style={styles.nextButtonText}>
-                {step === 2 ? 'Place Order' : 'Continue'}
-              </Text>
-              {step < 2 && <Icon name="arrow-forward" size={scale(20)} color="#fff" />}
-            </>
-          )}
-        </TouchableOpacity>
+        {step === 1 && (
+          <TouchableOpacity
+            style={[styles.nextButton, !canProceed() && styles.nextButtonDisabled]}
+            onPress={nextStep}
+            disabled={!canProceed()}
+          >
+            <Text style={styles.nextButtonText}>Continue</Text>
+            <Icon name="arrow-forward" size={scale(20)} color="#fff" />
+          </TouchableOpacity>
+        )}
       </View>
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
       <KniBottomNav navigation={navigation} />
@@ -574,6 +558,38 @@ const styles = StyleSheet.create({
     padding: scale(14),
   },
   infoText: { flex: 1, fontSize: moderateScale(13), color: C.info, lineHeight: moderateScale(18) },
+
+  // Vendor-wise styles
+  adminVendorCard: {
+    borderColor: '#93C5FD',
+    borderWidth: 1.5,
+  },
+  officialTag: {
+    backgroundColor: '#2563EB',
+    paddingHorizontal: scale(6),
+    paddingVertical: scale(2),
+    borderRadius: scale(4),
+  },
+  officialTagText: {
+    fontSize: moderateScale(9),
+    fontWeight: '700',
+    color: '#fff',
+  },
+  payVendorBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: scale(8),
+    backgroundColor: C.primary,
+    borderRadius: scale(12),
+    paddingVertical: scale(14),
+    marginTop: scale(12),
+  },
+  payVendorBtnText: {
+    fontSize: moderateScale(15),
+    fontWeight: '700',
+    color: '#fff',
+  },
 
   bottomBar: {
     position: 'absolute',

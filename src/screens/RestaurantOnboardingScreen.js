@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ScrollView, Platform, Alert,
-  ActivityIndicator, Image, Modal
+  ActivityIndicator, Image, Modal, Dimensions
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary } from 'react-native-image-picker';
@@ -10,6 +10,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import { api } from '../api/client';
 
 import { scale, moderateScale } from '../utils/responsive';
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const C = {
   primary: '#EF3A3A',
   ink: '#1D2254',
@@ -588,7 +589,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: scale(12),
     paddingHorizontal: scale(14),
-    paddingVertical: Platform.OS === 'ios' ? 12 : 10,
+    paddingVertical: Platform.OS === 'ios' ? scale(12) : scale(10),
     marginBottom: scale(14),
   },
   inputIcon: {
@@ -667,7 +668,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopLeftRadius: scale(20),
     borderTopRightRadius: scale(20),
-    maxHeight: '50%',
+    maxHeight: SCREEN_HEIGHT * 0.5,
   },
   pickerHeader: {
     flexDirection: 'row',

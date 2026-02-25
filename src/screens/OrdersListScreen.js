@@ -254,7 +254,7 @@ export default function OrdersListScreen({ navigation }) {
           contentContainerStyle={{
             paddingHorizontal: scale(16),
             paddingTop: scale(8),
-            paddingBottom: insets.bottom + 20
+            paddingBottom: insets.bottom + scale(20)
           }}
           ListEmptyComponent={<EmptyState type={activeTab} />}
           refreshControl={

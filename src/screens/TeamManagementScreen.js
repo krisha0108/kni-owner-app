@@ -11,6 +11,7 @@ import {
   TextInput,
   ScrollView,
   Alert,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -22,6 +23,7 @@ import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
 import { scale, moderateScale } from '../utils/responsive';
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const C = {
   primary: '#EF3A3A',
   ink: '#1D2254',
@@ -880,7 +882,7 @@ const styles = StyleSheet.create({
     backgroundColor: C.card,
     borderTopLeftRadius: scale(24),
     borderTopRightRadius: scale(24),
-    maxHeight: '90%',
+    maxHeight: SCREEN_HEIGHT * 0.9,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1020,7 +1022,7 @@ const styles = StyleSheet.create({
     backgroundColor: C.card,
     borderTopLeftRadius: scale(24),
     borderTopRightRadius: scale(24),
-    maxHeight: '70%',
+    maxHeight: SCREEN_HEIGHT * 0.7,
   },
   pickerBody: {
     padding: scale(16),

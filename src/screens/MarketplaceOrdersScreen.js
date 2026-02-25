@@ -19,6 +19,7 @@ import {
   Alert,
   StatusBar,
   Dimensions,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
@@ -31,7 +32,7 @@ import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
 import { scale, moderateScale } from '../utils/responsive';
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // App Theme Color Palette
 const C = {
@@ -116,6 +117,15 @@ export default function MarketplaceOrdersScreen({ navigation }) {
   // Navigation Menu
   const [menuVisible, setMenuVisible] = useState(false);
 
+  // Top-level tab: Orders vs Payments
+  const [activeMainTab, setActiveMainTab] = useState('orders');
+
+  // Payments state
+  const [payments, setPayments] = useState([]);
+  const [loadingPayments, setLoadingPayments] = useState(true);
+  const [selectedPayment, setSelectedPayment] = useState(null);
+  const [paymentDetailVisible, setPaymentDetailVisible] = useState(false);
+
   // Status filter tab
   const [activeStatusTab, setActiveStatusTab] = useState('all');
 
@@ -128,6 +138,10 @@ export default function MarketplaceOrdersScreen({ navigation }) {
     });
     return counts;
   }, [orders]);
+
+  const pendingPaymentsCount = React.useMemo(() => {
+    return payments.filter(p => p.status === 'PENDING').length;
+  }, [payments]);
 
   // Filter orders by status tab
   const filteredOrders = React.useMemo(() => {
@@ -152,17 +166,35 @@ export default function MarketplaceOrdersScreen({ navigation }) {
     }
   }, [selectedRestaurantId]);
 
+  const loadPayments = useCallback(async () => {
+    if (!selectedRestaurantId) return;
+
+    try {
+      setLoadingPayments(true);
+      const response = await api.get(`/owner/marketplace/payments?restaurantId=${selectedRestaurantId}`);
+      if (response.data.ok) {
+        setPayments(response.data.data || []);
+      }
+    } catch (error) {
+      console.error('Error loading payments:', error);
+    } finally {
+      setLoadingPayments(false);
+    }
+  }, [selectedRestaurantId]);
+
   // Load data when restaurant changes
   useEffect(() => {
     if (selectedRestaurantId) {
       loadData();
+      loadPayments();
     }
-  }, [selectedRestaurantId, loadData]);
+  }, [selectedRestaurantId, loadData, loadPayments]);
 
   const onRefresh = async () => {
     setRefreshing(true);
     await loadRestaurants();
     loadData();
+    loadPayments();
   };
 
   const openOrderDetails = (order) => {
@@ -204,6 +236,121 @@ export default function MarketplaceOrdersScreen({ navigation }) {
 
   const getStatusStyle = (status) => {
     return STATUS_CONFIG[status] || STATUS_CONFIG.PENDING;
+  };
+
+  const getPaymentStatusStyle = (status) => {
+    if (status === 'PENDING') return { bg: '#FEF3C7', color: '#D97706', icon: 'hourglass-outline', label: 'Pending Verification', gradient: ['#F59E0B', '#D97706'] };
+    if (status === 'VERIFIED') return { bg: C.successLight, color: C.success, icon: 'checkmark-circle-outline', label: 'Verified', gradient: [C.success, '#059669'] };
+    if (status === 'REJECTED') return { bg: C.dangerLight, color: C.danger, icon: 'close-circle-outline', label: 'Rejected', gradient: [C.danger, '#DC2626'] };
+    return { bg: C.bg, color: C.muted, icon: 'help-outline', label: status, gradient: [C.muted, C.muted] };
+  };
+
+  const renderPaymentCard = ({ item }) => {
+    const statusStyle = getPaymentStatusStyle(item.status);
+    const vendorName = item.vendor?.name || 'Unknown Vendor';
+    const items = item.items || [];
+
+    return (
+      <TouchableOpacity
+        style={styles.orderCard}
+        onPress={() => {
+          setSelectedPayment(item);
+          setPaymentDetailVisible(true);
+        }}
+        activeOpacity={0.7}
+      >
+        {/* Status Strip */}
+        <LinearGradient
+          colors={statusStyle.gradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.orderStatusStrip}
+        >
+          <Icon name={statusStyle.icon} size={scale(14)} color="#fff" />
+          <Text style={styles.orderStatusText}>{statusStyle.label}</Text>
+        </LinearGradient>
+
+        {/* Payment Content */}
+        <View style={styles.orderContent}>
+          {/* Payment Header */}
+          <View style={styles.orderHeader}>
+            <View style={styles.orderIdSection}>
+              <Text style={styles.orderIdLabel}>PAYMENT ID</Text>
+              <Text style={styles.orderId}>#{item.id?.slice(0, 8).toUpperCase()}</Text>
+            </View>
+            <View style={styles.orderDateSection}>
+              <Text style={styles.orderDateText}>{formatDate(item.createdAt)}</Text>
+              <Text style={styles.orderTimeText}>{formatTime(item.createdAt)}</Text>
+            </View>
+          </View>
+
+          {/* Vendor Info */}
+          <View style={styles.vendorSection}>
+            <View style={styles.vendorIcon}>
+              <Icon name="storefront" size={scale(16)} color={C.primary} />
+            </View>
+            <View style={styles.vendorInfo}>
+              <Text style={styles.vendorLabel}>Vendor</Text>
+              <Text style={styles.vendorName}>{vendorName}</Text>
+            </View>
+          </View>
+
+          {/* Items Preview */}
+          <View style={styles.itemsPreview}>
+            {items.slice(0, 2).map((orderItem, idx) => (
+              <View key={idx} style={styles.itemPreviewRow}>
+                <View style={styles.itemDot} />
+                <Text style={styles.itemPreviewName} numberOfLines={1}>
+                  {orderItem.name || 'Product'}
+                </Text>
+                <Text style={styles.itemPreviewQty}>x{orderItem.qty}</Text>
+              </View>
+            ))}
+            {items.length > 2 && (
+              <Text style={styles.moreItemsText}>+{items.length - 2} more items</Text>
+            )}
+          </View>
+
+          {/* Status Message */}
+          {item.status === 'PENDING' && (
+            <View style={[styles.paymentStatusMsg, { backgroundColor: '#FEF3C7' }]}>
+              <Icon name="time-outline" size={scale(14)} color="#D97706" />
+              <Text style={[styles.paymentStatusMsgText, { color: '#D97706' }]}>
+                Waiting for vendor verification
+              </Text>
+            </View>
+          )}
+          {item.status === 'VERIFIED' && item.order && (
+            <View style={[styles.paymentStatusMsg, { backgroundColor: C.successLight }]}>
+              <Icon name="checkmark-circle" size={scale(14)} color={C.success} />
+              <Text style={[styles.paymentStatusMsgText, { color: C.success }]}>
+                Order #{item.order.id?.slice(0, 8).toUpperCase()} placed
+              </Text>
+            </View>
+          )}
+          {item.status === 'REJECTED' && (
+            <View style={[styles.paymentStatusMsg, { backgroundColor: C.dangerLight }]}>
+              <Icon name="close-circle" size={scale(14)} color={C.danger} />
+              <Text style={[styles.paymentStatusMsgText, { color: C.danger }]} numberOfLines={2}>
+                Rejected{item.rejectionReason ? `: ${item.rejectionReason}` : ''}
+              </Text>
+            </View>
+          )}
+
+          {/* Payment Footer */}
+          <View style={styles.orderFooter}>
+            <View style={styles.orderTotalSection}>
+              <Text style={styles.orderTotalLabel}>{items.length} item{items.length > 1 ? 's' : ''}</Text>
+              <Text style={styles.orderTotalAmount}>{formatPrice(item.totalAmount)}</Text>
+            </View>
+            <View style={styles.viewDetailsBtn}>
+              <Text style={styles.viewDetailsText}>Details</Text>
+              <Icon name="chevron-forward" size={scale(16)} color={C.primary} />
+            </View>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
   };
 
   const renderOrderCard = ({ item }) => {
@@ -378,85 +525,167 @@ export default function MarketplaceOrdersScreen({ navigation }) {
       {/* Global Restaurant Selector */}
       <RestaurantSelectorBar />
 
-      {/* Premium Status Filter Tabs */}
-      <View style={styles.filterWrapper}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterContainer}
+      {/* Main Tab Switcher: Orders | Payments */}
+      <View style={styles.mainTabWrapper}>
+        <TouchableOpacity
+          style={[styles.mainTab, activeMainTab === 'orders' && styles.mainTabActive]}
+          onPress={() => setActiveMainTab('orders')}
+          activeOpacity={0.7}
         >
-          {STATUS_OPTIONS.map((status) => {
-            const config = STATUS_CONFIG[status.value] || STATUS_CONFIG.all;
-            const isActive = activeStatusTab === status.value;
-            const count = statusCounts[status.value] || 0;
-
-            return (
-              <TouchableOpacity
-                key={status.value}
-                style={[
-                  styles.filterChip,
-                  isActive && { backgroundColor: config.bg, borderColor: config.color }
-                ]}
-                onPress={() => setActiveStatusTab(status.value)}
-                activeOpacity={0.7}
-              >
-                <Icon name={config.icon} size={scale(14)} color={isActive ? config.color : C.muted} />
-                <Text style={[styles.filterChipText, isActive && { color: config.color }]}>
-                  {status.label}
-                </Text>
-                {count > 0 && (
-                  <View style={[styles.filterBadge, isActive && { backgroundColor: config.color }]}>
-                    <Text style={[styles.filterBadgeText, isActive && { color: '#fff' }]}>{count}</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+          <Icon name="receipt-outline" size={scale(18)} color={activeMainTab === 'orders' ? C.primary : C.muted} />
+          <Text style={[styles.mainTabText, activeMainTab === 'orders' && styles.mainTabTextActive]}>
+            Orders
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.mainTab, activeMainTab === 'payments' && styles.mainTabActive]}
+          onPress={() => setActiveMainTab('payments')}
+          activeOpacity={0.7}
+        >
+          <Icon name="card-outline" size={scale(18)} color={activeMainTab === 'payments' ? C.primary : C.muted} />
+          <Text style={[styles.mainTabText, activeMainTab === 'payments' && styles.mainTabTextActive]}>
+            Payments
+          </Text>
+          {pendingPaymentsCount > 0 && (
+            <View style={styles.pendingBadge}>
+              <Text style={styles.pendingBadgeText}>{pendingPaymentsCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
       </View>
 
-      <FlatList
-        data={filteredOrders}
-        keyExtractor={item => item.id.toString()}
-        renderItem={renderOrderCard}
-        contentContainerStyle={styles.ordersList}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={[C.primary]}
-            tintColor={C.primary}
-          />
-        }
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <View style={styles.emptyIconContainer}>
-              <Icon name="receipt-outline" size={scale(64)} color={C.muted} />
-            </View>
-            <Text style={styles.emptyTitle}>No Orders Yet</Text>
-            <Text style={styles.emptySubtitle}>
-              {activeStatusTab !== 'all'
-                ? `No ${STATUS_CONFIG[activeStatusTab]?.label.toLowerCase()} orders`
-                : 'Your marketplace orders will appear here'}
-            </Text>
-            <TouchableOpacity
-              style={styles.emptyActionBtn}
-              onPress={() => navigation.navigate('Marketplace')}
+      {activeMainTab === 'orders' ? (
+        <>
+          {/* Premium Status Filter Tabs */}
+          <View style={styles.filterWrapper}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filterContainer}
             >
-              <LinearGradient
-                colors={[C.gradient1, C.gradient2]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.emptyActionGradient}
-              >
-                <Icon name="bag-add" size={scale(20)} color="#fff" />
-                <Text style={styles.emptyActionText}>Browse Marketplace</Text>
-              </LinearGradient>
-            </TouchableOpacity>
+              {STATUS_OPTIONS.map((status) => {
+                const config = STATUS_CONFIG[status.value] || STATUS_CONFIG.all;
+                const isActive = activeStatusTab === status.value;
+                const count = statusCounts[status.value] || 0;
+
+                return (
+                  <TouchableOpacity
+                    key={status.value}
+                    style={[
+                      styles.filterChip,
+                      isActive && { backgroundColor: config.bg, borderColor: config.color }
+                    ]}
+                    onPress={() => setActiveStatusTab(status.value)}
+                    activeOpacity={0.7}
+                  >
+                    <Icon name={config.icon} size={scale(14)} color={isActive ? config.color : C.muted} />
+                    <Text style={[styles.filterChipText, isActive && { color: config.color }]}>
+                      {status.label}
+                    </Text>
+                    {count > 0 && (
+                      <View style={[styles.filterBadge, isActive && { backgroundColor: config.color }]}>
+                        <Text style={[styles.filterBadgeText, isActive && { color: '#fff' }]}>{count}</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
           </View>
-        }
-      />
+
+          <FlatList
+            data={filteredOrders}
+            keyExtractor={item => item.id.toString()}
+            renderItem={renderOrderCard}
+            contentContainerStyle={styles.ordersList}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={[C.primary]}
+                tintColor={C.primary}
+              />
+            }
+            ListEmptyComponent={
+              <View style={styles.emptyState}>
+                <View style={styles.emptyIconContainer}>
+                  <Icon name="receipt-outline" size={scale(64)} color={C.muted} />
+                </View>
+                <Text style={styles.emptyTitle}>No Orders Yet</Text>
+                <Text style={styles.emptySubtitle}>
+                  {activeStatusTab !== 'all'
+                    ? `No ${STATUS_CONFIG[activeStatusTab]?.label.toLowerCase()} orders`
+                    : 'Your marketplace orders will appear here'}
+                </Text>
+                <TouchableOpacity
+                  style={styles.emptyActionBtn}
+                  onPress={() => navigation.navigate('Marketplace')}
+                >
+                  <LinearGradient
+                    colors={[C.gradient1, C.gradient2]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.emptyActionGradient}
+                  >
+                    <Icon name="bag-add" size={scale(20)} color="#fff" />
+                    <Text style={styles.emptyActionText}>Browse Marketplace</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            }
+          />
+        </>
+      ) : (
+        /* ===== PAYMENTS TAB ===== */
+        loadingPayments && !refreshing ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={C.primary} />
+            <Text style={styles.loadingText}>Loading payments...</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={payments}
+            keyExtractor={item => item.id.toString()}
+            renderItem={renderPaymentCard}
+            contentContainerStyle={styles.ordersList}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={[C.primary]}
+                tintColor={C.primary}
+              />
+            }
+            ListEmptyComponent={
+              <View style={styles.emptyState}>
+                <View style={styles.emptyIconContainer}>
+                  <Icon name="card-outline" size={scale(64)} color={C.muted} />
+                </View>
+                <Text style={styles.emptyTitle}>No Payments Yet</Text>
+                <Text style={styles.emptySubtitle}>
+                  When you pay for marketplace orders, your payment status will appear here
+                </Text>
+                <TouchableOpacity
+                  style={styles.emptyActionBtn}
+                  onPress={() => navigation.navigate('Marketplace')}
+                >
+                  <LinearGradient
+                    colors={[C.gradient1, C.gradient2]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.emptyActionGradient}
+                  >
+                    <Icon name="bag-add" size={scale(20)} color="#fff" />
+                    <Text style={styles.emptyActionText}>Browse Marketplace</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            }
+          />
+        )
+      )}
 
       {/* ========== ORDER DETAIL MODAL - PREMIUM ========== */}
       <Modal visible={detailModalVisible} animationType="slide" transparent>
@@ -643,6 +872,202 @@ export default function MarketplaceOrdersScreen({ navigation }) {
               <TouchableOpacity
                 style={[styles.detailCloseBtn, selectedOrder?.status === 'DELIVERED' && { flex: 1 }]}
                 onPress={() => setDetailModalVisible(false)}
+              >
+                <Text style={styles.detailCloseBtnText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ========== PAYMENT DETAIL MODAL ========== */}
+      <Modal visible={paymentDetailVisible} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.paymentModalContainer}>
+            {/* Modal Header with Gradient */}
+            {selectedPayment && (
+              <LinearGradient
+                colors={getPaymentStatusStyle(selectedPayment.status).gradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.detailModalHeader}
+              >
+                <View style={styles.detailModalHeaderContent}>
+                  <View>
+                    <Text style={styles.detailModalOrderId}>
+                      #{selectedPayment.id?.slice(0, 8).toUpperCase()}
+                    </Text>
+                    <View style={styles.detailModalStatusRow}>
+                      <Icon name={getPaymentStatusStyle(selectedPayment.status).icon} size={scale(16)} color="#fff" />
+                      <Text style={styles.detailModalStatus}>
+                        {getPaymentStatusStyle(selectedPayment.status).label}
+                      </Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.detailModalCloseBtn}
+                    onPress={() => setPaymentDetailVisible(false)}
+                  >
+                    <Icon name="close" size={scale(22)} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.detailModalDateRow}>
+                  <Icon name="calendar-outline" size={scale(14)} color="rgba(255,255,255,0.8)" />
+                  <Text style={styles.detailModalDate}>
+                    {formatDate(selectedPayment.createdAt)} • {formatTime(selectedPayment.createdAt)}
+                  </Text>
+                </View>
+              </LinearGradient>
+            )}
+
+            {selectedPayment && (
+              <ScrollView
+                style={styles.detailModalBody}
+                contentContainerStyle={styles.detailModalBodyContent}
+                showsVerticalScrollIndicator={true}
+                bounces={true}
+              >
+                {/* Vendor Card */}
+                <View style={styles.detailCard}>
+                  <View style={styles.detailCardIcon}>
+                    <Icon name="storefront" size={scale(20)} color={C.primary} />
+                  </View>
+                  <View style={styles.detailCardContent}>
+                    <Text style={styles.detailCardLabel}>Vendor</Text>
+                    <Text style={styles.detailCardValue}>
+                      {selectedPayment.vendor?.name || 'Unknown Vendor'}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Delivery Address Card */}
+                {selectedPayment.deliveryAddress && (
+                  <View style={styles.detailCard}>
+                    <View style={[styles.detailCardIcon, { backgroundColor: '#E0F2FE' }]}>
+                      <Icon name="location" size={scale(20)} color="#0284C7" />
+                    </View>
+                    <View style={styles.detailCardContent}>
+                      <Text style={styles.detailCardLabel}>Delivery Address</Text>
+                      <Text style={styles.detailCardValue}>{selectedPayment.deliveryAddress}</Text>
+                    </View>
+                  </View>
+                )}
+
+                {/* Notes */}
+                {selectedPayment.notes && (
+                  <View style={styles.detailCard}>
+                    <View style={[styles.detailCardIcon, { backgroundColor: C.successLight }]}>
+                      <Icon name="document-text" size={scale(20)} color={C.success} />
+                    </View>
+                    <View style={styles.detailCardContent}>
+                      <Text style={styles.detailCardLabel}>Notes</Text>
+                      <Text style={styles.detailCardValue}>{selectedPayment.notes}</Text>
+                    </View>
+                  </View>
+                )}
+
+                {/* Screenshot */}
+                <View style={styles.detailCard}>
+                  <View style={[styles.detailCardIcon, { backgroundColor: '#E0E7FF' }]}>
+                    <Icon name="image" size={scale(20)} color="#4F46E5" />
+                  </View>
+                  <View style={styles.detailCardContent}>
+                    <Text style={styles.detailCardLabel}>Payment Screenshot</Text>
+                    {selectedPayment.screenshotUrl && (
+                      <Image
+                        source={{ uri: selectedPayment.screenshotUrl }}
+                        style={styles.paymentScreenshot}
+                        resizeMode="contain"
+                      />
+                    )}
+                  </View>
+                </View>
+
+                {/* Items Section */}
+                <View style={styles.detailItemsSection}>
+                  <Text style={styles.detailItemsTitle}>
+                    Items ({(selectedPayment.items || []).length})
+                  </Text>
+
+                  {(selectedPayment.items || []).map((item, idx) => (
+                    <View key={idx} style={styles.detailItemCard}>
+                      <View style={styles.detailItemLeft}>
+                        <View style={styles.detailItemImagePlaceholder}>
+                          <Icon name="cube" size={scale(18)} color={C.muted} />
+                        </View>
+                        <View style={styles.detailItemInfo}>
+                          <Text style={styles.detailItemName} numberOfLines={2}>
+                            {item.name || 'Product'}
+                          </Text>
+                          <Text style={styles.detailItemMeta}>
+                            x{item.qty} × {formatPrice(item.priceSnapshot || 0)}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={styles.detailItemTotal}>
+                        {formatPrice(item.qty * (item.priceSnapshot || 0))}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+
+                {/* Total Section */}
+                <View style={styles.detailTotalSection}>
+                  <View style={styles.detailTotalRow}>
+                    <Text style={styles.detailGrandTotalLabel}>Total Amount</Text>
+                    <Text style={styles.detailGrandTotalValue}>{formatPrice(selectedPayment.totalAmount)}</Text>
+                  </View>
+                </View>
+
+                {/* Status Messages */}
+                {selectedPayment.status === 'PENDING' && (
+                  <View style={[styles.detailStatusMsg, { backgroundColor: '#FEF3C7' }]}>
+                    <Icon name="time-outline" size={scale(18)} color="#D97706" />
+                    <Text style={[styles.detailStatusMsgText, { color: '#D97706' }]}>
+                      Waiting for vendor to verify your payment. You'll be notified once verified.
+                    </Text>
+                  </View>
+                )}
+
+                {selectedPayment.status === 'VERIFIED' && selectedPayment.order && (
+                  <View style={[styles.detailStatusMsg, { backgroundColor: C.successLight }]}>
+                    <Icon name="checkmark-circle" size={scale(18)} color={C.success} />
+                    <Text style={[styles.detailStatusMsgText, { color: C.success }]}>
+                      Payment verified! Order #{selectedPayment.order.id?.slice(0, 8).toUpperCase()} created.
+                    </Text>
+                  </View>
+                )}
+
+                {selectedPayment.status === 'REJECTED' && (
+                  <View style={[styles.detailStatusMsg, { backgroundColor: C.dangerLight }]}>
+                    <Icon name="close-circle" size={scale(18)} color={C.danger} />
+                    <Text style={[styles.detailStatusMsgText, { color: C.danger }]}>
+                      {selectedPayment.rejectionReason || 'Payment rejected. Please contact vendor or re-submit.'}
+                    </Text>
+                  </View>
+                )}
+
+                {selectedPayment.verifiedAt && (
+                  <View style={styles.detailCard}>
+                    <View style={[styles.detailCardIcon, { backgroundColor: C.successLight }]}>
+                      <Icon name="checkmark-done" size={scale(20)} color={C.success} />
+                    </View>
+                    <View style={styles.detailCardContent}>
+                      <Text style={styles.detailCardLabel}>Verified At</Text>
+                      <Text style={styles.detailCardValue}>
+                        {formatDate(selectedPayment.verifiedAt)} {formatTime(selectedPayment.verifiedAt)}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+              </ScrollView>
+            )}
+
+            {/* Footer */}
+            <View style={styles.detailModalFooter}>
+              <TouchableOpacity
+                style={[styles.detailCloseBtn, { flex: 1 }]}
+                onPress={() => setPaymentDetailVisible(false)}
               >
                 <Text style={styles.detailCloseBtnText}>Close</Text>
               </TouchableOpacity>
@@ -873,7 +1298,7 @@ const styles = StyleSheet.create({
   // Orders List
   ordersList: {
     paddingHorizontal: scale(16),
-    paddingBottom: scale(100),
+    paddingBottom: scale(120),
   },
 
   // Order Card - Premium Design
@@ -1112,7 +1537,7 @@ const styles = StyleSheet.create({
     backgroundColor: C.card,
     borderTopLeftRadius: scale(24),
     borderTopRightRadius: scale(24),
-    maxHeight: '90%',
+    maxHeight: SCREEN_HEIGHT * 0.9,
   },
   detailModalHeader: {
     paddingTop: scale(20),
@@ -1462,7 +1887,7 @@ const styles = StyleSheet.create({
     backgroundColor: C.card,
     borderTopLeftRadius: scale(24),
     borderTopRightRadius: scale(24),
-    maxHeight: '70%',
+    maxHeight: SCREEN_HEIGHT * 0.7,
   },
   pickerBody: { padding: scale(16) },
   restaurantOption: {
@@ -1493,4 +1918,86 @@ const styles = StyleSheet.create({
   restaurantOptionName: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink },
   restaurantOptionNameSelected: { color: C.primary },
   restaurantOptionAddress: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(2) },
+
+  // Main Tab Switcher (Orders | Payments)
+  mainTabWrapper: {
+    flexDirection: 'row',
+    backgroundColor: C.card,
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(8),
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+    gap: scale(8),
+  },
+  mainTab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: scale(8),
+    paddingVertical: scale(12),
+    borderRadius: scale(12),
+    backgroundColor: C.bg,
+    borderWidth: 1.5,
+    borderColor: C.border,
+  },
+  mainTabActive: {
+    backgroundColor: C.primaryLight,
+    borderColor: C.primary,
+  },
+  mainTabText: {
+    fontSize: moderateScale(15),
+    fontWeight: '700',
+    color: C.muted,
+  },
+  mainTabTextActive: {
+    color: C.primary,
+  },
+  pendingBadge: {
+    minWidth: scale(22),
+    height: scale(22),
+    borderRadius: scale(11),
+    backgroundColor: C.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: scale(6),
+  },
+  pendingBadgeText: {
+    fontSize: moderateScale(11),
+    fontWeight: '800',
+    color: '#fff',
+  },
+
+  // Payment Status Message in card
+  paymentStatusMsg: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(8),
+    paddingHorizontal: scale(12),
+    paddingVertical: scale(10),
+    borderRadius: scale(10),
+    marginBottom: scale(12),
+  },
+  paymentStatusMsgText: {
+    flex: 1,
+    fontSize: moderateScale(12),
+    fontWeight: '600',
+  },
+
+  // Payment Detail Modal Container - pixel-based height for consistent responsiveness
+  paymentModalContainer: {
+    backgroundColor: C.card,
+    borderTopLeftRadius: scale(24),
+    borderTopRightRadius: scale(24),
+    height: SCREEN_HEIGHT * 0.85,
+  },
+
+  // Payment Screenshot in modal
+  paymentScreenshot: {
+    width: '100%',
+    height: scale(200),
+    marginTop: scale(8),
+    borderRadius: scale(8),
+    backgroundColor: C.bg
+  },
 });
