@@ -1,59 +1,90 @@
+/**
+ * ============================================================================
+ * MARKETPLACE CART SCREEN - Vendor-wise Cart (Full Page)
+ * ============================================================================
+ * Replaces the old modal flow from MarketplaceScreen.
+ * Shows delivery details + vendor-grouped items + per-vendor Pay & Order.
+ */
+
 import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
-  FlatList,
+  StyleSheet,
+  ScrollView,
   TouchableOpacity,
   Image,
-  StyleSheet,
+  TextInput,
   Alert,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
+import { getImageUrl } from '../api/client';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
 import { scale, moderateScale } from '../utils/responsive';
+
 const C = {
   primary: '#EF3A3A',
+  primaryDark: '#DC2626',
+  primaryLight: '#FEE2E2',
+  gradient1: '#EF3A3A',
+  gradient2: '#DC2626',
   ink: '#1D2254',
-  text: '#0F172A',
-  muted: '#6B7280',
-  bg: '#F5F7FA',
+  text: '#334155',
+  muted: '#94A3B8',
+  bg: '#F8FAFC',
   card: '#FFFFFF',
-  border: '#E5E7EB',
-  ok: '#10B981',
+  border: '#E2E8F0',
+  success: '#10B981',
   danger: '#EF4444',
 };
 
-const CART_STORAGE_KEY = '@marketplace_cart';
+const formatPrice = (price) => `₹${(price || 0).toLocaleString('en-IN')}`;
 
-export default function MarketplaceCartScreen({ navigation }) {
-  const [cart, setCart] = useState([]);
+export default function MarketplaceCartScreen({ navigation, route }) {
+  const { restaurantId } = route.params || {};
+  const CART_STORAGE_KEY = `@marketplace_cart_${restaurantId || 'none'}`;
+
+  const [cart, setCart] = useState(route.params?.cart || []);
   const [loading, setLoading] = useState(true);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [deliveryNotes, setDeliveryNotes] = useState('');
 
+  // Reload cart from AsyncStorage on every focus (handles changes from other screens)
   useFocusEffect(
     useCallback(() => {
       loadCart();
-    }, [])
+    }, [restaurantId])
   );
 
   const loadCart = async () => {
     try {
       setLoading(true);
-      const cartData = await AsyncStorage.getItem(CART_STORAGE_KEY);
-      if (cartData) {
-        const items = JSON.parse(cartData);
-        setCart(Array.isArray(items) ? items : []);
-      } else {
-        setCart([]);
+      const paidVendorId = await AsyncStorage.getItem('@marketplace_paid_vendor');
+      const saved = await AsyncStorage.getItem(CART_STORAGE_KEY);
+      let parsed = saved ? JSON.parse(saved) : [];
+      if (!Array.isArray(parsed)) parsed = [];
+      parsed = parsed.filter(item => item && item.product);
+
+      if (paidVendorId && parsed.length > 0) {
+        parsed = parsed.filter(item => {
+          const vid = item.product.vendor?.id || item.product.vendorId || 'unknown';
+          return vid !== paidVendorId;
+        });
+        await AsyncStorage.setItem(CART_STORAGE_KEY, JSON.stringify(parsed));
+        await AsyncStorage.removeItem('@marketplace_paid_vendor');
       }
-    } catch (error) {
-      console.error('Load marketplace cart error:', error);
+
+      setCart(parsed);
+    } catch (e) {
+      console.log('Cart load error:', e);
       setCart([]);
     } finally {
       setLoading(false);
@@ -64,38 +95,28 @@ export default function MarketplaceCartScreen({ navigation }) {
     try {
       await AsyncStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
       setCart(items);
-    } catch (error) {
-      console.error('Save marketplace cart error:', error);
+    } catch (e) {
+      console.log('Cart save error:', e);
     }
   };
 
-  const handleUpdateQuantity = async (productId, newQuantity) => {
-    if (newQuantity < 1) return;
+  const updateCartQuantity = (productId, delta) => {
+    const item = cart.find(i => i.product.id === productId);
+    if (!item) return;
 
-    const updatedCart = cart.map(item =>
-      item.productId === productId
-        ? { ...item, quantity: newQuantity }
-        : item
-    );
-    await saveCart(updatedCart);
-  };
+    const newQty = item.quantity + delta;
+    if (newQty <= 0) {
+      const updated = cart.filter(i => i.product.id !== productId);
+      saveCart(updated);
+      return;
+    }
 
-  const handleRemove = async (productId) => {
-    Alert.alert(
-      'Remove Item',
-      'Are you sure you want to remove this item from cart?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
-            const updatedCart = cart.filter(item => item.productId !== productId);
-            await saveCart(updatedCart);
-          },
-        },
-      ]
+    const updated = cart.map(i =>
+      i.product.id === productId
+        ? { ...i, quantity: Math.min(newQty, i.product.stockQuantity || 999) }
+        : i
     );
+    saveCart(updated);
   };
 
   const handleClearCart = () => {
@@ -104,168 +125,290 @@ export default function MarketplaceCartScreen({ navigation }) {
       {
         text: 'Clear',
         style: 'destructive',
-        onPress: async () => {
-          await saveCart([]);
-        },
+        onPress: () => saveCart([]),
       },
     ]);
   };
 
-  const handleProceedToOrder = () => {
-    if (cart.length === 0) {
-      return Alert.alert('Empty Cart', 'Please add items to cart before proceeding');
-    }
+  const getCartTotal = () => cart.reduce((total, item) => total + item.product.price * item.quantity, 0);
+  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
 
-    navigation.navigate('CreateMarketplaceOrder', { cartItems: cart });
+  // Group cart items by vendor
+  const getVendorGroups = () => {
+    const groups = {};
+    cart.forEach(item => {
+      const vendorId = item.product.vendor?.id || item.product.vendorId || 'unknown';
+      const vendorNameVal = typeof item.product.vendor === 'object' ? item.product.vendor?.name : 'Unknown Vendor';
+      const isAdmin = item.product.isAdminStore === true;
+      if (!groups[vendorId]) {
+        groups[vendorId] = {
+          vendorId,
+          vendorName: isAdmin ? 'KNI Official Store' : vendorNameVal,
+          isAdminStore: isAdmin,
+          items: [],
+          total: 0,
+        };
+      }
+      groups[vendorId].items.push(item);
+      groups[vendorId].total += item.product.price * item.quantity;
+    });
+    return Object.values(groups);
   };
 
-  const totalPrice = cart.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 1), 0);
-  const totalItems = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
+  const handlePayAndOrder = (vendorGroup) => {
+    if (!restaurantId) return Alert.alert('Error', 'Please select a restaurant');
+    if (!deliveryAddress.trim()) return Alert.alert('Error', 'Please enter delivery address');
 
+    navigation.navigate('MarketplacePayment', {
+      vendorId: vendorGroup.vendorId,
+      vendorName: vendorGroup.vendorName,
+      isAdminStore: vendorGroup.isAdminStore,
+      items: vendorGroup.items.map(item => ({
+        product: item.product,
+        id: item.product.id,
+        productId: item.product.id,
+        name: item.product.name,
+        price: item.product.price,
+        quantity: item.quantity,
+      })),
+      restaurantId,
+      deliveryAddress: deliveryAddress.trim(),
+      deliveryNotes: deliveryNotes.trim(),
+    });
+  };
+
+  const vendorGroups = getVendorGroups();
+
+  // Loading state
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Icon name="arrow-back" size={scale(24)} color={C.ink} />
+      <SafeAreaView style={st.container}>
+        <View style={st.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
+            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Marketplace Cart</Text>
+          <Text style={st.headerTitle}>Your Cart</Text>
           <View style={{ width: scale(40) }} />
         </View>
-        <View style={styles.loadingContainer}>
+        <View style={st.loadingContainer}>
           <ActivityIndicator size="large" color={C.primary} />
         </View>
       </SafeAreaView>
     );
   }
 
-  return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Icon name="arrow-back" size={scale(24)} color={C.ink} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Marketplace Cart ({totalItems})</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+  // Empty state
+  if (cart.length === 0) {
+    return (
+      <SafeAreaView style={st.container}>
+        <View style={st.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
+            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
+          </TouchableOpacity>
+          <Text style={st.headerTitle}>Your Cart</Text>
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
+            <Icon name="menu" size={scale(22)} color={C.ink} />
+          </TouchableOpacity>
+        </View>
+        <View style={st.emptyState}>
+          <View style={st.emptyIconWrap}>
+            <Icon name="cart-outline" size={scale(64)} color={C.muted} />
+          </View>
+          <Text style={st.emptyTitle}>Your cart is empty</Text>
+          <Text style={st.emptyText}>Browse marketplace to add products</Text>
           <TouchableOpacity
-            onPress={handleClearCart}
-            disabled={cart.length === 0}
+            style={st.browseBtn}
+            onPress={() => navigation.navigate('Marketplace')}
           >
-            <Icon name="trash-outline" size={scale(20)} color={cart.length > 0 ? C.danger : C.muted} />
+            <Text style={st.browseBtnText}>Browse Marketplace</Text>
+          </TouchableOpacity>
+        </View>
+        <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
+        <KniBottomNav navigation={navigation} />
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={st.container}>
+      {/* Header */}
+      <View style={st.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
+          <Icon name="arrow-back" size={scale(22)} color={C.ink} />
+        </TouchableOpacity>
+        <View style={st.headerCenter}>
+          <Text style={st.headerTitle}>Your Cart</Text>
+          <Text style={st.headerSubtitle}>
+            {totalItems} item{totalItems !== 1 ? 's' : ''} from {vendorGroups.length} vendor{vendorGroups.length !== 1 ? 's' : ''}
+          </Text>
+        </View>
+        <View style={st.headerRight}>
+          <TouchableOpacity onPress={handleClearCart} style={{ padding: scale(8) }}>
+            <Icon name="trash-outline" size={scale(20)} color={C.danger} />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
-            <Icon name="menu" size={scale(22)} color="#1D2254" />
+            <Icon name="menu" size={scale(22)} color={C.ink} />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Cart Items */}
-      <FlatList
-        data={cart}
-        keyExtractor={(item) => item.productId}
-        contentContainerStyle={styles.listContent}
-        renderItem={({ item }) => (
-          <View style={styles.cartItem}>
-            {/* Item Image */}
-            {item.imageUrl ? (
-              <Image source={{ uri: item.imageUrl }} style={styles.itemImage} />
-            ) : (
-              <View style={[styles.itemImage, styles.placeholderImage]}>
-                <Icon name="image-outline" size={scale(32)} color={C.muted} />
-              </View>
-            )}
+      {/* Scrollable Content */}
+      <ScrollView
+        style={st.body}
+        contentContainerStyle={st.bodyContent}
+        showsVerticalScrollIndicator={true}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Delivery Details */}
+        <View style={st.deliverySection}>
+          <Text style={st.sectionTitle}>Delivery Details</Text>
 
-            {/* Item Details */}
-            <View style={styles.itemDetails}>
-              <Text style={styles.itemName} numberOfLines={2}>
-                {item.name}
+          <Text style={st.inputLabel}>Delivery Address *</Text>
+          <TextInput
+            style={st.textArea}
+            placeholder="Enter complete delivery address"
+            placeholderTextColor={C.muted}
+            value={deliveryAddress}
+            onChangeText={setDeliveryAddress}
+            multiline
+            numberOfLines={3}
+          />
+
+          <Text style={st.inputLabel}>Notes (Optional)</Text>
+          <TextInput
+            style={st.input}
+            placeholder="Any special instructions"
+            placeholderTextColor={C.muted}
+            value={deliveryNotes}
+            onChangeText={setDeliveryNotes}
+          />
+        </View>
+
+        {/* Vendor Groups */}
+        {vendorGroups.map((group) => (
+          <View key={group.vendorId} style={[st.vendorCard, group.isAdminStore && st.vendorCardAdmin]}>
+            {/* Vendor Header */}
+            <View style={st.vendorHeader}>
+              <View style={st.vendorNameRow}>
+                <Icon
+                  name={group.isAdminStore ? 'shield-checkmark' : 'storefront'}
+                  size={scale(18)}
+                  color={group.isAdminStore ? '#2563EB' : C.success}
+                />
+                <Text style={st.vendorName}>{group.vendorName}</Text>
+                {group.isAdminStore && (
+                  <View style={st.officialTag}>
+                    <Text style={st.officialTagText}>Official</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={st.vendorItemCount}>
+                {group.items.length} item{group.items.length !== 1 ? 's' : ''}
               </Text>
-              <Text style={styles.itemPrice}>₹{(item.price || 0).toFixed(2)}</Text>
-              {item.vendorName && (
-                <Text style={styles.vendorName} numberOfLines={1}>
-                  {item.vendorName}
-                </Text>
-              )}
             </View>
 
-            {/* Quantity Controls */}
-            <View style={styles.quantityControls}>
-              <View style={styles.quantityRow}>
-                <TouchableOpacity
-                  onPress={() => handleUpdateQuantity(item.productId, item.quantity - 1)}
-                  disabled={item.quantity <= 1}
-                  style={styles.quantityBtn}
-                >
-                  <Icon
-                    name="remove-circle-outline"
-                    size={scale(28)}
-                    color={item.quantity <= 1 ? C.muted : C.primary}
-                  />
-                </TouchableOpacity>
-                <Text style={styles.quantity}>{item.quantity}</Text>
-                <TouchableOpacity
-                  onPress={() => handleUpdateQuantity(item.productId, item.quantity + 1)}
-                  style={styles.quantityBtn}
-                >
-                  <Icon name="add-circle-outline" size={scale(28)} color={C.ok} />
-                </TouchableOpacity>
-              </View>
-
-              {/* Remove Button */}
+            {/* Items */}
+            {group.items.map((item) => (
               <TouchableOpacity
-                onPress={() => handleRemove(item.productId)}
-                style={styles.removeBtn}
+                key={item.product.id}
+                style={st.cartItem}
+                activeOpacity={0.7}
+                onPress={() => navigation.navigate('MarketplaceProduct', {
+                  product: item.product,
+                  restaurantId,
+                })}
               >
-                <Icon name="trash-outline" size={scale(20)} color={C.danger} />
+                <View style={st.cartItemImage}>
+                  {item.product.imageUrl ? (
+                    <Image source={{ uri: getImageUrl(item.product.imageUrl) }} style={st.cartItemImg} />
+                  ) : (
+                    <View style={st.cartItemImgPlaceholder}>
+                      <Icon name="cube" size={scale(20)} color={C.muted} />
+                    </View>
+                  )}
+                </View>
+                <View style={st.cartItemInfo}>
+                  <Text style={st.cartItemName} numberOfLines={2}>{item.product.name}</Text>
+                  {item.product.description && (
+                    <Text style={st.cartItemDesc} numberOfLines={1}>{item.product.description}</Text>
+                  )}
+                  <Text style={st.cartItemPrice}>{formatPrice(item.product.price)}</Text>
+                </View>
+                <View style={st.cartItemQty}>
+                  <TouchableOpacity
+                    style={st.qtyBtn}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      updateCartQuantity(item.product.id, -1);
+                    }}
+                  >
+                    <Icon name="remove" size={scale(16)} color={C.primary} />
+                  </TouchableOpacity>
+                  <Text style={st.qtyText}>{item.quantity}</Text>
+                  <TouchableOpacity
+                    style={st.qtyBtn}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      updateCartQuantity(item.product.id, 1);
+                    }}
+                  >
+                    <Icon name="add" size={scale(16)} color={C.primary} />
+                  </TouchableOpacity>
+                </View>
+                <Text style={st.cartItemTotal}>
+                  {formatPrice(item.product.price * item.quantity)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+
+            {/* Vendor Subtotal + Pay Button */}
+            <View style={st.vendorFooter}>
+              <View style={st.subtotalRow}>
+                <Text style={st.subtotalLabel}>Subtotal</Text>
+                <Text style={st.subtotalAmount}>{formatPrice(group.total)}</Text>
+              </View>
+              <TouchableOpacity
+                style={st.payOrderBtn}
+                onPress={() => handlePayAndOrder(group)}
+              >
+                <LinearGradient
+                  colors={[C.gradient1, C.gradient2]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={st.payOrderGradient}
+                >
+                  <Icon name="card" size={scale(18)} color="#fff" />
+                  <Text style={st.payOrderText}>Pay & Order</Text>
+                  <Icon name="arrow-forward" size={scale(16)} color="#fff" />
+                </LinearGradient>
               </TouchableOpacity>
             </View>
           </View>
-        )}
-        ListEmptyComponent={
-          <View style={styles.emptyBox}>
-            <Icon name="cart-outline" size={scale(80)} color={C.muted} />
-            <Text style={styles.emptyTitle}>Your cart is empty</Text>
-            <Text style={styles.emptyText}>Browse marketplace to add products</Text>
-            <TouchableOpacity
-              style={styles.browseButton}
-              onPress={() => navigation.navigate('Marketplace')}
-            >
-              <Text style={styles.browseButtonText}>Browse Marketplace</Text>
-            </TouchableOpacity>
-          </View>
-        }
-      />
+        ))}
+      </ScrollView>
 
-      {/* Footer */}
-      {cart.length > 0 && (
-        <View style={styles.footer}>
-          <View style={styles.totalSection}>
-            <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>Subtotal ({totalItems} items)</Text>
-              <Text style={styles.totalValue}>₹{totalPrice.toFixed(2)}</Text>
-            </View>
-          </View>
-          <TouchableOpacity
-            style={styles.checkoutButton}
-            onPress={handleProceedToOrder}
-          >
-            <Text style={styles.checkoutButtonText}>Proceed to Order</Text>
-            <Icon name="arrow-forward" size={scale(20)} color="#FFF" />
-          </TouchableOpacity>
+      {/* Footer - Grand Total */}
+      <View style={st.footer}>
+        <View style={st.totalRow}>
+          <Text style={st.totalLabel}>Grand Total</Text>
+          <Text style={st.totalAmount}>{formatPrice(getCartTotal())}</Text>
         </View>
-      )}
+      </View>
+
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
       <KniBottomNav navigation={navigation} />
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+// ==================== STYLES ====================
+const st = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: C.bg,
   },
+
+  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -284,149 +427,307 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  headerCenter: {
+    flex: 1,
+    marginLeft: scale(12),
+  },
   headerTitle: {
     fontSize: moderateScale(18),
     fontWeight: '700',
     color: C.ink,
   },
+  headerSubtitle: {
+    fontSize: moderateScale(13),
+    color: C.muted,
+    marginTop: scale(2),
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  // Loading
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  listContent: {
-    padding: scale(16),
-    flexGrow: 1,
-  },
-  cartItem: {
-    flexDirection: 'row',
-    backgroundColor: C.card,
-    borderRadius: scale(12),
-    padding: scale(12),
-    marginBottom: scale(12),
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  itemImage: {
-    width: scale(80),
-    height: scale(80),
-    borderRadius: scale(8),
-    resizeMode: 'cover',
-  },
-  placeholderImage: {
-    backgroundColor: C.bg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  itemDetails: {
-    flex: 1,
-    marginLeft: scale(12),
-    justifyContent: 'center',
-  },
-  itemName: {
-    fontSize: moderateScale(15),
-    fontWeight: '600',
-    color: C.text,
-    marginBottom: scale(4),
-  },
-  itemPrice: {
-    fontSize: moderateScale(16),
-    fontWeight: '700',
-    color: C.primary,
-    marginBottom: scale(4),
-  },
-  vendorName: {
-    fontSize: moderateScale(12),
-    color: C.muted,
-  },
-  quantityControls: {
-    marginLeft: scale(8),
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  quantityRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: scale(8),
-  },
-  quantityBtn: {
-    padding: scale(2),
-  },
-  quantity: {
-    fontSize: moderateScale(16),
-    fontWeight: '700',
-    color: C.text,
-    minWidth: scale(24),
-    textAlign: 'center',
-  },
-  removeBtn: {
-    padding: scale(8),
-  },
-  emptyBox: {
+
+  // Empty State
+  emptyState: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: scale(80),
+    paddingHorizontal: scale(32),
+  },
+  emptyIconWrap: {
+    width: scale(120),
+    height: scale(120),
+    borderRadius: scale(60),
+    backgroundColor: C.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: scale(20),
   },
   emptyTitle: {
     fontSize: moderateScale(20),
     fontWeight: '700',
-    color: C.text,
-    marginTop: scale(16),
+    color: C.ink,
+    marginBottom: scale(8),
   },
   emptyText: {
     fontSize: moderateScale(14),
     color: C.muted,
-    marginTop: scale(8),
+    textAlign: 'center',
     marginBottom: scale(24),
   },
-  browseButton: {
+  browseBtn: {
     backgroundColor: C.primary,
     borderRadius: scale(12),
     paddingHorizontal: scale(24),
     paddingVertical: scale(12),
   },
-  browseButtonText: {
+  browseBtnText: {
     fontSize: moderateScale(15),
     fontWeight: '600',
-    color: '#FFF',
+    color: '#fff',
   },
-  footer: {
+
+  // Body
+  body: {
+    flex: 1,
+  },
+  bodyContent: {
+    padding: scale(16),
+    paddingBottom: scale(120),
+  },
+
+  // Delivery Section
+  deliverySection: {
+    backgroundColor: C.card,
+    borderRadius: scale(16),
+    padding: scale(16),
+    marginBottom: scale(16),
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  sectionTitle: {
+    fontSize: moderateScale(16),
+    fontWeight: '700',
+    color: C.ink,
+    marginBottom: scale(12),
+  },
+  inputLabel: {
+    fontSize: moderateScale(13),
+    fontWeight: '600',
+    color: C.muted,
+    marginBottom: scale(8),
+    marginTop: scale(12),
+  },
+  input: {
+    backgroundColor: C.bg,
+    borderRadius: scale(12),
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(14),
+    fontSize: moderateScale(15),
+    color: C.ink,
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  textArea: {
+    backgroundColor: C.bg,
+    borderRadius: scale(12),
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(14),
+    fontSize: moderateScale(15),
+    color: C.ink,
+    borderWidth: 1,
+    borderColor: C.border,
+    minHeight: scale(80),
+    textAlignVertical: 'top',
+  },
+
+  // Vendor Group Card
+  vendorCard: {
+    backgroundColor: C.bg,
+    borderRadius: scale(16),
+    marginBottom: scale(16),
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  vendorCardAdmin: {
+    borderColor: '#93C5FD',
+    backgroundColor: '#F0F7FF',
+  },
+  vendorHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: scale(14),
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+    backgroundColor: C.card,
+  },
+  vendorNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(6),
+    flex: 1,
+  },
+  vendorName: {
+    fontSize: moderateScale(15),
+    fontWeight: '700',
+    color: C.ink,
+  },
+  officialTag: {
+    backgroundColor: '#2563EB',
+    paddingHorizontal: scale(6),
+    paddingVertical: scale(2),
+    borderRadius: scale(4),
+  },
+  officialTagText: {
+    fontSize: moderateScale(9),
+    fontWeight: '700',
+    color: '#fff',
+  },
+  vendorItemCount: {
+    fontSize: moderateScale(12),
+    color: C.muted,
+  },
+
+  // Cart Item
+  cartItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: scale(12),
+    paddingHorizontal: scale(14),
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+  },
+  cartItemImage: {
+    width: scale(56),
+    height: scale(56),
+    borderRadius: scale(12),
+    overflow: 'hidden',
+    backgroundColor: C.bg,
+  },
+  cartItemImg: {
+    width: '100%',
+    height: '100%',
+  },
+  cartItemImgPlaceholder: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cartItemInfo: {
+    flex: 1,
+    marginLeft: scale(12),
+  },
+  cartItemName: {
+    fontSize: moderateScale(14),
+    fontWeight: '600',
+    color: C.ink,
+    marginBottom: scale(2),
+  },
+  cartItemDesc: {
+    fontSize: moderateScale(11),
+    color: C.muted,
+    marginBottom: scale(2),
+  },
+  cartItemPrice: {
+    fontSize: moderateScale(12),
+    color: C.muted,
+  },
+  cartItemQty: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: scale(8),
+  },
+  qtyBtn: {
+    width: scale(28),
+    height: scale(28),
+    borderRadius: scale(8),
+    backgroundColor: C.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  qtyText: {
+    fontSize: moderateScale(14),
+    fontWeight: '700',
+    color: C.ink,
+    minWidth: scale(28),
+    textAlign: 'center',
+  },
+  cartItemTotal: {
+    fontSize: moderateScale(14),
+    fontWeight: '700',
+    color: C.ink,
+    minWidth: scale(60),
+    textAlign: 'right',
+  },
+
+  // Vendor Footer
+  vendorFooter: {
+    padding: scale(14),
     backgroundColor: C.card,
     borderTopWidth: 1,
     borderTopColor: C.border,
-    padding: scale(16),
   },
-  totalSection: {
+  subtotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: scale(12),
+  },
+  subtotalLabel: {
+    fontSize: moderateScale(14),
+    fontWeight: '600',
+    color: C.muted,
+  },
+  subtotalAmount: {
+    fontSize: moderateScale(18),
+    fontWeight: '800',
+    color: C.ink,
+  },
+  payOrderBtn: {
+    borderRadius: scale(12),
+    overflow: 'hidden',
+  },
+  payOrderGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: scale(12),
+    gap: scale(8),
+  },
+  payOrderText: {
+    fontSize: moderateScale(15),
+    fontWeight: '700',
+    color: '#fff',
+  },
+
+  // Footer
+  footer: {
+    padding: scale(16),
+    borderTopWidth: 1,
+    borderTopColor: C.border,
+    backgroundColor: C.card,
   },
   totalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: scale(4),
   },
   totalLabel: {
-    fontSize: moderateScale(14),
+    fontSize: moderateScale(16),
     color: C.muted,
   },
-  totalValue: {
-    fontSize: moderateScale(20),
-    fontWeight: '700',
-    color: C.text,
-  },
-  checkoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: scale(8),
-    backgroundColor: C.primary,
-    borderRadius: scale(12),
-    paddingVertical: scale(16),
-  },
-  checkoutButtonText: {
-    fontSize: moderateScale(16),
-    fontWeight: '700',
-    color: '#FFF',
+  totalAmount: {
+    fontSize: moderateScale(24),
+    fontWeight: '800',
+    color: C.ink,
   },
 });

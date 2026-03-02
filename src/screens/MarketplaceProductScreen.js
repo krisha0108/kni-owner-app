@@ -6,18 +6,16 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  ActivityIndicator,
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { api } from '../api/client';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
 import { scale, moderateScale } from '../utils/responsive';
-const CART_STORAGE_KEY = '@marketplace_cart';
+const CART_STORAGE_KEY_PREFIX = '@marketplace_cart_';
 
 const C = {
   primary: '#EF3A3A',
@@ -34,11 +32,13 @@ const C = {
 };
 
 export default function MarketplaceProductScreen({ navigation, route }) {
-  const { product: productParam } = route.params || {};
+  const { product: productParam, restaurantId } = route.params || {};
   const [product, setProduct] = useState(productParam || null);
-  const [quantity, setQuantity] = useState(1);
-  const [addingToCart, setAddingToCart] = useState(false);
+  const [cart, setCart] = useState([]);
   const [menuVisible, setMenuVisible] = useState(false);
+
+  const storageKey = `${CART_STORAGE_KEY_PREFIX}${restaurantId || 'none'}`;
+  const cartQty = cart.find(i => i.product?.id === product?.id)?.quantity || 0;
 
   useEffect(() => {
     if (!productParam) {
@@ -47,71 +47,64 @@ export default function MarketplaceProductScreen({ navigation, route }) {
     }
   }, [productParam, navigation]);
 
-  const addToCart = async () => {
-    if (!product) return;
-
-    setAddingToCart(true);
-    try {
-      // Get restaurant first
-      const restaurantsRes = await api.get('/owner/restaurants');
-      if (restaurantsRes.data.ok && restaurantsRes.data.data.length > 0) {
-        const restaurant = restaurantsRes.data.data.find(r => r.status === 'APPROVED');
-        if (restaurant) {
-          // Validate product with backend
-          const response = await api.post('/owner/marketplace/cart', {
-            restaurantId: restaurant.id,
-            productId: product.id,
-            quantity,
-          });
-
-          if (response.data.ok) {
-            // Save to AsyncStorage for marketplace cart
-            const cartItem = response.data.data;
-            await saveToCart(cartItem);
-            Alert.alert('Success', 'Product added to cart', [
-              { text: 'Continue Shopping', style: 'cancel' },
-              { text: 'Go to Cart', onPress: () => navigation.navigate('MarketplaceCart') },
-            ]);
-          } else {
-            Alert.alert('Error', response.data.error || 'Failed to add product');
-          }
-        } else {
-          Alert.alert('Error', 'No approved restaurant found');
+  // Load cart from AsyncStorage (same format as MarketplaceScreen)
+  useEffect(() => {
+    const loadCart = async () => {
+      try {
+        const saved = await AsyncStorage.getItem(storageKey);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) setCart(parsed);
         }
-      } else {
-        Alert.alert('Error', 'Please add a restaurant first');
+      } catch (e) {
+        // ignore
       }
-    } catch (error) {
-      console.log('Add to cart error:', error);
-      const errorMsg = error.response?.data?.error || 'Failed to add product to cart';
-      Alert.alert('Error', errorMsg);
-    } finally {
-      setAddingToCart(false);
+    };
+    loadCart();
+  }, [storageKey]);
+
+  // Save cart to AsyncStorage
+  const saveCart = async (newCart) => {
+    setCart(newCart);
+    try {
+      await AsyncStorage.setItem(storageKey, JSON.stringify(newCart));
+    } catch (e) {
+      // ignore
     }
   };
 
-  const increaseQuantity = () => setQuantity(q => q + 1);
-  const decreaseQuantity = () => setQuantity(q => Math.max(1, q - 1));
-
-  const saveToCart = async (cartItem) => {
-    try {
-      const existingCart = await AsyncStorage.getItem(CART_STORAGE_KEY);
-      let cart = existingCart ? JSON.parse(existingCart) : [];
-
-      // Check if item already exists
-      const existingIndex = cart.findIndex(item => item.productId === cartItem.productId);
-      if (existingIndex >= 0) {
-        // Update quantity
-        cart[existingIndex].quantity += cartItem.quantity;
-      } else {
-        // Add new item
-        cart.push(cartItem);
-      }
-
-      await AsyncStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
-    } catch (error) {
-      console.error('Save to cart error:', error);
+  const addToCart = () => {
+    if (!product) return;
+    const existing = cart.find(item => item.product.id === product.id);
+    if (existing) {
+      saveCart(
+        cart.map(item =>
+          item.product.id === product.id
+            ? { ...item, quantity: Math.min(item.quantity + 1, product.stockQuantity || 999) }
+            : item
+        )
+      );
+    } else {
+      saveCart([...cart, { product, quantity: 1 }]);
     }
+  };
+
+  const updateCartQuantity = (delta) => {
+    if (!product) return;
+    const item = cart.find(i => i.product.id === product.id);
+    if (!item) return;
+    const newQty = item.quantity + delta;
+    if (newQty <= 0) {
+      saveCart(cart.filter(i => i.product.id !== product.id));
+      return;
+    }
+    saveCart(
+      cart.map(i =>
+        i.product.id === product.id
+          ? { ...i, quantity: Math.min(newQty, product.stockQuantity || 999) }
+          : i
+      )
+    );
   };
 
   if (!product) {
@@ -144,7 +137,7 @@ export default function MarketplaceProductScreen({ navigation, route }) {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Product Details</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity onPress={() => navigation.navigate('Cart')} style={styles.cartBtn}>
+          <TouchableOpacity onPress={() => navigation.navigate('MarketplaceCart', { restaurantId })} style={styles.cartBtn}>
             <Icon name="cart-outline" size={scale(22)} color={C.ink} />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
@@ -153,7 +146,7 @@ export default function MarketplaceProductScreen({ navigation, route }) {
         </View>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: scale(120) }}>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: scale(200) }}>
         {/* Product Image */}
         {product.image ? (
           <Image source={{ uri: product.image }} style={styles.productImage} resizeMode="cover" />
@@ -220,29 +213,38 @@ export default function MarketplaceProductScreen({ navigation, route }) {
       {/* Bottom Bar */}
       {(product.canPurchase !== false && product.inStock) && (
         <View style={styles.bottomBar}>
-          <View style={styles.quantityControl}>
-            <TouchableOpacity style={styles.qtyBtn} onPress={decreaseQuantity}>
-              <Icon name="remove" size={scale(20)} color={C.ink} />
-            </TouchableOpacity>
-            <Text style={styles.qtyText}>{quantity}</Text>
-            <TouchableOpacity style={styles.qtyBtn} onPress={increaseQuantity}>
-              <Icon name="add" size={scale(20)} color={C.ink} />
-            </TouchableOpacity>
-          </View>
-          <TouchableOpacity
-            style={styles.addToCartBtn}
-            onPress={addToCart}
-            disabled={addingToCart}
-          >
-            {addingToCart ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <>
+          {cartQty > 0 ? (
+            <>
+              <View style={styles.quantityControl}>
+                <TouchableOpacity style={styles.qtyBtn} onPress={() => updateCartQuantity(-1)}>
+                  <Icon name="remove" size={scale(20)} color={C.primary} />
+                </TouchableOpacity>
+                <Text style={styles.qtyText}>{cartQty}</Text>
+                <TouchableOpacity
+                  style={[styles.qtyBtn, cartQty >= (product.stockQuantity || 999) && { opacity: 0.4 }]}
+                  onPress={() => updateCartQuantity(1)}
+                  disabled={cartQty >= (product.stockQuantity || 999)}
+                >
+                  <Icon name="add" size={scale(20)} color={C.primary} />
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity
+                style={styles.addToCartBtn}
+                onPress={() => navigation.navigate('MarketplaceCart', { restaurantId })}
+              >
                 <Icon name="cart" size={scale(20)} color="#fff" />
-                <Text style={styles.addToCartText}>Add to Cart</Text>
-              </>
-            )}
-          </TouchableOpacity>
+                <Text style={styles.addToCartText}>Go to Cart</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <TouchableOpacity
+              style={styles.addToCartBtn}
+              onPress={addToCart}
+            >
+              <Icon name="cart" size={scale(20)} color="#fff" />
+              <Text style={styles.addToCartText}>Add to Cart</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
@@ -332,16 +334,17 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    bottom: 0,
+    bottom: scale(85),
     flexDirection: 'row',
     alignItems: 'center',
     gap: scale(12),
     paddingHorizontal: scale(16),
     paddingVertical: scale(12),
-    paddingBottom: scale(24),
     backgroundColor: C.card,
     borderTopWidth: 1,
     borderTopColor: C.border,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
   },
   quantityControl: {
     flexDirection: 'row',

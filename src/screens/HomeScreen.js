@@ -75,6 +75,7 @@ export default function HomeScreen({ navigation }) {
   const [guides, setGuides] = useState([]);
   const [feed, setFeed] = useState([]);
   const [cartCount, setCartCount] = useState(0);
+  const [marketplaceCartCount, setMarketplaceCartCount] = useState(0);
   const [menuVisible, setMenuVisible] = useState(false);
 
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
@@ -265,6 +266,31 @@ export default function HomeScreen({ navigation }) {
     }
   }, [restaurantId, selectedPeriod]);
 
+  /* ═══════════ MARKETPLACE CART COUNT ═══════════ */
+  const loadMarketplaceCartCount = useCallback(async () => {
+    try {
+      if (!restaurantId) { setMarketplaceCartCount(0); return; }
+      const cartKey = `@marketplace_cart_${restaurantId}`;
+      const paidVendorId = await AsyncStorage.getItem('@marketplace_paid_vendor');
+      const saved = await AsyncStorage.getItem(cartKey);
+      let arr = saved ? JSON.parse(saved) : [];
+      if (!Array.isArray(arr)) arr = [];
+      arr = arr.filter(item => item && item.product);
+
+      // Remove paid vendor items from cart (same cleanup as MarketplaceScreen)
+      if (paidVendorId && arr.length > 0) {
+        arr = arr.filter(item => {
+          const vid = item.product.vendor?.id || item.product.vendorId || 'unknown';
+          return vid !== paidVendorId;
+        });
+        await AsyncStorage.setItem(cartKey, JSON.stringify(arr));
+        await AsyncStorage.removeItem('@marketplace_paid_vendor');
+      }
+
+      setMarketplaceCartCount(arr.length);
+    } catch { setMarketplaceCartCount(0); }
+  }, [restaurantId]);
+
   /* ═══════════ LIFECYCLE ═══════════ */
   // Load all home data on screen focus (covers first mount + every tab switch)
   useFocusEffect(
@@ -285,8 +311,9 @@ export default function HomeScreen({ navigation }) {
       };
       loadAll();
       calculateCartCount();
+      loadMarketplaceCartCount();
       if (restaurantId) loadAnalytics();
-    }, [loadRestaurants, fetchBanners, fetchFeed, fetchSponsored, fetchGuides, calculateCartCount, restaurantId, loadAnalytics])
+    }, [loadRestaurants, fetchBanners, fetchFeed, fetchSponsored, fetchGuides, calculateCartCount, loadMarketplaceCartCount, restaurantId, loadAnalytics])
   );
 
   // Reload analytics when restaurant or period changes
@@ -410,6 +437,18 @@ export default function HomeScreen({ navigation }) {
                 <ActivityIndicator size="small" color="#fff" />
               ) : (
                 <Icon name="download-outline" size={scale(18)} color={restaurantId ? '#fff' : 'rgba(255,255,255,0.35)'} />
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => restaurantId && navigation.navigate('MarketplaceCart', { restaurantId })}
+              disabled={!restaurantId}
+              style={st.headerBtn}
+            >
+              <Icon name="cart-outline" size={scale(18)} color={restaurantId ? '#fff' : 'rgba(255,255,255,0.35)'} />
+              {marketplaceCartCount > 0 && (
+                <View style={st.headerCartBadge}>
+                  <Text style={st.headerCartBadgeText}>{marketplaceCartCount}</Text>
+                </View>
               )}
             </TouchableOpacity>
             <TouchableOpacity onPress={() => navigation.navigate?.('Notifications')} style={st.headerBtn}>
@@ -1020,6 +1059,23 @@ const st = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  headerCartBadge: {
+    position: 'absolute',
+    top: scale(-4),
+    right: scale(-4),
+    backgroundColor: C.primary,
+    borderRadius: scale(10),
+    minWidth: scale(18),
+    height: scale(18),
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: scale(4),
+  },
+  headerCartBadgeText: {
+    fontSize: moderateScale(10),
+    fontWeight: '700',
+    color: '#fff',
   },
   greetText: {
     color: 'rgba(255,255,255,0.85)',

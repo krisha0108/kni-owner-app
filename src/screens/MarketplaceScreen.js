@@ -15,7 +15,6 @@ import {
   ActivityIndicator,
   Image,
   TextInput,
-  Modal,
   ScrollView,
   Alert,
   Animated,
@@ -33,7 +32,7 @@ import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
 import { scale, moderateScale } from '../utils/responsive';
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = (SCREEN_WIDTH - 48) / 2;
 
 // App Theme Color Palette
@@ -87,10 +86,7 @@ export default function MarketplaceScreen({ navigation }) {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [categories, setCategories] = useState([]);
   const [cart, setCart] = useState([]);
-  const [orderModalVisible, setOrderModalVisible] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
-  const [deliveryAddress, setDeliveryAddress] = useState('');
-  const [deliveryNotes, setDeliveryNotes] = useState('');
 
   // Animate cart button when items added
   const animateCart = () => {
@@ -114,7 +110,7 @@ export default function MarketplaceScreen({ navigation }) {
         if (saved) {
           const parsed = JSON.parse(saved);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            setCart(parsed);
+            setCart(parsed.filter(item => item && item.product));
           } else {
             setCart([]);
           }
@@ -185,26 +181,35 @@ export default function MarketplaceScreen({ navigation }) {
 
   useFocusEffect(
     useCallback(() => {
-      // Background refresh - no loading spinner (keeps cart visible)
-      if (selectedRestaurantId) {
-        loadData(false);
-      }
-      // Check if a vendor was paid - remove their items from cart
-      const checkPaidVendor = async () => {
+      if (!selectedRestaurantId) return;
+
+      // Background refresh products - no loading spinner
+      loadData(false);
+
+      // Reload cart from AsyncStorage (picks up changes from cart/product screens)
+      const syncCart = async () => {
         try {
           const paidVendorId = await AsyncStorage.getItem('@marketplace_paid_vendor');
+          const saved = await AsyncStorage.getItem(`@marketplace_cart_${selectedRestaurantId}`);
+          let parsed = saved ? JSON.parse(saved) : [];
+          if (!Array.isArray(parsed)) parsed = [];
+          parsed = parsed.filter(item => item && item.product);
+
           if (paidVendorId) {
-            setCart(prev => prev.filter(item => {
+            parsed = parsed.filter(item => {
               const vid = item.product.vendor?.id || item.product.vendorId || 'unknown';
               return vid !== paidVendorId;
-            }));
+            });
+            await AsyncStorage.setItem(`@marketplace_cart_${selectedRestaurantId}`, JSON.stringify(parsed));
             await AsyncStorage.removeItem('@marketplace_paid_vendor');
           }
+
+          setCart(parsed);
         } catch (e) {
           // ignore
         }
       };
-      checkPaidVendor();
+      syncCart();
     }, [selectedRestaurantId, loadData])
   );
 
@@ -279,31 +284,6 @@ export default function MarketplaceScreen({ navigation }) {
     return Object.values(groups);
   };
 
-  const handlePayAndOrder = (vendorGroup) => {
-    if (!selectedRestaurantId) return Alert.alert('Error', 'Please select a restaurant');
-    if (!deliveryAddress.trim()) return Alert.alert('Error', 'Please enter delivery address');
-
-    // Close modal first, then navigate
-    setOrderModalVisible(false);
-
-    // Navigate to payment screen with vendor's items + callback to remove from cart on success
-    navigation.navigate('MarketplacePayment', {
-      vendorId: vendorGroup.vendorId,
-      vendorName: vendorGroup.vendorName,
-      isAdminStore: vendorGroup.isAdminStore,
-      items: vendorGroup.items.map(item => ({
-        product: item.product,
-        id: item.product.id,
-        productId: item.product.id,
-        name: item.product.name,
-        price: item.product.price,
-        quantity: item.quantity,
-      })),
-      restaurantId: selectedRestaurantId,
-      deliveryAddress: deliveryAddress.trim(),
-      deliveryNotes: deliveryNotes.trim(),
-    });
-  };
 
   const renderProductCard = ({ item, index }) => {
     const cartQty = getCartItemQuantity(item.id);
@@ -314,49 +294,58 @@ export default function MarketplaceScreen({ navigation }) {
 
     return (
       <View style={[st.productCard, isAdmin && st.adminProductCard, { marginLeft: index % 2 === 0 ? 16 : 8, marginRight: index % 2 === 1 ? 16 : 8 }]}>
-        {/* Product Image */}
-        <View style={st.productImageContainer}>
-          {item.imageUrl || item.image ? (
-            <Image source={{ uri: getImageUrl(item.imageUrl || item.image) }} style={st.productImage} />
-          ) : (
-            <View style={st.productImagePlaceholder}>
-              <Icon name="cube-outline" size={scale(32)} color={C.muted} />
-            </View>
-          )}
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => navigation.navigate('MarketplaceProduct', { product: item, restaurantId: selectedRestaurantId })}
+        >
+          {/* Product Image */}
+          <View style={st.productImageContainer}>
+            {item.imageUrl || item.image ? (
+              <Image source={{ uri: getImageUrl(item.imageUrl || item.image) }} style={st.productImage} />
+            ) : (
+              <View style={st.productImagePlaceholder}>
+                <Icon name="cube-outline" size={scale(32)} color={C.muted} />
+              </View>
+            )}
 
-          {/* KNI Official Badge */}
-          {isAdmin && (
-            <View style={st.kniBadge}>
-              <Icon name="shield-checkmark" size={scale(10)} color="#fff" />
-              <Text style={st.kniBadgeText}>KNI Official</Text>
-            </View>
-          )}
+            {/* KNI Official Badge */}
+            {isAdmin && (
+              <View style={st.kniBadge}>
+                <Icon name="shield-checkmark" size={scale(10)} color="#fff" />
+                <Text style={st.kniBadgeText}>KNI Official</Text>
+              </View>
+            )}
 
-          {/* Stock Badge */}
-          {!inStock && (
-            <View style={st.outOfStockBadge}>
-              <Text style={st.outOfStockText}>Out of Stock</Text>
-            </View>
-          )}
-        </View>
+            {/* Stock Badge */}
+            {!inStock && (
+              <View style={st.outOfStockBadge}>
+                <Text style={st.outOfStockText}>Out of Stock</Text>
+              </View>
+            )}
+          </View>
 
-        {/* Product Info */}
-        <View style={st.productInfo}>
-          <Text style={st.productName} numberOfLines={2}>{item.name}</Text>
+          {/* Product Info */}
+          <View style={st.productInfo}>
+            <Text style={st.productName} numberOfLines={2}>{item.name}</Text>
 
-          {item.unit && (
-            <Text style={st.productUnit}>{item.unit}</Text>
-          )}
+            {item.unit && (
+              <Text style={st.productUnit}>{item.unit}</Text>
+            )}
 
-          {vendorName && (
-            <View style={st.vendorRow}>
-              <Icon name={isAdmin ? 'shield-checkmark' : 'storefront'} size={scale(11)} color={isAdmin ? '#2563EB' : C.success} />
-              <Text style={[st.vendorName, isAdmin && st.adminVendorName]} numberOfLines={1}>{vendorName}</Text>
-            </View>
-          )}
+            {vendorName && (
+              <View style={st.vendorRow}>
+                <Icon name={isAdmin ? 'shield-checkmark' : 'storefront'} size={scale(11)} color={isAdmin ? '#2563EB' : C.success} />
+                <Text style={[st.vendorName, isAdmin && st.adminVendorName]} numberOfLines={1}>{vendorName}</Text>
+              </View>
+            )}
 
-          <Text style={st.productPrice}>{formatPrice(item.price)}</Text>
-        </View>
+            {item.description && (
+              <Text style={st.productDescription} numberOfLines={1}>{item.description}</Text>
+            )}
+
+            <Text style={st.productPrice}>{formatPrice(item.price)}</Text>
+          </View>
+        </TouchableOpacity>
 
         {/* Add to Cart Button - Fixed at bottom */}
         <View style={st.cardFooter}>
@@ -442,7 +431,10 @@ export default function MarketplaceScreen({ navigation }) {
         {/* Main cart button */}
         <TouchableOpacity
           style={st.floatingCartBtn}
-          onPress={() => setOrderModalVisible(true)}
+          onPress={() => navigation.navigate('MarketplaceCart', {
+            restaurantId: selectedRestaurantId,
+            cart: cart,
+          })}
           activeOpacity={0.9}
         >
           <LinearGradient
@@ -531,6 +523,20 @@ export default function MarketplaceScreen({ navigation }) {
             </Text>
           </View>
           <View style={st.heroActions}>
+            <TouchableOpacity
+              style={st.heroIconBtn}
+              onPress={() => navigation.navigate('MarketplaceCart', {
+                restaurantId: selectedRestaurantId,
+                cart: cart,
+              })}
+            >
+              <Icon name="cart-outline" size={scale(22)} color="#fff" />
+              {cart.length > 0 && (
+                <View style={st.heroCartBadge}>
+                  <Text style={st.heroCartBadgeText}>{cart.length}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
             <TouchableOpacity
               style={st.heroIconBtn}
               onPress={() => navigation.navigate('MarketplaceOrders')}
@@ -637,146 +643,6 @@ export default function MarketplaceScreen({ navigation }) {
       {/* Floating Cart Button with Item Preview */}
       {renderFloatingCart()}
 
-      {/* Order Modal - Vendor-wise Cart */}
-      <Modal visible={orderModalVisible} animationType="slide" transparent>
-        <View style={st.modalOverlay}>
-          <View style={st.modalContainer}>
-            {/* Modal Header */}
-            <View style={st.modalHeader}>
-              <View>
-                <Text style={st.modalTitle}>Your Cart</Text>
-                <Text style={st.modalSubtitle}>{cart.length} item{cart.length !== 1 ? 's' : ''} from {getVendorGroups().length} vendor{getVendorGroups().length !== 1 ? 's' : ''}</Text>
-              </View>
-              <TouchableOpacity style={st.modalCloseBtn} onPress={() => setOrderModalVisible(false)}>
-                <Icon name="close" size={scale(24)} color={C.ink} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView
-              style={st.modalBody}
-              contentContainerStyle={st.modalBodyContent}
-              showsVerticalScrollIndicator={true}
-              bounces={true}
-            >
-              {/* Delivery Details - Common for all vendors */}
-              <View style={st.deliverySection}>
-                <Text style={st.deliverySectionTitle}>Delivery Details</Text>
-
-                <Text style={st.inputLabel}>Delivery Address *</Text>
-                <TextInput
-                  style={st.textArea}
-                  placeholder="Enter complete delivery address"
-                  placeholderTextColor={C.muted}
-                  value={deliveryAddress}
-                  onChangeText={setDeliveryAddress}
-                  multiline
-                  numberOfLines={3}
-                />
-
-                <Text style={st.inputLabel}>Notes (Optional)</Text>
-                <TextInput
-                  style={st.input}
-                  placeholder="Any special instructions"
-                  placeholderTextColor={C.muted}
-                  value={deliveryNotes}
-                  onChangeText={setDeliveryNotes}
-                />
-              </View>
-
-              {/* Vendor Groups */}
-              {getVendorGroups().map((group) => (
-                <View key={group.vendorId} style={[st.vendorGroupCard, group.isAdminStore && st.vendorGroupCardAdmin]}>
-                  {/* Vendor Header */}
-                  <View style={st.vendorGroupHeader}>
-                    <View style={st.vendorGroupNameRow}>
-                      <Icon
-                        name={group.isAdminStore ? 'shield-checkmark' : 'storefront'}
-                        size={scale(18)}
-                        color={group.isAdminStore ? '#2563EB' : C.success}
-                      />
-                      <Text style={st.vendorGroupName}>{group.vendorName}</Text>
-                      {group.isAdminStore && (
-                        <View style={st.kniOfficialTag}>
-                          <Text style={st.kniOfficialTagText}>Official</Text>
-                        </View>
-                      )}
-                    </View>
-                    <Text style={st.vendorGroupItemCount}>{group.items.length} item{group.items.length !== 1 ? 's' : ''}</Text>
-                  </View>
-
-                  {/* Items */}
-                  {group.items.map((item) => (
-                    <View key={item.product.id} style={st.cartItem}>
-                      <View style={st.cartItemImage}>
-                        {item.product.imageUrl ? (
-                          <Image source={{ uri: getImageUrl(item.product.imageUrl) }} style={st.cartItemImg} />
-                        ) : (
-                          <View style={st.cartItemImgPlaceholder}>
-                            <Icon name="cube" size={scale(20)} color={C.muted} />
-                          </View>
-                        )}
-                      </View>
-                      <View style={st.cartItemInfo}>
-                        <Text style={st.cartItemName} numberOfLines={2}>{item.product.name}</Text>
-                        <Text style={st.cartItemPrice}>{formatPrice(item.product.price)}</Text>
-                      </View>
-                      <View style={st.cartItemQty}>
-                        <TouchableOpacity
-                          style={st.cartQtyBtn}
-                          onPress={() => updateCartQuantity(item.product.id, -1)}
-                        >
-                          <Icon name="remove" size={scale(16)} color={C.primary} />
-                        </TouchableOpacity>
-                        <Text style={st.cartQtyText}>{item.quantity}</Text>
-                        <TouchableOpacity
-                          style={st.cartQtyBtn}
-                          onPress={() => updateCartQuantity(item.product.id, 1)}
-                        >
-                          <Icon name="add" size={scale(16)} color={C.primary} />
-                        </TouchableOpacity>
-                      </View>
-                      <Text style={st.cartItemTotal}>
-                        {formatPrice(item.product.price * item.quantity)}
-                      </Text>
-                    </View>
-                  ))}
-
-                  {/* Vendor Subtotal + Pay Button */}
-                  <View style={st.vendorGroupFooter}>
-                    <View style={st.vendorSubtotalRow}>
-                      <Text style={st.vendorSubtotalLabel}>Subtotal</Text>
-                      <Text style={st.vendorSubtotalAmount}>{formatPrice(group.total)}</Text>
-                    </View>
-                    <TouchableOpacity
-                      style={st.payOrderBtn}
-                      onPress={() => handlePayAndOrder(group)}
-                    >
-                      <LinearGradient
-                        colors={[C.gradient1, C.gradient2]}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                        style={st.payOrderGradient}
-                      >
-                        <Icon name="card" size={scale(18)} color="#fff" />
-                        <Text style={st.payOrderText}>Pay & Order</Text>
-                        <Icon name="arrow-forward" size={scale(16)} color="#fff" />
-                      </LinearGradient>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ))}
-            </ScrollView>
-
-            {/* Modal Footer - Grand Total */}
-            <View style={st.modalFooter}>
-              <View style={st.totalSection}>
-                <Text style={st.totalLabel}>Grand Total</Text>
-                <Text style={st.totalAmount}>{formatPrice(getCartTotal())}</Text>
-              </View>
-            </View>
-          </View>
-        </View>
-      </Modal>
 
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
       <KniBottomNav navigation={navigation} active="request" cartCount={cart.length} />
@@ -1257,291 +1123,28 @@ const st = StyleSheet.create({
     color: '#fff',
   },
 
-  // Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContainer: {
-    backgroundColor: C.card,
-    borderTopLeftRadius: scale(24),
-    borderTopRightRadius: scale(24),
-    maxHeight: SCREEN_HEIGHT * 0.85,
-    flex: 0,
-  },
-  modalHeader: {
-    flexDirection: 'row',
+  // Hero Cart Badge
+  heroCartBadge: {
+    position: 'absolute',
+    top: scale(-4),
+    right: scale(-4),
+    backgroundColor: '#fff',
+    borderRadius: scale(10),
+    minWidth: scale(20),
+    height: scale(20),
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: scale(20),
-    paddingVertical: scale(20),
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
+    justifyContent: 'center',
   },
-  modalTitle: {
-    fontSize: moderateScale(20),
+  heroCartBadgeText: {
+    fontSize: moderateScale(11),
     fontWeight: '700',
-    color: C.ink,
+    color: C.primary,
   },
-  modalSubtitle: {
-    fontSize: moderateScale(14),
+
+  // Product Description
+  productDescription: {
+    fontSize: moderateScale(11),
     color: C.muted,
     marginTop: scale(2),
-  },
-  modalCloseBtn: {
-    width: scale(40),
-    height: scale(40),
-    borderRadius: scale(12),
-    backgroundColor: C.bg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalBody: {
-    flexGrow: 1,
-    flexShrink: 1,
-  },
-  modalBodyContent: {
-    padding: scale(20),
-    paddingBottom: scale(10),
-  },
-
-  // Cart Items in Modal
-  cartItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: scale(12),
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
-  },
-  cartItemImage: {
-    width: scale(56),
-    height: scale(56),
-    borderRadius: scale(12),
-    overflow: 'hidden',
-    backgroundColor: C.bg,
-  },
-  cartItemImg: {
-    width: '100%',
-    height: '100%',
-  },
-  cartItemImgPlaceholder: {
-    width: '100%',
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cartItemInfo: {
-    flex: 1,
-    marginLeft: scale(12),
-  },
-  cartItemName: {
-    fontSize: moderateScale(14),
-    fontWeight: '600',
-    color: C.ink,
-    marginBottom: scale(4),
-  },
-  cartItemPrice: {
-    fontSize: moderateScale(12),
-    color: C.muted,
-  },
-  cartItemQty: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: scale(12),
-  },
-  cartQtyBtn: {
-    width: scale(28),
-    height: scale(28),
-    borderRadius: scale(8),
-    backgroundColor: C.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cartQtyText: {
-    fontSize: moderateScale(14),
-    fontWeight: '700',
-    color: C.ink,
-    minWidth: scale(28),
-    textAlign: 'center',
-  },
-  cartItemTotal: {
-    fontSize: moderateScale(14),
-    fontWeight: '700',
-    color: C.ink,
-    minWidth: scale(60),
-    textAlign: 'right',
-  },
-
-  // Delivery Section
-  deliverySection: {
-    marginTop: scale(24),
-    paddingTop: scale(20),
-    borderTopWidth: 1,
-    borderTopColor: C.border,
-  },
-  deliverySectionTitle: {
-    fontSize: moderateScale(16),
-    fontWeight: '700',
-    color: C.ink,
-    marginBottom: scale(16),
-  },
-  inputLabel: {
-    fontSize: moderateScale(13),
-    fontWeight: '600',
-    color: C.muted,
-    marginBottom: scale(8),
-    marginTop: scale(12),
-  },
-  input: {
-    backgroundColor: C.bg,
-    borderRadius: scale(12),
-    paddingHorizontal: scale(16),
-    paddingVertical: scale(14),
-    fontSize: moderateScale(15),
-    color: C.ink,
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  textArea: {
-    backgroundColor: C.bg,
-    borderRadius: scale(12),
-    paddingHorizontal: scale(16),
-    paddingVertical: scale(14),
-    fontSize: moderateScale(15),
-    color: C.ink,
-    borderWidth: 1,
-    borderColor: C.border,
-    minHeight: scale(80),
-    textAlignVertical: 'top',
-  },
-
-  // Modal Footer
-  modalFooter: {
-    padding: scale(20),
-    borderTopWidth: 1,
-    borderTopColor: C.border,
-    backgroundColor: C.card,
-  },
-  totalSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: scale(16),
-  },
-  totalLabel: {
-    fontSize: moderateScale(16),
-    color: C.muted,
-  },
-  totalAmount: {
-    fontSize: moderateScale(24),
-    fontWeight: '800',
-    color: C.ink,
-  },
-  placeOrderBtn: {
-    borderRadius: scale(14),
-    overflow: 'hidden',
-  },
-  placeOrderBtnDisabled: {
-    opacity: 0.7,
-  },
-  placeOrderGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: scale(16),
-    gap: scale(8),
-  },
-  placeOrderText: {
-    fontSize: moderateScale(16),
-    fontWeight: '700',
-    color: '#fff',
-  },
-
-  // Vendor Group Card in Modal
-  vendorGroupCard: {
-    backgroundColor: C.bg,
-    borderRadius: scale(16),
-    marginTop: scale(16),
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  vendorGroupCardAdmin: {
-    borderColor: '#93C5FD',
-    backgroundColor: '#F0F7FF',
-  },
-  vendorGroupHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: scale(14),
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
-    backgroundColor: C.card,
-  },
-  vendorGroupNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: scale(6),
-    flex: 1,
-  },
-  vendorGroupName: {
-    fontSize: moderateScale(15),
-    fontWeight: '700',
-    color: C.ink,
-  },
-  kniOfficialTag: {
-    backgroundColor: '#2563EB',
-    paddingHorizontal: scale(6),
-    paddingVertical: scale(2),
-    borderRadius: scale(4),
-  },
-  kniOfficialTagText: {
-    fontSize: moderateScale(9),
-    fontWeight: '700',
-    color: '#fff',
-  },
-  vendorGroupItemCount: {
-    fontSize: moderateScale(12),
-    color: C.muted,
-  },
-  vendorGroupFooter: {
-    padding: scale(14),
-    backgroundColor: C.card,
-    borderTopWidth: 1,
-    borderTopColor: C.border,
-  },
-  vendorSubtotalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: scale(12),
-  },
-  vendorSubtotalLabel: {
-    fontSize: moderateScale(14),
-    fontWeight: '600',
-    color: C.muted,
-  },
-  vendorSubtotalAmount: {
-    fontSize: moderateScale(18),
-    fontWeight: '800',
-    color: C.ink,
-  },
-  payOrderBtn: {
-    borderRadius: scale(12),
-    overflow: 'hidden',
-  },
-  payOrderGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: scale(12),
-    gap: scale(8),
-  },
-  payOrderText: {
-    fontSize: moderateScale(15),
-    fontWeight: '700',
-    color: '#fff',
   },
 });
