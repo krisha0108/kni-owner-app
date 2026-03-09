@@ -11,6 +11,7 @@ import { api, IMAGE_BASE_URL } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
 
 import { scale, moderateScale } from '../utils/responsive';
+import { usePermissions } from '../utils/usePermissions';
 const { width: W, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const C = {
@@ -96,6 +97,7 @@ const toStorageUrl = (u) => {
 };
 
 export default function SupportCenter({ navigation }) {
+  const { can } = usePermissions();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [tickets, setTickets] = useState([]);
@@ -121,9 +123,12 @@ export default function SupportCenter({ navigation }) {
   const loadData = useCallback(async (restaurantId = null) => {
     try {
       setLoading(true);
-      const restaurantsRes = await api.get('/owner/restaurants');
+      const restaurantsRes = await api.get('/owner/restaurants/accessible');
       if (restaurantsRes.data.ok && restaurantsRes.data.data.length > 0) {
-        const approved = restaurantsRes.data.data.filter(r => r.status === 'APPROVED');
+        const approved = restaurantsRes.data.data.map(item => ({
+          ...item.restaurant,
+          restaurantRole: item.role,
+        }));
         setRestaurants(approved);
         let target = null;
         if (restaurantId) target = approved.find(r => r.id === restaurantId);
@@ -367,12 +372,14 @@ export default function SupportCenter({ navigation }) {
       <Text style={st.emptySubtitle}>
         {activeTab !== 'all' ? 'Try changing the filter tab' : 'Create your first support ticket'}
       </Text>
+      {can('support:create') && (
       <TouchableOpacity activeOpacity={0.85} onPress={() => { resetForm(); setCreateModalVisible(true); }}>
         <LinearGradient colors={[C.primary, C.primaryDark]} style={st.emptyBtn}>
           <Icon name="add-circle" size={scale(18)} color="#fff" />
           <Text style={st.emptyBtnText}>New Ticket</Text>
         </LinearGradient>
       </TouchableOpacity>
+      )}
     </View>
   );
 
@@ -577,7 +584,7 @@ export default function SupportCenter({ navigation }) {
       />
 
       {/* ─── FAB (hide when empty state shows its own button) ─── */}
-      {filteredTickets.length > 0 && (
+      {filteredTickets.length > 0 && can('support:create') && (
         <TouchableOpacity style={st.fabWrap} activeOpacity={0.85} onPress={() => { resetForm(); setCreateModalVisible(true); }}>
           <LinearGradient colors={[C.primary, C.primaryDark]} style={st.fab}>
             <Icon name="add" size={scale(28)} color="#fff" />

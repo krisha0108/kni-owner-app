@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { scale, moderateScale, isTablet, getContainerMaxWidth, BREAKPOINTS } from '../utils/responsive';
+import { usePermissions } from '../utils/usePermissions';
 
 /* ---------- THEME ---------- */
 const C = {
@@ -21,6 +22,8 @@ export default function KniBottomNav({
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
+  const { can } = usePermissions();
+  const showFab = can('marketplace:create');
 
   // Responsive sizing
   const isTabletDevice = isTablet(width);
@@ -85,8 +88,8 @@ export default function KniBottomNav({
             tabMinWidth={tabMinWidth}
           />
 
-          {/* CENTER GHOST SLOT keeps symmetry */}
-          <View style={{ width: fabSize + scale(16) }} />
+          {/* CENTER GHOST SLOT keeps symmetry (only when FAB visible) */}
+          {showFab && <View style={{ width: fabSize + scale(16) }} />}
 
           {/* RIGHT SIDE */}
           <TabItem
@@ -109,6 +112,7 @@ export default function KniBottomNav({
           />
 
           {/* FULL-WIDTH ABSOLUTE WRAPPER: perfectly centers FAB on any width */}
+          {showFab && (
           <View pointerEvents="box-none" style={styles.fabWrap}>
             <TouchableOpacity
               activeOpacity={0.9}
@@ -118,6 +122,7 @@ export default function KniBottomNav({
               <Icon name="add" size={fabIconSize} color="#fff" />
             </TouchableOpacity>
           </View>
+          )}
 
         </View>
       </View>

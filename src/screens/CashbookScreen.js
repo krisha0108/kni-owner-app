@@ -22,6 +22,7 @@ import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
 import { scale, moderateScale } from '../utils/responsive';
+import { usePermissions } from '../utils/usePermissions';
 // Premium Color Palette
 const C = {
   primary: '#EF3A3A',
@@ -82,6 +83,7 @@ const getEntryConfig = (entryType) => ENTRY_TYPES.find(t => t.value === entryTyp
 export default function CashbookScreen({ navigation }) {
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
+  const { can } = usePermissions();
   const gridColumns = isTablet ? 2 : 1;
 
   const {
@@ -258,16 +260,22 @@ export default function CashbookScreen({ navigation }) {
             {isIncome ? '+' : '-'}{formatPrice(item.amount)}
           </Text>
         </View>
+        {(can('cashbook:update') || can('cashbook:delete')) && (
         <View style={st.cardActions}>
+          {can('cashbook:update') && (
           <TouchableOpacity style={[st.actionBtn, { backgroundColor: C.infoLight }]} onPress={() => openForm(null, item)}>
             <Icon name="pencil" size={scale(16)} color={C.info} />
             <Text style={[st.actionText, { color: C.info }]}>Edit</Text>
           </TouchableOpacity>
+          )}
+          {can('cashbook:delete') && (
           <TouchableOpacity style={[st.actionBtn, { backgroundColor: C.dangerLight }]} onPress={() => deleteEntry(item)}>
             <Icon name="trash" size={scale(16)} color={C.danger} />
             <Text style={[st.actionText, { color: C.danger }]}>Delete</Text>
           </TouchableOpacity>
+          )}
         </View>
+        )}
       </View>
     );
   };
@@ -319,6 +327,7 @@ export default function CashbookScreen({ navigation }) {
       )}
 
       {/* Quick Actions - Premium Grid Design */}
+      {can('cashbook:create') && (
       <View style={st.quickSection}>
         <View style={st.quickTitleRow}>
           <Icon name="flash" size={scale(18)} color={C.warning} />
@@ -367,6 +376,7 @@ export default function CashbookScreen({ navigation }) {
           </TouchableOpacity>
         </View>
       </View>
+      )}
 
       {/* Filter Chips */}
       <View style={st.filterSection}>
@@ -481,9 +491,11 @@ export default function CashbookScreen({ navigation }) {
           <Text style={st.headerSubtitle}>Track cash & bank transactions</Text>
         </View>
         <View style={st.headerActions}>
+          {can('cashbook:create') && (
           <TouchableOpacity style={st.headerIconBtn} onPress={() => openForm()}>
             <Icon name="add" size={scale(20)} color={C.primary} />
           </TouchableOpacity>
+          )}
           <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
             <Icon name="menu" size={scale(20)} color={C.ink} />
           </TouchableOpacity>
@@ -512,10 +524,12 @@ export default function CashbookScreen({ navigation }) {
             </View>
             <Text style={st.emptyTitle}>No Entries Yet</Text>
             <Text style={st.emptySubtitle}>Start tracking your cash and bank transactions</Text>
+            {can('cashbook:create') && (
             <TouchableOpacity style={st.emptyBtn} onPress={() => openForm()}>
               <Icon name="add" size={scale(18)} color="#fff" />
               <Text style={st.emptyBtnText}>Add First Entry</Text>
             </TouchableOpacity>
+            )}
           </View>
         }
       />

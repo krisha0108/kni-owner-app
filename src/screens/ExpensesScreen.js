@@ -24,6 +24,7 @@ import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
 import { scale, moderateScale } from '../utils/responsive';
+import { usePermissions } from '../utils/usePermissions';
 // Premium Color Palette
 const C = {
   primary: '#EF3A3A',
@@ -77,6 +78,7 @@ const formatDate = (dateStr) => {
 export default function ExpensesScreen({ navigation }) {
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
+  const { can } = usePermissions();
   const gridColumns = isTablet ? 2 : 1;
 
   const {
@@ -274,16 +276,22 @@ export default function ExpensesScreen({ navigation }) {
         </View>
 
         {/* Actions */}
+        {(can('expenses:update') || can('expenses:delete')) && (
         <View style={st.cardActions}>
+          {can('expenses:update') && (
           <TouchableOpacity style={[st.actionBtn, { backgroundColor: C.infoLight }]} onPress={() => openForm(item)}>
             <Icon name="pencil" size={scale(16)} color={C.info} />
             <Text style={[st.actionText, { color: C.info }]}>Edit</Text>
           </TouchableOpacity>
+          )}
+          {can('expenses:delete') && (
           <TouchableOpacity style={[st.actionBtn, { backgroundColor: C.dangerLight }]} onPress={() => deleteExpense(item)}>
             <Icon name="trash" size={scale(16)} color={C.danger} />
             <Text style={[st.actionText, { color: C.danger }]}>Delete</Text>
           </TouchableOpacity>
+          )}
         </View>
+        )}
       </View>
     );
   };
@@ -428,9 +436,11 @@ export default function ExpensesScreen({ navigation }) {
           <Text style={st.headerSubtitle}>Track your spending</Text>
         </View>
         <View style={st.headerActions}>
+          {can('expenses:create') && (
           <TouchableOpacity style={st.headerIconBtn} onPress={() => openForm()}>
             <Icon name="add" size={scale(20)} color={C.primary} />
           </TouchableOpacity>
+          )}
           <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
             <Icon name="menu" size={scale(20)} color={C.ink} />
           </TouchableOpacity>
@@ -458,10 +468,12 @@ export default function ExpensesScreen({ navigation }) {
             </View>
             <Text style={st.emptyTitle}>No Expenses Yet</Text>
             <Text style={st.emptySubtitle}>Track your expenses to manage finances</Text>
+            {can('expenses:create') && (
             <TouchableOpacity style={st.emptyBtn} onPress={() => openForm()}>
               <Icon name="add" size={scale(18)} color="#fff" />
               <Text style={st.emptyBtnText}>Add Expense</Text>
             </TouchableOpacity>
+            )}
           </View>
         }
       />

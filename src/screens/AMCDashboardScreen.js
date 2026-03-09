@@ -19,6 +19,7 @@ import { RestaurantSelectorBar } from '../components/RestaurantSelector';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 import { scale, moderateScale } from '../utils/responsive';
+import { usePermissions } from '../utils/usePermissions';
 
 const C = {
   primary: '#EF3A3A', primaryDark: '#DC2626', ink: '#1D2254', text: '#334155',
@@ -47,13 +48,14 @@ const formatDate = (dateStr) => {
 };
 
 const QA = [
-  { icon: 'add-circle-outline', label: 'New Request', grad: ['#7C3AED', '#6D28D9'], screen: 'AMCRequest' },
+  { icon: 'add-circle-outline', label: 'New Request', grad: ['#7C3AED', '#6D28D9'], screen: 'AMCRequest', permission: 'amc:create' },
   { icon: 'document-text-outline', label: 'My Requests', grad: ['#3B82F6', '#2563EB'], screen: 'AMCRequestsList' },
   { icon: 'shield-checkmark-outline', label: 'My Contracts', grad: ['#10B981', '#059669'], screen: 'AMCContracts' },
 ];
 
 export default function AMCDashboardScreen({ navigation }) {
   const { width } = useWindowDimensions();
+  const { can } = usePermissions();
   const {
     selectedRestaurantId: selectedRestaurant,
     loading: restaurantsLoading,
@@ -208,7 +210,7 @@ export default function AMCDashboardScreen({ navigation }) {
         {/* Quick Actions */}
         <Text style={styles.sectionTitle}>Quick Actions</Text>
         <View style={styles.qaRow}>
-          {QA.map((q, i) => (
+          {QA.filter(q => !q.permission || can(q.permission)).map((q, i) => (
             <TouchableOpacity
               key={i}
               style={styles.qaItem}

@@ -24,7 +24,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { api } from '../api/client';
+import { api, getImageUrl } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRestaurant } from '../context/RestaurantContext';
 import { RestaurantSelectorBar } from '../components/RestaurantSelector';
@@ -173,7 +173,12 @@ export default function MarketplaceOrdersScreen({ navigation }) {
       setLoadingPayments(true);
       const response = await api.get(`/owner/marketplace/payments?restaurantId=${selectedRestaurantId}`);
       if (response.data.ok) {
-        setPayments(response.data.data || []);
+        const paymentsData = response.data.data || [];
+        console.log('📦 Payments loaded:', paymentsData.length);
+        if (paymentsData.length > 0) {
+          console.log('First payment screenshotUrl:', paymentsData[0].screenshotUrl);
+        }
+        setPayments(paymentsData);
       }
     } catch (error) {
       console.error('Error loading payments:', error);
@@ -254,6 +259,10 @@ export default function MarketplaceOrdersScreen({ navigation }) {
       <TouchableOpacity
         style={styles.orderCard}
         onPress={() => {
+          console.log('🔍 Opening payment details...');
+          console.log('Payment ID:', item.id);
+          console.log('Screenshot URL:', item.screenshotUrl);
+          console.log('Full payment data:', JSON.stringify(item, null, 2));
           setSelectedPayment(item);
           setPaymentDetailVisible(true);
         }}
@@ -966,21 +975,42 @@ export default function MarketplaceOrdersScreen({ navigation }) {
                   </View>
                 )}
 
-                {/* Screenshot */}
-                <View style={styles.detailCard}>
-                  <View style={[styles.detailCardIcon, { backgroundColor: '#E0E7FF' }]}>
+                {/* Screenshot - Full Width Outside Card */}
+                <View style={styles.screenshotSection}>
+                  <View style={styles.screenshotHeader}>
                     <Icon name="image" size={scale(20)} color="#4F46E5" />
+                    <Text style={styles.screenshotHeaderText}>Payment Screenshot</Text>
                   </View>
-                  <View style={styles.detailCardContent}>
-                    <Text style={styles.detailCardLabel}>Payment Screenshot</Text>
-                    {selectedPayment.screenshotUrl && (
+                  {selectedPayment.screenshotUrl ? (
+                    <TouchableOpacity 
+                      activeOpacity={0.9}
+                      onPress={() => {
+                        const fullUrl = getImageUrl(selectedPayment.screenshotUrl);
+                        console.log('Screenshot URL (relative):', selectedPayment.screenshotUrl);
+                        console.log('Screenshot URL (full):', fullUrl);
+                      }}
+                      style={styles.screenshotImageContainer}
+                    >
                       <Image
-                        source={{ uri: selectedPayment.screenshotUrl }}
+                        source={{ uri: getImageUrl(selectedPayment.screenshotUrl) }}
                         style={styles.paymentScreenshot}
                         resizeMode="contain"
+                        onError={(error) => {
+                          console.error('Image load error:', error.nativeEvent);
+                          console.error('Failed URL:', selectedPayment.screenshotUrl);
+                          console.error('Full URL:', getImageUrl(selectedPayment.screenshotUrl));
+                        }}
+                        onLoad={() => console.log('✅ Screenshot loaded successfully from:', getImageUrl(selectedPayment.screenshotUrl))}
                       />
-                    )}
-                  </View>
+                    </TouchableOpacity>
+                  ) : (
+                    <View style={[styles.paymentScreenshot, { justifyContent: 'center', alignItems: 'center', backgroundColor: C.bgLight }]}>
+                      <Icon name="image-outline" size={scale(40)} color={C.muted} />
+                      <Text style={{ color: C.muted, fontSize: moderateScale(12), marginTop: scale(8), textAlign: 'center' }}>
+                        No screenshot available
+                      </Text>
+                    </View>
+                  )}
                 </View>
 
                 {/* Items Section */}
@@ -1995,9 +2025,38 @@ const styles = StyleSheet.create({
   // Payment Screenshot in modal
   paymentScreenshot: {
     width: '100%',
-    height: scale(200),
+    height: scale(250),
     marginTop: scale(8),
-    borderRadius: scale(8),
-    backgroundColor: C.bg
+    borderRadius: scale(12),
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+
+  // Screenshot Section Styles
+  screenshotSection: {
+    marginBottom: scale(16),
+    paddingHorizontal: scale(20),
+  },
+
+  screenshotHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(8),
+    marginBottom: scale(12),
+  },
+
+  screenshotHeaderText: {
+    fontSize: moderateScale(16),
+    fontWeight: '700',
+    color: C.ink,
+  },
+
+  screenshotImageContainer: {
+    borderRadius: scale(12),
+    overflow: 'hidden',
+    backgroundColor: '#F9FAFB',
+    borderWidth: 2,
+    borderColor: '#E0E7FF',
   },
 });

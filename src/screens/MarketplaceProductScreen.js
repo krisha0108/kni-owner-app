@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,12 +10,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
+import { getImageUrl } from '../api/client';
+import cartService from '../services/marketplaceCartService';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
 import { scale, moderateScale } from '../utils/responsive';
-const CART_STORAGE_KEY_PREFIX = '@marketplace_cart_';
+import { usePermissions } from '../utils/usePermissions';
 
 const C = {
   primary: '#EF3A3A',
@@ -32,12 +34,11 @@ const C = {
 };
 
 export default function MarketplaceProductScreen({ navigation, route }) {
+  const { can } = usePermissions();
   const { product: productParam, restaurantId } = route.params || {};
   const [product, setProduct] = useState(productParam || null);
   const [cart, setCart] = useState([]);
   const [menuVisible, setMenuVisible] = useState(false);
-
-  const storageKey = `${CART_STORAGE_KEY_PREFIX}${restaurantId || 'none'}`;
   const cartQty = cart.find(i => i.product?.id === product?.id)?.quantity || 0;
 
   useEffect(() => {
@@ -47,64 +48,66 @@ export default function MarketplaceProductScreen({ navigation, route }) {
     }
   }, [productParam, navigation]);
 
-  // Load cart from AsyncStorage (same format as MarketplaceScreen)
-  useEffect(() => {
-    const loadCart = async () => {
-      try {
-        const saved = await AsyncStorage.getItem(storageKey);
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed)) setCart(parsed);
-        }
-      } catch (e) {
-        // ignore
-      }
-    };
-    loadCart();
-  }, [storageKey]);
-
-  // Save cart to AsyncStorage
-  const saveCart = async (newCart) => {
-    setCart(newCart);
+  const loadCart = useCallback(async () => {
+    if (!restaurantId) return;
     try {
-      await AsyncStorage.setItem(storageKey, JSON.stringify(newCart));
+      const items = await cartService.getCart(restaurantId);
+      setCart(items || []);
     } catch (e) {
-      // ignore
+      setCart([]);
     }
-  };
+  }, [restaurantId]);
 
-  const addToCart = () => {
+  useEffect(() => {
+    loadCart();
+  }, [loadCart]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadCart();
+    }, [loadCart])
+  );
+
+  const addToCart = async () => {
     if (!product) return;
-    const existing = cart.find(item => item.product.id === product.id);
-    if (existing) {
-      saveCart(
-        cart.map(item =>
-          item.product.id === product.id
-            ? { ...item, quantity: Math.min(item.quantity + 1, product.stockQuantity || 999) }
-            : item
-        )
-      );
-    } else {
-      saveCart([...cart, { product, quantity: 1 }]);
+    if (!restaurantId) {
+      Alert.alert('Error', 'Restaurant not selected');
+      return;
+    }
+
+    try {
+      const existing = cart.find(item => item.product.id === product.id);
+      const newQuantity = existing
+        ? Math.min(existing.quantity + 1, product.stockQuantity || 999)
+        : 1;
+
+      const items = await cartService.addItem(restaurantId, product.id, newQuantity);
+      setCart(items || []);
+    } catch (error) {
+      Alert.alert('Error', error.message || 'Failed to add to cart');
     }
   };
 
-  const updateCartQuantity = (delta) => {
+  const updateCartQuantity = async (delta) => {
     if (!product) return;
     const item = cart.find(i => i.product.id === product.id);
     if (!item) return;
+
     const newQty = item.quantity + delta;
-    if (newQty <= 0) {
-      saveCart(cart.filter(i => i.product.id !== product.id));
-      return;
+
+    try {
+      if (newQty <= 0) {
+        await cartService.removeItem(item.id);
+      } else {
+        const clamped = Math.min(newQty, product.stockQuantity || 999);
+        const items = await cartService.updateItemQuantity(item.id, clamped);
+        setCart(items || []);
+        return;
+      }
+      await loadCart();
+    } catch (error) {
+      Alert.alert('Error', error.message || 'Failed to update cart');
     }
-    saveCart(
-      cart.map(i =>
-        i.product.id === product.id
-          ? { ...i, quantity: Math.min(newQty, product.stockQuantity || 999) }
-          : i
-      )
-    );
   };
 
   if (!product) {
@@ -129,6 +132,13 @@ export default function MarketplaceProductScreen({ navigation, route }) {
     );
   }
 
+  const imageSource = product.imageUrl || product.image;
+  const stockQty = Number(product.stockQuantity || 0);
+  const isInStock = product.inStock !== undefined ? !!product.inStock : stockQty > 0;
+  const canPurchase = product.canPurchase !== false && isInStock;
+  const categoryName = typeof product.category === 'object' ? product.category?.name : product.category;
+  const vendorName = typeof product.vendor === 'object' ? product.vendor?.name : product.vendor;
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -146,10 +156,10 @@ export default function MarketplaceProductScreen({ navigation, route }) {
         </View>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: scale(200) }}>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: scale(150) }}>
         {/* Product Image */}
-        {product.image ? (
-          <Image source={{ uri: product.image }} style={styles.productImage} resizeMode="cover" />
+        {imageSource ? (
+          <Image source={{ uri: getImageUrl(imageSource) }} style={styles.productImage} resizeMode="cover" />
         ) : (
           <View style={styles.noImage}>
             <Icon name="image-outline" size={scale(48)} color={C.muted} />
@@ -160,18 +170,35 @@ export default function MarketplaceProductScreen({ navigation, route }) {
         <View style={styles.infoContainer}>
           <Text style={styles.productName}>{product.name}</Text>
 
-          {product.vendor && (
+          {vendorName && (
             <View style={styles.vendorRow}>
               <Icon name="business-outline" size={scale(16)} color={C.muted} />
-              <Text style={styles.vendorText}>
-                {typeof product.vendor === 'object' ? product.vendor.name : product.vendor}
-              </Text>
+              <Text style={styles.vendorText}>{vendorName}</Text>
             </View>
           )}
 
+          <View style={styles.metaChipsRow}>
+            {categoryName ? (
+              <View style={styles.metaChip}>
+                <Icon name="grid-outline" size={scale(13)} color={C.info} />
+                <Text style={styles.metaChipText}>{categoryName}</Text>
+              </View>
+            ) : null}
+            {product.unit ? (
+              <View style={styles.metaChip}>
+                <Icon name="pricetag-outline" size={scale(13)} color={C.info} />
+                <Text style={styles.metaChipText}>Per {product.unit}</Text>
+              </View>
+            ) : null}
+            <View style={styles.metaChip}>
+              <Icon name="cube-outline" size={scale(13)} color={C.info} />
+              <Text style={styles.metaChipText}>Stock {stockQty}</Text>
+            </View>
+          </View>
+
           <View style={styles.priceRow}>
             <Text style={styles.price}>₹{product.price}</Text>
-            {product.inStock ? (
+            {isInStock ? (
               <View style={styles.stockBadge}>
                 <Icon name="checkmark-circle" size={scale(16)} color={C.ok} />
                 <Text style={styles.stockText}>In Stock</Text>
@@ -184,6 +211,25 @@ export default function MarketplaceProductScreen({ navigation, route }) {
             )}
           </View>
 
+          <View style={styles.quickInfoCard}>
+            <View style={styles.quickInfoRow}>
+              <Text style={styles.quickInfoLabel}>Available Quantity</Text>
+              <Text style={styles.quickInfoValue}>{stockQty}</Text>
+            </View>
+            {product.deliveryTime ? (
+              <View style={styles.quickInfoRow}>
+                <Text style={styles.quickInfoLabel}>Delivery Time</Text>
+                <Text style={styles.quickInfoValue}>{product.deliveryTime}</Text>
+              </View>
+            ) : null}
+            {product.subCategory?.name ? (
+              <View style={styles.quickInfoRow}>
+                <Text style={styles.quickInfoLabel}>Sub Category</Text>
+                <Text style={styles.quickInfoValue}>{product.subCategory.name}</Text>
+              </View>
+            ) : null}
+          </View>
+
           {product.description && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Description</Text>
@@ -191,12 +237,10 @@ export default function MarketplaceProductScreen({ navigation, route }) {
             </View>
           )}
 
-          {product.category && (
+          {categoryName && (
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Category</Text>
-              <Text style={styles.detailValue}>
-                {typeof product.category === 'object' ? product.category.name : product.category}
-              </Text>
+              <Text style={styles.detailValue}>{categoryName}</Text>
             </View>
           )}
 
@@ -211,7 +255,7 @@ export default function MarketplaceProductScreen({ navigation, route }) {
       </ScrollView>
 
       {/* Bottom Bar */}
-      {(product.canPurchase !== false && product.inStock) && (
+      {canPurchase && can('marketplace:create') && (
         <View style={styles.bottomBar}>
           {cartQty > 0 ? (
             <>
@@ -221,9 +265,9 @@ export default function MarketplaceProductScreen({ navigation, route }) {
                 </TouchableOpacity>
                 <Text style={styles.qtyText}>{cartQty}</Text>
                 <TouchableOpacity
-                  style={[styles.qtyBtn, cartQty >= (product.stockQuantity || 999) && { opacity: 0.4 }]}
+                  style={[styles.qtyBtn, cartQty >= (stockQty || 999) && { opacity: 0.4 }]}
                   onPress={() => updateCartQuantity(1)}
-                  disabled={cartQty >= (product.stockQuantity || 999)}
+                  disabled={cartQty >= (stockQty || 999)}
                 >
                   <Icon name="add" size={scale(20)} color={C.primary} />
                 </TouchableOpacity>
@@ -302,6 +346,20 @@ const styles = StyleSheet.create({
   vendorRow: { flexDirection: 'row', alignItems: 'center', gap: scale(6), marginBottom: scale(12) },
   vendorText: { fontSize: moderateScale(14), color: C.muted },
 
+  metaChipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: scale(8), marginBottom: scale(12) },
+  metaChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(4),
+    backgroundColor: '#EFF6FF',
+    borderColor: '#DBEAFE',
+    borderWidth: 1,
+    borderRadius: scale(16),
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(6),
+  },
+  metaChipText: { fontSize: moderateScale(12), color: '#1E40AF', fontWeight: '600' },
+
   priceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: scale(16) },
   price: { fontSize: moderateScale(28), fontWeight: '900', color: C.primary },
   stockBadge: {
@@ -315,6 +373,24 @@ const styles = StyleSheet.create({
   },
   outOfStock: { backgroundColor: '#FEF2F2' },
   stockText: { fontSize: moderateScale(13), fontWeight: '600', color: C.ok },
+
+  quickInfoCard: {
+    backgroundColor: C.card,
+    borderColor: C.border,
+    borderWidth: 1,
+    borderRadius: scale(12),
+    paddingHorizontal: scale(12),
+    paddingVertical: scale(10),
+    marginBottom: scale(14),
+  },
+  quickInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: scale(6),
+  },
+  quickInfoLabel: { fontSize: moderateScale(13), color: C.muted },
+  quickInfoValue: { fontSize: moderateScale(13), fontWeight: '700', color: C.ink, maxWidth: '60%', textAlign: 'right' },
 
   section: { marginBottom: scale(16) },
   sectionTitle: { fontSize: moderateScale(16), fontWeight: '700', color: C.ink, marginBottom: scale(8) },

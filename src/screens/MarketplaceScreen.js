@@ -24,14 +24,15 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api, getImageUrl } from '../api/client';
+import cartService from '../services/marketplaceCartService';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRestaurant } from '../context/RestaurantContext';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
 import { scale, moderateScale } from '../utils/responsive';
+import { usePermissions } from '../utils/usePermissions';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = (SCREEN_WIDTH - 48) / 2;
 
@@ -71,6 +72,7 @@ export default function MarketplaceScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const scrollY = useRef(new Animated.Value(0)).current;
   const cartAnimation = useRef(new Animated.Value(1)).current;
+  const { can } = usePermissions();
 
   const {
     selectedRestaurant: currentRestaurant,
@@ -96,52 +98,26 @@ export default function MarketplaceScreen({ navigation }) {
     ]).start();
   };
 
-  // ========== CART PERSISTENCE ==========
-  const CART_STORAGE_KEY = `@marketplace_cart_${selectedRestaurantId || 'none'}`;
+  // ========== CART MANAGEMENT (Server-Side) ==========
   const cartLoadedRef = useRef(false);
 
-  // Restore cart from AsyncStorage when restaurant changes
-  useEffect(() => {
+  // Load cart from server when restaurant changes
+  const loadCart = useCallback(async () => {
     if (!selectedRestaurantId) return;
-    cartLoadedRef.current = false;
-    const restoreCart = async () => {
-      try {
-        const saved = await AsyncStorage.getItem(`@marketplace_cart_${selectedRestaurantId}`);
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setCart(parsed.filter(item => item && item.product));
-          } else {
-            setCart([]);
-          }
-        } else {
-          setCart([]);
-        }
-      } catch (e) {
-        console.log('Cart restore error:', e);
-        setCart([]);
-      } finally {
-        cartLoadedRef.current = true;
-      }
-    };
-    restoreCart();
+    try {
+      const items = await cartService.getCart(selectedRestaurantId);
+      setCart(items || []);
+      cartLoadedRef.current = true;
+    } catch (error) {
+      console.error('Load cart error:', error);
+      setCart([]);
+      cartLoadedRef.current = true;
+    }
   }, [selectedRestaurantId]);
 
-  // Save cart to AsyncStorage whenever it changes
   useEffect(() => {
-    if (!selectedRestaurantId || !cartLoadedRef.current) return;
-    const saveCart = async () => {
-      try {
-        await AsyncStorage.setItem(
-          `@marketplace_cart_${selectedRestaurantId}`,
-          JSON.stringify(cart)
-        );
-      } catch (e) {
-        console.log('Cart save error:', e);
-      }
-    };
-    saveCart();
-  }, [cart, selectedRestaurantId]);
+    loadCart();
+  }, [loadCart]);
 
   const loadData = useCallback(async (showLoader = true) => {
     if (!selectedRestaurantId) return;
@@ -186,71 +162,55 @@ export default function MarketplaceScreen({ navigation }) {
       // Background refresh products - no loading spinner
       loadData(false);
 
-      // Reload cart from AsyncStorage (picks up changes from cart/product screens)
-      const syncCart = async () => {
-        try {
-          const paidVendorId = await AsyncStorage.getItem('@marketplace_paid_vendor');
-          const saved = await AsyncStorage.getItem(`@marketplace_cart_${selectedRestaurantId}`);
-          let parsed = saved ? JSON.parse(saved) : [];
-          if (!Array.isArray(parsed)) parsed = [];
-          parsed = parsed.filter(item => item && item.product);
-
-          if (paidVendorId) {
-            parsed = parsed.filter(item => {
-              const vid = item.product.vendor?.id || item.product.vendorId || 'unknown';
-              return vid !== paidVendorId;
-            });
-            await AsyncStorage.setItem(`@marketplace_cart_${selectedRestaurantId}`, JSON.stringify(parsed));
-            await AsyncStorage.removeItem('@marketplace_paid_vendor');
-          }
-
-          setCart(parsed);
-        } catch (e) {
-          // ignore
-        }
-      };
-      syncCart();
-    }, [selectedRestaurantId, loadData])
+      // Reload cart from server
+      loadCart();
+    }, [selectedRestaurantId, loadData, loadCart])
   );
 
   const onRefresh = async () => {
     setRefreshing(true);
     await loadRestaurants();
     await loadData();
+    await loadCart();
   };
 
-  // Cart Functions - Local state only
-  const addToCart = (product) => {
+  // Cart Functions - Server-side API
+  const addToCart = async (product) => {
+    if (!selectedRestaurantId) return;
     animateCart();
-    setCart(prev => {
-      const existing = prev.find(item => item.product.id === product.id);
-      if (existing) {
-        return prev.map(item =>
-          item.product.id === product.id
-            ? { ...item, quantity: Math.min(item.quantity + 1, product.stockQuantity || 999) }
-            : item
-        );
-      }
-      return [...prev, { product, quantity: 1 }];
-    });
+    try {
+      const existing = cart.find(item => item.product.id === product.id);
+      const newQuantity = existing 
+        ? Math.min(existing.quantity + 1, product.stockQuantity || 999)
+        : 1;
+      
+      const items = await cartService.addItem(selectedRestaurantId, product.id, newQuantity);
+      setCart(items || []);
+    } catch (error) {
+      Alert.alert('Error', error.message || 'Failed to add to cart');
+      console.error('Add to cart error:', error);
+    }
   };
 
-  const updateCartQuantity = (productId, delta) => {
-    setCart(prev => {
-      const item = prev.find(i => i.product.id === productId);
-      if (!item) return prev;
+  const updateCartQuantity = async (productId, delta) => {
+    if (!selectedRestaurantId) return;
+    const item = cart.find(i => i.product.id === productId);
+    if (!item) return;
 
-      const newQty = item.quantity + delta;
+    const newQty = item.quantity + delta;
+
+    try {
       if (newQty <= 0) {
-        return prev.filter(i => i.product.id !== productId);
+        await cartService.removeItem(item.id);
+      } else {
+        const clamped = Math.min(newQty, item.product.stockQuantity || 999);
+        await cartService.updateItemQuantity(item.id, clamped);
       }
-
-      return prev.map(i =>
-        i.product.id === productId
-          ? { ...i, quantity: Math.min(newQty, i.product.stockQuantity || 999) }
-          : i
-      );
-    });
+      await loadCart();
+    } catch (error) {
+      Alert.alert('Error', error.message || 'Failed to update cart');
+      console.error('Update cart error:', error);
+    }
   };
 
   const getCartTotal = () => cart.reduce((total, item) => total + item.product.price * item.quantity, 0);
@@ -348,6 +308,7 @@ export default function MarketplaceScreen({ navigation }) {
         </TouchableOpacity>
 
         {/* Add to Cart Button - Fixed at bottom */}
+        {can('marketplace:create') && (
         <View style={st.cardFooter}>
           {cartQty > 0 ? (
             <View style={st.quantityContainer}>
@@ -379,6 +340,7 @@ export default function MarketplaceScreen({ navigation }) {
             </TouchableOpacity>
           )}
         </View>
+        )}
       </View>
     );
   };

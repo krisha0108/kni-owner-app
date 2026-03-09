@@ -20,6 +20,7 @@ import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
 import { scale, moderateScale } from '../utils/responsive';
+import { usePermissions } from '../utils/usePermissions';
 // Keep original colors - not flashy
 const C = {
   primary: '#EF3A3A',
@@ -70,6 +71,7 @@ const formatDate = (dateStr) => {
 export default function VendorLedgerScreen({ navigation }) {
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
+  const { can } = usePermissions();
 
   const { selectedRestaurantId, loading: restaurantsLoading, loadRestaurants, hasRestaurants } = useRestaurant();
 
@@ -235,6 +237,7 @@ export default function VendorLedgerScreen({ navigation }) {
 
       <View style={st.vendorFooter}>
         <Text style={st.lastTxn}>Last: {formatDate(item.lastTransactionDate)}</Text>
+        {can('vendor-ledger:create') && (
         <View style={st.vendorActions}>
           <TouchableOpacity style={[st.vendorBtn, { backgroundColor: C.dangerLight }]} onPress={() => openEntryModal('PURCHASE', item)}>
             <Icon name="cart" size={scale(14)} color={C.danger} />
@@ -245,6 +248,7 @@ export default function VendorLedgerScreen({ navigation }) {
             <Text style={[st.vendorBtnText, { color: C.ok }]}>Payment</Text>
           </TouchableOpacity>
         </View>
+        )}
       </View>
     </View>
   );
@@ -328,6 +332,7 @@ export default function VendorLedgerScreen({ navigation }) {
       </View>
 
       {/* Quick Actions */}
+      {can('vendor-ledger:create') && (
       <View style={st.quickRow}>
         <TouchableOpacity style={[st.quickBtn, { backgroundColor: C.dangerLight, borderColor: C.danger }]} onPress={() => openEntryModal('PURCHASE')}>
           <Icon name="cart" size={scale(18)} color={C.danger} />
@@ -338,6 +343,7 @@ export default function VendorLedgerScreen({ navigation }) {
           <Text style={[st.quickBtnText, { color: C.ok }]}>Add Payment</Text>
         </TouchableOpacity>
       </View>
+      )}
 
       {/* Tabs */}
       <View style={st.tabsContainer}>
@@ -416,9 +422,11 @@ export default function VendorLedgerScreen({ navigation }) {
           <Text style={st.headerSubtitle}>Manage vendor accounts</Text>
         </View>
         <View style={st.headerActions}>
+          {can('vendor-ledger:create') && (
           <TouchableOpacity style={st.headerIconBtn} onPress={() => openEntryModal()}>
             <Icon name="add" size={scale(20)} color={C.primary} />
           </TouchableOpacity>
+          )}
           <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
             <Icon name="menu" size={scale(20)} color={C.ink} />
           </TouchableOpacity>
@@ -445,10 +453,12 @@ export default function VendorLedgerScreen({ navigation }) {
             <Icon name={activeTab === 'summary' ? 'business-outline' : 'document-text-outline'} size={scale(64)} color={C.muted} />
             <Text style={st.emptyTitle}>{activeTab === 'summary' ? 'No Vendors Yet' : 'No Transactions Yet'}</Text>
             <Text style={st.emptySubtitle}>Add a purchase or payment to get started</Text>
+            {can('vendor-ledger:create') && (
             <TouchableOpacity style={st.emptyBtn} onPress={() => openEntryModal()}>
               <Icon name="add" size={scale(18)} color="#fff" />
               <Text style={st.emptyBtnText}>Add Entry</Text>
             </TouchableOpacity>
+            )}
           </View>
         }
       />

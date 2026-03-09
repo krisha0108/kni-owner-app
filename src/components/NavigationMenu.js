@@ -11,6 +11,7 @@ import {
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scale, moderateScale, isTablet, getContainerMaxWidth } from '../utils/responsive';
+import { usePermissions } from '../utils/usePermissions';
 
 const C = {
   primary: '#EF3A3A',
@@ -26,65 +27,65 @@ const MENU_SECTIONS = [
   {
     title: 'Overview',
     items: [
-      { icon: 'grid-outline', label: 'Dashboard', screen: 'Dashboard' },
-      { icon: 'bar-chart-outline', label: 'Analytics', screen: 'Analytics' },
+      { icon: 'grid-outline', label: 'Dashboard', screen: 'Dashboard', permission: 'analytics:read' },
+      { icon: 'bar-chart-outline', label: 'Analytics', screen: 'Analytics', permission: 'analytics:read' },
     ],
   },
   {
     title: 'Business',
     items: [
-      { icon: 'restaurant-outline', label: 'My Restaurants', screen: 'MyRestaurants' },
-      { icon: 'people-outline', label: 'Team Management', screen: 'TeamManagement' },
+      { icon: 'restaurant-outline', label: 'My Restaurants', screen: 'MyRestaurants', permission: 'restaurant:read' },
+      { icon: 'people-outline', label: 'Team Management', screen: 'TeamManagement', permission: 'team:read' },
     ],
   },
   {
     title: 'Equipment',
     items: [
-      { icon: 'hardware-chip-outline', label: 'My Equipment', screen: 'MyEquipment' },
+      { icon: 'hardware-chip-outline', label: 'My Equipment', screen: 'MyEquipment', permission: 'equipment:read' },
     ],
   },
   {
     title: 'Finance',
     items: [
-      { icon: 'cash-outline', label: 'My Expenses', screen: 'Expenses' },
-      { icon: 'pie-chart-outline', label: 'Spending Reports', screen: 'SpendingReports' },
-      { icon: 'book-outline', label: 'Khatabook', screen: 'Khatabook' },
+      { icon: 'cash-outline', label: 'My Expenses', screen: 'Expenses', permission: 'expenses:read' },
+      { icon: 'pie-chart-outline', label: 'Spending Reports', screen: 'SpendingReports', permission: 'expenses:read' },
+      { icon: 'book-outline', label: 'Khatabook', screen: 'Khatabook', permission: 'vendor-ledger:read' },
     ],
   },
   {
     title: 'Staff Management',
     items: [
-      { icon: 'person-outline', label: 'Staff Management', screen: 'Staff' },
-      { icon: 'calendar-outline', label: 'Staff Attendance', screen: 'StaffAttendance' },
-      { icon: 'card-outline', label: 'Staff Salary', screen: 'StaffSalary' },
-      { icon: 'receipt-outline', label: 'Vendor Ledger', screen: 'VendorLedger' },
+      { icon: 'person-outline', label: 'Staff Management', screen: 'Staff', permission: 'staff:read' },
+      { icon: 'calendar-outline', label: 'Staff Attendance', screen: 'StaffAttendance', permission: 'staff:read' },
+      { icon: 'card-outline', label: 'Staff Salary', screen: 'StaffSalary', permission: 'staff:read' },
+      { icon: 'receipt-outline', label: 'Vendor Ledger', screen: 'VendorLedger', permission: 'vendor-ledger:read' },
     ],
   },
   {
     title: 'Services',
     items: [
-      { icon: 'folder-outline', label: 'Category Request', screen: 'CategoryRequest' },
+      { icon: 'folder-outline', label: 'Category Request', screen: 'CategoryRequest', permission: 'category:read' },
     ],
   },
   {
     title: 'Bookings',
     items: [
-      { icon: 'calendar-outline', label: 'My Bookings', screen: 'MyBookings' },
-      { icon: 'hourglass-outline', label: 'Pending Approvals', screen: 'PendingApproval' },
+      { icon: 'calendar-outline', label: 'My Bookings', screen: 'MyBookings', permission: 'bookings:read' },
+      { icon: 'hourglass-outline', label: 'Pending Approvals', screen: 'PendingApproval', permission: 'bookings:update' },
     ],
   },
   {
     title: 'Marketplace',
     items: [
-      { icon: 'storefront-outline', label: 'Marketplace', screen: 'Marketplace' },
-      { icon: 'bag-check-outline', label: 'My Orders', screen: 'MarketplaceOrders' },
-      { icon: 'locate-outline', label: 'Order Tracking', screen: 'OrderTracking' },
+      { icon: 'storefront-outline', label: 'Marketplace', screen: 'Marketplace', permission: 'marketplace:read' },
+      { icon: 'bag-check-outline', label: 'My Orders', screen: 'MarketplaceOrders', permission: 'marketplace:read' },
+      { icon: 'locate-outline', label: 'Order Tracking', screen: 'OrderTracking', permission: 'marketplace:read' },
     ],
   },
   {
     title: 'Others',
     items: [
-      { icon: 'headset-outline', label: 'Support', screen: 'SupportCenter' },
+      { icon: 'headset-outline', label: 'Support', screen: 'SupportCenter', permission: 'support:read' },
       { icon: 'notifications-outline', label: 'Notifications', screen: 'Notifications' },
       { icon: 'person-circle-outline', label: 'Profile', screen: 'Profile' },
     ],
@@ -94,6 +95,7 @@ const MENU_SECTIONS = [
 export default function NavigationMenu({ visible, onClose, navigation }) {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const { can } = usePermissions();
 
   const isTabletDevice = isTablet(width);
   const maxWidth = getContainerMaxWidth(width);
@@ -152,7 +154,10 @@ export default function NavigationMenu({ visible, onClose, navigation }) {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={isTabletDevice ? { flexDirection: 'row', flexWrap: 'wrap' } : undefined}
           >
-            {MENU_SECTIONS.map((section, sectionIndex) => (
+            {MENU_SECTIONS.map((section, sectionIndex) => {
+              const visibleItems = section.items.filter(item => !item.permission || can(item.permission));
+              if (visibleItems.length === 0) return null;
+              return (
               <View
                 key={sectionIndex}
                 style={[
@@ -163,7 +168,7 @@ export default function NavigationMenu({ visible, onClose, navigation }) {
                 <Text style={[styles.sectionTitle, { fontSize: sectionTitleSize, paddingHorizontal: scale(8) }]}>
                   {section.title}
                 </Text>
-                {section.items.map((item, itemIndex) => (
+                {visibleItems.map((item, itemIndex) => (
                   <TouchableOpacity
                     key={itemIndex}
                     style={[styles.menuItem, { paddingVertical: scale(14), paddingHorizontal: scale(12), borderRadius: scale(12) }]}
@@ -175,7 +180,8 @@ export default function NavigationMenu({ visible, onClose, navigation }) {
                   </TouchableOpacity>
                 ))}
               </View>
-            ))}
+              );
+            })}
             <View style={{ height: scale(20), width: '100%' }} />
           </ScrollView>
         </View>

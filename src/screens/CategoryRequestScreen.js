@@ -26,8 +26,10 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { api } from '../api/client';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
+import { useRestaurant } from '../context/RestaurantContext';
 
 import { scale, moderateScale } from '../utils/responsive';
+import { usePermissions } from '../utils/usePermissions';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 // Premium Color Palette
 const C = {
@@ -85,6 +87,8 @@ const formatDate = (dateStr) => {
 };
 
 export default function CategoryRequestScreen({ navigation }) {
+  const { can } = usePermissions();
+  const { selectedRestaurantId } = useRestaurant();
   const [categoryName, setCategoryName] = useState('');
   const [description, setDescription] = useState('');
   const [reason, setReason] = useState('');
@@ -99,7 +103,9 @@ export default function CategoryRequestScreen({ navigation }) {
 
   const loadMyRequests = useCallback(async () => {
     try {
-      const response = await api.get('/owner/category-request');
+      const response = await api.get('/owner/category-request', {
+        params: { restaurantId: selectedRestaurantId },
+      });
       if (response.data?.ok) {
         setMyRequests(response.data.data || []);
       }
@@ -109,7 +115,7 @@ export default function CategoryRequestScreen({ navigation }) {
       setLoadingRequests(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [selectedRestaurantId]);
 
   useEffect(() => {
     loadMyRequests();
@@ -128,6 +134,7 @@ export default function CategoryRequestScreen({ navigation }) {
     setSubmitting(true);
     try {
       const response = await api.post('/owner/category-request', {
+        restaurantId: selectedRestaurantId,
         categoryName: categoryName.trim(),
         description: description.trim(),
         reason: reason.trim(),
@@ -258,10 +265,12 @@ export default function CategoryRequestScreen({ navigation }) {
           <Text style={st.headerTitle}>Category Requests</Text>
         </View>
         {/* New Request Button in Header */}
+        {can('category:create') && (
         <TouchableOpacity style={st.newReqBtn} onPress={() => setModalVisible(true)}>
           <Icon name="add" size={scale(18)} color="#FFF" />
           <Text style={st.newReqBtnText}>New</Text>
         </TouchableOpacity>
+        )}
         <TouchableOpacity style={st.menuBtn} onPress={() => setMenuVisible(true)}>
           <Icon name="menu" size={scale(20)} color={C.ink} />
         </TouchableOpacity>

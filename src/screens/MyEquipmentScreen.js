@@ -15,13 +15,14 @@ import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary } from 'react-native-image-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { api, getImageUrl } from '../api/client';
+import { api, getImageUrl, uploadFile } from '../api/client';
 import { useRestaurant } from '../context/RestaurantContext';
 import { RestaurantSelectorBar } from '../components/RestaurantSelector';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
 import { scale, moderateScale } from '../utils/responsive';
+import { usePermissions } from '../utils/usePermissions';
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const CARD_WIDTH = (SCREEN_WIDTH - 48) / 2;
 
@@ -106,6 +107,7 @@ export default function MyEquipmentScreen({ navigation }) {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const isTablet = width >= 768;
+  const { can } = usePermissions();
   const gridColumns = isTablet ? 2 : 1;
 
   const {
@@ -245,7 +247,7 @@ export default function MyEquipmentScreen({ navigation }) {
       const formData = new FormData();
       formData.append('file', { uri: asset.uri, type: asset.type || 'image/jpeg', name: asset.fileName || `image-${Date.now()}.jpg` });
       formData.append('folder', `equipment/${type}`);
-      const { data } = await api.post('/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      const { data } = await uploadFile(formData);
       if (data.ok && data.url) {
         if (type === 'bills') setForm(f => ({ ...f, billImageUrl: data.url }));
         else if (type === 'warranty-cards') setForm(f => ({ ...f, warrantyCardUrl: data.url }));
@@ -423,12 +425,16 @@ export default function MyEquipmentScreen({ navigation }) {
             <Icon name="construct" size={scale(14)} color="#fff" />
             <Text style={st.serviceBtnText}>Service</Text>
           </TouchableOpacity>
+          {can('equipment:update') && (
           <TouchableOpacity style={st.iconBtn} onPress={() => openForm(item)}>
             <Icon name="pencil" size={scale(16)} color={C.info} />
           </TouchableOpacity>
+          )}
+          {can('equipment:delete') && (
           <TouchableOpacity style={[st.iconBtn, { backgroundColor: C.dangerLight }]} onPress={() => deleteEquipment(item)}>
             <Icon name="trash" size={scale(16)} color={C.danger} />
           </TouchableOpacity>
+          )}
         </View>
       </TouchableOpacity>
     );
@@ -472,9 +478,11 @@ export default function MyEquipmentScreen({ navigation }) {
             <Text style={st.heroSubtitle}>{selectedRestaurant?.name || 'Select Restaurant'}</Text>
           </View>
           <View style={st.heroActions}>
+            {can('equipment:create') && (
             <TouchableOpacity style={st.heroIconBtn} onPress={() => openForm()}>
               <Icon name="add" size={scale(22)} color="#fff" />
             </TouchableOpacity>
+            )}
             <TouchableOpacity style={st.heroIconBtn} onPress={() => setMenuVisible(true)}>
               <Icon name="menu" size={scale(22)} color="#fff" />
             </TouchableOpacity>
@@ -579,7 +587,7 @@ export default function MyEquipmentScreen({ navigation }) {
             <Text style={st.emptySubtitle}>
               {equipments.length === 0 ? 'Add your first equipment to get started' : 'Try different filters'}
             </Text>
-            {equipments.length === 0 && (
+            {equipments.length === 0 && can('equipment:create') && (
               <TouchableOpacity style={st.emptyBtn} onPress={() => openForm()}>
                 <Icon name="add" size={scale(18)} color="#fff" />
                 <Text style={st.emptyBtnText}>Add Equipment</Text>

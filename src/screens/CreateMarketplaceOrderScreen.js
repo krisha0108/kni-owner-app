@@ -17,7 +17,6 @@ import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
 import { scale, moderateScale } from '../utils/responsive';
-const CART_STORAGE_KEY = '@marketplace_cart';
 
 const C = {
   primary: '#EF3A3A',
@@ -129,18 +128,6 @@ export default function CreateMarketplaceOrderScreen({ navigation, route }) {
       deliveryAddress: selectedRestaurant.address || '',
       deliveryNotes: deliveryNotes.trim(),
     });
-
-    // Remove paid vendor's items from AsyncStorage cart
-    try {
-      const remaining = cartItems.filter(item => item.vendorId !== vendorGroup.vendorId);
-      if (remaining.length > 0) {
-        await AsyncStorage.setItem(CART_STORAGE_KEY, JSON.stringify(remaining));
-      } else {
-        await AsyncStorage.removeItem(CART_STORAGE_KEY);
-      }
-    } catch (e) {
-      // Ignore cart update errors
-    }
   };
 
   if (restaurantsLoading) {

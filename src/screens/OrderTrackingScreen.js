@@ -170,9 +170,12 @@ export default function OrderTrackingScreen({ navigation }) {
   const loadData = useCallback(async (restaurantId = null) => {
     try {
       setLoading(true);
-      const restaurantsRes = await api.get('/owner/restaurants');
+      const restaurantsRes = await api.get('/owner/restaurants/accessible');
       if (restaurantsRes.data.ok && restaurantsRes.data.data.length > 0) {
-        const approvedRestaurants = restaurantsRes.data.data.filter(r => r.status === 'APPROVED');
+        const approvedRestaurants = restaurantsRes.data.data.map(item => ({
+          ...item.restaurant,
+          restaurantRole: item.role,
+        }));
         setRestaurants(approvedRestaurants);
 
         let targetRestaurant = null;
@@ -262,12 +265,11 @@ export default function OrderTrackingScreen({ navigation }) {
   };
 
   const getOrderTimeline = (order) => {
-    const statusOrder = ['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED'];
+    const statusOrder = ['PLACED', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED'];
     let currentIndex = statusOrder.indexOf(order.status);
-    if (order.status === 'PLACED') currentIndex = 0;
     const isCancelled = order.status === 'CANCELLED';
     return [
-      { title: 'Order Placed', description: 'Order submitted', date: order.createdAt, step: 0 },
+      { title: 'Order Placed', description: 'Your order has been placed', date: order.createdAt, step: 0 },
       { title: 'Confirmed', description: 'Order confirmed by vendor', step: 1 },
       { title: 'Processing', description: 'Order being prepared', step: 2 },
       { title: 'Shipped', description: 'Order dispatched', step: 3 },

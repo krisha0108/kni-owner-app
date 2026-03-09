@@ -10,6 +10,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { api, getImageUrl } from '../api/client';
 
 import { scale, moderateScale } from '../utils/responsive';
+import { usePermissions } from '../utils/usePermissions';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const HERO_HEIGHT = 260;
 
@@ -79,6 +80,7 @@ const formatDateShort = (dateString) => {
 };
 
 export default function RestaurantView({ navigation, route }) {
+  const { can } = usePermissions();
   const { restaurantId } = route.params;
   const [restaurant, setRestaurant] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -87,9 +89,13 @@ export default function RestaurantView({ navigation, route }) {
 
   const loadRestaurant = async () => {
     try {
-      const response = await api.get('/owner/restaurants');
+      const response = await api.get('/owner/restaurants/accessible');
       if (response.data.ok) {
-        const found = response.data.data.find(r => r.id === restaurantId);
+        const restaurants = response.data.data.map(item => ({
+          ...item.restaurant,
+          restaurantRole: item.role,
+        }));
+        const found = restaurants.find(r => r.id === restaurantId);
         if (found) {
           setRestaurant(found);
         } else {
@@ -170,7 +176,7 @@ export default function RestaurantView({ navigation, route }) {
           </TouchableOpacity>
 
           {/* Edit Button */}
-          {restaurant.status !== 'APPROVED' && (
+          {restaurant.status !== 'APPROVED' && can('restaurant:update') && (
             <TouchableOpacity
               style={st.heroEditBtn}
               onPress={() => navigation.navigate('RestaurantEdit', { restaurantId: restaurant.id })}

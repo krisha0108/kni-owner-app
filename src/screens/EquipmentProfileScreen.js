@@ -11,6 +11,7 @@ import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
 import { scale, moderateScale } from '../utils/responsive';
+import { usePermissions } from '../utils/usePermissions';
 const C = {
   primary: '#EF3A3A',
   ink: '#1D2254',
@@ -121,6 +122,7 @@ const formatDate = (dateString) => {
 };
 
 export default function EquipmentProfileScreen({ navigation, route }) {
+  const { can } = usePermissions();
   const { equipmentId } = route.params || {};
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -412,6 +414,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
           <Icon name="arrow-back" size={scale(22)} color={C.ink} />
         </TouchableOpacity>
         <Text style={st.headerTitle} numberOfLines={1}>{equipment.name}</Text>
+        {can('service:create') && (
         <TouchableOpacity
           onPress={() => {
             // Navigate to ServiceRequest screen (same flow as owner web /owner/request-service)
@@ -434,6 +437,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
         >
           <Icon name="construct" size={scale(20)} color="#fff" />
         </TouchableOpacity>
+        )}
         <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
           <Icon name="menu" size={scale(22)} color="#1D2254" />
         </TouchableOpacity>
@@ -658,6 +662,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
               <View style={st.emptySection}>
                 <Icon name="construct-outline" size={scale(48)} color={C.muted} />
                 <Text style={st.emptySectionText}>No service history yet</Text>
+                {can('service:create') && (
                 <TouchableOpacity
                   style={st.emptyBtn}
                   onPress={() => {
@@ -680,6 +685,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
                   <Icon name="add" size={scale(18)} color="#fff" />
                   <Text style={st.emptyBtnText}>Request First Service</Text>
                 </TouchableOpacity>
+                )}
               </View>
             )}
           </View>
@@ -766,22 +772,26 @@ export default function EquipmentProfileScreen({ navigation, route }) {
                   />
                 </View>
 
+                {can('amc:cancel') && (
                 <TouchableOpacity
                   style={st.cancelAmcBtn}
                   onPress={() => handleCancelAmc(activeAmc.id)}
                 >
                   <Text style={st.cancelAmcText}>Cancel AMC</Text>
                 </TouchableOpacity>
+                )}
               </View>
             ) : (
               <View style={st.noAmcCard}>
                 <Icon name="shield-outline" size={scale(48)} color={C.muted} />
                 <Text style={st.noAmcTitle}>No Active AMC</Text>
                 <Text style={st.noAmcText}>Create a maintenance plan for this equipment</Text>
+                {can('amc:create') && (
                 <TouchableOpacity style={st.createAmcBtn} onPress={() => setShowAmcModal(true)}>
                   <Icon name="add" size={scale(18)} color="#fff" />
                   <Text style={st.createAmcText}>Create AMC Plan</Text>
                 </TouchableOpacity>
+                )}
               </View>
             )}
 

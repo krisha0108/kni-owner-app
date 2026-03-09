@@ -23,6 +23,7 @@ import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
 import { scale, moderateScale } from '../utils/responsive';
+import { usePermissions } from '../utils/usePermissions';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const C = {
   primary: '#EF3A3A',
@@ -81,6 +82,9 @@ const formatDate = (dateString) => {
 };
 
 export default function TeamManagementScreen({ navigation }) {
+  // RBAC permissions
+  const { can } = usePermissions();
+
   // Global restaurant context
   const {
     selectedRestaurant: currentRestaurant,
@@ -88,6 +92,37 @@ export default function TeamManagementScreen({ navigation }) {
     loading: restaurantsLoading,
     loadRestaurants,
   } = useRestaurant();
+
+  // Access gate: ACCOUNTANT & VIEWER cannot access team management
+  if (!can('team:read')) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
+          </TouchableOpacity>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>Team Management</Text>
+            <Text style={styles.headerSubtitle}>Access Restricted</Text>
+          </View>
+          <View style={styles.headerActions} />
+        </View>
+        <View style={styles.loadingBox}>
+          <View style={[styles.emptyIconBox, { backgroundColor: '#FEF2F2' }]}>
+            <Icon name="lock-closed-outline" size={scale(48)} color={C.danger} />
+          </View>
+          <Text style={styles.emptyTitle}>Access Restricted</Text>
+          <Text style={styles.emptyText}>
+            You don't have permission to view team management. Contact the restaurant owner for access.
+          </Text>
+          <TouchableOpacity style={styles.emptyBtn} onPress={() => navigation.goBack()}>
+            <Icon name="arrow-back-outline" size={scale(18)} color="#fff" />
+            <Text style={styles.emptyBtnText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -313,8 +348,10 @@ export default function TeamManagementScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Actions */}
+        {/* Actions (owner-only) */}
+        {(can('team:update') || can('team:remove')) && (
         <View style={styles.actionsRow}>
+          {can('team:update') && (
           <TouchableOpacity
             style={[styles.actionBtn, { backgroundColor: '#EFF6FF' }]}
             onPress={() => openEditModal(item)}
@@ -322,7 +359,9 @@ export default function TeamManagementScreen({ navigation }) {
             <Icon name="create-outline" size={scale(16)} color={C.info} />
             <Text style={[styles.actionBtnText, { color: C.info }]}>Edit Role</Text>
           </TouchableOpacity>
+          )}
 
+          {can('team:remove') && (
           <TouchableOpacity
             style={[styles.actionBtn, { backgroundColor: '#FEF2F2' }]}
             onPress={() => removeMember(item)}
@@ -330,7 +369,9 @@ export default function TeamManagementScreen({ navigation }) {
             <Icon name="trash-outline" size={scale(16)} color={C.danger} />
             <Text style={[styles.actionBtnText, { color: C.danger }]}>Remove</Text>
           </TouchableOpacity>
+          )}
         </View>
+        )}
       </View>
     );
   };
@@ -373,9 +414,11 @@ export default function TeamManagementScreen({ navigation }) {
           <Text style={styles.headerSubtitle}>Manage team access</Text>
         </View>
         <View style={styles.headerActions}>
+          {can('team:invite') && (
           <TouchableOpacity onPress={openInviteModal} style={styles.headerIconBtn}>
             <Icon name="person-add" size={scale(20)} color={C.primary} />
           </TouchableOpacity>
+          )}
           <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.headerIconBtn}>
             <Icon name="menu" size={scale(20)} color={C.ink} />
           </TouchableOpacity>
@@ -419,10 +462,12 @@ export default function TeamManagementScreen({ navigation }) {
             <Text style={styles.emptyText}>
               Invite members to collaborate on your restaurant
             </Text>
+            {can('team:invite') && (
             <TouchableOpacity style={styles.emptyBtn} onPress={openInviteModal}>
               <Icon name="person-add-outline" size={scale(18)} color="#fff" />
               <Text style={styles.emptyBtnText}>Invite Member</Text>
             </TouchableOpacity>
+            )}
           </View>
         }
       />

@@ -21,6 +21,7 @@ import PieChartCard from '../components/charts/PieChartCard';
 import BarChartCard from '../components/charts/BarChartCard';
 import { exportAnalyticsPDF, openPDF } from '../services/analyticsService';
 import { scale, moderateScale } from '../utils/responsive';
+import { usePermissions } from '../utils/usePermissions';
 
 const ION_GLYPHS = (Icon.getRawGlyphMap?.() ?? {});
 const hasIonicon = (name) => !!name && Object.prototype.hasOwnProperty.call(ION_GLYPHS, name);
@@ -47,16 +48,17 @@ const getStatusColor = (s) =>
 
 /* ──────── QUICK ACTION DATA ──────── */
 const QA = [
-  { icon: 'calendar-outline', label: 'Bookings', grad: ['#FF6B6B', '#EF3A3A'], screen: 'MyBookings' },
-  { icon: 'storefront-outline', label: 'Restaurants', grad: ['#818CF8', '#6366F1'], screen: 'MyRestaurants' },
-  { icon: 'cash-outline', label: 'Expenses', grad: ['#34D399', '#10B981'], screen: 'Expenses' },
-  { icon: 'headset-outline', label: 'Support', grad: ['#FBBF24', '#F59E0B'], screen: 'SupportCenter' },
+  { icon: 'calendar-outline', label: 'Bookings', grad: ['#FF6B6B', '#EF3A3A'], screen: 'MyBookings', permission: 'bookings:read' },
+  { icon: 'storefront-outline', label: 'Restaurants', grad: ['#818CF8', '#6366F1'], screen: 'MyRestaurants', permission: 'restaurant:read' },
+  { icon: 'cash-outline', label: 'Expenses', grad: ['#34D399', '#10B981'], screen: 'Expenses', permission: 'expenses:read' },
+  { icon: 'headset-outline', label: 'Support', grad: ['#FBBF24', '#F59E0B'], screen: 'SupportCenter', permission: 'support:read' },
 ];
 
 /* ======================================================================= */
 export default function HomeScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
+  const { can } = usePermissions();
 
   const {
     restaurants,
@@ -270,24 +272,9 @@ export default function HomeScreen({ navigation }) {
   const loadMarketplaceCartCount = useCallback(async () => {
     try {
       if (!restaurantId) { setMarketplaceCartCount(0); return; }
-      const cartKey = `@marketplace_cart_${restaurantId}`;
-      const paidVendorId = await AsyncStorage.getItem('@marketplace_paid_vendor');
-      const saved = await AsyncStorage.getItem(cartKey);
-      let arr = saved ? JSON.parse(saved) : [];
-      if (!Array.isArray(arr)) arr = [];
-      arr = arr.filter(item => item && item.product);
-
-      // Remove paid vendor items from cart (same cleanup as MarketplaceScreen)
-      if (paidVendorId && arr.length > 0) {
-        arr = arr.filter(item => {
-          const vid = item.product.vendor?.id || item.product.vendorId || 'unknown';
-          return vid !== paidVendorId;
-        });
-        await AsyncStorage.setItem(cartKey, JSON.stringify(arr));
-        await AsyncStorage.removeItem('@marketplace_paid_vendor');
-      }
-
-      setMarketplaceCartCount(arr.length);
+      const cartService = require('../services/marketplaceCartService').default;
+      const items = await cartService.getCart(restaurantId);
+      setMarketplaceCartCount(items.length || 0);
     } catch { setMarketplaceCartCount(0); }
   }, [restaurantId]);
 
@@ -367,10 +354,12 @@ export default function HomeScreen({ navigation }) {
         fetchGuides(),
         loadRestaurants(),
         loadAnalytics(),
+        calculateCartCount(),
+        loadMarketplaceCartCount(),
       ]);
       setTimeout(() => setRefreshing(false), 300);
     })();
-  }, [fetchBanners, fetchFeed, fetchSponsored, fetchGuides, loadRestaurants, loadAnalytics]);
+  }, [fetchBanners, fetchFeed, fetchSponsored, fetchGuides, loadRestaurants, loadAnalytics, calculateCartCount, loadMarketplaceCartCount]);
 
   const handleExportPDF = async () => {
     if (!restaurantId) {
@@ -439,6 +428,7 @@ export default function HomeScreen({ navigation }) {
                 <Icon name="download-outline" size={scale(18)} color={restaurantId ? '#fff' : 'rgba(255,255,255,0.35)'} />
               )}
             </TouchableOpacity>
+            {can('marketplace:create') && (
             <TouchableOpacity
               onPress={() => restaurantId && navigation.navigate('MarketplaceCart', { restaurantId })}
               disabled={!restaurantId}
@@ -451,6 +441,7 @@ export default function HomeScreen({ navigation }) {
                 </View>
               )}
             </TouchableOpacity>
+            )}
             <TouchableOpacity onPress={() => navigation.navigate?.('Notifications')} style={st.headerBtn}>
               <Icon name="notifications-outline" size={scale(18)} color="#fff" />
             </TouchableOpacity>
@@ -543,7 +534,7 @@ export default function HomeScreen({ navigation }) {
 
             {/* ══════ QUICK ACTIONS ══════ */}
             <View style={st.qaRow}>
-              {QA.map((q, i) => (
+              {QA.filter(q => !q.permission || can(q.permission)).map((q, i) => (
                 <TouchableOpacity
                   key={i}
                   style={st.qaItem}
@@ -559,6 +550,7 @@ export default function HomeScreen({ navigation }) {
             </View>
 
             {/* ══════ AMC BANNER ══════ */}
+            {can('amc:read') && (
             <TouchableOpacity
               activeOpacity={0.9}
               onPress={() => navigation.navigate('AMCDashboard')}
@@ -584,6 +576,7 @@ export default function HomeScreen({ navigation }) {
                 </View>
               </LinearGradient>
             </TouchableOpacity>
+            )}
 
             {/* ══════ FEED PILLS ══════ */}
             {feed.length > 0 && (

@@ -17,7 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary } from 'react-native-image-picker';
-import { api } from '../api/client';
+import { api, uploadFile } from '../api/client';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
@@ -100,9 +100,7 @@ export default function RestaurantCreateScreen({ navigation }) {
       });
       formDataUpload.append('folder', type === 'restaurant' ? 'restaurants' : 'fssai-certificates');
 
-      const response = await api.post('/upload', formDataUpload, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      const response = await uploadFile(formDataUpload);
 
       if (response.data.ok) {
         const field = type === 'restaurant' ? 'restaurantImageUrl' : 'fssaiCertificateUrl';

@@ -7,7 +7,7 @@ import {
 import Icon from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary } from 'react-native-image-picker';
 import LinearGradient from 'react-native-linear-gradient';
-import { api } from '../api/client';
+import { api, uploadFile } from '../api/client';
 
 import { scale, moderateScale } from '../utils/responsive';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -170,9 +170,7 @@ const RestaurantOnboarding = ({ navigation, route }) => {
         });
         imageFormData.append('folder', 'restaurants');
 
-        const imageRes = await api.post('/upload', imageFormData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
+        const imageRes = await uploadFile(imageFormData);
 
         if (imageRes.data?.ok) {
           restaurantImageUrl = imageRes.data.data.url;
@@ -188,9 +186,7 @@ const RestaurantOnboarding = ({ navigation, route }) => {
       });
       certFormData.append('folder', 'fssai-certificates');
 
-      const certRes = await api.post('/upload', certFormData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      const certRes = await uploadFile(certFormData);
 
       if (!certRes.data?.ok) {
         throw new Error('Failed to upload FSSAI certificate');

@@ -27,6 +27,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { api, getImageUrl } from '../api/client';
 import uploadService from '../services/uploadService';
+import cartService from '../services/marketplaceCartService';
 
 import { scale, moderateScale } from '../utils/responsive';
 
@@ -194,8 +195,12 @@ export default function MarketplacePaymentScreen({ navigation, route }) {
 
       const response = await api.post('/owner/marketplace/payments', payload);
       if (response.data.ok) {
-        // Save paid vendor ID so Marketplace screen can remove these items from cart
-        await AsyncStorage.setItem('@marketplace_paid_vendor', vendorId);
+        // Clear this vendor's items from cart after payment submitted
+        try {
+          await cartService.clearCart(restaurantId, { vendorId });
+        } catch (e) {
+          console.warn('Failed to clear cart after payment:', e);
+        }
         setPaymentSubmitted(true);
         setPaymentId(response.data.data.id);
         setPaymentStatus('PENDING');

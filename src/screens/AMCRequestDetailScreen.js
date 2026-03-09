@@ -15,7 +15,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary } from 'react-native-image-picker';
 import Clipboard from '@react-native-clipboard/clipboard';
-import { api, getImageUrl } from '../api/client';
+import { api, getImageUrl, uploadFile } from '../api/client';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 import { scale, moderateScale } from '../utils/responsive';
@@ -155,7 +155,7 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
       formData.append('file', { uri: asset.uri, type: asset.type || 'image/jpeg', name: asset.fileName || `amc-payment-${Date.now()}.jpg` });
       formData.append('folder', 'amc-payments');
 
-      const uploadRes = await api.post('/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      const uploadRes = await uploadFile(formData);
       if (!uploadRes.data?.ok || !uploadRes.data?.url) throw new Error('Upload failed');
 
       await api.post(`/owner/amc-payment/${request.payment.id}/upload`, { screenshotUrl: uploadRes.data.url });

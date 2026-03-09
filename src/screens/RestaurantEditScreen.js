@@ -7,7 +7,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary } from 'react-native-image-picker';
-import { api, getImageUrl } from '../api/client';
+import { api, getImageUrl, uploadFile } from '../api/client';
 
 import { scale, moderateScale } from '../utils/responsive';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -216,9 +216,7 @@ export default function RestaurantEditScreen({ navigation, route }) {
         });
         imageFormData.append('folder', 'restaurants');
 
-        const imageRes = await api.post('/upload', imageFormData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
+        const imageRes = await uploadFile(imageFormData);
 
         if (imageRes.data?.ok) {
           finalRestaurantImageUrl = imageRes.data.data.url;
@@ -235,9 +233,7 @@ export default function RestaurantEditScreen({ navigation, route }) {
         });
         certFormData.append('folder', 'fssai-certificates');
 
-        const certRes = await api.post('/upload', certFormData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
+        const certRes = await uploadFile(certFormData);
 
         if (certRes.data?.ok) {
           finalFssaiCertificateUrl = certRes.data.data.url;

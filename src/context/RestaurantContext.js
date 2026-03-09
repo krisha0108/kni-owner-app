@@ -26,13 +26,14 @@ export function RestaurantProvider({ children }) {
       setLoading(true);
       setError(null);
 
-      const response = await api.get('/owner/restaurants');
+      const response = await api.get('/owner/restaurants/accessible');
 
       if (response.data.ok) {
-        // Filter only approved restaurants
-        const approvedRestaurants = (response.data.data || []).filter(
-          r => r.status === 'APPROVED'
-        );
+        // Transform accessible response: { restaurantId, role, restaurant } -> flat restaurant with restaurantRole
+        const approvedRestaurants = (response.data.data || []).map(item => ({
+          ...item.restaurant,
+          restaurantRole: item.role,
+        }));
         setRestaurants(approvedRestaurants);
 
         // Try to restore previously selected restaurant

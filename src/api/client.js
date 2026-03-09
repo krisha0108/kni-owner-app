@@ -52,6 +52,13 @@ api.interceptors.request.use(
     } catch (err) {
       console.error('❌ Error fetching token:', err);
     }
+
+    // For FormData uploads, remove Content-Type so React Native
+    // auto-sets it with the correct multipart boundary
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
+    }
+
     return config;
   },
   (error) => {
@@ -89,6 +96,30 @@ api.interceptors.response.use(
   }
 );
 
+/**
+ * Upload file using native fetch (axios FormData is unreliable on Android).
+ * Usage: const data = await uploadFile(formData);
+ * Returns the parsed JSON response (same format as api.post would return).
+ */
+const uploadFile = async (formData) => {
+  const token = await AsyncStorage.getItem('userToken');
+  console.log('📤 Upload via fetch: POST /upload');
+
+  const response = await fetch(`${API_BASE_URL}/upload`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  });
+
+  const data = await response.json();
+  console.log(response.ok ? '✅ Upload success' : '❌ Upload failed:', response.status);
+
+  if (!response.ok) {
+    throw { response: { status: response.status, data } };
+  }
+  return { data };
+};
+
 // Helper function to get full image URL
 export const getImageUrl = (relativePath) => {
   if (!relativePath) return null;
@@ -110,4 +141,4 @@ export const formatCurrency = (amount) => {
   return `₹${num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
-export { api, API_BASE_URL, IMAGE_BASE_URL };
+export { api, API_BASE_URL, IMAGE_BASE_URL, uploadFile };

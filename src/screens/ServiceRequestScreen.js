@@ -31,7 +31,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import Icon from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary } from 'react-native-image-picker';
 import Clipboard from '@react-native-clipboard/clipboard';
-import { api } from '../api/client';
+import { api, uploadFile } from '../api/client';
 import { useRestaurant } from '../context/RestaurantContext';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
@@ -256,9 +256,7 @@ export default function ServiceRequestScreen({ navigation, route }) {
       });
       formData.append('folder', 'payment-proofs');
 
-      const response = await api.post('/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      const response = await uploadFile(formData);
 
       if (response.data?.ok && response.data?.url) {
         setPaymentScreenshot(response.data.url);

@@ -21,9 +21,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { getImageUrl } from '../api/client';
+import cartService from '../services/marketplaceCartService';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
@@ -49,9 +49,8 @@ const formatPrice = (price) => `₹${(price || 0).toLocaleString('en-IN')}`;
 
 export default function MarketplaceCartScreen({ navigation, route }) {
   const { restaurantId } = route.params || {};
-  const CART_STORAGE_KEY = `@marketplace_cart_${restaurantId || 'none'}`;
 
-  const [cart, setCart] = useState(route.params?.cart || []);
+  const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(true);
   const [menuVisible, setMenuVisible] = useState(false);
   const [deliveryAddress, setDeliveryAddress] = useState('');
@@ -65,58 +64,37 @@ export default function MarketplaceCartScreen({ navigation, route }) {
   );
 
   const loadCart = async () => {
+    if (!restaurantId) return;
     try {
       setLoading(true);
-      const paidVendorId = await AsyncStorage.getItem('@marketplace_paid_vendor');
-      const saved = await AsyncStorage.getItem(CART_STORAGE_KEY);
-      let parsed = saved ? JSON.parse(saved) : [];
-      if (!Array.isArray(parsed)) parsed = [];
-      parsed = parsed.filter(item => item && item.product);
-
-      if (paidVendorId && parsed.length > 0) {
-        parsed = parsed.filter(item => {
-          const vid = item.product.vendor?.id || item.product.vendorId || 'unknown';
-          return vid !== paidVendorId;
-        });
-        await AsyncStorage.setItem(CART_STORAGE_KEY, JSON.stringify(parsed));
-        await AsyncStorage.removeItem('@marketplace_paid_vendor');
-      }
-
-      setCart(parsed);
-    } catch (e) {
-      console.log('Cart load error:', e);
+      const items = await cartService.getCart(restaurantId);
+      setCart(items || []);
+    } catch (error) {
+      console.error('Load cart error:', error);
       setCart([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const saveCart = async (items) => {
-    try {
-      await AsyncStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
-      setCart(items);
-    } catch (e) {
-      console.log('Cart save error:', e);
-    }
-  };
-
-  const updateCartQuantity = (productId, delta) => {
+  const updateCartQuantity = async (productId, delta) => {
     const item = cart.find(i => i.product.id === productId);
     if (!item) return;
 
     const newQty = item.quantity + delta;
-    if (newQty <= 0) {
-      const updated = cart.filter(i => i.product.id !== productId);
-      saveCart(updated);
-      return;
-    }
 
-    const updated = cart.map(i =>
-      i.product.id === productId
-        ? { ...i, quantity: Math.min(newQty, i.product.stockQuantity || 999) }
-        : i
-    );
-    saveCart(updated);
+    try {
+      if (newQty <= 0) {
+        await cartService.removeItem(item.id);
+      } else {
+        const clamped = Math.min(newQty, item.product.stockQuantity || 999);
+        await cartService.updateItemQuantity(item.id, clamped);
+      }
+      await loadCart();
+    } catch (error) {
+      Alert.alert('Error', error.message || 'Failed to update cart');
+      console.error('Update cart error:', error);
+    }
   };
 
   const handleClearCart = () => {

@@ -8,7 +8,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { api } from '../api/client';
+import { api, uploadFile } from '../api/client';
 import { Clipboard } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { useFocusEffect } from '@react-navigation/native';
@@ -1128,11 +1128,7 @@ export default function RequestNow({ navigation, route }) {
         formData.append('folder', 'payment-proofs');
 
         // Upload to /upload endpoint
-        const uploadResponse = await api.post('/upload', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        });
+        const uploadResponse = await uploadFile(formData);
 
         if (uploadResponse.data?.ok && uploadResponse.data?.url) {
           screenshotUrl = uploadResponse.data.url;

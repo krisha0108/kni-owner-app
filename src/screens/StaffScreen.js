@@ -31,6 +31,7 @@ import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
 import { scale, moderateScale } from '../utils/responsive';
+import { usePermissions } from '../utils/usePermissions';
 // Premium Color Palette
 const C = {
   primary: '#EF3A3A',
@@ -96,6 +97,7 @@ const formatSalary = (item) => {
 export default function StaffScreen({ navigation }) {
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
+  const { can } = usePermissions();
   const isLargePhone = width >= 400;
 
   const {
@@ -320,10 +322,12 @@ export default function StaffScreen({ navigation }) {
 
         {/* Actions */}
         <View style={st.cardActions}>
+          {can('staff:update') && (
           <TouchableOpacity style={[st.actionBtn, { backgroundColor: C.infoLight }]} onPress={() => openForm(item)}>
             <Icon name="pencil" size={scale(16)} color={C.info} />
             <Text style={[st.actionBtnText, { color: C.info }]}>Edit</Text>
           </TouchableOpacity>
+          )}
           <TouchableOpacity style={[st.actionBtn, { backgroundColor: C.bg }]} onPress={() => openActionModal(item)}>
             <Icon name="ellipsis-horizontal" size={scale(16)} color={C.muted} />
             <Text style={[st.actionBtnText, { color: C.muted }]}>More</Text>
@@ -460,9 +464,11 @@ export default function StaffScreen({ navigation }) {
           <Text style={st.headerSubtitle}>Manage your team</Text>
         </View>
         <View style={st.headerActions}>
+          {can('staff:create') && (
           <TouchableOpacity style={st.headerIconBtn} onPress={() => openForm()}>
             <Icon name="person-add" size={scale(20)} color={C.primary} />
           </TouchableOpacity>
+          )}
           <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
             <Icon name="menu" size={scale(20)} color={C.ink} />
           </TouchableOpacity>
@@ -493,7 +499,7 @@ export default function StaffScreen({ navigation }) {
             <Text style={st.emptySubtitle}>
               {staff.length === 0 ? 'Add your first team member' : 'No matching staff found'}
             </Text>
-            {staff.length === 0 && (
+            {staff.length === 0 && can('staff:create') && (
               <TouchableOpacity style={st.emptyBtn} onPress={() => openForm()}>
                 <Icon name="add" size={scale(18)} color="#fff" />
                 <Text style={st.emptyBtnText}>Add Staff</Text>
@@ -582,11 +588,11 @@ export default function StaffScreen({ navigation }) {
               </View>
 
               {/* Status (Edit Mode) */}
-              {isEditMode && (
+              {isEditMode && can('staff:update') && (
                 <>
                   <Text style={st.label}>Status</Text>
                   <View style={st.statusGrid}>
-                    {STAFF_STATUSES.map(s => {
+                    {STAFF_STATUSES.filter(s => s.value !== 'TERMINATED' || can('staff:delete')).map(s => {
                       const isSelected = form.status === s.value;
                       return (
                         <TouchableOpacity
@@ -670,16 +676,20 @@ export default function StaffScreen({ navigation }) {
             </View>
 
             {/* Edit Option */}
+            {can('staff:update') && (
             <TouchableOpacity style={st.actionItem} onPress={handleEdit}>
               <Icon name="pencil-outline" size={scale(20)} color={C.info} />
               <Text style={st.actionItemText}>Edit Details</Text>
             </TouchableOpacity>
+            )}
 
+            {can('staff:update') && (
+            <>
             <View style={st.actionDivider} />
             <Text style={st.actionSectionTitle}>Change Status</Text>
 
             {/* Status Options */}
-            {STAFF_STATUSES.map(status => (
+            {STAFF_STATUSES.filter(s => s.value !== 'TERMINATED' || can('staff:delete')).map(status => (
               <TouchableOpacity
                 key={status.value}
                 style={[st.actionItem, selectedStaff?.status === status.value && st.actionItemDisabled]}
@@ -693,10 +703,13 @@ export default function StaffScreen({ navigation }) {
                 </Text>
               </TouchableOpacity>
             ))}
+            </>
+            )}
 
             <View style={st.actionDivider} />
 
             {/* Terminate Option */}
+            {can('staff:delete') && (
             <TouchableOpacity
               style={[st.actionItem, st.actionItemDanger]}
               onPress={handleDelete}
@@ -713,6 +726,7 @@ export default function StaffScreen({ navigation }) {
                 </>
               )}
             </TouchableOpacity>
+            )}
 
             {/* Cancel Button */}
             <TouchableOpacity style={st.actionCancelBtn} onPress={() => setActionModalVisible(false)}>

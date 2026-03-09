@@ -18,6 +18,7 @@ import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
 import { scale, moderateScale } from '../utils/responsive';
+import { usePermissions } from '../utils/usePermissions';
 // Premium Color Palette (Consistent with other screens)
 const C = {
   primary: '#EF3A3A',
@@ -66,6 +67,7 @@ const getStatusStyle = (status) => {
 export default function MyRestaurantsScreen({ navigation }) {
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
+  const { can } = usePermissions();
   const gridColumns = isTablet ? 2 : 1;
 
   const [loading, setLoading] = useState(true);
@@ -210,6 +212,7 @@ export default function MyRestaurantsScreen({ navigation }) {
             <Text style={st.viewBtnText}>View</Text>
           </TouchableOpacity>
 
+          {can('restaurant:update') && (
           <TouchableOpacity
             style={st.iconBtn}
             onPress={() => handleEdit(item)}
@@ -217,8 +220,9 @@ export default function MyRestaurantsScreen({ navigation }) {
           >
             <Icon name="pencil" size={scale(18)} color={C.info} />
           </TouchableOpacity>
+          )}
 
-          {canDelete(item) && (
+          {can('restaurant:delete') && canDelete(item) && (
             <TouchableOpacity
               style={[st.iconBtn, { backgroundColor: C.dangerLight }]}
               onPress={() => handleDelete(item)}
@@ -316,12 +320,14 @@ export default function MyRestaurantsScreen({ navigation }) {
             <Text style={st.heroSubtitle}>{restaurants.length} registered</Text>
           </View>
           <View style={st.heroActions}>
+            {can('restaurant:update') && (
             <TouchableOpacity
               style={st.heroIconBtn}
               onPress={() => navigation.navigate('RestaurantOnboarding', { isFirstRestaurant: false })}
             >
               <Icon name="add" size={scale(22)} color="#fff" />
             </TouchableOpacity>
+            )}
             <TouchableOpacity style={st.heroIconBtn} onPress={() => setMenuVisible(true)}>
               <Icon name="menu" size={scale(22)} color="#fff" />
             </TouchableOpacity>
@@ -350,7 +356,7 @@ export default function MyRestaurantsScreen({ navigation }) {
             <Text style={st.emptySubtitle}>
               {restaurants.length === 0 ? 'Add your first restaurant to get started' : 'Try a different filter'}
             </Text>
-            {restaurants.length === 0 && (
+            {restaurants.length === 0 && can('restaurant:update') && (
               <TouchableOpacity
                 style={st.emptyBtn}
                 onPress={() => navigation.navigate('RestaurantOnboarding', { isFirstRestaurant: false })}
@@ -362,7 +368,7 @@ export default function MyRestaurantsScreen({ navigation }) {
           </View>
         }
         ListFooterComponent={
-          restaurants.length > 0 ? (
+          restaurants.length > 0 && can('restaurant:update') ? (
             <TouchableOpacity
               style={st.addMoreBtn}
               onPress={() => navigation.navigate('RestaurantOnboarding', { isFirstRestaurant: false })}
