@@ -5,6 +5,7 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
+  Pressable,
   RefreshControl,
   ActivityIndicator,
   Modal,
@@ -41,8 +42,12 @@ const C = {
 
 const SERVICE_STATUSES = [
   { value: 'all', label: 'All Status', icon: 'apps' },
-  { value: 'PENDING_PAYMENT', label: 'Pending Payment', icon: 'time' },
-  { value: 'SCHEDULED', label: 'Scheduled', icon: 'calendar' },
+  { value: 'SLOT_SELECTED', label: 'Slot Selected', icon: 'time' },
+  { value: 'PAYMENT_UPLOADED', label: 'Payment Uploaded', icon: 'cloud-upload' },
+  { value: 'PAYMENT_VERIFIED', label: 'Payment Verified', icon: 'checkmark-circle' },
+  { value: 'PAYMENT_REJECTED', label: 'Payment Rejected', icon: 'close-circle' },
+  { value: 'ENGINEER_ASSIGNED', label: 'Engineer Assigned', icon: 'person' },
+  { value: 'ACCEPTED_BY_ENGINEER', label: 'Engineer Accepted', icon: 'person' },
   { value: 'IN_PROGRESS', label: 'In Progress', icon: 'construct' },
   { value: 'COMPLETED', label: 'Completed', icon: 'checkmark-circle' },
   { value: 'CANCELLED', label: 'Cancelled', icon: 'close-circle' },
@@ -50,8 +55,9 @@ const SERVICE_STATUSES = [
 
 const ORDER_STATUSES = [
   { value: 'all', label: 'All Status', icon: 'apps' },
-  { value: 'PENDING', label: 'Pending', icon: 'time' },
-  { value: 'PLACED', label: 'Placed', icon: 'time' },
+  { value: 'PAYMENT_PENDING', label: 'Payment Pending', icon: 'time' },
+  { value: 'PAYMENT_REJECTED', label: 'Payment Rejected', icon: 'close-circle' },
+  { value: 'PLACED', label: 'Placed', icon: 'receipt' },
   { value: 'CONFIRMED', label: 'Confirmed', icon: 'checkmark-circle' },
   { value: 'PROCESSING', label: 'Processing', icon: 'cube' },
   { value: 'SHIPPED', label: 'Shipped', icon: 'car' },
@@ -60,19 +66,23 @@ const ORDER_STATUSES = [
 ];
 
 const SERVICE_STATUS_CONFIG = {
-  PENDING_PAYMENT: { bg: '#FEF3C7', color: '#D97706', icon: 'time', label: 'Pending Payment', gradient: ['#FBBF24', '#F59E0B'] },
+  DRAFT: { bg: '#F1F5F9', color: '#64748B', icon: 'document-outline', label: 'Draft', gradient: ['#94A3B8', '#64748B'] },
+  SLOT_SELECTED: { bg: '#FEF3C7', color: '#D97706', icon: 'time', label: 'Slot Selected', gradient: ['#FBBF24', '#F59E0B'] },
   PAYMENT_UPLOADED: { bg: '#E0E7FF', color: '#6366F1', icon: 'cloud-upload', label: 'Payment Uploaded', gradient: ['#818CF8', '#6366F1'] },
   PAYMENT_VERIFIED: { bg: '#D1FAE5', color: '#059669', icon: 'checkmark-circle', label: 'Payment Verified', gradient: ['#34D399', '#10B981'] },
-  SLOT_SELECTED: { bg: '#FEF3C7', color: '#D97706', icon: 'time', label: 'Slot Selected', gradient: ['#FBBF24', '#F59E0B'] },
-  SCHEDULED: { bg: '#DBEAFE', color: '#2563EB', icon: 'calendar', label: 'Scheduled', gradient: ['#60A5FA', '#3B82F6'] },
+  PAYMENT_REJECTED: { bg: '#FEE2E2', color: '#DC2626', icon: 'close-circle', label: 'Payment Rejected', gradient: ['#F87171', '#EF4444'] },
+  ENGINEER_ASSIGNED: { bg: '#DBEAFE', color: '#2563EB', icon: 'person', label: 'Engineer Assigned', gradient: ['#60A5FA', '#3B82F6'] },
+  ACCEPTED_BY_ENGINEER: { bg: '#D1FAE5', color: '#059669', icon: 'person', label: 'Engineer Accepted', gradient: ['#34D399', '#10B981'] },
   IN_PROGRESS: { bg: '#E0E7FF', color: '#4F46E5', icon: 'construct', label: 'In Progress', gradient: ['#818CF8', '#6366F1'] },
+  REJECTED_BY_ENGINEER: { bg: '#FEE2E2', color: '#DC2626', icon: 'close-circle', label: 'Engineer Rejected', gradient: ['#F87171', '#EF4444'] },
   COMPLETED: { bg: '#D1FAE5', color: '#059669', icon: 'checkmark-done', label: 'Completed', gradient: ['#34D399', '#10B981'] },
   CANCELLED: { bg: '#FEE2E2', color: '#DC2626', icon: 'close-circle', label: 'Cancelled', gradient: ['#F87171', '#EF4444'] },
 };
 
 const ORDER_STATUS_CONFIG = {
-  PENDING: { bg: '#FEF3C7', color: '#D97706', icon: 'time', label: 'Pending', gradient: ['#FBBF24', '#F59E0B'] },
-  PLACED: { bg: '#FEF3C7', color: '#D97706', icon: 'receipt', label: 'Placed', gradient: ['#FBBF24', '#F59E0B'] },
+  PAYMENT_PENDING: { bg: '#FEF3C7', color: '#D97706', icon: 'time', label: 'Payment Pending', gradient: ['#FBBF24', '#F59E0B'] },
+  PAYMENT_REJECTED: { bg: '#FEE2E2', color: '#DC2626', icon: 'close-circle', label: 'Payment Rejected', gradient: ['#F87171', '#EF4444'] },
+  PLACED: { bg: '#E0E7FF', color: '#4F46E5', icon: 'receipt', label: 'Order Placed', gradient: ['#818CF8', '#6366F1'] },
   CONFIRMED: { bg: '#DBEAFE', color: '#2563EB', icon: 'checkmark-circle', label: 'Confirmed', gradient: ['#60A5FA', '#3B82F6'] },
   PROCESSING: { bg: '#E0E7FF', color: '#4F46E5', icon: 'cube', label: 'Processing', gradient: ['#818CF8', '#6366F1'] },
   SHIPPED: { bg: '#F5F3FF', color: '#7C3AED', icon: 'car', label: 'Shipped', gradient: ['#A78BFA', '#8B5CF6'] },
@@ -149,7 +159,7 @@ export default function OrderTrackingScreen({ navigation }) {
   const [activeTab, setActiveTab] = useState('services');
 
   const [serviceBookings, setServiceBookings] = useState([]);
-  const [marketplaceOrders, setMarketplaceOrders] = useState([]);
+  const [trackingItems, setTrackingItems] = useState([]);
 
   const [restaurants, setRestaurants] = useState([]);
   const [currentRestaurant, setCurrentRestaurant] = useState(null);
@@ -188,12 +198,79 @@ export default function OrderTrackingScreen({ navigation }) {
 
         if (targetRestaurant) {
           setCurrentRestaurant(targetRestaurant);
-          const [bookingsRes, ordersRes] = await Promise.all([
+          const [bookingsRes, ordersRes, paymentsRes] = await Promise.all([
             api.get(`/owner/bookings?restaurantId=${targetRestaurant.id}`).catch(() => ({ data: { ok: false } })),
             api.get(`/owner/marketplace/orders?restaurantId=${targetRestaurant.id}`).catch(() => ({ data: { ok: false } })),
+            api.get(`/owner/marketplace/payments?restaurantId=${targetRestaurant.id}`).catch(() => ({ data: { ok: false } })),
           ]);
           if (bookingsRes.data.ok) setServiceBookings(bookingsRes.data.data || []);
-          if (ordersRes.data.ok) setMarketplaceOrders(ordersRes.data.data || []);
+
+          // Build unified tracking items from payments + orders
+          const orders = ordersRes.data.ok ? (ordersRes.data.data || []) : [];
+          const payments = paymentsRes.data.ok ? (paymentsRes.data.data || []) : [];
+
+          // Map orderId → order for quick lookup
+          const orderMap = {};
+          for (const order of orders) {
+            orderMap[order.id] = order;
+          }
+
+          // Map orderId → payment (payment.orderId links to order after verification)
+          const orderIdToPayment = {};
+          const unlinkedPayments = [];
+          for (const payment of payments) {
+            if (payment.orderId && orderMap[payment.orderId]) {
+              orderIdToPayment[payment.orderId] = payment;
+            } else {
+              // Payment not yet linked to an order (PENDING or REJECTED)
+              unlinkedPayments.push(payment);
+            }
+          }
+
+          const items = [];
+
+          // 1. Orders that have a linked payment → full tracking
+          for (const order of orders) {
+            const payment = orderIdToPayment[order.id];
+            const combinedStatus = order.status;
+            const itemNames = (order.items || [])
+              .map(i => i.product?.name || i.name || '')
+              .filter(Boolean)
+              .join(', ');
+            items.push({
+              id: order.id,
+              payment: payment || null,
+              order,
+              combinedStatus,
+              totalAmount: order.totalAmount,
+              createdAt: payment?.createdAt || order.createdAt,
+              vendorName: payment?.vendor?.name || order.vendor?.name || '',
+              itemNames,
+              items: order.items,
+            });
+          }
+
+          // 2. Payments without linked orders (PENDING / REJECTED)
+          for (const payment of unlinkedPayments) {
+            const combinedStatus = payment.status === 'REJECTED' ? 'PAYMENT_REJECTED' : 'PAYMENT_PENDING';
+            const paymentItems = payment.items || [];
+            const itemNames = paymentItems.map(i => i.name || '').filter(Boolean).join(', ');
+            items.push({
+              id: payment.id,
+              payment,
+              order: null,
+              combinedStatus,
+              totalAmount: payment.totalAmount,
+              createdAt: payment.createdAt,
+              vendorName: payment.vendor?.name || '',
+              itemNames,
+              items: paymentItems,
+            });
+          }
+
+          // Sort by date descending
+          items.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+          setTrackingItems(items);
         }
       }
     } catch (error) {
@@ -215,7 +292,7 @@ export default function OrderTrackingScreen({ navigation }) {
     if (restaurant.id !== currentRestaurant?.id) {
       setCurrentRestaurant(restaurant);
       setServiceBookings([]);
-      setMarketplaceOrders([]);
+      setTrackingItems([]);
       loadData(restaurant.id);
     }
   };
@@ -233,10 +310,13 @@ export default function OrderTrackingScreen({ navigation }) {
     return matchesSearch && matchesStatus;
   });
 
-  const filteredOrders = marketplaceOrders.filter((o) => {
+  const filteredOrders = trackingItems.filter((t) => {
+    const q = searchQuery.toLowerCase();
     const matchesSearch = !searchQuery ||
-      o.id?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = orderStatusFilter === 'all' || o.status === orderStatusFilter;
+      t.id?.toLowerCase().includes(q) ||
+      t.vendorName?.toLowerCase().includes(q) ||
+      t.itemNames?.toLowerCase().includes(q);
+    const matchesStatus = orderStatusFilter === 'all' || t.combinedStatus === orderStatusFilter;
     return matchesSearch && matchesStatus;
   });
 
@@ -247,37 +327,68 @@ export default function OrderTrackingScreen({ navigation }) {
     ORDER_STATUS_CONFIG[status] || { bg: '#F3F4F6', color: C.muted, icon: 'time', label: status, gradient: ['#9CA3AF', '#6B7280'] };
 
   const getServiceTimeline = (booking) => {
-    const statusOrder = ['PENDING_PAYMENT', 'PAYMENT_VERIFIED', 'SCHEDULED', 'IN_PROGRESS', 'COMPLETED'];
-    const currentIndex = statusOrder.indexOf(booking.status);
     const isCancelled = booking.status === 'CANCELLED';
+    // Map status to step number (matching the 6-step service booking flow)
+    const stepMap = {
+      DRAFT: 0, SLOT_SELECTED: 0,
+      PAYMENT_UPLOADED: 1, PAYMENT_REJECTED: 1,
+      PAYMENT_VERIFIED: 2,
+      ENGINEER_ASSIGNED: 3, ACCEPTED_BY_ENGINEER: 3, REJECTED_BY_ENGINEER: 3,
+      IN_PROGRESS: 4,
+      COMPLETED: 5,
+    };
+    const currentStep = stepMap[booking.status] ?? -1;
+
     return [
-      { title: 'Order Placed', description: 'Service request created', date: booking.createdAt, step: 0 },
-      { title: 'Payment Verified', description: 'Payment confirmed', step: 1 },
-      { title: 'Scheduled', description: booking.slotStartDateTime ? `Scheduled for ${formatDate(booking.slotStartDateTime)}` : 'Pending scheduling', step: 2 },
-      { title: 'In Progress', description: booking.engineerAssignments?.[0]?.engineer?.name ? `Assigned to ${booking.engineerAssignments[0].engineer.name}` : 'Engineer working', step: 3 },
-      { title: isCancelled ? 'Cancelled' : 'Completed', description: isCancelled ? 'Service cancelled' : 'Service completed', step: 4 },
+      { title: 'Booked', description: 'Service request created', date: booking.createdAt, step: 0 },
+      { title: 'Payment', description: booking.status === 'PAYMENT_REJECTED' ? 'Payment rejected — re-upload required' : 'Payment uploaded', step: 1 },
+      { title: 'Verified', description: 'Payment confirmed', step: 2 },
+      { title: 'Assigned', description: booking.engineerAssignments?.[0]?.engineer?.name ? `Engineer: ${booking.engineerAssignments[0].engineer.name}` : 'Engineer assignment pending', step: 3 },
+      { title: 'In Progress', description: booking.slotStartDateTime ? `Slot: ${formatDate(booking.slotStartDateTime)}` : 'Engineer working', step: 4 },
+      { title: isCancelled ? 'Cancelled' : 'Completed', description: isCancelled ? 'Service cancelled' : 'Service completed', step: 5 },
     ].map((item, index, arr) => ({
       ...item,
-      isCompleted: !isCancelled && currentIndex >= item.step,
-      isCurrent: !isCancelled && currentIndex === item.step,
+      isCompleted: !isCancelled && currentStep > item.step,
+      isCurrent: !isCancelled && currentStep === item.step,
       isLast: index === arr.length - 1,
     }));
   };
 
-  const getOrderTimeline = (order) => {
-    const statusOrder = ['PLACED', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED'];
-    let currentIndex = statusOrder.indexOf(order.status);
-    const isCancelled = order.status === 'CANCELLED';
+  const getTrackingTimeline = (tracking) => {
+    const payment = tracking.payment;
+    const order = tracking.order;
+    const isCancelled = order?.status === 'CANCELLED';
+
+    // 6-step flow: Payment → Verified → Confirmed → Processing → Shipped → Delivered
+    let currentStep = 0;
+    if (payment) {
+      if (payment.status === 'PENDING') currentStep = 0;
+      else if (payment.status === 'REJECTED') currentStep = 0;
+      else if (payment.status === 'VERIFIED') {
+        if (!order) currentStep = 1;
+        else {
+          const orderStepMap = { PLACED: 2, CONFIRMED: 2, PROCESSING: 3, SHIPPED: 4, DELIVERED: 5 };
+          currentStep = orderStepMap[order.status] ?? 2;
+        }
+      }
+    } else if (order) {
+      const orderStepMap = { PLACED: 2, CONFIRMED: 2, PROCESSING: 3, SHIPPED: 4, DELIVERED: 5 };
+      currentStep = orderStepMap[order.status] ?? 2;
+    }
+
+    const isRejected = payment?.status === 'REJECTED';
+
     return [
-      { title: 'Order Placed', description: 'Your order has been placed', date: order.createdAt, step: 0 },
-      { title: 'Confirmed', description: 'Order confirmed by vendor', step: 1 },
-      { title: 'Processing', description: 'Order being prepared', step: 2 },
-      { title: 'Shipped', description: 'Order dispatched', step: 3 },
-      { title: isCancelled ? 'Cancelled' : 'Delivered', description: isCancelled ? 'Order cancelled' : 'Order delivered', step: 4 },
+      { title: 'Payment Submitted', description: isRejected ? 'Payment was rejected — re-submit required' : 'Payment screenshot uploaded', date: payment?.createdAt, step: 0 },
+      { title: 'Payment Verified', description: 'Vendor verified your payment', date: payment?.status === 'VERIFIED' ? payment.updatedAt : null, step: 1 },
+      { title: 'Order Confirmed', description: 'Order created & confirmed', date: order?.createdAt, step: 2 },
+      { title: 'Processing', description: 'Order being prepared', step: 3 },
+      { title: 'Shipped', description: 'Order dispatched', step: 4 },
+      { title: isCancelled ? 'Cancelled' : 'Delivered', description: isCancelled ? 'Order cancelled' : 'Order delivered', step: 5 },
     ].map((item, index, arr) => ({
       ...item,
-      isCompleted: !isCancelled && currentIndex >= item.step,
-      isCurrent: !isCancelled && currentIndex === item.step,
+      isCompleted: !isCancelled && !isRejected && currentStep > item.step,
+      isCurrent: !isCancelled && !isRejected && currentStep === item.step,
       isLast: index === arr.length - 1,
     }));
   };
@@ -288,11 +399,21 @@ export default function OrderTrackingScreen({ navigation }) {
 
   // Stats
   const activeServices = serviceBookings.filter(b => !['COMPLETED', 'CANCELLED'].includes(b.status)).length;
-  const activeOrders = marketplaceOrders.filter(o => !['DELIVERED', 'CANCELLED'].includes(o.status)).length;
+  const activeOrders = trackingItems.filter(t => !['DELIVERED', 'CANCELLED'].includes(t.combinedStatus)).length;
+
+  // Helper: get service item names from booking items
+  const getBookingItemNames = (booking) => {
+    if (!booking.items || booking.items.length === 0) return '';
+    return booking.items
+      .map(i => i.serviceItem?.name || i.partItem?.name || '')
+      .filter(Boolean)
+      .join(', ');
+  };
 
   // Render Service Card
   const renderServiceCard = ({ item }) => {
     const ss = getServiceStatusStyle(item.status);
+    const itemNames = getBookingItemNames(item);
     return (
       <TouchableOpacity
         style={s.card}
@@ -307,6 +428,9 @@ export default function OrderTrackingScreen({ navigation }) {
             </LinearGradient>
             <View style={s.cardTopInfo}>
               <Text style={s.cardTitle} numberOfLines={1}>{item.equipment?.name || 'General Service'}</Text>
+              {itemNames ? (
+                <Text style={s.cardItemNames} numberOfLines={1}>{itemNames}</Text>
+              ) : null}
               <Text style={s.cardId}>#{item.id?.slice(0, 8)}</Text>
             </View>
             <Icon name="chevron-forward" size={scale(18)} color={C.muted} />
@@ -334,9 +458,9 @@ export default function OrderTrackingScreen({ navigation }) {
     );
   };
 
-  // Render Order Card
+  // Render Order/Tracking Card
   const renderOrderCard = ({ item }) => {
-    const os = getOrderStatusStyle(item.status);
+    const os = getOrderStatusStyle(item.combinedStatus);
     const itemCount = item.items?.length || 0;
     return (
       <TouchableOpacity
@@ -351,7 +475,12 @@ export default function OrderTrackingScreen({ navigation }) {
               <Icon name={os.icon} size={scale(16)} color="#fff" />
             </LinearGradient>
             <View style={s.cardTopInfo}>
-              <Text style={s.cardTitle} numberOfLines={1}>{itemCount} Item{itemCount !== 1 ? 's' : ''}</Text>
+              <Text style={s.cardTitle} numberOfLines={1}>
+                {item.vendorName || `${itemCount} Item${itemCount !== 1 ? 's' : ''}`}
+              </Text>
+              {item.itemNames ? (
+                <Text style={s.cardItemNames} numberOfLines={1}>{item.itemNames}</Text>
+              ) : null}
               <Text style={s.cardId}>#{item.id?.slice(0, 8)}</Text>
             </View>
             <Icon name="chevron-forward" size={scale(18)} color={C.muted} />
@@ -501,7 +630,7 @@ export default function OrderTrackingScreen({ navigation }) {
           <Icon name="search" size={scale(17)} color={C.muted} />
           <TextInput
             style={s.searchInput}
-            placeholder={activeTab === 'services' ? 'Search by ID or equipment...' : 'Search by order ID...'}
+            placeholder={activeTab === 'services' ? 'Search by ID or equipment...' : 'Search by ID, vendor, item...'}
             placeholderTextColor="#9CA3AF"
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -556,8 +685,9 @@ export default function OrderTrackingScreen({ navigation }) {
       )}
 
       {/* ========== SERVICE DETAIL MODAL ========== */}
-      <Modal visible={serviceDetailVisible} animationType="slide" transparent>
+      <Modal visible={serviceDetailVisible} animationType="slide" transparent statusBarTranslucent>
         <View style={s.detailOverlay}>
+          <Pressable style={s.detailOverlayBg} onPress={() => setServiceDetailVisible(false)} />
           <View style={s.detailContent}>
             <View style={s.detailHeader}>
               <Text style={s.detailTitle}>Service Booking</Text>
@@ -565,7 +695,7 @@ export default function OrderTrackingScreen({ navigation }) {
                 <Icon name="close" size={scale(24)} color={C.ink} />
               </TouchableOpacity>
             </View>
-            <ScrollView style={s.detailBody} contentContainerStyle={{ padding: scale(16), paddingBottom: scale(30) }} nestedScrollEnabled keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator bounces>
+            <ScrollView style={s.detailBody} contentContainerStyle={{ padding: scale(16), paddingBottom: scale(30) }} nestedScrollEnabled keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={true} overScrollMode="always">
               {selectedService ? (
                 <>
                   {(() => {
@@ -614,6 +744,33 @@ export default function OrderTrackingScreen({ navigation }) {
                       </View>
                     </View>
                   </View>
+                  {selectedService.items?.length > 0 && (
+                    <View style={s.modalSection}>
+                      <View style={s.modalSectionHeader}>
+                        <View style={[s.modalSectionIcon, { backgroundColor: '#F5F3FF' }]}>
+                          <Icon name="list" size={scale(16)} color="#7C3AED" />
+                        </View>
+                        <Text style={s.modalSectionTitle}>Ordered Items</Text>
+                      </View>
+                      <View style={s.modalInfoCard}>
+                        {selectedService.items.map((si, idx) => (
+                          <View key={idx} style={s.orderItemRow}>
+                            <View style={{ flex: 1 }}>
+                              <Text style={s.orderItemName}>
+                                {si.serviceItem?.name || si.partItem?.name || 'Item'}
+                              </Text>
+                              <Text style={s.orderItemQty}>
+                                {si.itemType === 'PART' ? 'Part' : 'Service'} · Qty: {si.qty}
+                              </Text>
+                            </View>
+                            <Text style={s.orderItemPrice}>
+                              {formatPrice(si.priceSnapshot * si.qty)}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  )}
                   {selectedService.engineerAssignments?.[0] && (
                     <View style={s.modalSection}>
                       <View style={s.modalSectionHeader}>
@@ -668,8 +825,9 @@ export default function OrderTrackingScreen({ navigation }) {
       </Modal>
 
       {/* ========== ORDER DETAIL MODAL ========== */}
-      <Modal visible={orderDetailVisible} animationType="slide" transparent>
+      <Modal visible={orderDetailVisible} animationType="slide" transparent statusBarTranslucent>
         <View style={s.detailOverlay}>
+          <Pressable style={s.detailOverlayBg} onPress={() => setOrderDetailVisible(false)} />
           <View style={s.detailContent}>
             <View style={s.detailHeader}>
               <Text style={s.detailTitle}>Marketplace Order</Text>
@@ -677,11 +835,11 @@ export default function OrderTrackingScreen({ navigation }) {
                 <Icon name="close" size={scale(24)} color={C.ink} />
               </TouchableOpacity>
             </View>
-            <ScrollView style={s.detailBody} contentContainerStyle={{ padding: scale(16), paddingBottom: scale(30) }} nestedScrollEnabled keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator bounces>
+            <ScrollView style={s.detailBody} contentContainerStyle={{ padding: scale(16), paddingBottom: scale(30) }} nestedScrollEnabled keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={true} overScrollMode="always">
               {selectedOrder ? (
                 <>
                   {(() => {
-                    const os = getOrderStatusStyle(selectedOrder.status);
+                    const os = getOrderStatusStyle(selectedOrder.combinedStatus);
                     return (
                       <LinearGradient colors={os.gradient} style={s.modalStatusBanner}>
                         <View style={s.modalStatusIcon}>
@@ -689,11 +847,41 @@ export default function OrderTrackingScreen({ navigation }) {
                         </View>
                         <View>
                           <Text style={s.modalStatusLabel}>{os.label}</Text>
-                          <Text style={s.modalStatusDate}>Ordered {formatTimeAgo(selectedOrder.createdAt)}</Text>
+                          <Text style={s.modalStatusDate}>{formatTimeAgo(selectedOrder.createdAt)}</Text>
                         </View>
                       </LinearGradient>
                     );
                   })()}
+
+                  {/* Payment Rejected Warning */}
+                  {selectedOrder.combinedStatus === 'PAYMENT_REJECTED' && (
+                    <View style={s.rejectedWarning}>
+                      <Icon name="warning" size={scale(18)} color="#DC2626" />
+                      <Text style={s.rejectedWarningText}>
+                        Your payment was rejected. Please re-submit payment to proceed.
+                      </Text>
+                    </View>
+                  )}
+
+                  {/* Vendor Info */}
+                  {selectedOrder.vendorName ? (
+                    <View style={s.modalSection}>
+                      <View style={s.modalSectionHeader}>
+                        <View style={[s.modalSectionIcon, { backgroundColor: '#FEF2F2' }]}>
+                          <Icon name="storefront" size={scale(16)} color={C.primary} />
+                        </View>
+                        <Text style={s.modalSectionTitle}>Vendor</Text>
+                      </View>
+                      <View style={s.modalInfoCard}>
+                        <View style={[s.modalInfoRow, { borderBottomWidth: 0 }]}>
+                          <Text style={s.modalInfoLabel}>Name</Text>
+                          <Text style={s.modalInfoValue}>{selectedOrder.vendorName}</Text>
+                        </View>
+                      </View>
+                    </View>
+                  ) : null}
+
+                  {/* Order Items */}
                   <View style={s.modalSection}>
                     <View style={s.modalSectionHeader}>
                       <View style={[s.modalSectionIcon, { backgroundColor: '#F5F3FF' }]}>
@@ -705,7 +893,7 @@ export default function OrderTrackingScreen({ navigation }) {
                       {selectedOrder.items?.map((item, index) => (
                         <View key={index} style={s.orderItemRow}>
                           <View style={{ flex: 1 }}>
-                            <Text style={s.orderItemName}>{item.product?.name || 'Product'}</Text>
+                            <Text style={s.orderItemName}>{item.product?.name || item.name || 'Product'}</Text>
                             <Text style={s.orderItemQty}>Qty: {item.qty || item.quantity || 1}</Text>
                           </View>
                           <Text style={s.orderItemPrice}>
@@ -719,15 +907,17 @@ export default function OrderTrackingScreen({ navigation }) {
                       </View>
                     </View>
                   </View>
+
+                  {/* 7-Step Tracking Timeline */}
                   <View style={s.modalSection}>
                     <View style={s.modalSectionHeader}>
                       <View style={[s.modalSectionIcon, { backgroundColor: '#ECFDF5' }]}>
                         <Icon name="git-branch" size={scale(16)} color="#059669" />
                       </View>
-                      <Text style={s.modalSectionTitle}>Delivery Timeline</Text>
+                      <Text style={s.modalSectionTitle}>Tracking Timeline</Text>
                     </View>
                     <View style={s.tlWrapper}>
-                      {getOrderTimeline(selectedOrder).map((step, index) => (
+                      {getTrackingTimeline(selectedOrder).map((step, index) => (
                         <TimelineStep key={index} step={step} isLast={step.isLast} />
                       ))}
                     </View>
@@ -1051,7 +1241,8 @@ const s = StyleSheet.create({
   },
   cardTopInfo: { flex: 1 },
   cardTitle: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink },
-  cardId: { fontSize: moderateScale(11), color: C.muted, marginTop: scale(2) },
+  cardItemNames: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(2) },
+  cardId: { fontSize: moderateScale(11), color: '#9CA3AF', marginTop: scale(2) },
   cardBottomRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1106,8 +1297,9 @@ const s = StyleSheet.create({
   emptyBtnText: { fontSize: moderateScale(14), fontWeight: '600', color: C.primary },
 
   // Detail Modal - exact copy from EquipmentProfileScreen
-  detailOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  detailContent: { backgroundColor: C.card, borderTopLeftRadius: scale(24), borderTopRightRadius: scale(24), height: '85%' },
+  detailOverlay: { flex: 1 },
+  detailOverlayBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' },
+  detailContent: { backgroundColor: C.card, borderTopLeftRadius: scale(24), borderTopRightRadius: scale(24), height: SCREEN_HEIGHT * 0.85, position: 'absolute', bottom: 0, left: 0, right: 0 },
   detailHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     padding: scale(16), borderBottomWidth: 1, borderBottomColor: C.border,
@@ -1320,6 +1512,25 @@ const s = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   tlDate: { fontSize: moderateScale(11), color: C.muted },
+
+  // Rejected Warning
+  rejectedWarning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(10),
+    padding: scale(14),
+    backgroundColor: '#FEF2F2',
+    borderRadius: scale(12),
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    marginBottom: scale(16),
+  },
+  rejectedWarningText: {
+    flex: 1,
+    fontSize: moderateScale(13),
+    fontWeight: '600',
+    color: '#DC2626',
+  },
 
   // Picker Sheet
   pickerOverlay: {

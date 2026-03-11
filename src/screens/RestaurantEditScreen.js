@@ -24,6 +24,18 @@ const C = {
   danger: '#EF4444',
 };
 
+const OUTLET_TYPES = [
+  { key: 'CLOUD_KITCHEN', label: 'Cloud Kitchen' },
+  { key: 'QSR', label: 'QSR (Quick Service)' },
+  { key: 'FINE_DINE', label: 'Fine Dine' },
+  { key: 'HOTEL', label: 'Hotel' },
+  { key: 'CAFE', label: 'Cafe' },
+  { key: 'CATERING', label: 'Catering' },
+  { key: 'HOSPITAL', label: 'Hospital' },
+  { key: 'INDUSTRIES', label: 'Industries' },
+  { key: 'INSTITUTE', label: 'Institute' },
+];
+
 export default function RestaurantEditScreen({ navigation, route }) {
   const { restaurantId } = route.params;
   const [loading, setLoading] = useState(true);
@@ -33,6 +45,7 @@ export default function RestaurantEditScreen({ navigation, route }) {
     address: '',
     city: '',
     pincode: '',
+    outletType: '',
     fssaiNumber: '',
   });
   const [restaurantImageUrl, setRestaurantImageUrl] = useState(null);
@@ -45,6 +58,7 @@ export default function RestaurantEditScreen({ navigation, route }) {
   const [selectedStateName, setSelectedStateName] = useState('');
   const [showStatePicker, setShowStatePicker] = useState(false);
   const [showCityPicker, setShowCityPicker] = useState(false);
+  const [showOutletTypePicker, setShowOutletTypePicker] = useState(false);
 
   useEffect(() => {
     loadRestaurant();
@@ -64,6 +78,7 @@ export default function RestaurantEditScreen({ navigation, route }) {
           address: restaurant.address || '',
           city: restaurant.city || '',
           pincode: restaurant.pincode || '',
+          outletType: restaurant.outletType || '',
           fssaiNumber: restaurant.fssaiNumber || '',
         });
         setRestaurantImageUrl(restaurant.restaurantImageUrl);
@@ -246,6 +261,7 @@ export default function RestaurantEditScreen({ navigation, route }) {
         address: address.trim(),
         city: city.trim(),
         pincode: pincode || undefined,
+        outletType: form.outletType || undefined,
         fssaiNumber: fssaiNumber || undefined,
         restaurantImageUrl: finalRestaurantImageUrl || undefined,
         fssaiCertificateUrl: finalFssaiCertificateUrl || undefined,
@@ -395,6 +411,20 @@ export default function RestaurantEditScreen({ navigation, route }) {
           />
         </View>
 
+        {/* Outlet Type */}
+        <Text style={styles.pickerLabel}>Outlet Type</Text>
+        <TouchableOpacity
+          style={styles.pickerBtn}
+          onPress={() => setShowOutletTypePicker(true)}
+          disabled={saving}
+        >
+          <Icon name="storefront" size={scale(18)} color={C.primary} style={styles.inputIcon} />
+          <Text style={form.outletType ? styles.pickerBtnText : styles.pickerBtnPlaceholder}>
+            {form.outletType ? OUTLET_TYPES.find(o => o.key === form.outletType)?.label : 'Select Outlet Type'}
+          </Text>
+          <Icon name="chevron-down" size={scale(18)} color={C.muted} />
+        </TouchableOpacity>
+
         {/* FSSAI Details */}
         <Text style={styles.sectionTitle}>FSSAI Details</Text>
 
@@ -522,6 +552,37 @@ export default function RestaurantEditScreen({ navigation, route }) {
               {cities.length === 0 && (
                 <Text style={styles.pickerEmpty}>No cities available for this state</Text>
               )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Outlet Type Picker Modal */}
+      <Modal visible={showOutletTypePicker} transparent animationType="slide">
+        <View style={styles.pickerOverlay}>
+          <View style={styles.pickerContainer}>
+            <View style={styles.pickerHeader}>
+              <Text style={styles.pickerTitle}>Select Outlet Type</Text>
+              <TouchableOpacity onPress={() => setShowOutletTypePicker(false)}>
+                <Icon name="close" size={scale(24)} color={C.ink} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.pickerList}>
+              {OUTLET_TYPES.map(type => (
+                <TouchableOpacity
+                  key={type.key}
+                  style={[styles.pickerItem, form.outletType === type.key && styles.pickerItemActive]}
+                  onPress={() => {
+                    handleChange('outletType', type.key);
+                    setShowOutletTypePicker(false);
+                  }}
+                >
+                  <Text style={[styles.pickerItemText, form.outletType === type.key && styles.pickerItemTextActive]}>
+                    {type.label}
+                  </Text>
+                  {form.outletType === type.key && <Icon name="checkmark" size={scale(20)} color={C.primary} />}
+                </TouchableOpacity>
+              ))}
             </ScrollView>
           </View>
         </View>

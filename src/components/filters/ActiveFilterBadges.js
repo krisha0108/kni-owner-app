@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { scale, moderateScale } from '../../utils/responsive';
 
 const C = {
   primary: '#EF3A3A',
@@ -104,7 +105,7 @@ export default function ActiveFilterBadges({ filters, onRemove, statusOptions })
             style={[styles.badge, { backgroundColor: filter.colors.bg }]}
           >
             <View style={[styles.badgeIcon, { backgroundColor: filter.colors.color + '20' }]}>
-              <Icon name={filter.icon} size={12} color={filter.colors.color} />
+              <Icon name={filter.icon} size={scale(12)} color={filter.colors.color} />
             </View>
             <Text style={[styles.badgeText, { color: filter.colors.color }]} numberOfLines={1}>
               {filter.label}
@@ -114,7 +115,7 @@ export default function ActiveFilterBadges({ filters, onRemove, statusOptions })
               style={[styles.closeBtn, { backgroundColor: filter.colors.color + '20' }]}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Icon name="close" size={12} color={filter.colors.color} />
+              <Icon name="close" size={scale(12)} color={filter.colors.color} />
             </TouchableOpacity>
           </View>
         ))}
@@ -125,71 +126,71 @@ export default function ActiveFilterBadges({ filters, onRemove, statusOptions })
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 8,
+    paddingVertical: scale(8),
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 10,
+    paddingHorizontal: scale(16),
+    marginBottom: scale(10),
   },
   activeIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: scale(8),
   },
   activeDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: scale(8),
+    height: scale(8),
+    borderRadius: scale(4),
     backgroundColor: C.primary,
   },
   activeText: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     fontWeight: '700',
     color: C.ink,
   },
   clearAllBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
+    paddingHorizontal: scale(12),
+    paddingVertical: scale(6),
+    borderRadius: scale(8),
     backgroundColor: C.bg,
   },
   clearAllText: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     fontWeight: '600',
     color: C.muted,
   },
   scrollContent: {
-    paddingHorizontal: 16,
-    gap: 10,
+    paddingHorizontal: scale(16),
+    gap: scale(10),
   },
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingLeft: 6,
-    paddingRight: 6,
-    paddingVertical: 6,
-    borderRadius: 12,
+    gap: scale(8),
+    paddingLeft: scale(6),
+    paddingRight: scale(6),
+    paddingVertical: scale(6),
+    borderRadius: scale(12),
   },
   badgeIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 8,
+    width: scale(24),
+    height: scale(24),
+    borderRadius: scale(8),
     alignItems: 'center',
     justifyContent: 'center',
   },
   badgeText: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     fontWeight: '600',
-    maxWidth: 120,
+    maxWidth: scale(120),
   },
   closeBtn: {
-    width: 22,
-    height: 22,
-    borderRadius: 7,
+    width: scale(22),
+    height: scale(22),
+    borderRadius: scale(7),
     alignItems: 'center',
     justifyContent: 'center',
   },

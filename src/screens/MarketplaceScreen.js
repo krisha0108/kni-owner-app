@@ -30,6 +30,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useRestaurant } from '../context/RestaurantContext';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
+import PriceRequestModal from '../components/PriceRequestModal';
 
 import { scale, moderateScale } from '../utils/responsive';
 import { usePermissions } from '../utils/usePermissions';
@@ -89,6 +90,8 @@ export default function MarketplaceScreen({ navigation }) {
   const [categories, setCategories] = useState([]);
   const [cart, setCart] = useState([]);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [priceRequestProduct, setPriceRequestProduct] = useState(null);
+  const [isPriceRequestOpen, setIsPriceRequestOpen] = useState(false);
 
   // Animate cart button when items added
   const animateCart = () => {
@@ -213,6 +216,16 @@ export default function MarketplaceScreen({ navigation }) {
     }
   };
 
+  // Request Price for "Price on Request" products
+  const handleRequestPrice = (product) => {
+    if (!selectedRestaurantId) {
+      Alert.alert('Error', 'Please select a restaurant first');
+      return;
+    }
+    setPriceRequestProduct(product);
+    setIsPriceRequestOpen(true);
+  };
+
   const getCartTotal = () => cart.reduce((total, item) => total + item.product.price * item.quantity, 0);
   const getCartItemQuantity = (productId) => cart.find(i => i.product.id === productId)?.quantity || 0;
 
@@ -303,14 +316,72 @@ export default function MarketplaceScreen({ navigation }) {
               <Text style={st.productDescription} numberOfLines={1}>{item.description}</Text>
             )}
 
-            <Text style={st.productPrice}>{formatPrice(item.price)}</Text>
+            {item.deliveryTime && (
+              <View style={st.deliveryTimeRow}>
+                <Icon name="time-outline" size={scale(11)} color={C.muted} />
+                <Text style={st.deliveryTimeText}>{item.deliveryTime}</Text>
+              </View>
+            )}
+
+            {/* Price / On Request */}
+            {item.priceOnRequest && !item.canPurchase ? (
+              <View style={st.priceOnRequestRow}>
+                {item.priceUnlock?.status === 'UNLOCKED' && !item.priceUnlock.isExpired ? (
+                  <Text style={st.productPrice}>{formatPrice(item.priceUnlock.unlockedPrice)}</Text>
+                ) : (
+                  <View style={st.onRequestBadge}>
+                    <Icon name="pricetag-outline" size={scale(11)} color={C.warning} />
+                    <Text style={st.onRequestText}>On Request</Text>
+                  </View>
+                )}
+                {item.priceUnlock?.status === 'PENDING' && (
+                  <View style={st.requestedBadge}>
+                    <Text style={st.requestedBadgeText}>Requested</Text>
+                  </View>
+                )}
+                {item.priceUnlock?.status === 'DECLINED' && (
+                  <View style={st.declinedBadge}>
+                    <Text style={st.declinedBadgeText}>Declined</Text>
+                  </View>
+                )}
+                {item.priceUnlock?.isExpired && (
+                  <View style={st.expiredBadge}>
+                    <Text style={st.expiredBadgeText}>Expired</Text>
+                  </View>
+                )}
+              </View>
+            ) : (
+              <Text style={st.productPrice}>
+                {item.priceUnlock?.unlockedPrice
+                  ? formatPrice(item.priceUnlock.unlockedPrice)
+                  : formatPrice(item.price)}
+              </Text>
+            )}
           </View>
         </TouchableOpacity>
 
-        {/* Add to Cart Button - Fixed at bottom */}
+        {/* Add to Cart / Request Price Button - Fixed at bottom */}
         {can('marketplace:create') && (
         <View style={st.cardFooter}>
-          {cartQty > 0 ? (
+          {item.priceOnRequest && !item.canPurchase ? (
+            // Price on Request — show Request Price or status
+            item.priceUnlock?.status === 'PENDING' ? (
+              <View style={st.requestedContainer}>
+                <Icon name="time-outline" size={scale(14)} color={C.warning} />
+                <Text style={st.requestedText}>Price Requested</Text>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={st.requestPriceBtn}
+                onPress={() => handleRequestPrice(item)}
+              >
+                <Icon name="pricetag-outline" size={scale(14)} color={C.warning} />
+                <Text style={st.requestPriceText}>
+                  {item.priceUnlock?.status === 'DECLINED' || item.priceUnlock?.isExpired ? 'Re-request' : 'Request Price'}
+                </Text>
+              </TouchableOpacity>
+            )
+          ) : cartQty > 0 ? (
             <View style={st.quantityContainer}>
               <TouchableOpacity
                 style={st.qtyBtn}
@@ -606,6 +677,16 @@ export default function MarketplaceScreen({ navigation }) {
       {renderFloatingCart()}
 
 
+      <PriceRequestModal
+        visible={isPriceRequestOpen}
+        product={priceRequestProduct}
+        restaurantId={selectedRestaurantId}
+        onClose={() => {
+          setIsPriceRequestOpen(false);
+          setPriceRequestProduct(null);
+        }}
+        onSuccess={() => loadData(false)}
+      />
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
       <KniBottomNav navigation={navigation} active="request" cartCount={cart.length} />
     </SafeAreaView>
@@ -843,6 +924,90 @@ const st = StyleSheet.create({
     fontWeight: '800',
     color: C.ink,
     marginTop: scale(6),
+  },
+  priceOnRequestRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: scale(4),
+    marginTop: scale(6),
+  },
+  onRequestBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(3),
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: scale(6),
+    paddingVertical: scale(3),
+    borderRadius: scale(4),
+  },
+  onRequestText: {
+    fontSize: moderateScale(10),
+    fontWeight: '700',
+    color: '#92400E',
+  },
+  requestedBadge: {
+    backgroundColor: '#DBEAFE',
+    paddingHorizontal: scale(6),
+    paddingVertical: scale(2),
+    borderRadius: scale(4),
+  },
+  requestedBadgeText: {
+    fontSize: moderateScale(9),
+    fontWeight: '600',
+    color: '#1E40AF',
+  },
+  declinedBadge: {
+    backgroundColor: '#FEE2E2',
+    paddingHorizontal: scale(6),
+    paddingVertical: scale(2),
+    borderRadius: scale(4),
+  },
+  declinedBadgeText: {
+    fontSize: moderateScale(9),
+    fontWeight: '600',
+    color: '#DC2626',
+  },
+  expiredBadge: {
+    backgroundColor: '#FED7AA',
+    paddingHorizontal: scale(6),
+    paddingVertical: scale(2),
+    borderRadius: scale(4),
+  },
+  expiredBadgeText: {
+    fontSize: moderateScale(9),
+    fontWeight: '600',
+    color: '#C2410C',
+  },
+  requestPriceBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FEF3C7',
+    borderRadius: scale(8),
+    paddingVertical: scale(8),
+    gap: scale(4),
+    borderWidth: 1,
+    borderColor: '#FCD34D',
+  },
+  requestPriceText: {
+    fontSize: moderateScale(11),
+    fontWeight: '700',
+    color: '#92400E',
+  },
+  requestedContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#DBEAFE',
+    borderRadius: scale(8),
+    paddingVertical: scale(8),
+    gap: scale(4),
+  },
+  requestedText: {
+    fontSize: moderateScale(11),
+    fontWeight: '600',
+    color: '#1E40AF',
   },
 
   // Card Footer with Button
@@ -1104,6 +1269,17 @@ const st = StyleSheet.create({
   },
 
   // Product Description
+  deliveryTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(4),
+    marginTop: scale(4),
+  },
+  deliveryTimeText: {
+    fontSize: moderateScale(10),
+    color: C.muted,
+    fontWeight: '500',
+  },
   productDescription: {
     fontSize: moderateScale(11),
     color: C.muted,

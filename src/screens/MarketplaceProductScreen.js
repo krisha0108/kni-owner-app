@@ -11,10 +11,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
-import { getImageUrl } from '../api/client';
+import { api, getImageUrl } from '../api/client';
 import cartService from '../services/marketplaceCartService';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
+import PriceRequestModal from '../components/PriceRequestModal';
 
 import { scale, moderateScale } from '../utils/responsive';
 import { usePermissions } from '../utils/usePermissions';
@@ -39,6 +40,7 @@ export default function MarketplaceProductScreen({ navigation, route }) {
   const [product, setProduct] = useState(productParam || null);
   const [cart, setCart] = useState([]);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [isPriceRequestOpen, setIsPriceRequestOpen] = useState(false);
   const cartQty = cart.find(i => i.product?.id === product?.id)?.quantity || 0;
 
   useEffect(() => {
@@ -108,6 +110,14 @@ export default function MarketplaceProductScreen({ navigation, route }) {
     } catch (error) {
       Alert.alert('Error', error.message || 'Failed to update cart');
     }
+  };
+
+  const handleRequestPrice = () => {
+    if (!restaurantId) {
+      Alert.alert('Error', 'Restaurant not selected');
+      return;
+    }
+    setIsPriceRequestOpen(true);
   };
 
   if (!product) {
@@ -197,7 +207,40 @@ export default function MarketplaceProductScreen({ navigation, route }) {
           </View>
 
           <View style={styles.priceRow}>
-            <Text style={styles.price}>₹{product.price}</Text>
+            {product.priceOnRequest && !product.canPurchase ? (
+              <View style={styles.priceOnRequestContainer}>
+                {product.priceUnlock?.status === 'UNLOCKED' && !product.priceUnlock.isExpired ? (
+                  <Text style={styles.price}>₹{product.priceUnlock.unlockedPrice}</Text>
+                ) : (
+                  <View style={styles.onRequestBadgeLarge}>
+                    <Icon name="pricetag-outline" size={scale(18)} color="#92400E" />
+                    <Text style={styles.onRequestTextLarge}>Price on Request</Text>
+                  </View>
+                )}
+                {product.priceUnlock?.status === 'PENDING' && (
+                  <View style={styles.statusBadgePending}>
+                    <Icon name="time-outline" size={scale(14)} color="#1E40AF" />
+                    <Text style={styles.statusBadgePendingText}>Requested</Text>
+                  </View>
+                )}
+                {product.priceUnlock?.status === 'DECLINED' && (
+                  <View style={styles.statusBadgeDeclined}>
+                    <Icon name="close-circle-outline" size={scale(14)} color="#DC2626" />
+                    <Text style={styles.statusBadgeDeclinedText}>Declined</Text>
+                  </View>
+                )}
+                {product.priceUnlock?.isExpired && (
+                  <View style={styles.statusBadgeExpired}>
+                    <Icon name="alert-circle-outline" size={scale(14)} color="#C2410C" />
+                    <Text style={styles.statusBadgeExpiredText}>Expired</Text>
+                  </View>
+                )}
+              </View>
+            ) : (
+              <Text style={styles.price}>
+                ₹{product.priceUnlock?.unlockedPrice || product.price}
+              </Text>
+            )}
             {isInStock ? (
               <View style={styles.stockBadge}>
                 <Icon name="checkmark-circle" size={scale(16)} color={C.ok} />
@@ -255,42 +298,72 @@ export default function MarketplaceProductScreen({ navigation, route }) {
       </ScrollView>
 
       {/* Bottom Bar */}
-      {canPurchase && can('marketplace:create') && (
-        <View style={styles.bottomBar}>
-          {cartQty > 0 ? (
-            <>
-              <View style={styles.quantityControl}>
-                <TouchableOpacity style={styles.qtyBtn} onPress={() => updateCartQuantity(-1)}>
-                  <Icon name="remove" size={scale(20)} color={C.primary} />
-                </TouchableOpacity>
-                <Text style={styles.qtyText}>{cartQty}</Text>
-                <TouchableOpacity
-                  style={[styles.qtyBtn, cartQty >= (stockQty || 999) && { opacity: 0.4 }]}
-                  onPress={() => updateCartQuantity(1)}
-                  disabled={cartQty >= (stockQty || 999)}
-                >
-                  <Icon name="add" size={scale(20)} color={C.primary} />
-                </TouchableOpacity>
+      {can('marketplace:create') && (
+        product.priceOnRequest && !product.canPurchase ? (
+          <View style={styles.bottomBar}>
+            {product.priceUnlock?.status === 'PENDING' ? (
+              <View style={styles.requestedBottomBar}>
+                <Icon name="time-outline" size={scale(20)} color="#1E40AF" />
+                <Text style={styles.requestedBottomText}>Price Request Pending</Text>
               </View>
+            ) : (
+              <TouchableOpacity
+                style={styles.requestPriceBottomBtn}
+                onPress={handleRequestPrice}
+              >
+                <Icon name="pricetag-outline" size={scale(20)} color="#92400E" />
+                <Text style={styles.requestPriceBottomText}>
+                  {product.priceUnlock?.status === 'DECLINED' || product.priceUnlock?.isExpired ? 'Re-request Price' : 'Request Price'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        ) : canPurchase ? (
+          <View style={styles.bottomBar}>
+            {cartQty > 0 ? (
+              <>
+                <View style={styles.quantityControl}>
+                  <TouchableOpacity style={styles.qtyBtn} onPress={() => updateCartQuantity(-1)}>
+                    <Icon name="remove" size={scale(20)} color={C.primary} />
+                  </TouchableOpacity>
+                  <Text style={styles.qtyText}>{cartQty}</Text>
+                  <TouchableOpacity
+                    style={[styles.qtyBtn, cartQty >= (stockQty || 999) && { opacity: 0.4 }]}
+                    onPress={() => updateCartQuantity(1)}
+                    disabled={cartQty >= (stockQty || 999)}
+                  >
+                    <Icon name="add" size={scale(20)} color={C.primary} />
+                  </TouchableOpacity>
+                </View>
+                <TouchableOpacity
+                  style={styles.addToCartBtn}
+                  onPress={() => navigation.navigate('MarketplaceCart', { restaurantId })}
+                >
+                  <Icon name="cart" size={scale(20)} color="#fff" />
+                  <Text style={styles.addToCartText}>Go to Cart</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
               <TouchableOpacity
                 style={styles.addToCartBtn}
-                onPress={() => navigation.navigate('MarketplaceCart', { restaurantId })}
+                onPress={addToCart}
               >
                 <Icon name="cart" size={scale(20)} color="#fff" />
-                <Text style={styles.addToCartText}>Go to Cart</Text>
+                <Text style={styles.addToCartText}>Add to Cart</Text>
               </TouchableOpacity>
-            </>
-          ) : (
-            <TouchableOpacity
-              style={styles.addToCartBtn}
-              onPress={addToCart}
-            >
-              <Icon name="cart" size={scale(20)} color="#fff" />
-              <Text style={styles.addToCartText}>Add to Cart</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+            )}
+          </View>
+        ) : null
       )}
+      <PriceRequestModal
+        visible={isPriceRequestOpen}
+        product={product}
+        restaurantId={restaurantId}
+        onClose={() => setIsPriceRequestOpen(false)}
+        onSuccess={() => {
+          setProduct({ ...product, priceUnlock: { status: 'PENDING', unlockedPrice: null, validUntil: null, isExpired: false } });
+        }}
+      />
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
       <KniBottomNav navigation={navigation} />
     </SafeAreaView>
@@ -443,4 +516,100 @@ const styles = StyleSheet.create({
     backgroundColor: C.primary,
   },
   addToCartText: { fontSize: moderateScale(15), fontWeight: '700', color: '#fff' },
+
+  // Price on Request styles
+  priceOnRequestContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: scale(8),
+  },
+  onRequestBadgeLarge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(6),
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: scale(12),
+    paddingVertical: scale(6),
+    borderRadius: scale(8),
+  },
+  onRequestTextLarge: {
+    fontSize: moderateScale(16),
+    fontWeight: '800',
+    color: '#92400E',
+  },
+  statusBadgePending: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(4),
+    backgroundColor: '#DBEAFE',
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(4),
+    borderRadius: scale(12),
+  },
+  statusBadgePendingText: {
+    fontSize: moderateScale(12),
+    fontWeight: '600',
+    color: '#1E40AF',
+  },
+  statusBadgeDeclined: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(4),
+    backgroundColor: '#FEE2E2',
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(4),
+    borderRadius: scale(12),
+  },
+  statusBadgeDeclinedText: {
+    fontSize: moderateScale(12),
+    fontWeight: '600',
+    color: '#DC2626',
+  },
+  statusBadgeExpired: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(4),
+    backgroundColor: '#FED7AA',
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(4),
+    borderRadius: scale(12),
+  },
+  statusBadgeExpiredText: {
+    fontSize: moderateScale(12),
+    fontWeight: '600',
+    color: '#C2410C',
+  },
+  requestPriceBottomBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: scale(8),
+    paddingVertical: scale(14),
+    borderRadius: scale(12),
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#FCD34D',
+  },
+  requestPriceBottomText: {
+    fontSize: moderateScale(15),
+    fontWeight: '700',
+    color: '#92400E',
+  },
+  requestedBottomBar: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: scale(8),
+    paddingVertical: scale(14),
+    borderRadius: scale(12),
+    backgroundColor: '#DBEAFE',
+  },
+  requestedBottomText: {
+    fontSize: moderateScale(15),
+    fontWeight: '700',
+    color: '#1E40AF',
+  },
 });

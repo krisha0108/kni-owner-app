@@ -311,6 +311,12 @@ export default function MarketplaceCartScreen({ navigation, route }) {
                     <Text style={st.cartItemDesc} numberOfLines={1}>{item.product.description}</Text>
                   )}
                   <Text style={st.cartItemPrice}>{formatPrice(item.product.price)}</Text>
+                  {item.product.deliveryTime && (
+                    <View style={st.deliveryTimeRow}>
+                      <Icon name="time-outline" size={scale(11)} color={C.muted} />
+                      <Text style={st.deliveryTimeText}>{item.product.deliveryTime}</Text>
+                    </View>
+                  )}
                 </View>
                 <View style={st.cartItemQty}>
                   <TouchableOpacity
@@ -618,6 +624,17 @@ const st = StyleSheet.create({
   cartItemPrice: {
     fontSize: moderateScale(12),
     color: C.muted,
+  },
+  deliveryTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(4),
+    marginTop: scale(2),
+  },
+  deliveryTimeText: {
+    fontSize: moderateScale(10),
+    color: C.muted,
+    fontWeight: '500',
   },
   cartItemQty: {
     flexDirection: 'row',

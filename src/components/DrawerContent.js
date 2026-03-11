@@ -8,6 +8,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { scale, moderateScale } from '../utils/responsive';
 
 const C = {
   primary: '#EF3A3A',
@@ -89,14 +90,14 @@ export default function DrawerContent({ navigation, state }) {
       >
         <Icon
           name={item.icon}
-          size={20}
+          size={scale(20)}
           color={isActive ? C.primary : C.muted}
           style={styles.menuIcon}
         />
         <Text style={[styles.menuText, isActive && styles.menuTextActive]}>
           {item.name}
         </Text>
-        <Icon name="chevron-forward" size={16} color={isActive ? C.primary : C.border} />
+        <Icon name="chevron-forward" size={scale(16)} color={isActive ? C.primary : C.border} />
       </TouchableOpacity>
     );
   };
@@ -118,7 +119,7 @@ export default function DrawerContent({ navigation, state }) {
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <View style={styles.logoBox}>
-            <Icon name="storefront" size={24} color="#fff" />
+            <Icon name="storefront" size={scale(24)} color="#fff" />
           </View>
           <View>
             <Text style={styles.headerTitle}>KNI Owner</Text>
@@ -129,7 +130,7 @@ export default function DrawerContent({ navigation, state }) {
 
       <ScrollView style={styles.menu} showsVerticalScrollIndicator={false}>
         {Object.keys(SECTION_HEADERS).map(renderSection)}
-        <View style={{ height: 20 }} />
+        <View style={{ height: scale(20) }} />
       </ScrollView>
 
       <View style={styles.footer}>
@@ -137,9 +138,9 @@ export default function DrawerContent({ navigation, state }) {
           style={styles.footerButton}
           onPress={() => handleNavigate('Profile')}
         >
-          <Icon name="person-circle-outline" size={22} color={C.primary} />
+          <Icon name="person-circle-outline" size={scale(22)} color={C.primary} />
           <Text style={styles.footerText}>My Profile</Text>
-          <Icon name="chevron-forward" size={16} color={C.muted} />
+          <Icon name="chevron-forward" size={scale(16)} color={C.muted} />
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -152,7 +153,7 @@ const styles = StyleSheet.create({
     backgroundColor: C.card,
   },
   header: {
-    padding: 20,
+    padding: scale(20),
     backgroundColor: C.primary,
   },
   headerTop: {
@@ -160,36 +161,36 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: scale(44),
+    height: scale(44),
+    borderRadius: scale(12),
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: scale(12),
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: moderateScale(18),
     fontWeight: 'bold',
     color: '#fff',
   },
   headerSubtitle: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     color: 'rgba(255,255,255,0.8)',
-    marginTop: 2,
+    marginTop: scale(2),
   },
   menu: {
     flex: 1,
   },
   section: {
-    marginTop: 12,
+    marginTop: scale(12),
   },
   sectionHeader: {
-    fontSize: 11,
+    fontSize: moderateScale(11),
     fontWeight: '700',
     color: C.muted,
-    paddingHorizontal: 20,
-    paddingVertical: 8,
+    paddingHorizontal: scale(20),
+    paddingVertical: scale(8),
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     backgroundColor: C.bg,
@@ -197,8 +198,8 @@ const styles = StyleSheet.create({
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 20,
+    paddingVertical: scale(14),
+    paddingHorizontal: scale(20),
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
@@ -208,12 +209,12 @@ const styles = StyleSheet.create({
     borderLeftColor: C.primary,
   },
   menuIcon: {
-    marginRight: 14,
-    width: 24,
+    marginRight: scale(14),
+    width: scale(24),
   },
   menuText: {
     flex: 1,
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: C.text,
   },
   menuTextActive: {
@@ -223,20 +224,20 @@ const styles = StyleSheet.create({
   footer: {
     borderTopWidth: 1,
     borderTopColor: C.border,
-    padding: 12,
+    padding: scale(12),
   },
   footerButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
+    padding: scale(12),
     backgroundColor: C.bg,
-    borderRadius: 12,
+    borderRadius: scale(12),
   },
   footerText: {
     flex: 1,
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '600',
     color: C.ink,
-    marginLeft: 12,
+    marginLeft: scale(12),
   },
 });

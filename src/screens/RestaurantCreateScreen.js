@@ -38,11 +38,24 @@ const C = {
 };
 
 export default function RestaurantCreateScreen({ navigation }) {
+  const OUTLET_TYPES = [
+    { key: 'CLOUD_KITCHEN', label: 'Cloud Kitchen' },
+    { key: 'QSR', label: 'QSR (Quick Service)' },
+    { key: 'FINE_DINE', label: 'Fine Dine' },
+    { key: 'HOTEL', label: 'Hotel' },
+    { key: 'CAFE', label: 'Cafe' },
+    { key: 'CATERING', label: 'Catering' },
+    { key: 'HOSPITAL', label: 'Hospital' },
+    { key: 'INDUSTRIES', label: 'Industries' },
+    { key: 'INSTITUTE', label: 'Institute' },
+  ];
+
   const [formData, setFormData] = useState({
     name: '',
     address: '',
     city: '',
     pincode: '',
+    outletType: '',
     restaurantImageUrl: '',
     fssaiNumber: '',
     fssaiCertificateUrl: '',
@@ -56,6 +69,7 @@ export default function RestaurantCreateScreen({ navigation }) {
   const [selectedStateName, setSelectedStateName] = useState('');
   const [showStatePicker, setShowStatePicker] = useState(false);
   const [showCityPicker, setShowCityPicker] = useState(false);
+  const [showOutletTypePicker, setShowOutletTypePicker] = useState(false);
 
   useEffect(() => {
     api.get('/public/locations?type=states').then(res => {
@@ -314,6 +328,20 @@ export default function RestaurantCreateScreen({ navigation }) {
                 />
               </View>
             </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Outlet Type</Text>
+              <TouchableOpacity
+                style={styles.pickerBtn}
+                onPress={() => setShowOutletTypePicker(true)}
+                disabled={isLoading}
+              >
+                <Text style={formData.outletType ? styles.pickerBtnText : styles.pickerBtnPlaceholder}>
+                  {formData.outletType ? OUTLET_TYPES.find(o => o.key === formData.outletType)?.label : 'Select Outlet Type'}
+                </Text>
+                <Icon name="chevron-down" size={scale(18)} color={C.muted} />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Restaurant Image */}
@@ -442,6 +470,37 @@ export default function RestaurantCreateScreen({ navigation }) {
               {cities.length === 0 && (
                 <Text style={styles.pickerEmpty}>No cities available for this state</Text>
               )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Outlet Type Picker Modal */}
+      <Modal visible={showOutletTypePicker} transparent animationType="slide">
+        <View style={styles.pickerOverlay}>
+          <View style={styles.pickerContainer}>
+            <View style={styles.pickerHeader}>
+              <Text style={styles.pickerTitle}>Select Outlet Type</Text>
+              <TouchableOpacity onPress={() => setShowOutletTypePicker(false)}>
+                <Icon name="close" size={scale(24)} color={C.ink} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.pickerList}>
+              {OUTLET_TYPES.map(type => (
+                <TouchableOpacity
+                  key={type.key}
+                  style={[styles.pickerItem, formData.outletType === type.key && styles.pickerItemActive]}
+                  onPress={() => {
+                    updateField('outletType', type.key);
+                    setShowOutletTypePicker(false);
+                  }}
+                >
+                  <Text style={[styles.pickerItemText, formData.outletType === type.key && styles.pickerItemTextActive]}>
+                    {type.label}
+                  </Text>
+                  {formData.outletType === type.key && <Icon name="checkmark" size={scale(20)} color={C.primary} />}
+                </TouchableOpacity>
+              ))}
             </ScrollView>
           </View>
         </View>

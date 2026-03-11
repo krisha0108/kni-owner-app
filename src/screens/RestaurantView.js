@@ -338,6 +338,21 @@ export default function RestaurantView({ navigation, route }) {
             </>
           )}
 
+          {restaurant.outletType && (
+            <>
+              <View style={st.divider} />
+              <View style={st.detailRow}>
+                <View style={st.detailIcon}>
+                  <Icon name="storefront-outline" size={scale(18)} color={C.muted} />
+                </View>
+                <View style={st.detailContent}>
+                  <Text style={st.detailLabel}>Outlet Type</Text>
+                  <Text style={st.detailValue}>{restaurant.outletType.replace(/_/g, ' ')}</Text>
+                </View>
+              </View>
+            </>
+          )}
+
           <View style={st.divider} />
 
           <View style={st.detailRow}>

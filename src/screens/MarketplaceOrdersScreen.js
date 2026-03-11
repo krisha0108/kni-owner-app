@@ -66,6 +66,17 @@ const STATUS_CONFIG = {
   CANCELLED: { bg: C.dangerLight, color: C.danger, icon: 'close-circle-outline', label: 'Cancelled', gradient: [C.danger, '#DC2626'] },
 };
 
+const ORDER_TIMELINE_STEPS = [
+  { key: 'PAYMENT_SUBMITTED', icon: 'cloud-upload-outline', label: 'Payment Submitted' },
+  { key: 'PAYMENT_VERIFIED', icon: 'checkmark-circle-outline', label: 'Payment Verified' },
+  { key: 'CONFIRMED', icon: 'cart-outline', label: 'Order Confirmed' },
+  { key: 'PROCESSING', icon: 'cog-outline', label: 'Processing' },
+  { key: 'SHIPPED', icon: 'car-outline', label: 'Shipped' },
+  { key: 'DELIVERED', icon: 'trophy-outline', label: 'Delivered' },
+];
+
+const ORDER_STATUS_ORDER = ['PLACED', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED'];
+
 const STATUS_OPTIONS = [
   { value: 'all', label: 'All', icon: 'layers-outline' },
   { value: 'PLACED', label: 'Placed', icon: 'time-outline' },
@@ -329,11 +340,11 @@ export default function MarketplaceOrdersScreen({ navigation }) {
               </Text>
             </View>
           )}
-          {item.status === 'VERIFIED' && item.order && (
+          {item.status === 'VERIFIED' && item.orderId && (
             <View style={[styles.paymentStatusMsg, { backgroundColor: C.successLight }]}>
               <Icon name="checkmark-circle" size={scale(14)} color={C.success} />
               <Text style={[styles.paymentStatusMsgText, { color: C.success }]}>
-                Order #{item.order.id?.slice(0, 8).toUpperCase()} placed
+                Order #{item.orderId?.slice(0, 8).toUpperCase()} placed
               </Text>
             </View>
           )}
@@ -736,13 +747,157 @@ export default function MarketplaceOrdersScreen({ navigation }) {
               </LinearGradient>
             )}
 
-            {selectedOrder && (
+            {selectedOrder && (() => {
+              const isCancelled = selectedOrder.status === 'CANCELLED';
+              // Find linked payment for this order
+              const linkedPayment = payments.find(p => p.orderId === selectedOrder.id);
+
+              // 6-step: determine current step
+              let currentStep = -1;
+              const isRejected = linkedPayment?.status === 'REJECTED';
+              if (linkedPayment) {
+                if (linkedPayment.status === 'PENDING') currentStep = 0;
+                else if (linkedPayment.status === 'REJECTED') currentStep = 0;
+                else if (linkedPayment.status === 'VERIFIED') {
+                  const orderStepMap = { PLACED: 2, CONFIRMED: 2, PROCESSING: 3, SHIPPED: 4, DELIVERED: 5 };
+                  currentStep = orderStepMap[selectedOrder.status] ?? 2;
+                }
+              } else {
+                // Legacy order without payment
+                const orderStepMap = { PLACED: 2, CONFIRMED: 2, PROCESSING: 3, SHIPPED: 4, DELIVERED: 5 };
+                currentStep = orderStepMap[selectedOrder.status] ?? 2;
+              }
+
+              return (
               <ScrollView
                 style={styles.detailModalBody}
                 contentContainerStyle={styles.detailModalBodyContent}
                 showsVerticalScrollIndicator={true}
                 bounces={true}
               >
+                {/* Payment Rejected Warning */}
+                {isRejected && (
+                  <View style={[styles.detailStatusMsg, { backgroundColor: C.dangerLight }]}>
+                    <Icon name="close-circle" size={scale(18)} color={C.danger} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.detailStatusMsgText, { color: C.danger, fontWeight: '700' }]}>
+                        Payment Rejected
+                      </Text>
+                      <Text style={{ fontSize: moderateScale(12), color: C.danger, marginTop: scale(4) }}>
+                        {linkedPayment?.rejectionReason || 'Please re-submit payment screenshot'}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+
+                {/* 7-Step Progress Timeline */}
+                {!isCancelled && (
+                  <View style={styles.orderTimelineCard}>
+                    <Text style={styles.orderTimelineSectionTitle}>Order Journey</Text>
+                    <View style={styles.orderTimeline}>
+                      {ORDER_TIMELINE_STEPS.map((step, index) => {
+                        const isCompleted = !isCancelled && !isRejected && currentStep > index;
+                        const isCurrent = !isCancelled && !isRejected && currentStep === index;
+                        const isLast = index === ORDER_TIMELINE_STEPS.length - 1;
+
+                        return (
+                          <View key={step.key} style={styles.orderTimelineStep}>
+                            <View style={styles.orderTimelineStepContent}>
+                              <View
+                                style={[
+                                  styles.orderTimelineCircle,
+                                  isCompleted && styles.orderTimelineCircleCompleted,
+                                  isCurrent && styles.orderTimelineCircleCurrent,
+                                ]}
+                              >
+                                {isCompleted ? (
+                                  <Icon name="checkmark" size={14} color="#fff" />
+                                ) : (
+                                  <Icon
+                                    name={step.icon}
+                                    size={14}
+                                    color={isCurrent ? C.primary : C.muted}
+                                  />
+                                )}
+                              </View>
+                              <Text
+                                style={[
+                                  styles.orderTimelineLabel,
+                                  isCompleted && styles.orderTimelineLabelCompleted,
+                                  isCurrent && styles.orderTimelineLabelCurrent,
+                                ]}
+                              >
+                                {step.label}
+                              </Text>
+                            </View>
+                            {!isLast && (
+                              <View
+                                style={[
+                                  styles.orderTimelineLine,
+                                  isCompleted && styles.orderTimelineLineCompleted,
+                                ]}
+                              />
+                            )}
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </View>
+                )}
+
+                {/* Cancelled with reason */}
+                {isCancelled && (
+                  <View style={[styles.detailStatusMsg, { backgroundColor: C.dangerLight }]}>
+                    <Icon name="close-circle" size={scale(18)} color={C.danger} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.detailStatusMsgText, { color: C.danger, fontWeight: '700' }]}>
+                        Order Cancelled
+                      </Text>
+                      {selectedOrder.cancellationReason && (
+                        <Text style={{ fontSize: moderateScale(12), color: C.danger, marginTop: scale(4) }}>
+                          Reason: {selectedOrder.cancellationReason}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                )}
+
+                {/* Status Notes from Vendor */}
+                {selectedOrder.statusNotes && !isCancelled && (
+                  <View style={[styles.detailStatusMsg, { backgroundColor: '#DBEAFE' }]}>
+                    <Icon name="chatbubble-ellipses-outline" size={scale(18)} color="#2563EB" />
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: moderateScale(11), color: '#2563EB', fontWeight: '700' }}>Vendor Note</Text>
+                      <Text style={{ fontSize: moderateScale(12), color: '#1E40AF', marginTop: scale(2) }}>
+                        {selectedOrder.statusNotes}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+
+                {/* Expected / Actual Delivery Dates */}
+                {(selectedOrder.expectedDeliveryDate || selectedOrder.actualDeliveryDate) && (
+                  <View style={styles.detailCard}>
+                    <View style={[styles.detailCardIcon, { backgroundColor: '#F0FDF4' }]}>
+                      <Icon name="calendar" size={scale(20)} color={C.success} />
+                    </View>
+                    <View style={styles.detailCardContent}>
+                      {selectedOrder.expectedDeliveryDate && (
+                        <View>
+                          <Text style={styles.detailCardLabel}>Expected Delivery</Text>
+                          <Text style={styles.detailCardValue}>{formatDate(selectedOrder.expectedDeliveryDate)}</Text>
+                        </View>
+                      )}
+                      {selectedOrder.actualDeliveryDate && (
+                        <View style={selectedOrder.expectedDeliveryDate ? { marginTop: scale(6) } : {}}>
+                          <Text style={styles.detailCardLabel}>Delivered On</Text>
+                          <Text style={[styles.detailCardValue, { color: C.success, fontWeight: '700' }]}>{formatDate(selectedOrder.actualDeliveryDate)}</Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                )}
+
                 {/* Vendor Card */}
                 <View style={styles.detailCard}>
                   <View style={styles.detailCardIcon}>
@@ -801,6 +956,14 @@ export default function MarketplaceOrdersScreen({ navigation }) {
                           <Text style={styles.detailItemMeta}>
                             {item.qty} {item.product?.unit || 'pcs'} × {formatPrice(item.priceSnapshot || item.product?.price || 0)}
                           </Text>
+                          {item.product?.deliveryTime && (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(4), marginTop: scale(2) }}>
+                              <Icon name="time-outline" size={scale(11)} color={C.muted} />
+                              <Text style={{ fontSize: moderateScale(10), color: C.muted }}>
+                                {item.product.deliveryTime}
+                              </Text>
+                            </View>
+                          )}
                         </View>
                       </View>
                       <Text style={styles.detailItemTotal}>
@@ -827,8 +990,50 @@ export default function MarketplaceOrdersScreen({ navigation }) {
                   </View>
                 </View>
 
-                {/* Status Message */}
-                {selectedOrder.status === 'PLACED' && (
+                {/* Status History Timeline */}
+                {selectedOrder.statusHistory && selectedOrder.statusHistory.length > 0 && (
+                  <View style={styles.orderTimelineCard}>
+                    <Text style={styles.orderTimelineSectionTitle}>Status History</Text>
+                    {selectedOrder.statusHistory.map((entry, idx) => {
+                      const isLatest = idx === selectedOrder.statusHistory.length - 1;
+                      const entryStatusStyle = getStatusStyle(entry.newStatus);
+                      return (
+                        <View key={entry.id || idx} style={styles.historyItem}>
+                          <View style={styles.historyDotCol}>
+                            <View style={[styles.historyDot, { backgroundColor: isLatest ? C.primary : C.success }]} />
+                            {idx < selectedOrder.statusHistory.length - 1 && (
+                              <View style={styles.historyLine} />
+                            )}
+                          </View>
+                          <View style={styles.historyContent}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(6), flexWrap: 'wrap' }}>
+                              {entry.oldStatus && (
+                                <>
+                                  <View style={[styles.historyBadge, { backgroundColor: '#F1F5F9' }]}>
+                                    <Text style={[styles.historyBadgeText, { color: C.muted }]}>{entry.oldStatus}</Text>
+                                  </View>
+                                  <Icon name="arrow-forward" size={scale(10)} color={C.muted} />
+                                </>
+                              )}
+                              <View style={[styles.historyBadge, { backgroundColor: entryStatusStyle.bg }]}>
+                                <Text style={[styles.historyBadgeText, { color: entryStatusStyle.color }]}>{entry.newStatus}</Text>
+                              </View>
+                            </View>
+                            <Text style={styles.historyDate}>
+                              {formatDate(entry.createdAt)} • {formatTime(entry.createdAt)}
+                            </Text>
+                            {entry.notes && (
+                              <Text style={styles.historyNotes}>{entry.notes}</Text>
+                            )}
+                          </View>
+                        </View>
+                      );
+                    })}
+                  </View>
+                )}
+
+                {/* Status Message for PLACED */}
+                {selectedOrder.status === 'PLACED' && !selectedOrder.statusHistory?.length && (
                   <View style={styles.detailStatusMsg}>
                     <Icon name="time-outline" size={scale(18)} color={C.primary} />
                     <Text style={styles.detailStatusMsgText}>
@@ -845,17 +1050,9 @@ export default function MarketplaceOrdersScreen({ navigation }) {
                     </Text>
                   </View>
                 )}
-
-                {selectedOrder.status === 'CANCELLED' && (
-                  <View style={[styles.detailStatusMsg, { backgroundColor: C.dangerLight }]}>
-                    <Icon name="close-circle" size={scale(18)} color={C.danger} />
-                    <Text style={[styles.detailStatusMsgText, { color: C.danger }]}>
-                      This order was cancelled.
-                    </Text>
-                  </View>
-                )}
               </ScrollView>
-            )}
+              );
+            })()}
 
             {/* Footer Actions */}
             <View style={styles.detailModalFooter}>
@@ -1059,11 +1256,11 @@ export default function MarketplaceOrdersScreen({ navigation }) {
                   </View>
                 )}
 
-                {selectedPayment.status === 'VERIFIED' && selectedPayment.order && (
+                {selectedPayment.status === 'VERIFIED' && selectedPayment.orderId && (
                   <View style={[styles.detailStatusMsg, { backgroundColor: C.successLight }]}>
                     <Icon name="checkmark-circle" size={scale(18)} color={C.success} />
                     <Text style={[styles.detailStatusMsgText, { color: C.success }]}>
-                      Payment verified! Order #{selectedPayment.order.id?.slice(0, 8).toUpperCase()} created.
+                      Payment verified! Order #{selectedPayment.orderId?.slice(0, 8).toUpperCase()} created.
                     </Text>
                   </View>
                 )}
@@ -1749,6 +1946,129 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(20),
     fontWeight: '800',
     color: C.primary,
+  },
+
+  // Order Timeline Stepper (like service booking)
+  orderTimelineCard: {
+    backgroundColor: C.card,
+    borderRadius: scale(16),
+    padding: scale(16),
+    marginBottom: scale(12),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: scale(2) },
+    shadowOpacity: 0.05,
+    shadowRadius: scale(8),
+    elevation: 2,
+  },
+  orderTimelineSectionTitle: {
+    fontSize: moderateScale(14),
+    fontWeight: '700',
+    color: C.ink,
+    marginBottom: scale(16),
+  },
+  orderTimeline: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  orderTimelineStep: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  orderTimelineStepContent: {
+    alignItems: 'center',
+  },
+  orderTimelineCircle: {
+    width: scale(32),
+    height: scale(32),
+    borderRadius: scale(16),
+    backgroundColor: C.bg,
+    borderWidth: scale(2),
+    borderColor: C.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: scale(6),
+  },
+  orderTimelineCircleCompleted: {
+    backgroundColor: C.success,
+    borderColor: C.success,
+  },
+  orderTimelineCircleCurrent: {
+    backgroundColor: '#fff',
+    borderColor: C.primary,
+    borderWidth: scale(3),
+  },
+  orderTimelineLabel: {
+    fontSize: moderateScale(9),
+    color: C.muted,
+    textAlign: 'center',
+    maxWidth: scale(50),
+  },
+  orderTimelineLabelCompleted: {
+    color: C.success,
+    fontWeight: '600',
+  },
+  orderTimelineLabelCurrent: {
+    color: C.primary,
+    fontWeight: '700',
+  },
+  orderTimelineLine: {
+    position: 'absolute',
+    top: scale(15),
+    left: '50%',
+    right: '-50%',
+    height: scale(2),
+    backgroundColor: C.border,
+    zIndex: -1,
+  },
+  orderTimelineLineCompleted: {
+    backgroundColor: C.success,
+  },
+
+  // Status History Items
+  historyItem: {
+    flexDirection: 'row',
+    gap: scale(10),
+  },
+  historyDotCol: {
+    alignItems: 'center',
+    width: scale(12),
+  },
+  historyDot: {
+    width: scale(10),
+    height: scale(10),
+    borderRadius: scale(5),
+    marginTop: scale(4),
+  },
+  historyLine: {
+    width: scale(2),
+    flex: 1,
+    minHeight: scale(20),
+    backgroundColor: C.border,
+  },
+  historyContent: {
+    flex: 1,
+    paddingBottom: scale(12),
+  },
+  historyBadge: {
+    paddingHorizontal: scale(8),
+    paddingVertical: scale(2),
+    borderRadius: scale(6),
+  },
+  historyBadgeText: {
+    fontSize: moderateScale(10),
+    fontWeight: '600',
+  },
+  historyDate: {
+    fontSize: moderateScale(11),
+    color: C.muted,
+    marginTop: scale(4),
+  },
+  historyNotes: {
+    fontSize: moderateScale(11),
+    color: C.text,
+    marginTop: scale(2),
+    fontStyle: 'italic',
   },
 
   // Detail Status Message

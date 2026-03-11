@@ -9,6 +9,7 @@ import {
   Dimensions,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { scale, moderateScale } from '../../utils/responsive';
 
 const { height } = Dimensions.get('window');
 
@@ -80,9 +81,9 @@ export default function SortDropdown({ value, options, onChange }) {
     <>
       <TouchableOpacity style={styles.sortButton} onPress={openModal} activeOpacity={0.7}>
         <View style={styles.sortIconBox}>
-          <Icon name="swap-vertical" size={16} color={C.primary} />
+          <Icon name="swap-vertical" size={scale(16)} color={C.primary} />
         </View>
-        <Icon name="chevron-down" size={14} color={C.muted} />
+        <Icon name="chevron-down" size={scale(14)} color={C.muted} />
       </TouchableOpacity>
 
       <Modal visible={visible} transparent animationType="none">
@@ -106,12 +107,12 @@ export default function SortDropdown({ value, options, onChange }) {
             <View style={styles.header}>
               <View style={styles.headerLeft}>
                 <View style={styles.headerIcon}>
-                  <Icon name="swap-vertical" size={20} color={C.primary} />
+                  <Icon name="swap-vertical" size={scale(20)} color={C.primary} />
                 </View>
                 <Text style={styles.title}>Sort By</Text>
               </View>
               <TouchableOpacity onPress={closeModal} style={styles.closeBtn}>
-                <Icon name="close" size={22} color={C.muted} />
+                <Icon name="close" size={scale(22)} color={C.muted} />
               </TouchableOpacity>
             </View>
 
@@ -141,7 +142,7 @@ export default function SortDropdown({ value, options, onChange }) {
                       >
                         <Icon
                           name={iconName}
-                          size={16}
+                          size={scale(16)}
                           color={isSelected ? C.primary : C.muted}
                         />
                       </View>
@@ -156,7 +157,7 @@ export default function SortDropdown({ value, options, onChange }) {
                     </View>
                     {isSelected && (
                       <View style={styles.checkIcon}>
-                        <Icon name="checkmark" size={16} color="#fff" />
+                        <Icon name="checkmark" size={scale(16)} color="#fff" />
                       </View>
                     )}
                   </TouchableOpacity>
@@ -164,7 +165,7 @@ export default function SortDropdown({ value, options, onChange }) {
               })}
             </View>
 
-            <View style={{ height: 32 }} />
+            <View style={{ height: scale(32) }} />
           </Animated.View>
         </View>
       </Modal>
@@ -176,19 +177,19 @@ const styles = StyleSheet.create({
   sortButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: scale(6),
     backgroundColor: C.card,
     borderWidth: 2,
     borderColor: C.border,
-    borderRadius: 14,
-    paddingHorizontal: 4,
-    paddingVertical: 4,
-    paddingRight: 12,
+    borderRadius: scale(14),
+    paddingHorizontal: scale(4),
+    paddingVertical: scale(4),
+    paddingRight: scale(12),
   },
   sortIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: scale(36),
+    height: scale(36),
+    borderRadius: scale(10),
     backgroundColor: C.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
@@ -209,72 +210,72 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: C.card,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    borderTopLeftRadius: scale(28),
+    borderTopRightRadius: scale(28),
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
+    shadowOffset: { width: 0, height: scale(-4) },
     shadowOpacity: 0.15,
-    shadowRadius: 20,
+    shadowRadius: scale(20),
     elevation: 20,
   },
   handleContainer: {
     alignItems: 'center',
-    paddingTop: 12,
-    paddingBottom: 4,
+    paddingTop: scale(12),
+    paddingBottom: scale(4),
   },
   handle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
+    width: scale(40),
+    height: scale(4),
+    borderRadius: scale(2),
     backgroundColor: C.border,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: scale(20),
+    paddingVertical: scale(16),
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: scale(12),
   },
   headerIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: scale(44),
+    height: scale(44),
+    borderRadius: scale(14),
     backgroundColor: C.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
   title: {
-    fontSize: 20,
+    fontSize: moderateScale(20),
     fontWeight: '800',
     color: C.ink,
   },
   closeBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(12),
     backgroundColor: C.bg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   optionsList: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingHorizontal: scale(16),
+    paddingTop: scale(12),
   },
   option: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    marginBottom: 8,
-    borderRadius: 14,
+    paddingVertical: scale(14),
+    paddingHorizontal: scale(12),
+    marginBottom: scale(8),
+    borderRadius: scale(14),
     backgroundColor: C.bg,
     borderWidth: 1.5,
     borderColor: 'transparent',
@@ -289,12 +290,12 @@ const styles = StyleSheet.create({
   optionLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: scale(12),
   },
   optionIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: scale(36),
+    height: scale(36),
+    borderRadius: scale(10),
     backgroundColor: C.card,
     alignItems: 'center',
     justifyContent: 'center',
@@ -303,7 +304,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   optionText: {
-    fontSize: 15,
+    fontSize: moderateScale(15),
     fontWeight: '600',
     color: C.text,
   },
@@ -312,9 +313,9 @@ const styles = StyleSheet.create({
     color: C.primary,
   },
   checkIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: scale(28),
+    height: scale(28),
+    borderRadius: scale(14),
     backgroundColor: C.primary,
     alignItems: 'center',
     justifyContent: 'center',

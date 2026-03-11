@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { scale, moderateScale } from '../../utils/responsive';
 
 const C = {
   primary: '#EF3A3A',
@@ -59,7 +60,7 @@ export default function DateRangePicker({ from, to, onChangeFrom, onChangeTo }) 
           <View style={[styles.iconBox, from && styles.iconBoxActive]}>
             <Icon
               name="calendar"
-              size={18}
+              size={scale(18)}
               color={from ? C.info : C.muted}
             />
           </View>
@@ -83,14 +84,14 @@ export default function DateRangePicker({ from, to, onChangeFrom, onChangeTo }) 
               onPress={() => onChangeFrom('')}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Icon name="close-circle" size={18} color={C.muted} />
+              <Icon name="close-circle" size={scale(18)} color={C.muted} />
             </TouchableOpacity>
           )}
         </TouchableOpacity>
 
         {/* Arrow */}
         <View style={styles.arrowBox}>
-          <Icon name="arrow-forward" size={16} color={C.muted} />
+          <Icon name="arrow-forward" size={scale(16)} color={C.muted} />
         </View>
 
         {/* To Date */}
@@ -102,7 +103,7 @@ export default function DateRangePicker({ from, to, onChangeFrom, onChangeTo }) 
           <View style={[styles.iconBox, to && styles.iconBoxActive]}>
             <Icon
               name="calendar"
-              size={18}
+              size={scale(18)}
               color={to ? C.info : C.muted}
             />
           </View>
@@ -126,7 +127,7 @@ export default function DateRangePicker({ from, to, onChangeFrom, onChangeTo }) 
               onPress={() => onChangeTo('')}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Icon name="close-circle" size={18} color={C.muted} />
+              <Icon name="close-circle" size={scale(18)} color={C.muted} />
             </TouchableOpacity>
           )}
         </TouchableOpacity>
@@ -188,27 +189,27 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: scale(8),
   },
   dateCard: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: C.bg,
-    borderRadius: 14,
-    padding: 12,
+    borderRadius: scale(14),
+    padding: scale(12),
     borderWidth: 1.5,
     borderColor: C.border,
-    gap: 10,
+    gap: scale(10),
   },
   dateCardActive: {
     backgroundColor: C.infoLight,
     borderColor: C.info,
   },
   iconBox: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
+    width: scale(38),
+    height: scale(38),
+    borderRadius: scale(10),
     backgroundColor: C.card,
     alignItems: 'center',
     justifyContent: 'center',
@@ -220,7 +221,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   dateLabel: {
-    fontSize: 11,
+    fontSize: moderateScale(11),
     fontWeight: '600',
     color: C.muted,
     textTransform: 'uppercase',
@@ -229,64 +230,64 @@ const styles = StyleSheet.create({
   dateValueRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginTop: 2,
+    gap: scale(6),
+    marginTop: scale(2),
   },
   dateDay: {
-    fontSize: 24,
+    fontSize: moderateScale(24),
     fontWeight: '800',
     color: C.ink,
   },
   dateMonth: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     fontWeight: '700',
     color: C.text,
   },
   dateYear: {
-    fontSize: 10,
+    fontSize: moderateScale(10),
     fontWeight: '500',
     color: C.muted,
   },
   datePlaceholder: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '500',
     color: C.muted,
-    marginTop: 4,
+    marginTop: scale(4),
   },
   clearBtn: {
-    padding: 4,
+    padding: scale(4),
   },
   arrowBox: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: scale(28),
+    height: scale(28),
+    borderRadius: scale(14),
     backgroundColor: C.bg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   quickSelect: {
-    marginTop: 14,
+    marginTop: scale(14),
   },
   quickLabel: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     fontWeight: '600',
     color: C.muted,
-    marginBottom: 8,
+    marginBottom: scale(8),
   },
   quickOptions: {
     flexDirection: 'row',
-    gap: 8,
+    gap: scale(8),
   },
   quickChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
+    paddingHorizontal: scale(14),
+    paddingVertical: scale(8),
+    borderRadius: scale(10),
     backgroundColor: C.card,
     borderWidth: 1,
     borderColor: C.border,
   },
   quickChipText: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     fontWeight: '600',
     color: C.text,
   },

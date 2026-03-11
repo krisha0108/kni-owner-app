@@ -16,6 +16,7 @@ import { api, IMAGE_BASE_URL } from '../api/client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { useFocusEffect } from '@react-navigation/native';
+import { useRestaurant } from '../context/RestaurantContext';
 
 import { scale, moderateScale } from '../utils/responsive';
 const C = {
@@ -265,6 +266,7 @@ const NotificationSettingsModal = ({ visible, onClose, settings, onSave }) => {
    ========================================================= */
 export default function ProfileScreen({ navigation }) {
   const insets = useSafeAreaInsets();
+  const { selectedRestaurant } = useRestaurant();
   const scrollY = useRef(new Animated.Value(0)).current;
   const [user, setUser] = useState(null);
   const [hotels, setHotels] = useState([]);
@@ -477,6 +479,12 @@ export default function ProfileScreen({ navigation }) {
                 <Icon name="star" size={scale(12)} color="#F59E0B" />
                 <Text style={st.heroTag2Text}>{(user?.rating ?? 0).toFixed(1)} Rating</Text>
               </View>
+              {selectedRestaurant?.restaurantRole && (
+                <View style={st.heroTag2}>
+                  <Icon name="person-circle" size={scale(12)} color="#6366F1" />
+                  <Text style={st.heroTag2Text}>{selectedRestaurant.restaurantRole}</Text>
+                </View>
+              )}
             </View>
           </Animated.View>
         </View>
@@ -499,6 +507,14 @@ export default function ProfileScreen({ navigation }) {
                   <Icon name="call-outline" size={scale(13)} color={C.muted} />
                   <Text style={st.pInfoText}>{user?.phone ?? '-'}</Text>
                 </View>
+                {selectedRestaurant?.restaurantRole && (
+                  <View style={st.pInfoRow}>
+                    <Icon name="shield-outline" size={scale(13)} color={C.muted} />
+                    <Text style={[st.pInfoText, { color: '#6366F1', fontWeight: '600' }]}>
+                      {selectedRestaurant.restaurantRole.charAt(0) + selectedRestaurant.restaurantRole.slice(1).toLowerCase()}
+                    </Text>
+                  </View>
+                )}
               </View>
               <TouchableOpacity onPress={navigateEdit} style={st.editBtn}>
                 <Icon name="create-outline" size={scale(16)} color={C.primary} />

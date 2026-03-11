@@ -44,6 +44,9 @@ const KITCHEN_TYPES = [
   { key: 'HOTEL', label: 'Hotel' },
   { key: 'CAFE', label: 'Cafe' },
   { key: 'CATERING', label: 'Catering' },
+  { key: 'HOSPITAL', label: 'Hospital' },
+  { key: 'INDUSTRIES', label: 'Industries' },
+  { key: 'INSTITUTE', label: 'Institute' },
 ];
 
 export default function AMCRequestScreen({ navigation }) {

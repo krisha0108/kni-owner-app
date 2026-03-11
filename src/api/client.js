@@ -141,4 +141,26 @@ export const formatCurrency = (amount) => {
   return `₹${num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
-export { api, API_BASE_URL, IMAGE_BASE_URL, uploadFile };
+/**
+ * Upload document (image or PDF) using /upload-document endpoint.
+ */
+const uploadDocument = async (formData) => {
+  const token = await AsyncStorage.getItem('userToken');
+  console.log('📤 Upload via fetch: POST /upload-document');
+
+  const response = await fetch(`${API_BASE_URL}/upload-document`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  });
+
+  const data = await response.json();
+  console.log(response.ok ? '✅ Doc upload success' : '❌ Doc upload failed:', response.status);
+
+  if (!response.ok) {
+    throw { response: { status: response.status, data } };
+  }
+  return { data };
+};
+
+export { api, API_BASE_URL, IMAGE_BASE_URL, uploadFile, uploadDocument };

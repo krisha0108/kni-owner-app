@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import DateRangePicker from './DateRangePicker';
+import { scale, moderateScale } from '../../utils/responsive';
 
 const { height, width } = Dimensions.get('window');
 
@@ -166,7 +167,7 @@ export default function FilterBottomSheet({ visible, onClose, filters, onApply, 
           <View style={styles.header}>
             <View style={styles.headerLeft}>
               <View style={styles.headerIcon}>
-                <Icon name="options" size={20} color={C.primary} />
+                <Icon name="options" size={scale(20)} color={C.primary} />
               </View>
               <View>
                 <Text style={styles.title}>Filters</Text>
@@ -176,7 +177,7 @@ export default function FilterBottomSheet({ visible, onClose, filters, onApply, 
               </View>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <Icon name="close" size={22} color={C.muted} />
+              <Icon name="close" size={scale(22)} color={C.muted} />
             </TouchableOpacity>
           </View>
 
@@ -189,7 +190,7 @@ export default function FilterBottomSheet({ visible, onClose, filters, onApply, 
             {config?.showStatus && (
               <View style={styles.filterSection}>
                 <View style={styles.sectionHeader}>
-                  <Icon name="flag" size={18} color={C.ink} />
+                  <Icon name="flag" size={scale(18)} color={C.ink} />
                   <Text style={styles.label}>Status</Text>
                 </View>
                 <View style={styles.statusGrid}>
@@ -217,7 +218,7 @@ export default function FilterBottomSheet({ visible, onClose, filters, onApply, 
                         >
                           <Icon
                             name={iconName}
-                            size={14}
+                            size={scale(14)}
                             color={isActive ? '#fff' : statusColor.color}
                           />
                         </View>
@@ -231,7 +232,7 @@ export default function FilterBottomSheet({ visible, onClose, filters, onApply, 
                           {status.label}
                         </Text>
                         {isActive && (
-                          <Icon name="checkmark" size={14} color="#fff" />
+                          <Icon name="checkmark" size={scale(14)} color="#fff" />
                         )}
                       </TouchableOpacity>
                     );
@@ -244,7 +245,7 @@ export default function FilterBottomSheet({ visible, onClose, filters, onApply, 
             {config?.showDateRange && (
               <View style={styles.filterSection}>
                 <View style={styles.sectionHeader}>
-                  <Icon name="calendar" size={18} color={C.ink} />
+                  <Icon name="calendar" size={scale(18)} color={C.ink} />
                   <Text style={styles.label}>Date Range</Text>
                 </View>
                 <DateRangePicker
@@ -260,7 +261,7 @@ export default function FilterBottomSheet({ visible, onClose, filters, onApply, 
             {config?.showAmountRange && (
               <View style={styles.filterSection}>
                 <View style={styles.sectionHeader}>
-                  <Icon name="cash" size={18} color={C.ink} />
+                  <Icon name="cash" size={scale(18)} color={C.ink} />
                   <Text style={styles.label}>Amount Range</Text>
                 </View>
                 <View style={styles.amountRow}>
@@ -303,7 +304,7 @@ export default function FilterBottomSheet({ visible, onClose, filters, onApply, 
             {config?.showCategory && config?.categoryOptions && (
               <View style={styles.filterSection}>
                 <View style={styles.sectionHeader}>
-                  <Icon name="pricetag" size={18} color={C.ink} />
+                  <Icon name="pricetag" size={scale(18)} color={C.ink} />
                   <Text style={styles.label}>Category</Text>
                 </View>
                 <View style={styles.statusGrid}>
@@ -329,7 +330,7 @@ export default function FilterBottomSheet({ visible, onClose, filters, onApply, 
                           {category.label}
                         </Text>
                         {isActive && (
-                          <Icon name="checkmark" size={14} color="#fff" />
+                          <Icon name="checkmark" size={scale(14)} color="#fff" />
                         )}
                       </TouchableOpacity>
                     );
@@ -338,17 +339,17 @@ export default function FilterBottomSheet({ visible, onClose, filters, onApply, 
               </View>
             )}
 
-            <View style={{ height: 20 }} />
+            <View style={{ height: scale(20) }} />
           </ScrollView>
 
           {/* Footer */}
           <View style={styles.footer}>
             <TouchableOpacity style={styles.resetButton} onPress={handleReset}>
-              <Icon name="refresh" size={18} color={C.muted} />
+              <Icon name="refresh" size={scale(18)} color={C.muted} />
               <Text style={styles.resetButtonText}>Reset All</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.applyButton} onPress={handleApply}>
-              <Icon name="checkmark-circle" size={20} color="#fff" />
+              <Icon name="checkmark-circle" size={scale(20)} color="#fff" />
               <Text style={styles.applyButtonText}>Apply Filters</Text>
             </TouchableOpacity>
           </View>
@@ -375,96 +376,96 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: C.card,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    borderTopLeftRadius: scale(28),
+    borderTopRightRadius: scale(28),
     maxHeight: height * 0.85,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
+    shadowOffset: { width: 0, height: scale(-4) },
     shadowOpacity: 0.15,
-    shadowRadius: 20,
+    shadowRadius: scale(20),
     elevation: 20,
   },
   handleContainer: {
     alignItems: 'center',
-    paddingTop: 12,
-    paddingBottom: 4,
+    paddingTop: scale(12),
+    paddingBottom: scale(4),
   },
   handle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
+    width: scale(40),
+    height: scale(4),
+    borderRadius: scale(2),
     backgroundColor: C.border,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: scale(20),
+    paddingVertical: scale(16),
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: scale(12),
   },
   headerIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: scale(44),
+    height: scale(44),
+    borderRadius: scale(14),
     backgroundColor: C.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
   title: {
-    fontSize: 20,
+    fontSize: moderateScale(20),
     fontWeight: '800',
     color: C.ink,
   },
   subtitle: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     color: C.muted,
-    marginTop: 2,
+    marginTop: scale(2),
   },
   closeBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(12),
     backgroundColor: C.bg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   content: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingHorizontal: scale(20),
+    paddingTop: scale(20),
   },
   filterSection: {
-    marginBottom: 28,
+    marginBottom: scale(28),
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginBottom: 14,
+    gap: scale(10),
+    marginBottom: scale(14),
   },
   label: {
-    fontSize: 15,
+    fontSize: moderateScale(15),
     fontWeight: '700',
     color: C.ink,
   },
   statusGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: scale(10),
   },
   statusChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12,
+    gap: scale(8),
+    paddingHorizontal: scale(14),
+    paddingVertical: scale(10),
+    borderRadius: scale(12),
     backgroundColor: C.bg,
     borderWidth: 1.5,
     borderColor: C.border,
@@ -473,14 +474,14 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   statusIconBox: {
-    width: 26,
-    height: 26,
-    borderRadius: 8,
+    width: scale(26),
+    height: scale(26),
+    borderRadius: scale(8),
     alignItems: 'center',
     justifyContent: 'center',
   },
   statusChipText: {
-    fontSize: 13,
+    fontSize: moderateScale(13),
     fontWeight: '600',
     color: C.text,
   },
@@ -490,21 +491,21 @@ const styles = StyleSheet.create({
   amountRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: scale(12),
   },
   amountInput: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: C.bg,
-    borderRadius: 14,
+    borderRadius: scale(14),
     borderWidth: 1.5,
     borderColor: C.border,
     overflow: 'hidden',
   },
   amountIconBox: {
-    width: 44,
-    height: 48,
+    width: scale(44),
+    height: scale(48),
     backgroundColor: C.card,
     alignItems: 'center',
     justifyContent: 'center',
@@ -512,40 +513,40 @@ const styles = StyleSheet.create({
     borderRightColor: C.border,
   },
   amountIcon: {
-    fontSize: 18,
+    fontSize: moderateScale(18),
     fontWeight: '700',
     color: C.muted,
   },
   amountField: {
     flex: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
+    paddingHorizontal: scale(14),
+    paddingVertical: scale(12),
+    fontSize: moderateScale(15),
     fontWeight: '600',
     color: C.text,
   },
   amountDivider: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: scale(6),
   },
   amountDividerLine: {
-    width: 8,
-    height: 2,
+    width: scale(8),
+    height: scale(2),
     backgroundColor: C.border,
-    borderRadius: 1,
+    borderRadius: scale(1),
   },
   amountDividerText: {
-    fontSize: 12,
+    fontSize: moderateScale(12),
     fontWeight: '600',
     color: C.muted,
   },
   footer: {
     flexDirection: 'row',
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    paddingBottom: 32,
+    gap: scale(12),
+    paddingHorizontal: scale(20),
+    paddingVertical: scale(16),
+    paddingBottom: scale(32),
     borderTopWidth: 1,
     borderTopColor: C.border,
     backgroundColor: C.card,
@@ -555,15 +556,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 16,
-    borderRadius: 14,
+    gap: scale(8),
+    paddingVertical: scale(16),
+    borderRadius: scale(14),
     backgroundColor: C.bg,
     borderWidth: 1.5,
     borderColor: C.border,
   },
   resetButtonText: {
-    fontSize: 15,
+    fontSize: moderateScale(15),
     fontWeight: '700',
     color: C.muted,
   },
@@ -572,18 +573,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 16,
-    borderRadius: 14,
+    gap: scale(8),
+    paddingVertical: scale(16),
+    borderRadius: scale(14),
     backgroundColor: C.primary,
     shadowColor: C.primary,
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: scale(4) },
     shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowRadius: scale(8),
     elevation: 4,
   },
   applyButtonText: {
-    fontSize: 15,
+    fontSize: moderateScale(15),
     fontWeight: '700',
     color: '#fff',
   },

@@ -6,7 +6,8 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { api, getImageUrl } from '../api/client';
+import { launchImageLibrary } from 'react-native-image-picker';
+import { api, getImageUrl, uploadDocument } from '../api/client';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
@@ -30,7 +31,17 @@ const C = {
 const durationOptions = [
   { key: 'MONTHLY', label: 'Monthly (1 month)' },
   { key: 'QUARTERLY', label: 'Quarterly (3 months)' },
+  { key: 'HALF_YEARLY', label: 'Half Yearly (6 months)' },
   { key: 'YEARLY', label: 'Yearly (12 months)' },
+];
+
+const serviceTypeOptions = [
+  'Preventive Maintenance',
+  'Breakdown Repair',
+  'Routine Inspection',
+  'Parts Replacement',
+  'Deep Cleaning',
+  'Other',
 ];
 
 const getDurationLabel = (duration) => {
@@ -131,23 +142,50 @@ export default function EquipmentProfileScreen({ navigation, route }) {
   const [activeTab, setActiveTab] = useState('details');
   const [selectedImage, setSelectedImage] = useState(null);
 
-  // AMC form state
+  // AMC form state (External AMC only)
   const [showAmcModal, setShowAmcModal] = useState(false);
   const [amcSaving, setAmcSaving] = useState(false);
   const [amcForm, setAmcForm] = useState({
+    providerName: '',
+    providerContact: '',
     planName: '',
     planDescription: '',
-    duration: 'MONTHLY',
+    contractNumber: '',
+    documentUrl: '',
+    duration: 'YEARLY',
     serviceLimit: '1',
     featuresJson: [],
     totalAmount: '',
     startDate: '',
-    autoRenew: false,
   });
   const [featureInput, setFeatureInput] = useState('');
   const [durationPickerVisible, setDurationPickerVisible] = useState(false);
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [docUploading, setDocUploading] = useState(false);
+
+  // Edit external AMC state
+  const [showEditAmcModal, setShowEditAmcModal] = useState(false);
+  const [editingAmc, setEditingAmc] = useState(null);
+  const [editAmcForm, setEditAmcForm] = useState({
+    planName: '', planDescription: '', providerName: '', providerContact: '',
+    contractNumber: '', documentUrl: '', totalAmount: '', featuresJson: [],
+  });
+  const [editFeatureInput, setEditFeatureInput] = useState('');
+  const [editDocUploading, setEditDocUploading] = useState(false);
+  const [editAmcSaving, setEditAmcSaving] = useState(false);
+
+  // Log service state
+  const [showLogServiceModal, setShowLogServiceModal] = useState(false);
+  const [logServiceAmcId, setLogServiceAmcId] = useState(null);
+  const [logServiceForm, setLogServiceForm] = useState({
+    serviceDate: new Date().toISOString().split('T')[0],
+    serviceType: '',
+    notes: '',
+  });
+  const [showLogDatePicker, setShowLogDatePicker] = useState(false);
+  const [serviceTypePickerVisible, setServiceTypePickerVisible] = useState(false);
+  const [logServiceSaving, setLogServiceSaving] = useState(false);
 
   // Service booking state
   const [showServiceModal, setShowServiceModal] = useState(false);
@@ -165,10 +203,6 @@ export default function EquipmentProfileScreen({ navigation, route }) {
       const { data } = await api.get(`/owner/equipment/${equipmentId}`);
       if (data.ok && data.data) {
         setEquipment(data.data);
-        setAmcForm(f => ({
-          ...f,
-          planName: `${data.data.name} Maintenance Plan`,
-        }));
       }
     } catch (error) {
       console.log('Error fetching equipment:', error);
@@ -228,17 +262,26 @@ export default function EquipmentProfileScreen({ navigation, route }) {
     }
   };
 
+  const resetAmcForm = () => {
+    setAmcForm({
+      providerName: '', providerContact: '', planName: '', planDescription: '',
+      contractNumber: '', documentUrl: '', duration: 'YEARLY', serviceLimit: '1',
+      featuresJson: [], totalAmount: '', startDate: '',
+    });
+    setFeatureInput('');
+  };
+
   const handleCreateAmc = async () => {
+    if (!amcForm.providerName.trim()) {
+      Alert.alert('Error', 'Please enter provider name');
+      return;
+    }
     if (!amcForm.planName.trim()) {
       Alert.alert('Error', 'Please enter plan name');
       return;
     }
     if (!amcForm.startDate) {
-      Alert.alert('Error', 'Please enter start date');
-      return;
-    }
-    if (!amcForm.serviceLimit || parseInt(amcForm.serviceLimit) < 1) {
-      Alert.alert('Error', 'Please enter valid service limit');
+      Alert.alert('Error', 'Please select start date');
       return;
     }
 
@@ -246,38 +289,131 @@ export default function EquipmentProfileScreen({ navigation, route }) {
     try {
       const payload = {
         equipmentId,
+        source: 'EXTERNAL',
+        providerName: amcForm.providerName,
+        providerContact: amcForm.providerContact || undefined,
+        contractNumber: amcForm.contractNumber || undefined,
+        documentUrl: amcForm.documentUrl || undefined,
         planName: amcForm.planName,
         planDescription: amcForm.planDescription || undefined,
         duration: amcForm.duration,
-        serviceLimit: parseInt(amcForm.serviceLimit),
+        serviceLimit: parseInt(amcForm.serviceLimit) || 0,
         featuresJson: amcForm.featuresJson.length > 0 ? amcForm.featuresJson : undefined,
-        totalAmount: parseFloat(amcForm.totalAmount || 0),
+        totalAmount: parseInt(amcForm.totalAmount || '0'),
         startDate: new Date(amcForm.startDate).toISOString(),
-        autoRenew: amcForm.autoRenew,
+        autoRenew: false,
       };
 
       const { data } = await api.post(`/owner/equipment/${equipmentId}/amc`, payload);
       if (data.ok) {
-        Alert.alert('Success', 'AMC subscription created successfully');
+        Alert.alert('Success', 'External AMC added successfully');
         setShowAmcModal(false);
-        setAmcForm({
-          planName: equipment?.name ? `${equipment.name} Maintenance Plan` : '',
-          planDescription: '',
-          duration: 'MONTHLY',
-          serviceLimit: '1',
-          featuresJson: [],
-          totalAmount: '',
-          startDate: '',
-          autoRenew: false,
-        });
+        resetAmcForm();
         fetchAmcSubscriptions();
       } else {
-        Alert.alert('Error', data.error || 'Failed to create AMC');
+        Alert.alert('Error', data.error || 'Failed to add AMC');
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to create AMC subscription');
+      Alert.alert('Error', 'Failed to add external AMC');
     } finally {
       setAmcSaving(false);
+    }
+  };
+
+  const handleDocUpload = (setter, setUploading) => {
+    launchImageLibrary({ mediaType: 'photo', quality: 0.8, maxWidth: 1920, maxHeight: 1920 }, async (result) => {
+      if (result.didCancel || !result.assets?.[0]) return;
+      setUploading(true);
+      try {
+        const asset = result.assets[0];
+        const formData = new FormData();
+        formData.append('file', { uri: asset.uri, type: asset.type || 'image/jpeg', name: asset.fileName || `amc-doc-${Date.now()}.jpg` });
+        formData.append('folder', 'amc-documents');
+        const res = await uploadDocument(formData);
+        if (res.data?.ok && res.data?.url) {
+          setter(res.data.url);
+          Alert.alert('Success', 'Document uploaded');
+        } else {
+          throw new Error('Upload failed');
+        }
+      } catch (e) {
+        Alert.alert('Error', 'Failed to upload document');
+      } finally {
+        setUploading(false);
+      }
+    });
+  };
+
+  const handleEditAmc = (amc) => {
+    setEditingAmc(amc);
+    setEditAmcForm({
+      planName: amc.planName || '', planDescription: amc.planDescription || '',
+      providerName: amc.providerName || '', providerContact: amc.providerContact || '',
+      contractNumber: amc.contractNumber || '', documentUrl: amc.documentUrl || '',
+      totalAmount: String(amc.totalAmount || ''), featuresJson: amc.featuresJson || [],
+    });
+    setEditFeatureInput('');
+    setShowEditAmcModal(true);
+  };
+
+  const handleUpdateAmc = async () => {
+    if (!editingAmc) return;
+    setEditAmcSaving(true);
+    try {
+      const { data } = await api.patch(`/owner/equipment/${equipmentId}/amc/${editingAmc.id}`, {
+        planName: editAmcForm.planName || undefined,
+        planDescription: editAmcForm.planDescription || undefined,
+        providerName: editAmcForm.providerName || undefined,
+        providerContact: editAmcForm.providerContact || undefined,
+        contractNumber: editAmcForm.contractNumber || undefined,
+        documentUrl: editAmcForm.documentUrl || undefined,
+        totalAmount: parseInt(editAmcForm.totalAmount || '0'),
+        featuresJson: editAmcForm.featuresJson,
+      });
+      if (data.ok) {
+        Alert.alert('Success', 'AMC updated successfully');
+        setShowEditAmcModal(false);
+        setEditingAmc(null);
+        fetchAmcSubscriptions();
+      } else {
+        Alert.alert('Error', data.error || 'Failed to update');
+      }
+    } catch (e) {
+      Alert.alert('Error', 'Failed to update AMC');
+    } finally {
+      setEditAmcSaving(false);
+    }
+  };
+
+  const openLogService = (amcId) => {
+    setLogServiceAmcId(amcId);
+    setLogServiceForm({ serviceDate: new Date().toISOString().split('T')[0], serviceType: '', notes: '' });
+    setShowLogServiceModal(true);
+  };
+
+  const handleLogService = async () => {
+    if (!logServiceForm.serviceType) {
+      Alert.alert('Error', 'Please select service type');
+      return;
+    }
+    setLogServiceSaving(true);
+    try {
+      const { data } = await api.post(`/owner/equipment/${equipmentId}/amc/${logServiceAmcId}`, {
+        serviceDate: new Date(logServiceForm.serviceDate).toISOString(),
+        serviceType: logServiceForm.serviceType,
+        notes: logServiceForm.notes || undefined,
+      });
+      if (data.ok) {
+        Alert.alert('Success', 'Service logged successfully');
+        setShowLogServiceModal(false);
+        fetchAmcSubscriptions();
+      } else {
+        Alert.alert('Error', data.error || 'Failed to log service');
+      }
+    } catch (e) {
+      Alert.alert('Error', 'Failed to log service');
+    } finally {
+      setLogServiceSaving(false);
     }
   };
 
@@ -402,7 +538,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
   const warrantyStatus = getWarrantyStatus(equipment.warrantyEndDate);
   const warrantyStyle = getWarrantyStyle(warrantyStatus);
   const statusStyle = getStatusStyle(equipment.status);
-  const activeAmc = amcSubscriptions.find(amc => amc.status === 'ACTIVE');
+  const activeAmcCount = amcSubscriptions.filter(amc => amc.status === 'ACTIVE').length;
   const photoUrls = Array.isArray(equipment.photoUrls) ? equipment.photoUrls : [];
   const serviceHistory = equipment.serviceHistory || [];
 
@@ -693,134 +829,174 @@ export default function EquipmentProfileScreen({ navigation, route }) {
 
         {activeTab === 'amc' && (
           <View style={st.section}>
-            {/* Active AMC */}
-            {activeAmc ? (
-              <View style={st.amcActiveCard}>
-                <View style={st.amcActiveHeader}>
-                  <View style={st.amcActiveBadge}>
-                    <Icon name="checkmark-circle" size={scale(16)} color={C.ok} />
-                    <Text style={st.amcActiveLabel}>Active AMC</Text>
-                  </View>
-                </View>
-                <Text style={st.amcPlanName}>{activeAmc.planName || 'Custom Plan'}</Text>
-                {activeAmc.planDescription && (
-                  <Text style={st.amcDescription}>{activeAmc.planDescription}</Text>
-                )}
+            {/* Add External AMC button */}
+            {can('amc:create') && (
+              <TouchableOpacity style={st.createAmcBtn} onPress={() => { resetAmcForm(); setShowAmcModal(true); }}>
+                <Icon name="add" size={scale(18)} color="#fff" />
+                <Text style={st.createAmcText}>Add External AMC</Text>
+              </TouchableOpacity>
+            )}
 
-                <View style={st.amcDetails}>
-                  <View style={st.amcDetailItem}>
-                    <Text style={st.amcDetailLabel}>Duration</Text>
-                    <Text style={st.amcDetailValue}>{getDurationLabel(activeAmc.duration)}</Text>
-                  </View>
-                  <View style={st.amcDetailItem}>
-                    <Text style={st.amcDetailLabel}>Amount</Text>
-                    <Text style={st.amcDetailValue}>₹{activeAmc.totalAmount.toLocaleString()}</Text>
-                  </View>
-                  <View style={st.amcDetailItem}>
-                    <Text style={st.amcDetailLabel}>Period</Text>
-                    <Text style={st.amcDetailValue}>
-                      {formatDate(activeAmc.startDate)} - {formatDate(activeAmc.endDate)}
-                    </Text>
-                  </View>
-                </View>
+            {/* AMC Subscriptions List */}
+            {amcSubscriptions.length > 0 ? (
+              <View style={{ marginTop: scale(12) }}>
+                {amcSubscriptions.map(amc => {
+                  const amcStyle = getAmcStatusStyle(amc.status);
+                  const isExternal = amc.source === 'EXTERNAL';
+                  const isActive = amc.status === 'ACTIVE';
+                  const daysRemaining = Math.ceil((new Date(amc.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                  const usagePercent = amc.serviceLimit > 0 ? (amc.servicesUsed / amc.serviceLimit) * 100 : 0;
+                  const canLogService = isExternal && isActive && (amc.serviceLimit === 0 || amc.servicesUsed < amc.serviceLimit);
 
-                {/* Service Usage */}
-                <View style={st.usageBox}>
-                  <View style={st.usageHeader}>
-                    <Text style={st.usageLabel}>Service Usage</Text>
-                    <Text style={st.usageText}>
-                      {activeAmc.servicesUsed} / {activeAmc.serviceLimit}
-                    </Text>
-                  </View>
-                  <View style={st.progressBar}>
-                    <View
-                      style={[
-                        st.progressFill,
-                        {
-                          width: `${Math.min(100, (activeAmc.servicesUsed / activeAmc.serviceLimit) * 100)}%`,
-                          backgroundColor: activeAmc.servicesUsed >= activeAmc.serviceLimit ? C.danger : C.ok,
-                        },
-                      ]}
-                    />
-                  </View>
-                  <Text style={st.usageRemaining}>
-                    {activeAmc.serviceLimit - activeAmc.servicesUsed} services remaining
-                  </Text>
-                </View>
-
-                {/* Features */}
-                {activeAmc.featuresJson && activeAmc.featuresJson.length > 0 && (
-                  <View style={st.featuresBox}>
-                    <Text style={st.featuresTitle}>Features</Text>
-                    {activeAmc.featuresJson.map((feature, index) => (
-                      <View key={index} style={st.featureItem}>
-                        <Icon name="checkmark" size={scale(14)} color={C.ok} />
-                        <Text style={st.featureText}>{feature}</Text>
+                  return (
+                    <View key={amc.id} style={[st.amcActiveCard, isActive && { borderLeftWidth: scale(4), borderLeftColor: isExternal ? C.info : C.ok }]}>
+                      {/* Header */}
+                      <View style={st.amcActiveHeader}>
+                        <View style={{ flex: 1 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(6), flexWrap: 'wrap' }}>
+                            <Text style={st.amcPlanName}>{amc.planName || 'Custom Plan'}</Text>
+                            <View style={[st.sourceBadge, { backgroundColor: isExternal ? '#DBEAFE' : '#ECFDF5' }]}>
+                              <Icon name={isExternal ? 'business-outline' : 'shield-checkmark-outline'} size={scale(12)} color={isExternal ? C.info : C.ok} />
+                              <Text style={[st.sourceBadgeText, { color: isExternal ? C.info : C.ok }]}>
+                                {isExternal ? 'External' : 'KNI Platform'}
+                              </Text>
+                            </View>
+                          </View>
+                          {amc.planDescription ? <Text style={st.amcDescription}>{amc.planDescription}</Text> : null}
+                        </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(6) }}>
+                          {isExternal && isActive && can('amc:update') && (
+                            <TouchableOpacity onPress={() => handleEditAmc(amc)}>
+                              <Icon name="create-outline" size={scale(20)} color={C.muted} />
+                            </TouchableOpacity>
+                          )}
+                          <View style={[st.amcHistoryBadge, { backgroundColor: amcStyle.bg }]}>
+                            <Text style={[st.amcHistoryStatus, { color: amcStyle.text }]}>{amcStyle.label}</Text>
+                          </View>
+                        </View>
                       </View>
-                    ))}
-                  </View>
-                )}
 
-                {/* Auto-renew toggle */}
-                <View style={st.autoRenewRow}>
-                  <Text style={st.autoRenewLabel}>Auto-Renew</Text>
-                  <Switch
-                    value={activeAmc.autoRenew}
-                    onValueChange={() => handleToggleAutoRenew(activeAmc.id, activeAmc.autoRenew)}
-                    trackColor={{ false: C.border, true: C.ok }}
-                    thumbColor={activeAmc.autoRenew ? '#fff' : '#f4f3f4'}
-                  />
-                </View>
+                      {/* External provider info */}
+                      {isExternal && amc.providerName && (
+                        <View style={st.providerInfoBox}>
+                          <Text style={st.providerInfoText}>
+                            <Text style={{ fontWeight: '600' }}>Provider: </Text>{amc.providerName}
+                          </Text>
+                          {amc.providerContact ? <Text style={st.providerInfoText}>Contact: {amc.providerContact}</Text> : null}
+                          {amc.contractNumber ? <Text style={st.providerInfoText}>Contract #: {amc.contractNumber}</Text> : null}
+                          {amc.documentUrl ? (
+                            <TouchableOpacity onPress={() => setSelectedImage(getImageUrl(amc.documentUrl))}>
+                              <Text style={[st.providerInfoText, { color: C.info }]}>View Document</Text>
+                            </TouchableOpacity>
+                          ) : null}
+                        </View>
+                      )}
 
-                {can('amc:cancel') && (
-                <TouchableOpacity
-                  style={st.cancelAmcBtn}
-                  onPress={() => handleCancelAmc(activeAmc.id)}
-                >
-                  <Text style={st.cancelAmcText}>Cancel AMC</Text>
-                </TouchableOpacity>
-                )}
+                      {/* Details */}
+                      <View style={st.amcDetails}>
+                        <View style={st.amcDetailItem}>
+                          <Text style={st.amcDetailLabel}>Duration</Text>
+                          <Text style={st.amcDetailValue}>{getDurationLabel(amc.duration)}</Text>
+                        </View>
+                        <View style={st.amcDetailItem}>
+                          <Text style={st.amcDetailLabel}>Amount</Text>
+                          <Text style={st.amcDetailValue}>₹{(amc.totalAmount || 0).toLocaleString()}</Text>
+                        </View>
+                        <View style={st.amcDetailItem}>
+                          <Text style={st.amcDetailLabel}>Period</Text>
+                          <Text style={st.amcDetailValue}>{formatDate(amc.startDate)} - {formatDate(amc.endDate)}</Text>
+                        </View>
+                      </View>
+
+                      {/* Service Usage */}
+                      {isActive && amc.serviceLimit > 0 && (
+                        <View style={st.usageBox}>
+                          <View style={st.usageHeader}>
+                            <Text style={st.usageLabel}>Service Usage</Text>
+                            <Text style={st.usageText}>{amc.servicesUsed} / {amc.serviceLimit}</Text>
+                          </View>
+                          <View style={st.progressBar}>
+                            <View style={[st.progressFill, {
+                              width: `${Math.min(100, usagePercent)}%`,
+                              backgroundColor: usagePercent >= 100 ? C.danger : usagePercent >= 80 ? C.warn : C.ok,
+                            }]} />
+                          </View>
+                          <Text style={st.usageRemaining}>
+                            {amc.serviceLimit - amc.servicesUsed} services remaining • {daysRemaining > 0 ? `${daysRemaining} days left` : 'Expired'}
+                          </Text>
+                        </View>
+                      )}
+                      {isActive && amc.serviceLimit === 0 && (
+                        <Text style={[st.usageRemaining, { marginTop: scale(4) }]}>
+                          Unlimited services • {daysRemaining > 0 ? `${daysRemaining} days left` : 'Expired'}
+                        </Text>
+                      )}
+
+                      {/* Features */}
+                      {amc.featuresJson && amc.featuresJson.length > 0 && (
+                        <View style={st.featuresBox}>
+                          <Text style={st.featuresTitle}>Features</Text>
+                          {amc.featuresJson.map((feature, index) => (
+                            <View key={index} style={st.featureItem}>
+                              <Icon name="checkmark" size={scale(14)} color={C.ok} />
+                              <Text style={st.featureText}>{feature}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      )}
+
+                      {/* Service History for External */}
+                      {isExternal && amc.usageLogs && amc.usageLogs.length > 0 && (
+                        <View style={st.featuresBox}>
+                          <Text style={st.featuresTitle}>Service History</Text>
+                          {amc.usageLogs.map(log => (
+                            <View key={log.id} style={st.serviceLogItem}>
+                              <View style={{ flex: 1 }}>
+                                <Text style={{ fontSize: moderateScale(13), fontWeight: '500', color: C.text }}>{log.serviceType}</Text>
+                                {log.notes ? <Text style={{ fontSize: moderateScale(11), color: C.muted }}>{log.notes}</Text> : null}
+                              </View>
+                              <Text style={{ fontSize: moderateScale(11), color: C.muted }}>{formatDate(log.serviceDate)}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      )}
+
+                      {/* Actions */}
+                      {isActive && (
+                        <View style={{ flexDirection: 'row', gap: scale(8), marginTop: scale(8), flexWrap: 'wrap' }}>
+                          {canLogService && can('amc:update') && (
+                            <TouchableOpacity style={st.logServiceBtn} onPress={() => openLogService(amc.id)}>
+                              <Icon name="add-circle-outline" size={scale(16)} color="#fff" />
+                              <Text style={st.logServiceText}>Log Service</Text>
+                            </TouchableOpacity>
+                          )}
+                          {!isExternal && (
+                            <View style={st.autoRenewRow}>
+                              <Text style={st.autoRenewLabel}>Auto-Renew</Text>
+                              <Switch
+                                value={amc.autoRenew}
+                                onValueChange={() => handleToggleAutoRenew(amc.id, amc.autoRenew)}
+                                trackColor={{ false: C.border, true: C.ok }}
+                                thumbColor={amc.autoRenew ? '#fff' : '#f4f3f4'}
+                              />
+                            </View>
+                          )}
+                          {can('amc:cancel') && (
+                            <TouchableOpacity style={st.cancelAmcBtn} onPress={() => handleCancelAmc(amc.id)}>
+                              <Text style={st.cancelAmcText}>Cancel AMC</Text>
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                      )}
+                    </View>
+                  );
+                })}
               </View>
             ) : (
               <View style={st.noAmcCard}>
                 <Icon name="shield-outline" size={scale(48)} color={C.muted} />
-                <Text style={st.noAmcTitle}>No Active AMC</Text>
-                <Text style={st.noAmcText}>Create a maintenance plan for this equipment</Text>
-                {can('amc:create') && (
-                <TouchableOpacity style={st.createAmcBtn} onPress={() => setShowAmcModal(true)}>
-                  <Icon name="add" size={scale(18)} color="#fff" />
-                  <Text style={st.createAmcText}>Create AMC Plan</Text>
-                </TouchableOpacity>
-                )}
-              </View>
-            )}
-
-            {/* AMC History */}
-            {amcSubscriptions.length > 0 && (
-              <View style={st.amcHistorySection}>
-                <Text style={st.sectionTitle}>AMC History</Text>
-                {amcSubscriptions.map(amc => {
-                  const amcStyle = getAmcStatusStyle(amc.status);
-                  return (
-                    <View key={amc.id} style={st.amcHistoryCard}>
-                      <View style={st.amcHistoryHeader}>
-                        <Text style={st.amcHistoryName}>{amc.planName || 'Custom Plan'}</Text>
-                        <View style={[st.amcHistoryBadge, { backgroundColor: amcStyle.bg }]}>
-                          <Text style={[st.amcHistoryStatus, { color: amcStyle.text }]}>
-                            {amcStyle.label}
-                          </Text>
-                        </View>
-                      </View>
-                      <Text style={st.amcHistoryDuration}>{getDurationLabel(amc.duration)}</Text>
-                      <Text style={st.amcHistoryPeriod}>
-                        {formatDate(amc.startDate)} - {formatDate(amc.endDate)}
-                      </Text>
-                      <Text style={st.amcHistoryUsage}>
-                        {amc.servicesUsed} / {amc.serviceLimit} services used
-                      </Text>
-                    </View>
-                  );
-                })}
+                <Text style={st.noAmcTitle}>No AMC Subscriptions</Text>
+                <Text style={st.noAmcText}>Add an external AMC to track third-party maintenance contracts</Text>
               </View>
             )}
           </View>
@@ -839,23 +1015,41 @@ export default function EquipmentProfileScreen({ navigation, route }) {
         </View>
       </Modal>
 
-      {/* Create AMC Modal */}
+      {/* Add External AMC Modal */}
       <Modal visible={showAmcModal} animationType="slide" transparent>
         <View style={st.modalOverlay}>
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <View style={st.modalContent}>
             <View style={st.modalHeader}>
-              <Text style={st.modalTitle}>Create AMC Plan</Text>
+              <Text style={st.modalTitle}>Add External AMC</Text>
               <TouchableOpacity onPress={() => setShowAmcModal(false)}>
                 <Icon name="close" size={scale(24)} color={C.ink} />
               </TouchableOpacity>
             </View>
 
             <ScrollView style={st.modalBody} contentContainerStyle={{ padding: scale(16), paddingBottom: scale(30) }} nestedScrollEnabled keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator bounces>
+              <Text style={st.label}>Provider Name *</Text>
+              <TextInput
+                style={st.input}
+                placeholder="e.g., Voltas, Blue Star"
+                placeholderTextColor={C.muted}
+                value={amcForm.providerName}
+                onChangeText={v => setAmcForm(f => ({ ...f, providerName: v }))}
+              />
+
+              <Text style={st.label}>Provider Contact</Text>
+              <TextInput
+                style={st.input}
+                placeholder="Phone or email"
+                placeholderTextColor={C.muted}
+                value={amcForm.providerContact}
+                onChangeText={v => setAmcForm(f => ({ ...f, providerContact: v }))}
+              />
+
               <Text style={st.label}>Plan Name *</Text>
               <TextInput
                 style={st.input}
-                placeholder="e.g., Monthly Oven Maintenance"
+                placeholder="e.g., Annual Maintenance Plan"
                 placeholderTextColor={C.muted}
                 value={amcForm.planName}
                 onChangeText={v => setAmcForm(f => ({ ...f, planName: v }))}
@@ -871,36 +1065,68 @@ export default function EquipmentProfileScreen({ navigation, route }) {
                 onChangeText={v => setAmcForm(f => ({ ...f, planDescription: v }))}
               />
 
+              <Text style={st.label}>Contract Number</Text>
+              <TextInput
+                style={st.input}
+                placeholder="e.g., AMC-2026-001"
+                placeholderTextColor={C.muted}
+                value={amcForm.contractNumber}
+                onChangeText={v => setAmcForm(f => ({ ...f, contractNumber: v }))}
+              />
+
+              <Text style={st.label}>Upload Document</Text>
+              {amcForm.documentUrl ? (
+                <View style={st.uploadedDocRow}>
+                  <Icon name="document-text-outline" size={scale(18)} color={C.info} />
+                  <Text style={st.uploadedDocText} numberOfLines={1}>Document uploaded</Text>
+                  <TouchableOpacity onPress={() => setAmcForm(f => ({ ...f, documentUrl: '' }))}>
+                    <Icon name="close-circle" size={scale(18)} color={C.muted} />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={st.docUploadBtn}
+                  onPress={() => handleDocUpload((url) => setAmcForm(f => ({ ...f, documentUrl: url })), setDocUploading)}
+                  disabled={docUploading}
+                >
+                  {docUploading ? (
+                    <ActivityIndicator size="small" color={C.muted} />
+                  ) : (
+                    <>
+                      <Icon name="cloud-upload-outline" size={scale(24)} color={C.muted} />
+                      <Text style={st.docUploadText}>Tap to upload (Photo of contract)</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              )}
+
               <Text style={st.label}>Duration *</Text>
-              <TouchableOpacity
-                style={st.pickerBtn}
-                onPress={() => setDurationPickerVisible(true)}
-              >
+              <TouchableOpacity style={st.pickerBtn} onPress={() => setDurationPickerVisible(true)}>
                 <Text style={st.pickerText}>{getDurationLabel(amcForm.duration)}</Text>
                 <Icon name="chevron-down" size={scale(18)} color={C.muted} />
               </TouchableOpacity>
 
-              <Text style={st.label}>Service Limit *</Text>
+              <Text style={st.label}>Service Limit</Text>
               <TextInput
                 style={st.input}
-                placeholder="Number of services"
+                placeholder="0 for unlimited"
                 placeholderTextColor={C.muted}
                 keyboardType="numeric"
                 value={amcForm.serviceLimit}
                 onChangeText={v => setAmcForm(f => ({ ...f, serviceLimit: v }))}
               />
 
-              <Text style={st.label}>Plan Cost (₹) *</Text>
+              <Text style={st.label}>Amount (₹)</Text>
               <TextInput
                 style={st.input}
-                placeholder="0.00"
+                placeholder="0"
                 placeholderTextColor={C.muted}
-                keyboardType="decimal-pad"
+                keyboardType="numeric"
                 value={amcForm.totalAmount}
                 onChangeText={v => setAmcForm(f => ({ ...f, totalAmount: v }))}
               />
 
-              <Text style={st.label}>Features</Text>
+              <Text style={st.label}>Features / Coverage</Text>
               <View style={st.featureInputRow}>
                 <TextInput
                   style={[st.input, { flex: 1 }]}
@@ -927,10 +1153,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
               )}
 
               <Text style={st.label}>Start Date *</Text>
-              <TouchableOpacity
-                style={st.pickerBtn}
-                onPress={() => setShowStartDatePicker(true)}
-              >
+              <TouchableOpacity style={st.pickerBtn} onPress={() => setShowStartDatePicker(true)}>
                 <Text style={amcForm.startDate ? st.pickerText : { fontSize: moderateScale(14), color: C.muted }}>
                   {amcForm.startDate || 'Select start date'}
                 </Text>
@@ -942,19 +1165,8 @@ export default function EquipmentProfileScreen({ navigation, route }) {
                   mode="date"
                   display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                   onChange={onStartDateChange}
-                  minimumDate={new Date()}
                 />
               )}
-
-              <View style={st.switchRow}>
-                <Text style={st.switchLabel}>Enable auto-renewal</Text>
-                <Switch
-                  value={amcForm.autoRenew}
-                  onValueChange={v => setAmcForm(f => ({ ...f, autoRenew: v }))}
-                  trackColor={{ false: C.border, true: C.ok }}
-                  thumbColor={amcForm.autoRenew ? '#fff' : '#f4f3f4'}
-                />
-              </View>
             </ScrollView>
 
             <View style={st.modalFooter}>
@@ -965,12 +1177,176 @@ export default function EquipmentProfileScreen({ navigation, route }) {
                 {amcSaving ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Text style={st.saveText}>Create AMC</Text>
+                  <Text style={st.saveText}>Add External AMC</Text>
                 )}
               </TouchableOpacity>
             </View>
           </View>
           </KeyboardAvoidingView>
+        </View>
+      </Modal>
+
+      {/* Edit External AMC Modal */}
+      <Modal visible={showEditAmcModal} animationType="slide" transparent>
+        <View style={st.modalOverlay}>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+          <View style={st.modalContent}>
+            <View style={st.modalHeader}>
+              <Text style={st.modalTitle}>Edit AMC Details</Text>
+              <TouchableOpacity onPress={() => setShowEditAmcModal(false)}>
+                <Icon name="close" size={scale(24)} color={C.ink} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={st.modalBody} contentContainerStyle={{ padding: scale(16), paddingBottom: scale(30) }} nestedScrollEnabled keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator bounces>
+              <Text style={st.label}>Plan Name</Text>
+              <TextInput style={st.input} value={editAmcForm.planName} onChangeText={v => setEditAmcForm(f => ({ ...f, planName: v }))} placeholderTextColor={C.muted} />
+
+              <Text style={st.label}>Description</Text>
+              <TextInput style={[st.input, { height: scale(80), textAlignVertical: 'top' }]} multiline value={editAmcForm.planDescription} onChangeText={v => setEditAmcForm(f => ({ ...f, planDescription: v }))} placeholderTextColor={C.muted} />
+
+              <Text style={st.label}>Provider Name</Text>
+              <TextInput style={st.input} value={editAmcForm.providerName} onChangeText={v => setEditAmcForm(f => ({ ...f, providerName: v }))} placeholderTextColor={C.muted} />
+
+              <Text style={st.label}>Provider Contact</Text>
+              <TextInput style={st.input} value={editAmcForm.providerContact} onChangeText={v => setEditAmcForm(f => ({ ...f, providerContact: v }))} placeholderTextColor={C.muted} />
+
+              <Text style={st.label}>Contract Number</Text>
+              <TextInput style={st.input} value={editAmcForm.contractNumber} onChangeText={v => setEditAmcForm(f => ({ ...f, contractNumber: v }))} placeholderTextColor={C.muted} />
+
+              <Text style={st.label}>Amount (₹)</Text>
+              <TextInput style={st.input} keyboardType="numeric" value={editAmcForm.totalAmount} onChangeText={v => setEditAmcForm(f => ({ ...f, totalAmount: v }))} placeholderTextColor={C.muted} />
+
+              <Text style={st.label}>Upload Document</Text>
+              {editAmcForm.documentUrl ? (
+                <View style={st.uploadedDocRow}>
+                  <Icon name="document-text-outline" size={scale(18)} color={C.info} />
+                  <Text style={st.uploadedDocText} numberOfLines={1}>Document uploaded</Text>
+                  <TouchableOpacity onPress={() => setEditAmcForm(f => ({ ...f, documentUrl: '' }))}>
+                    <Icon name="close-circle" size={scale(18)} color={C.muted} />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={st.docUploadBtn}
+                  onPress={() => handleDocUpload((url) => setEditAmcForm(f => ({ ...f, documentUrl: url })), setEditDocUploading)}
+                  disabled={editDocUploading}
+                >
+                  {editDocUploading ? <ActivityIndicator size="small" color={C.muted} /> : (
+                    <>
+                      <Icon name="cloud-upload-outline" size={scale(24)} color={C.muted} />
+                      <Text style={st.docUploadText}>Tap to upload</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              )}
+
+              <Text style={st.label}>Features</Text>
+              <View style={st.featureInputRow}>
+                <TextInput style={[st.input, { flex: 1 }]} placeholder="Add a feature" placeholderTextColor={C.muted} value={editFeatureInput} onChangeText={setEditFeatureInput} />
+                <TouchableOpacity style={st.addFeatureBtn} onPress={() => { if (editFeatureInput.trim()) { setEditAmcForm(f => ({ ...f, featuresJson: [...f.featuresJson, editFeatureInput.trim()] })); setEditFeatureInput(''); } }}>
+                  <Icon name="add" size={scale(20)} color="#fff" />
+                </TouchableOpacity>
+              </View>
+              {editAmcForm.featuresJson.length > 0 && (
+                <View style={st.featuresList}>
+                  {editAmcForm.featuresJson.map((feature, index) => (
+                    <View key={index} style={st.featureBadge}>
+                      <Text style={st.featureBadgeText}>{feature}</Text>
+                      <TouchableOpacity onPress={() => setEditAmcForm(f => ({ ...f, featuresJson: f.featuresJson.filter((_, i) => i !== index) }))}>
+                        <Icon name="close-circle" size={scale(16)} color={C.muted} />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </ScrollView>
+            <View style={st.modalFooter}>
+              <TouchableOpacity style={st.cancelBtn} onPress={() => setShowEditAmcModal(false)}><Text style={st.cancelText}>Cancel</Text></TouchableOpacity>
+              <TouchableOpacity style={st.saveBtn} onPress={handleUpdateAmc} disabled={editAmcSaving}>
+                {editAmcSaving ? <ActivityIndicator size="small" color="#fff" /> : <Text style={st.saveText}>Save Changes</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
+
+      {/* Log Service Modal */}
+      <Modal visible={showLogServiceModal} animationType="slide" transparent>
+        <View style={st.modalOverlay}>
+          <View style={st.pickerModal}>
+            <View style={st.modalHeader}>
+              <Text style={st.modalTitle}>Log Service Usage</Text>
+              <TouchableOpacity onPress={() => setShowLogServiceModal(false)}>
+                <Icon name="close" size={scale(24)} color={C.ink} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView contentContainerStyle={{ padding: scale(16) }} keyboardShouldPersistTaps="handled">
+              <Text style={st.label}>Service Date *</Text>
+              <TouchableOpacity style={st.pickerBtn} onPress={() => setShowLogDatePicker(true)}>
+                <Text style={st.pickerText}>{logServiceForm.serviceDate || 'Select date'}</Text>
+                <Icon name="calendar-outline" size={scale(18)} color={C.muted} />
+              </TouchableOpacity>
+              {showLogDatePicker && (
+                <DateTimePicker
+                  value={logServiceForm.serviceDate ? new Date(logServiceForm.serviceDate) : new Date()}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={(e, d) => { setShowLogDatePicker(Platform.OS === 'ios'); if (d) setLogServiceForm(f => ({ ...f, serviceDate: d.toISOString().split('T')[0] })); }}
+                />
+              )}
+
+              <Text style={st.label}>Service Type *</Text>
+              <TouchableOpacity style={st.pickerBtn} onPress={() => setServiceTypePickerVisible(true)}>
+                <Text style={logServiceForm.serviceType ? st.pickerText : { fontSize: moderateScale(14), color: C.muted }}>
+                  {logServiceForm.serviceType || 'Select service type'}
+                </Text>
+                <Icon name="chevron-down" size={scale(18)} color={C.muted} />
+              </TouchableOpacity>
+
+              <Text style={st.label}>Notes</Text>
+              <TextInput
+                style={[st.input, { height: scale(80), textAlignVertical: 'top' }]}
+                placeholder="What was done during this service..."
+                placeholderTextColor={C.muted}
+                multiline
+                value={logServiceForm.notes}
+                onChangeText={v => setLogServiceForm(f => ({ ...f, notes: v }))}
+              />
+            </ScrollView>
+            <View style={st.modalFooter}>
+              <TouchableOpacity style={st.cancelBtn} onPress={() => setShowLogServiceModal(false)}><Text style={st.cancelText}>Cancel</Text></TouchableOpacity>
+              <TouchableOpacity style={st.saveBtn} onPress={handleLogService} disabled={logServiceSaving}>
+                {logServiceSaving ? <ActivityIndicator size="small" color="#fff" /> : <Text style={st.saveText}>Log Service</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Service Type Picker Modal */}
+      <Modal visible={serviceTypePickerVisible} animationType="slide" transparent>
+        <View style={st.modalOverlay}>
+          <View style={st.pickerModal}>
+            <View style={st.modalHeader}>
+              <Text style={st.modalTitle}>Select Service Type</Text>
+              <TouchableOpacity onPress={() => setServiceTypePickerVisible(false)}>
+                <Icon name="close" size={scale(24)} color={C.ink} />
+              </TouchableOpacity>
+            </View>
+            <View style={st.pickerList}>
+              {serviceTypeOptions.map(opt => (
+                <TouchableOpacity
+                  key={opt}
+                  style={[st.pickerItem, logServiceForm.serviceType === opt && st.pickerItemActive]}
+                  onPress={() => { setLogServiceForm(f => ({ ...f, serviceType: opt })); setServiceTypePickerVisible(false); }}
+                >
+                  <Text style={[st.pickerItemText, logServiceForm.serviceType === opt && { color: C.primary }]}>{opt}</Text>
+                  {logServiceForm.serviceType === opt && <Icon name="checkmark-circle" size={scale(20)} color={C.primary} />}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
         </View>
       </Modal>
 
@@ -1282,6 +1658,37 @@ const st = StyleSheet.create({
   cancelAmcBtn: { marginTop: scale(16), paddingVertical: scale(12), borderRadius: scale(10), backgroundColor: '#FEF2F2', alignItems: 'center' },
   cancelAmcText: { fontSize: moderateScale(14), fontWeight: '700', color: C.danger },
 
+  sourceBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: scale(3),
+    paddingHorizontal: scale(6), paddingVertical: scale(2), borderRadius: scale(6),
+  },
+  sourceBadgeText: { fontSize: moderateScale(10), fontWeight: '700' },
+  providerInfoBox: {
+    backgroundColor: '#EFF6FF', borderRadius: scale(8), padding: scale(8),
+    marginBottom: scale(8), gap: scale(2),
+  },
+  providerInfoText: { fontSize: moderateScale(12), color: C.text },
+  logServiceBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: scale(4),
+    paddingHorizontal: scale(12), paddingVertical: scale(8), borderRadius: scale(8), backgroundColor: C.info,
+  },
+  logServiceText: { fontSize: moderateScale(12), fontWeight: '700', color: '#fff' },
+  serviceLogItem: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    padding: scale(8), backgroundColor: '#F9FAFB', borderRadius: scale(6), marginTop: scale(4),
+  },
+  docUploadBtn: {
+    borderWidth: 2, borderColor: C.border, borderStyle: 'dashed', borderRadius: scale(12),
+    padding: scale(20), alignItems: 'center', justifyContent: 'center', backgroundColor: C.card, marginBottom: scale(8),
+  },
+  docUploadText: { fontSize: moderateScale(13), color: C.muted, marginTop: scale(4) },
+  uploadedDocRow: {
+    flexDirection: 'row', alignItems: 'center', gap: scale(8),
+    padding: scale(10), borderRadius: scale(8), borderWidth: 1, borderColor: C.border,
+    backgroundColor: '#F0F9FF', marginBottom: scale(8),
+  },
+  uploadedDocText: { flex: 1, fontSize: moderateScale(13), color: C.info },
+
   noAmcCard: {
     backgroundColor: C.card, borderRadius: scale(16), padding: scale(24),
     alignItems: 'center', borderWidth: 1, borderColor: C.border
@@ -1289,8 +1696,9 @@ const st = StyleSheet.create({
   noAmcTitle: { fontSize: moderateScale(18), fontWeight: '900', color: C.ink, marginTop: scale(12) },
   noAmcText: { fontSize: moderateScale(14), color: C.muted, marginTop: scale(4), textAlign: 'center' },
   createAmcBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: scale(6), marginTop: scale(16),
-    paddingHorizontal: scale(20), paddingVertical: scale(12), borderRadius: scale(12), backgroundColor: C.primary
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: scale(6),
+    paddingHorizontal: scale(20), paddingVertical: scale(12), borderRadius: scale(12), backgroundColor: C.primary,
+    alignSelf: 'stretch',
   },
   createAmcText: { fontSize: moderateScale(14), fontWeight: '700', color: '#fff' },
 

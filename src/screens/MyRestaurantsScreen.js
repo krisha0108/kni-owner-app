@@ -193,6 +193,13 @@ export default function MyRestaurantsScreen({ navigation }) {
             </View>
           )}
 
+          {item.outletType && (
+            <View style={st.outletBadge}>
+              <Icon name="storefront" size={scale(12)} color={C.info} />
+              <Text style={st.outletText}>{item.outletType.replace(/_/g, ' ')}</Text>
+            </View>
+          )}
+
           {item.fssaiNumber && (
             <View style={st.fssaiBadge}>
               <Icon name="shield-checkmark" size={scale(12)} color={C.success} />
@@ -430,6 +437,8 @@ const st = StyleSheet.create({
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: scale(6), marginBottom: scale(4) },
   infoText: { fontSize: moderateScale(13), color: C.text, flex: 1 },
   infoTextMuted: { fontSize: moderateScale(12), color: C.muted },
+  outletBadge: { flexDirection: 'row', alignItems: 'center', gap: scale(4), marginTop: scale(8), paddingHorizontal: scale(10), paddingVertical: scale(5), backgroundColor: C.infoLight, borderRadius: scale(8), alignSelf: 'flex-start' },
+  outletText: { fontSize: moderateScale(11), fontWeight: '600', color: C.info },
   fssaiBadge: { flexDirection: 'row', alignItems: 'center', gap: scale(4), marginTop: scale(8), paddingHorizontal: scale(10), paddingVertical: scale(5), backgroundColor: C.successLight, borderRadius: scale(8), alignSelf: 'flex-start' },
   fssaiText: { fontSize: moderateScale(11), fontWeight: '600', color: C.success },
   cardActions: { flexDirection: 'row', alignItems: 'center', gap: scale(8), padding: scale(14), paddingTop: 0 },

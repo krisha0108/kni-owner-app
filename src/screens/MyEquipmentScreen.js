@@ -408,6 +408,7 @@ export default function MyEquipmentScreen({ navigation }) {
 
         {/* Card Actions */}
         <View style={st.cardActions}>
+          {can('service:create') && (
           <TouchableOpacity
             style={st.serviceBtn}
             onPress={() => {
@@ -425,6 +426,7 @@ export default function MyEquipmentScreen({ navigation }) {
             <Icon name="construct" size={scale(14)} color="#fff" />
             <Text style={st.serviceBtnText}>Service</Text>
           </TouchableOpacity>
+          )}
           {can('equipment:update') && (
           <TouchableOpacity style={st.iconBtn} onPress={() => openForm(item)}>
             <Icon name="pencil" size={scale(16)} color={C.info} />
