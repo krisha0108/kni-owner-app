@@ -232,7 +232,7 @@ export default function NewBookingScreen({ navigation, route }) {
           <Icon name="cart-outline" size={64} color={C.muted} />
           <Text style={st.emptyTitle}>Your Cart is Empty</Text>
           <Text style={st.emptyText}>Add services to your cart before booking</Text>
-          <TouchableOpacity style={st.browseBtn} onPress={() => navigation.navigate('Feed')}>
+          <TouchableOpacity style={st.browseBtn} onPress={() => navigation.navigate('Home')}>
             <Icon name="grid-outline" size={18} color="#fff" />
             <Text style={st.browseBtnText}>Browse Services</Text>
           </TouchableOpacity>

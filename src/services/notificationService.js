@@ -275,8 +275,8 @@ class NotificationService {
     try {
       // Navigate based on notification type
       if (data?.type === 'booking' && data?.bookingId) {
-        this.navigationRef.current.navigate('RequestDetail', {
-          id: data.bookingId,
+        this.navigationRef.current.navigate('BookingDetail', {
+          bookingId: data.bookingId,
         });
       } else if (data?.type === 'order' && data?.orderId) {
         this.navigationRef.current.navigate('OrderTracking', {
@@ -287,7 +287,17 @@ class NotificationService {
           equipmentId: data.equipmentId,
         });
       } else if (data?.type === 'amc' && data?.amcId) {
-        this.navigationRef.current.navigate('MyAmcs');
+        this.navigationRef.current.navigate('AMCDashboard');
+      } else if (data?.type === 'support') {
+        this.navigationRef.current.navigate('SupportCenter');
+      } else if (data?.type === 'team') {
+        this.navigationRef.current.navigate('TeamManagement');
+      } else if (data?.type === 'payment' || data?.type === 'payout') {
+        this.navigationRef.current.navigate('Notifications');
+      } else if (data?.type === 'stock') {
+        this.navigationRef.current.navigate('Notifications');
+      } else if (data?.type === 'rating') {
+        this.navigationRef.current.navigate('Notifications');
       } else {
         // Default: Navigate to notifications screen
         this.navigationRef.current.navigate('Notifications');

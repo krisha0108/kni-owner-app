@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   Image,
   Alert,
+  FlatList,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -43,6 +45,12 @@ export default function MarketplaceProductScreen({ navigation, route }) {
   const [isPriceRequestOpen, setIsPriceRequestOpen] = useState(false);
   const cartQty = cart.find(i => i.product?.id === product?.id)?.quantity || 0;
 
+  // Related products state
+  const [moreFromVendor, setMoreFromVendor] = useState([]);
+  const [similarProducts, setSimilarProducts] = useState([]);
+  const [recentlyViewed, setRecentlyViewed] = useState([]);
+  const [relatedLoading, setRelatedLoading] = useState(false);
+
   useEffect(() => {
     if (!productParam) {
       Alert.alert('Error', 'Product not found');
@@ -69,6 +77,39 @@ export default function MarketplaceProductScreen({ navigation, route }) {
       loadCart();
     }, [loadCart])
   );
+
+  // Log recently viewed + fetch related products (non-blocking)
+  useEffect(() => {
+    if (!product?.id) return;
+
+    // Log view
+    api.post('/owner/marketplace/recently-viewed', {
+      vendorProductId: product.id,
+    }).catch(() => {});
+
+    // Fetch related products
+    setRelatedLoading(true);
+    api.get(`/owner/marketplace/products/${product.id}/related`)
+      .then(res => {
+        if (res.data?.ok) {
+          setMoreFromVendor(res.data.data.moreFromVendor || []);
+          setSimilarProducts(res.data.data.similarProducts || []);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setRelatedLoading(false));
+
+    // Fetch recently viewed
+    api.get('/owner/marketplace/recently-viewed')
+      .then(res => {
+        if (res.data?.ok) {
+          // Filter out the current product
+          const filtered = (res.data.data || []).filter(p => p.id !== product.id);
+          setRecentlyViewed(filtered);
+        }
+      })
+      .catch(() => {});
+  }, [product?.id]);
 
   const addToCart = async () => {
     if (!product) return;
@@ -112,12 +153,121 @@ export default function MarketplaceProductScreen({ navigation, route }) {
     }
   };
 
+  // Generic add/update for related product cards
+  const addRelatedToCart = async (productId, stockQty) => {
+    if (!restaurantId) return;
+    try {
+      const existing = cart.find(item => item.product?.id === productId);
+      const newQty = existing ? Math.min(existing.quantity + 1, stockQty || 999) : 1;
+      const items = await cartService.addItem(restaurantId, productId, newQty);
+      setCart(items || []);
+    } catch (error) {
+      Alert.alert('Error', error.message || 'Failed to add to cart');
+    }
+  };
+
+  const updateRelatedCartQty = async (productId, delta) => {
+    const item = cart.find(i => i.product?.id === productId);
+    if (!item) return;
+    const newQty = item.quantity + delta;
+    try {
+      if (newQty <= 0) {
+        await cartService.removeItem(item.id);
+        await loadCart();
+      } else {
+        const items = await cartService.updateItemQuantity(item.id, newQty);
+        setCart(items || []);
+      }
+    } catch (error) {
+      Alert.alert('Error', error.message || 'Failed to update cart');
+    }
+  };
+
+  const getRelatedCartQty = (productId) => {
+    return cart.find(i => i.product?.id === productId)?.quantity || 0;
+  };
+
   const handleRequestPrice = () => {
     if (!restaurantId) {
       Alert.alert('Error', 'Restaurant not selected');
       return;
     }
     setIsPriceRequestOpen(true);
+  };
+
+  const navigateToProduct = (relatedProduct) => {
+    navigation.push('MarketplaceProduct', {
+      product: relatedProduct,
+      restaurantId,
+    });
+  };
+
+  const renderRelatedProductCard = ({ item }) => {
+    const qty = getRelatedCartQty(item.id);
+    const isPriceOnRequest = item.priceOnRequest === true;
+
+    return (
+      <TouchableOpacity
+        style={styles.relatedCard}
+        onPress={() => navigateToProduct(item)}
+        activeOpacity={0.7}
+      >
+        {item.imageUrl ? (
+          <Image
+            source={{ uri: getImageUrl(item.imageUrl) }}
+            style={styles.relatedCardImage}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={styles.relatedCardNoImage}>
+            <Icon name="image-outline" size={scale(24)} color={C.muted} />
+          </View>
+        )}
+        <Text style={styles.relatedCardName} numberOfLines={1}>{item.name}</Text>
+        <Text style={styles.relatedCardVendor} numberOfLines={1}>
+          {item.vendor?.name || ''}
+        </Text>
+        {isPriceOnRequest ? (
+          <Text style={styles.relatedCardPriceOnRequest}>Price on Request</Text>
+        ) : (
+          <>
+            <Text style={styles.relatedCardPrice}>
+              {'\u20B9'}{(item.price || 0).toLocaleString('en-IN')}
+            </Text>
+            {item.stockQuantity > 0 && (
+              <View style={styles.relatedCartControls}>
+                {qty > 0 ? (
+                  <View style={styles.relatedQtyRow}>
+                    <TouchableOpacity
+                      style={styles.relatedQtyBtn}
+                      onPress={(e) => { e.stopPropagation?.(); updateRelatedCartQty(item.id, -1); }}
+                    >
+                      <Icon name="remove" size={scale(12)} color={C.primary} />
+                    </TouchableOpacity>
+                    <Text style={styles.relatedQtyText}>{qty}</Text>
+                    <TouchableOpacity
+                      style={[styles.relatedQtyBtn, qty >= item.stockQuantity && { opacity: 0.4 }]}
+                      onPress={(e) => { e.stopPropagation?.(); updateRelatedCartQty(item.id, 1); }}
+                      disabled={qty >= item.stockQuantity}
+                    >
+                      <Icon name="add" size={scale(12)} color={C.primary} />
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.relatedAddBtn}
+                    onPress={(e) => { e.stopPropagation?.(); addRelatedToCart(item.id, item.stockQuantity); }}
+                  >
+                    <Icon name="add" size={scale(12)} color="#fff" />
+                    <Text style={styles.relatedAddBtnText}>Add</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+          </>
+        )}
+      </TouchableOpacity>
+    );
   };
 
   if (!product) {
@@ -166,7 +316,7 @@ export default function MarketplaceProductScreen({ navigation, route }) {
         </View>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: scale(150) }}>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: scale(220) }}>
         {/* Product Image */}
         {imageSource ? (
           <Image source={{ uri: getImageUrl(imageSource) }} style={styles.productImage} resizeMode="cover" />
@@ -210,7 +360,7 @@ export default function MarketplaceProductScreen({ navigation, route }) {
             {product.priceOnRequest && !product.canPurchase ? (
               <View style={styles.priceOnRequestContainer}>
                 {product.priceUnlock?.status === 'UNLOCKED' && !product.priceUnlock.isExpired ? (
-                  <Text style={styles.price}>₹{product.priceUnlock.unlockedPrice}</Text>
+                  <Text style={styles.price}>{'\u20B9'}{product.priceUnlock.unlockedPrice}</Text>
                 ) : (
                   <View style={styles.onRequestBadgeLarge}>
                     <Icon name="pricetag-outline" size={scale(18)} color="#92400E" />
@@ -238,7 +388,7 @@ export default function MarketplaceProductScreen({ navigation, route }) {
               </View>
             ) : (
               <Text style={styles.price}>
-                ₹{product.priceUnlock?.unlockedPrice || product.price}
+                {'\u20B9'}{product.priceUnlock?.unlockedPrice || product.price}
               </Text>
             )}
             {isInStock ? (
@@ -294,6 +444,62 @@ export default function MarketplaceProductScreen({ navigation, route }) {
             </View>
           )}
         </View>
+
+        {/* Related Products Sections */}
+        {relatedLoading ? (
+          <View style={styles.relatedLoadingContainer}>
+            <ActivityIndicator size="small" color={C.muted} />
+          </View>
+        ) : (
+          <>
+            {/* More from Vendor */}
+            {moreFromVendor.length > 0 && (
+              <View style={styles.relatedSection}>
+                <Text style={styles.relatedSectionTitle}>
+                  More from {vendorName || 'this Vendor'}
+                </Text>
+                <FlatList
+                  data={moreFromVendor}
+                  renderItem={renderRelatedProductCard}
+                  keyExtractor={item => item.id}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.relatedListContent}
+                />
+              </View>
+            )}
+
+            {/* Similar Products */}
+            {similarProducts.length > 0 && (
+              <View style={styles.relatedSection}>
+                <Text style={styles.relatedSectionTitle}>Similar Products</Text>
+                <FlatList
+                  data={similarProducts}
+                  renderItem={renderRelatedProductCard}
+                  keyExtractor={item => item.id}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.relatedListContent}
+                />
+              </View>
+            )}
+
+            {/* Recently Viewed */}
+            {recentlyViewed.length > 0 && (
+              <View style={styles.relatedSection}>
+                <Text style={styles.relatedSectionTitle}>Recently Viewed</Text>
+                <FlatList
+                  data={recentlyViewed}
+                  renderItem={renderRelatedProductCard}
+                  keyExtractor={item => item.id}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.relatedListContent}
+                />
+              </View>
+            )}
+          </>
+        )}
 
       </ScrollView>
 
@@ -611,5 +817,117 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(15),
     fontWeight: '700',
     color: '#1E40AF',
+  },
+
+  // Related products styles
+  relatedSection: {
+    marginTop: scale(8),
+    paddingTop: scale(12),
+    borderTopWidth: 1,
+    borderTopColor: C.border,
+  },
+  relatedSectionTitle: {
+    fontSize: moderateScale(16),
+    fontWeight: '700',
+    color: C.ink,
+    paddingHorizontal: scale(16),
+    marginBottom: scale(10),
+  },
+  relatedListContent: {
+    paddingHorizontal: scale(16),
+    gap: scale(10),
+  },
+  relatedLoadingContainer: {
+    paddingVertical: scale(20),
+    alignItems: 'center',
+  },
+  relatedCard: {
+    width: scale(130),
+    backgroundColor: C.card,
+    borderRadius: scale(12),
+    borderWidth: 1,
+    borderColor: C.border,
+    padding: scale(8),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  relatedCardImage: {
+    width: '100%',
+    height: scale(90),
+    borderRadius: scale(8),
+    backgroundColor: C.bg,
+    marginBottom: scale(6),
+  },
+  relatedCardNoImage: {
+    width: '100%',
+    height: scale(90),
+    borderRadius: scale(8),
+    backgroundColor: C.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: scale(6),
+  },
+  relatedCardName: {
+    fontSize: moderateScale(12),
+    fontWeight: '600',
+    color: C.ink,
+  },
+  relatedCardVendor: {
+    fontSize: moderateScale(10),
+    color: C.muted,
+    marginTop: scale(2),
+  },
+  relatedCardPrice: {
+    fontSize: moderateScale(14),
+    fontWeight: '800',
+    color: C.primary,
+    marginTop: scale(4),
+  },
+  relatedCardPriceOnRequest: {
+    fontSize: moderateScale(10),
+    fontWeight: '600',
+    color: '#D97706',
+    marginTop: scale(4),
+  },
+  relatedCartControls: {
+    marginTop: scale(6),
+  },
+  relatedAddBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: C.primary,
+    borderRadius: scale(6),
+    paddingVertical: scale(4),
+    gap: scale(2),
+  },
+  relatedAddBtnText: {
+    fontSize: moderateScale(10),
+    fontWeight: '700',
+    color: '#fff',
+  },
+  relatedQtyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: scale(6),
+  },
+  relatedQtyBtn: {
+    width: scale(22),
+    height: scale(22),
+    borderRadius: scale(6),
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  relatedQtyText: {
+    fontSize: moderateScale(12),
+    fontWeight: '700',
+    color: C.ink,
+    minWidth: scale(16),
+    textAlign: 'center',
   },
 });

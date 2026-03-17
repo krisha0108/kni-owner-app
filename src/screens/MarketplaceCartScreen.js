@@ -103,7 +103,15 @@ export default function MarketplaceCartScreen({ navigation, route }) {
       {
         text: 'Clear',
         style: 'destructive',
-        onPress: () => saveCart([]),
+        onPress: async () => {
+          try {
+            await cartService.clearCart(restaurantId, { clearAll: true });
+            setCart([]);
+          } catch (error) {
+            Alert.alert('Error', error.message || 'Failed to clear cart');
+            console.error('Clear cart error:', error);
+          }
+        },
       },
     ]);
   };

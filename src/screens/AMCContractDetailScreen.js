@@ -8,12 +8,12 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   ActivityIndicator, RefreshControl, Modal, TextInput,
-  Alert, StatusBar,
+  Alert, StatusBar, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { api } from '../api/client';
+import { api, API_BASE_URL } from '../api/client';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 import { scale, moderateScale } from '../utils/responsive';
@@ -294,6 +294,12 @@ export default function AMCContractDetailScreen({ navigation, route }) {
 
         {/* Action Buttons */}
         <View style={styles.actionsRow}>
+          <TouchableOpacity
+            style={[styles.actionBtn, { backgroundColor: C.info, flex: 0, paddingHorizontal: scale(14) }]}
+            onPress={() => Linking.openURL(`${API_BASE_URL}/owner/amc-contracts/${contractId}/document`)}
+          >
+            <Icon name="download-outline" size={18} color="#fff" />
+          </TouchableOpacity>
           {contract.status === 'ACTIVE' && (
             <TouchableOpacity style={styles.actionBtn} onPress={() => setBreakdownModal(true)}>
               <Icon name="warning-outline" size={18} color="#fff" />

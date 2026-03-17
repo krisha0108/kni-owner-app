@@ -14,6 +14,59 @@
       },
       "oauth_client": [
         {
+          "client_id": "896374925078-k54tjm5dtfa5i3kvlqc08u7g9ptjtb6o.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.kniapp",
+            "certificate_hash": "f2053f76257b2741b74f40faf411db1664aff0fd"
+          }
+        },
+        {
+          "client_id": "896374925078-n9ciq0ajar3vlmihplq01b5tpkptjfv6.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.kniapp",
+            "certificate_hash": "85d742543fdbe7f6d283bc1aedfefa7bc4539ab5"
+          }
+        },
+        {
+          "client_id": "896374925078-svhua6ij8tt6cpm3ktpimea6ojtdmr5l.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.kniapp",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "896374925078-c3gdr6hi301pnth64vj5t6jqlmhjotom.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDEp0xgtKai96ayIKu3kaJEyb1q22stFEQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "896374925078-c3gdr6hi301pnth64vj5t6jqlmhjotom.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:896374925078:android:0836820c6de255423c1237",
+        "android_client_info": {
+          "package_name": "com.serviceengineer"
+        }
+      },
+      "oauth_client": [
+        {
           "client_id": "896374925078-c3gdr6hi301pnth64vj5t6jqlmhjotom.apps.googleusercontent.com",
           "client_type": 3
         }

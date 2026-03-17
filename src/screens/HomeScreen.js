@@ -417,6 +417,9 @@ export default function HomeScreen({ navigation }) {
           </View>
 
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(6) }}>
+            <TouchableOpacity onPress={() => navigation.navigate('Search')} style={st.headerBtn}>
+              <Icon name="search" size={scale(18)} color="#fff" />
+            </TouchableOpacity>
             <TouchableOpacity
               onPress={handleExportPDF}
               disabled={exporting || !restaurantId}

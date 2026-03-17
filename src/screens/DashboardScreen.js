@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -47,6 +48,8 @@ export default function DashboardScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState(30);
   const [data, setData] = useState(null);
+  const [revenueData, setRevenueData] = useState(null);
+  const [revenueLoading, setRevenueLoading] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
 
   const loadData = useCallback(async () => {
@@ -57,16 +60,24 @@ export default function DashboardScreen({ navigation }) {
 
     try {
       setLoading(true);
+      setRevenueLoading(true);
 
-      const response = await api.get(`/owner/analytics?restaurantId=${restaurantId}&period=${selectedPeriod}`);
+      const [analyticsRes, revenueRes] = await Promise.all([
+        api.get(`/owner/analytics?restaurantId=${restaurantId}&period=${selectedPeriod}`),
+        api.get(`/owner/analytics/revenue?restaurantId=${restaurantId}&period=${selectedPeriod}`),
+      ]);
 
-      if (response.data.ok) {
-        setData(response.data.data);
+      if (analyticsRes.data.ok) {
+        setData(analyticsRes.data.data);
+      }
+      if (revenueRes.data.ok) {
+        setRevenueData(revenueRes.data.data);
       }
     } catch (error) {
       console.error('Dashboard error:', error);
     } finally {
       setLoading(false);
+      setRevenueLoading(false);
       setRefreshing(false);
     }
   }, [restaurantId, selectedPeriod]);
@@ -260,6 +271,101 @@ export default function DashboardScreen({ navigation }) {
                   </View>
                 </View>
                 <Text style={styles.recentItemAmount}>₹{expense.amount}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Revenue Analytics Sections */}
+        {revenueLoading && !revenueData && (
+          <View style={styles.revenueLoadingContainer}>
+            <ActivityIndicator size="small" color={C.primary} />
+            <Text style={styles.revenueLoadingText}>Loading revenue analytics...</Text>
+          </View>
+        )}
+
+        {/* Monthly Revenue Trend */}
+        {revenueData?.monthlyTrend && revenueData.monthlyTrend.length > 0 && (
+          <View style={styles.analyticsCard}>
+            <Text style={styles.analyticsCardTitle}>Monthly Revenue Trend</Text>
+            {(() => {
+              const maxRevenue = Math.max(...revenueData.monthlyTrend.map(m => m.revenue || 0), 1);
+              const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+              return revenueData.monthlyTrend.map((item, index) => {
+                const pct = ((item.revenue || 0) / maxRevenue) * 100;
+                const monthLabel = item.month ? MONTH_NAMES[item.month - 1] || item.month : `M${index + 1}`;
+                return (
+                  <View key={index} style={styles.barRow}>
+                    <Text style={styles.barLabel}>{monthLabel}</Text>
+                    <View style={styles.barTrack}>
+                      <View style={[styles.barFill, { width: `${Math.max(pct, 2)}%`, backgroundColor: C.ok }]} />
+                    </View>
+                    <Text style={styles.barAmount}>{`\u20B9${(item.revenue || 0).toLocaleString('en-IN')}`}</Text>
+                  </View>
+                );
+              });
+            })()}
+          </View>
+        )}
+
+        {/* Top Spending Categories */}
+        {revenueData?.topCategories && revenueData.topCategories.length > 0 && (
+          <View style={styles.analyticsCard}>
+            <Text style={styles.analyticsCardTitle}>Top Spending</Text>
+            {(() => {
+              const maxAmount = Math.max(...revenueData.topCategories.map(c => c.amount || 0), 1);
+              return revenueData.topCategories.map((cat, index) => {
+                const pct = ((cat.amount || 0) / maxAmount) * 100;
+                return (
+                  <View key={index} style={styles.barRow}>
+                    <Text style={styles.barLabel} numberOfLines={1}>{cat.category || cat.name}</Text>
+                    <View style={styles.barTrack}>
+                      <View style={[styles.barFill, { width: `${Math.max(pct, 2)}%`, backgroundColor: C.danger }]} />
+                    </View>
+                    <View style={styles.barAmountCol}>
+                      <Text style={styles.barAmount}>{`\u20B9${(cat.amount || 0).toLocaleString('en-IN')}`}</Text>
+                      <Text style={styles.barCount}>{cat.count || 0} items</Text>
+                    </View>
+                  </View>
+                );
+              });
+            })()}
+          </View>
+        )}
+
+        {/* Equipment Maintenance Cost */}
+        {revenueData?.equipmentCosts && revenueData.equipmentCosts.length > 0 && (
+          <View style={styles.analyticsCard}>
+            <Text style={styles.analyticsCardTitle}>Equipment Costs</Text>
+            {revenueData.equipmentCosts.map((equip, index) => (
+              <View key={index} style={styles.listRow}>
+                <View style={styles.listRowLeft}>
+                  <Icon name="construct-outline" size={scale(18)} color={C.warn} />
+                  <View style={styles.listRowText}>
+                    <Text style={styles.listRowTitle} numberOfLines={1}>{equip.name || equip.equipment}</Text>
+                    <Text style={styles.listRowSub}>{equip.serviceCount || equip.count || 0} services</Text>
+                  </View>
+                </View>
+                <Text style={styles.listRowAmount}>{`\u20B9${(equip.totalCost || equip.amount || 0).toLocaleString('en-IN')}`}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Vendor Spending */}
+        {revenueData?.vendorSpending && revenueData.vendorSpending.length > 0 && (
+          <View style={styles.analyticsCard}>
+            <Text style={styles.analyticsCardTitle}>Top Vendors</Text>
+            {revenueData.vendorSpending.map((vendor, index) => (
+              <View key={index} style={styles.listRow}>
+                <View style={styles.listRowLeft}>
+                  <Icon name="storefront-outline" size={scale(18)} color={C.primary} />
+                  <View style={styles.listRowText}>
+                    <Text style={styles.listRowTitle} numberOfLines={1}>{vendor.name || vendor.vendor}</Text>
+                    <Text style={styles.listRowSub}>{vendor.orderCount || vendor.count || 0} orders</Text>
+                  </View>
+                </View>
+                <Text style={styles.listRowAmount}>{`\u20B9${(vendor.totalSpent || vendor.amount || 0).toLocaleString('en-IN')}`}</Text>
               </View>
             ))}
           </View>
@@ -494,5 +600,104 @@ const styles = StyleSheet.create({
   },
   statusCOMPLETED: {
     color: C.ok,
+  },
+  // Revenue Analytics Styles
+  revenueLoadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: scale(20),
+    gap: scale(8),
+  },
+  revenueLoadingText: {
+    fontSize: moderateScale(13),
+    color: C.muted,
+  },
+  analyticsCard: {
+    backgroundColor: C.card,
+    marginHorizontal: scale(16),
+    marginBottom: scale(16),
+    padding: scale(16),
+    borderRadius: scale(12),
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  analyticsCardTitle: {
+    fontSize: moderateScale(16),
+    fontWeight: '700',
+    color: C.ink,
+    marginBottom: scale(14),
+  },
+  barRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: scale(10),
+  },
+  barLabel: {
+    width: scale(36),
+    fontSize: moderateScale(12),
+    color: C.muted,
+    fontWeight: '500',
+  },
+  barTrack: {
+    flex: 1,
+    height: scale(14),
+    backgroundColor: '#F1F5F9',
+    borderRadius: scale(7),
+    marginHorizontal: scale(8),
+    overflow: 'hidden',
+  },
+  barFill: {
+    height: '100%',
+    borderRadius: scale(7),
+  },
+  barAmount: {
+    fontSize: moderateScale(12),
+    fontWeight: '600',
+    color: C.ink,
+    textAlign: 'right',
+    minWidth: scale(60),
+  },
+  barAmountCol: {
+    alignItems: 'flex-end',
+    minWidth: scale(70),
+  },
+  barCount: {
+    fontSize: moderateScale(10),
+    color: C.muted,
+    marginTop: scale(1),
+  },
+  listRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: scale(10),
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+  },
+  listRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: scale(8),
+  },
+  listRowText: {
+    marginLeft: scale(10),
+    flex: 1,
+  },
+  listRowTitle: {
+    fontSize: moderateScale(13),
+    fontWeight: '600',
+    color: C.ink,
+  },
+  listRowSub: {
+    fontSize: moderateScale(11),
+    color: C.muted,
+    marginTop: scale(2),
+  },
+  listRowAmount: {
+    fontSize: moderateScale(14),
+    fontWeight: '700',
+    color: C.ink,
   },
 });

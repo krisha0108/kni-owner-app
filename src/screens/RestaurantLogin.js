@@ -29,9 +29,8 @@ export default function RestaurantLogin({ navigation }) {
 
   useEffect(() => {
     GoogleSignin.configure({
-      webClientId: '851628336447-uccg7n0mbg4g2mlvb5g8nr9r55s4oje2.apps.googleusercontent.com',
-      offlineAccess: true,
-      forceCodeForRefreshToken: true,
+      webClientId: '896374925078-c3gdr6hi301pnth64vj5t6jqlmhjotom.apps.googleusercontent.com',
+      offlineAccess: false,
     });
   }, []);
 

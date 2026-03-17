@@ -4,7 +4,7 @@
  * ============================================================================
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import {
   Linking,
   useWindowDimensions,
   StatusBar,
+  AppState,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
@@ -125,6 +126,41 @@ export default function BookingDetailScreen({ navigation, route }) {
       loadBooking();
     }
   }, [bookingId, loadBooking]);
+
+  // Auto-refresh polling every 30 seconds for active bookings
+  const TERMINAL_BOOKING_STATUSES = ['COMPLETED', 'CANCELLED'];
+  const appStateRef = useRef(AppState.currentState);
+
+  useEffect(() => {
+    if (!bookingId) return;
+    if (booking && TERMINAL_BOOKING_STATUSES.includes(booking.status)) return;
+
+    const silentRefresh = async () => {
+      try {
+        const response = await api.get(`/owner/bookings/${bookingId}`);
+        if (response.data.ok) {
+          setBooking(response.data.data);
+        }
+      } catch (error) {
+        // Silent fail
+      }
+    };
+
+    const intervalId = setInterval(() => {
+      if (appStateRef.current === 'active') {
+        silentRefresh();
+      }
+    }, 30000);
+
+    const appStateSubscription = AppState.addEventListener('change', (nextAppState) => {
+      appStateRef.current = nextAppState;
+    });
+
+    return () => {
+      clearInterval(intervalId);
+      appStateSubscription.remove();
+    };
+  }, [bookingId, booking?.status]);
 
   const onRefresh = () => {
     setRefreshing(true);

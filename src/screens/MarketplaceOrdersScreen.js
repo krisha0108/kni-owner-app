@@ -20,11 +20,12 @@ import {
   StatusBar,
   Dimensions,
   Image,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { api, getImageUrl } from '../api/client';
+import { api, getImageUrl, API_BASE_URL } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRestaurant } from '../context/RestaurantContext';
 import { RestaurantSelectorBar } from '../components/RestaurantSelector';
@@ -206,6 +207,36 @@ export default function MarketplaceOrdersScreen({ navigation }) {
     }
   }, [selectedRestaurantId, loadData, loadPayments]);
 
+  // Auto-refresh every 60 seconds when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      if (!selectedRestaurantId) return;
+
+      const silentRefresh = async () => {
+        try {
+          const response = await api.get(`/owner/marketplace/orders?restaurantId=${selectedRestaurantId}`);
+          if (response.data.ok) {
+            setOrders(response.data.data || []);
+          }
+        } catch (error) {
+          // Silent fail
+        }
+        try {
+          const response = await api.get(`/owner/marketplace/payments?restaurantId=${selectedRestaurantId}`);
+          if (response.data.ok) {
+            setPayments(response.data.data || []);
+          }
+        } catch (error) {
+          // Silent fail
+        }
+      };
+
+      const intervalId = setInterval(silentRefresh, 60000);
+
+      return () => clearInterval(intervalId);
+    }, [selectedRestaurantId])
+  );
+
   const onRefresh = async () => {
     setRefreshing(true);
     await loadRestaurants();
@@ -216,6 +247,20 @@ export default function MarketplaceOrdersScreen({ navigation }) {
   const openOrderDetails = (order) => {
     setSelectedOrder(order);
     setDetailModalVisible(true);
+  };
+
+  const INVOICE_STATUSES = ['CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED'];
+
+  const handleDownloadInvoice = async (order) => {
+    try {
+      const token = await require('@react-native-async-storage/async-storage').default.getItem('userToken');
+      const invoiceUrl = `${API_BASE_URL}/owner/marketplace/orders/${order.id}/invoice`;
+      // Open in browser — the API returns a PDF with attachment header
+      await Linking.openURL(invoiceUrl);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to open invoice. Please try again.');
+      console.error('Invoice download error:', error);
+    }
   };
 
   const openRatingModal = (order) => {
@@ -1056,6 +1101,15 @@ export default function MarketplaceOrdersScreen({ navigation }) {
 
             {/* Footer Actions */}
             <View style={styles.detailModalFooter}>
+              {INVOICE_STATUSES.includes(selectedOrder?.status) && (
+                <TouchableOpacity
+                  style={styles.detailInvoiceBtn}
+                  onPress={() => handleDownloadInvoice(selectedOrder)}
+                >
+                  <Icon name="document-text-outline" size={scale(18)} color={C.primary} />
+                  <Text style={styles.detailInvoiceBtnText}>Invoice</Text>
+                </TouchableOpacity>
+              )}
               {selectedOrder?.status === 'DELIVERED' && (
                 selectedOrder?.rating ? (
                   <View style={styles.detailRatedBadge}>
@@ -2097,6 +2151,23 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: C.border,
     backgroundColor: C.card,
+  },
+  detailInvoiceBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: scale(6),
+    paddingVertical: scale(12),
+    paddingHorizontal: scale(16),
+    backgroundColor: C.primaryLight || '#FEE2E2',
+    borderRadius: scale(12),
+    borderWidth: 1,
+    borderColor: C.primary,
+  },
+  detailInvoiceBtnText: {
+    fontSize: moderateScale(13),
+    fontWeight: '700',
+    color: C.primary,
   },
   detailRateBtn: {
     flex: 1,

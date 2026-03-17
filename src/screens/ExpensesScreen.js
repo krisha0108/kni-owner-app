@@ -8,7 +8,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl,
   ActivityIndicator, Modal, TextInput, ScrollView, Alert, Image,
-  StatusBar, useWindowDimensions, Platform, KeyboardAvoidingView,
+  StatusBar, useWindowDimensions, Platform, KeyboardAvoidingView, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
@@ -16,7 +16,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary } from 'react-native-image-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import RNFS from 'react-native-fs';
-import { api } from '../api/client';
+import { api, API_BASE_URL } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRestaurant } from '../context/RestaurantContext';
 import { RestaurantSelectorBar } from '../components/RestaurantSelector';
@@ -276,8 +276,13 @@ export default function ExpensesScreen({ navigation }) {
         </View>
 
         {/* Actions */}
-        {(can('expenses:update') || can('expenses:delete')) && (
         <View style={st.cardActions}>
+          <TouchableOpacity
+            style={[st.actionBtn, { backgroundColor: C.warningLight, flex: 0, paddingHorizontal: scale(12) }]}
+            onPress={() => Linking.openURL(`${API_BASE_URL}/owner/expenses/${item.id}/receipt`)}
+          >
+            <Icon name="document-text-outline" size={scale(16)} color={C.warning} />
+          </TouchableOpacity>
           {can('expenses:update') && (
           <TouchableOpacity style={[st.actionBtn, { backgroundColor: C.infoLight }]} onPress={() => openForm(item)}>
             <Icon name="pencil" size={scale(16)} color={C.info} />
@@ -291,7 +296,6 @@ export default function ExpensesScreen({ navigation }) {
           </TouchableOpacity>
           )}
         </View>
-        )}
       </View>
     );
   };

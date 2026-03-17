@@ -19,10 +19,11 @@ import {
   useWindowDimensions,
   StatusBar,
   Dimensions,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { api } from '../api/client';
+import { api, API_BASE_URL } from '../api/client';
 import { useRestaurant } from '../context/RestaurantContext';
 import { RestaurantSelectorBar } from '../components/RestaurantSelector';
 import KniBottomNav from '../components/KniBottomNav';
@@ -355,6 +356,12 @@ export default function StaffSalaryScreen({ navigation }) {
 
         {/* Actions */}
         <View style={st.cardActions}>
+          <TouchableOpacity
+            style={st.slipBtn}
+            onPress={() => Linking.openURL(`${API_BASE_URL}/owner/staff-salary/${item.id}/slip`)}
+          >
+            <Icon name="document-text-outline" size={scale(16)} color={C.warning} />
+          </TouchableOpacity>
           <TouchableOpacity style={st.detailBtn} onPress={() => setDetailModal(item)}>
             <Icon name="eye-outline" size={scale(16)} color={C.info} />
             <Text style={[st.actionBtnText, { color: C.info }]}>Details</Text>
@@ -845,6 +852,15 @@ const st = StyleSheet.create({
     paddingVertical: scale(10),
     borderRadius: scale(10),
     backgroundColor: C.dangerLight,
+  },
+  slipBtn: {
+    width: scale(40),
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: scale(10),
+    borderRadius: scale(10),
+    backgroundColor: C.warningLight,
+    marginRight: scale(8),
   },
 
   // Empty State

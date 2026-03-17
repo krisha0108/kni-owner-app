@@ -77,6 +77,10 @@ import PaymentUploadScreen from '../screens/PaymentUploadScreen';
 import CategoryRequestScreen from '../screens/CategoryRequestScreen';
 import CartScreen from '../screens/CartScreen';
 import CreateMarketplaceOrderScreen from '../screens/CreateMarketplaceOrderScreen';
+import SlotBookingScreen from '../screens/SlotBookingScreen';
+
+// Search
+import SearchScreen from '../screens/SearchScreen';
 
 // AMC (Annual Maintenance Contract)
 import AMCDashboardScreen from '../screens/AMCDashboardScreen';
@@ -86,9 +90,9 @@ import AMCRequestDetailScreen from '../screens/AMCRequestDetailScreen';
 import AMCContractsScreen from '../screens/AMCContractsScreen';
 import AMCContractDetailScreen from '../screens/AMCContractDetailScreen';
 
-// Legacy Screens (keeping for compatibility)
+// Legacy Screens removed
 // RequestScreen removed - using MarketplaceScreen instead
-import RequestDetail from '../screens/RequestDetail';
+// RequestDetail removed - using BookingDetail instead
 // RequestNow screen removed - use Cart screen instead
 import RestaurantView from '../screens/RestaurantView';
 import RestaurantsScreen from '../screens/RestaurantsScreen';
@@ -172,6 +176,9 @@ export default function AppNavigator() {
         <Stack.Screen name="MarketplaceCart" component={MarketplaceCartScreen} />
         <Stack.Screen name="MarketplacePayment" component={MarketplacePaymentScreen} />
 
+        {/* Search */}
+        <Stack.Screen name="Search" component={SearchScreen} />
+
         {/* Equipment & Service Screens */}
         <Stack.Screen name="MyEquipment" component={MyEquipmentScreen} />
         <Stack.Screen name="EquipmentProfile" component={EquipmentProfileScreen} />
@@ -189,6 +196,7 @@ export default function AppNavigator() {
         <Stack.Screen name="PaymentUpload" component={PaymentUploadScreen} />
         <Stack.Screen name="CategoryRequest" component={CategoryRequestScreen} />
         <Stack.Screen name="Cart" component={CartScreen} />
+        <Stack.Screen name="SlotBooking" component={SlotBookingScreen} />
         <Stack.Screen name="CreateMarketplaceOrder" component={CreateMarketplaceOrderScreen} />
 
         {/* Phase 4: Feature Parity Screens */}
@@ -207,7 +215,7 @@ export default function AppNavigator() {
 
         {/* Legacy screens kept for compatibility */}
         {/* RequestScreen removed - using MarketplaceScreen instead */}
-        <Stack.Screen name="RequestDetail" component={RequestDetail} />
+        {/* RequestDetail removed - using BookingDetail instead */}
         {/* RequestNow screen removed - use Cart screen for cart flow */}
         <Stack.Screen name="Restaurants" component={RestaurantsScreen} />
         <Stack.Screen name="RestaurantView" component={RestaurantView} />
