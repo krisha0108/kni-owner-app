@@ -27,10 +27,6 @@ class NotificationService {
     try {
       console.log('🔔 Initializing notification service');
 
-      // Force re-registration after Firebase project change
-      // Remove this line after first successful registration
-      await AsyncStorage.removeItem('fcmTokenRegistered');
-
       await this.setupFCM();
       await this.setupNotificationListeners();
 

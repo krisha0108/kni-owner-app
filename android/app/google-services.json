@@ -38,6 +38,14 @@
           }
         },
         {
+          "client_id": "896374925078-t6t1b00caat7oip18k37eaursp3r1g99.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.kniapp",
+            "certificate_hash": "c89b6357f366d12ff69e4880cf0f5760051f0376"
+          }
+        },
+        {
           "client_id": "896374925078-c3gdr6hi301pnth64vj5t6jqlmhjotom.apps.googleusercontent.com",
           "client_type": 3
         }
