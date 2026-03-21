@@ -461,6 +461,9 @@ export default function VendorLedgerScreen({ navigation }) {
             )}
           </View>
         }
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        removeClippedSubviews={true}
       />
 
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />

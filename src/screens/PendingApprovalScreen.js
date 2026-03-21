@@ -514,6 +514,9 @@ export default function PendingApprovalScreen({ navigation }) {
             tintColor={C.primary}
           />
         }
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        removeClippedSubviews={true}
       />
 
       {/* Restaurant Picker Modal */}

@@ -110,6 +110,9 @@ export default function StaffScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [staff, setStaff] = useState([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [actionModalVisible, setActionModalVisible] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState(null);
@@ -141,24 +144,63 @@ export default function StaffScreen({ navigation }) {
 
   useFocusEffect(useCallback(() => { loadData(); }, [selectedRestaurant]));
 
-  const loadData = async () => {
+  const loadData = async (pageNum = 1, append = false) => {
     if (!selectedRestaurant) { setLoading(false); return; }
+
+    if (pageNum === 1) setLoading(true);
+    else setLoadingMore(true);
+
     try {
-      setLoading(true);
-      const response = await api.get(`/owner/staff?restaurantId=${selectedRestaurant}`);
-      if (response.data.ok) setStaff(response.data.data);
+      const params = new URLSearchParams({ restaurantId: selectedRestaurant, page: pageNum.toString(), pageSize: '20' });
+      const response = await api.get(`/owner/staff?${params}`);
+      if (response.data.ok) {
+        const responseData = response.data.data;
+        if (responseData && responseData.items) {
+          const { items, total, page: currentPage, pageSize } = responseData;
+          if (append) {
+            setStaff(prev => [...prev, ...items]);
+          } else {
+            setStaff(items);
+          }
+          setHasMore(currentPage * pageSize < total);
+          setPage(currentPage);
+        } else {
+          setStaff(responseData || []);
+          setHasMore(false);
+        }
+      }
     } catch (error) {
       console.error('Error loading staff:', error);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
       setRefreshing(false);
     }
   };
 
+  // Status tab is now client-side only — no refetch needed
+
+  const handleLoadMore = () => {
+    if (!loadingMore && hasMore && !loading) {
+      loadData(page + 1, true);
+    }
+  };
+
+  const renderListFooter = () => {
+    if (!loadingMore) return null;
+    return (
+      <View style={{ padding: 16, alignItems: 'center' }}>
+        <ActivityIndicator size="small" color="#EF3A3A" />
+      </View>
+    );
+  };
+
   const onRefresh = async () => {
     setRefreshing(true);
+    setPage(1);
+    setHasMore(true);
     await loadRestaurants();
-    await loadData();
+    await loadData(1, false);
   };
 
   const onDateChange = (event, selectedDate) => {
@@ -507,6 +549,12 @@ export default function StaffScreen({ navigation }) {
             )}
           </View>
         }
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.3}
+        ListFooterComponent={renderListFooter}
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        removeClippedSubviews={true}
       />
 
       {/* ========== ADD/EDIT MODAL ========== */}

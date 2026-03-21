@@ -1,6 +1,7 @@
 apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
+apply plugin: "com.google.firebase.crashlytics"
 
 // ✅ Load keystore properties from android/app/keystore.properties (corrected path)
 def keystorePropertiesFile = file("keystore.properties")
@@ -31,8 +32,8 @@ android {
         applicationId "com.kniapp"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 30
-        versionName "30.0"
+        versionCode 31
+        versionName "31.0"
     }
 
     signingConfigs {

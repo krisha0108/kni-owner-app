@@ -995,7 +995,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { scale, moderateScale } from '../utils/responsive';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 // ---- debug helpers ----
-const DEBUG_IMG = true;
+const DEBUG_IMG = false;
 const logImg = (...a) => DEBUG_IMG && console.log('[RD:image]', ...a);
 const logGrp = (label, fn) => {
   if (!DEBUG_IMG) return fn?.();

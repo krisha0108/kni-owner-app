@@ -53,6 +53,9 @@ export default function AMCContractsScreen({ navigation }) {
   const [contracts, setContracts] = useState([]);
   const [activeTab, setActiveTab] = useState('all');
   const [menuVisible, setMenuVisible] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const statusCounts = useMemo(() => {
     const counts = { all: contracts.length };
@@ -66,18 +69,35 @@ export default function AMCContractsScreen({ navigation }) {
     }, [selectedRestaurant])
   );
 
-  const loadData = async () => {
+  const loadData = async (pageNum = 1, append = false) => {
+    if (pageNum === 1) setLoading(true);
+    else setLoadingMore(true);
+
     try {
-      setLoading(true);
-      const params = { ...(selectedRestaurant ? { restaurantId: selectedRestaurant } : {}) };
+      const params = { page: pageNum, pageSize: 20 };
+      if (selectedRestaurant) params.restaurantId = selectedRestaurant;
       const response = await api.get('/owner/amc-contracts', { params });
       if (response.data.ok) {
-        setContracts(response.data.data || []);
+        const responseData = response.data.data;
+        if (responseData && responseData.items) {
+          const { items, total, page: currentPage, pageSize } = responseData;
+          if (append) {
+            setContracts(prev => [...prev, ...items]);
+          } else {
+            setContracts(items);
+          }
+          setHasMore(currentPage * pageSize < total);
+          setPage(currentPage);
+        } else {
+          setContracts(responseData || []);
+          setHasMore(false);
+        }
       }
     } catch (error) {
       console.error('Error loading AMC contracts:', error);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
       setRefreshing(false);
     }
   };
@@ -87,10 +107,27 @@ export default function AMCContractsScreen({ navigation }) {
     return contracts.filter(c => c.status === activeTab);
   }, [contracts, activeTab]);
 
+  const handleLoadMore = () => {
+    if (!loadingMore && hasMore && !loading) {
+      loadData(page + 1, true);
+    }
+  };
+
+  const renderFooter = () => {
+    if (!loadingMore) return null;
+    return (
+      <View style={{ padding: 16, alignItems: 'center' }}>
+        <ActivityIndicator size="small" color="#EF3A3A" />
+      </View>
+    );
+  };
+
   const onRefresh = async () => {
     setRefreshing(true);
+    setPage(1);
+    setHasMore(true);
     await loadRestaurants();
-    await loadData();
+    await loadData(1, false);
   };
 
   const renderStatusTab = (statusKey) => {
@@ -279,6 +316,12 @@ export default function AMCContractsScreen({ navigation }) {
             </Text>
           </View>
         }
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.3}
+        ListFooterComponent={renderFooter}
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        removeClippedSubviews={true}
       />
 
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />

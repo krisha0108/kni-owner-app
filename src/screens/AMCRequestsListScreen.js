@@ -69,6 +69,9 @@ export default function AMCRequestsListScreen({ navigation }) {
   const [requests, setRequests] = useState([]);
   const [activeTab, setActiveTab] = useState('all');
   const [menuVisible, setMenuVisible] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const statusCounts = useMemo(() => {
     const counts = { all: requests.length };
@@ -84,18 +87,35 @@ export default function AMCRequestsListScreen({ navigation }) {
     }, [selectedRestaurant])
   );
 
-  const loadData = async () => {
+  const loadData = async (pageNum = 1, append = false) => {
+    if (pageNum === 1) setLoading(true);
+    else setLoadingMore(true);
+
     try {
-      setLoading(true);
-      const params = { ...(selectedRestaurant ? { restaurantId: selectedRestaurant } : {}) };
+      const params = { page: pageNum, pageSize: 20 };
+      if (selectedRestaurant) params.restaurantId = selectedRestaurant;
       const response = await api.get('/owner/amc-requests', { params });
       if (response.data.ok) {
-        setRequests(response.data.data || []);
+        const responseData = response.data.data;
+        if (responseData && responseData.items) {
+          const { items, total, page: currentPage, pageSize } = responseData;
+          if (append) {
+            setRequests(prev => [...prev, ...items]);
+          } else {
+            setRequests(items);
+          }
+          setHasMore(currentPage * pageSize < total);
+          setPage(currentPage);
+        } else {
+          setRequests(responseData || []);
+          setHasMore(false);
+        }
       }
     } catch (error) {
       console.error('Error loading AMC requests:', error);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
       setRefreshing(false);
     }
   };
@@ -105,10 +125,27 @@ export default function AMCRequestsListScreen({ navigation }) {
     return requests.filter(r => r.status === activeTab);
   }, [requests, activeTab]);
 
+  const handleLoadMore = () => {
+    if (!loadingMore && hasMore && !loading) {
+      loadData(page + 1, true);
+    }
+  };
+
+  const renderFooter = () => {
+    if (!loadingMore) return null;
+    return (
+      <View style={{ padding: 16, alignItems: 'center' }}>
+        <ActivityIndicator size="small" color="#EF3A3A" />
+      </View>
+    );
+  };
+
   const onRefresh = async () => {
     setRefreshing(true);
+    setPage(1);
+    setHasMore(true);
     await loadRestaurants();
-    await loadData();
+    await loadData(1, false);
   };
 
   const renderStatusTab = (statusKey) => {
@@ -279,6 +316,12 @@ export default function AMCRequestsListScreen({ navigation }) {
             </Text>
           </View>
         }
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.3}
+        ListFooterComponent={renderFooter}
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        removeClippedSubviews={true}
       />
 
       {/* FAB */}

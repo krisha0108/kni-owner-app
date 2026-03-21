@@ -597,6 +597,9 @@ export default function MyEquipmentScreen({ navigation }) {
             )}
           </View>
         }
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        removeClippedSubviews={true}
       />
 
       {/* Add/Edit Modal */}

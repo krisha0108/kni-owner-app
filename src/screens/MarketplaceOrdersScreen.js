@@ -114,6 +114,9 @@ export default function MarketplaceOrdersScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [orders, setOrders] = useState([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   // Order Detail Modal
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -155,28 +158,62 @@ export default function MarketplaceOrdersScreen({ navigation }) {
     return payments.filter(p => p.status === 'PENDING').length;
   }, [payments]);
 
-  // Filter orders by status tab
+  // Client-side status filter
   const filteredOrders = React.useMemo(() => {
     if (activeStatusTab === 'all') return orders;
-    return orders.filter(o => o.status === activeStatusTab);
+    return orders.filter(o => (o.status || 'PLACED') === activeStatusTab);
   }, [orders, activeStatusTab]);
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (pageNum = 1, append = false) => {
     if (!selectedRestaurantId) return;
 
+    if (pageNum === 1) setLoading(true);
+    else setLoadingMore(true);
+
     try {
-      setLoading(true);
-      const response = await api.get(`/owner/marketplace/orders?restaurantId=${selectedRestaurantId}`);
+      const params = new URLSearchParams({ restaurantId: selectedRestaurantId, page: pageNum.toString(), pageSize: '20' });
+      const response = await api.get(`/owner/marketplace/orders?${params}`);
       if (response.data.ok) {
-        setOrders(response.data.data || []);
+        const responseData = response.data.data;
+        if (responseData && responseData.items) {
+          const { items, total, page: currentPage, pageSize } = responseData;
+          if (append) {
+            setOrders(prev => [...prev, ...items]);
+          } else {
+            setOrders(items);
+          }
+          setHasMore(currentPage * pageSize < total);
+          setPage(currentPage);
+        } else {
+          setOrders(responseData || []);
+          setHasMore(false);
+        }
       }
     } catch (error) {
       console.error('Error loading orders:', error);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
       setRefreshing(false);
     }
   }, [selectedRestaurantId]);
+
+  // Status tab is now client-side only — no refetch needed
+
+  const handleLoadMore = () => {
+    if (!loadingMore && hasMore && !loading) {
+      loadData(page + 1, true);
+    }
+  };
+
+  const renderOrdersFooter = () => {
+    if (!loadingMore) return null;
+    return (
+      <View style={{ padding: 16, alignItems: 'center' }}>
+        <ActivityIndicator size="small" color="#EF3A3A" />
+      </View>
+    );
+  };
 
   const loadPayments = useCallback(async () => {
     if (!selectedRestaurantId) return;
@@ -202,6 +239,8 @@ export default function MarketplaceOrdersScreen({ navigation }) {
   // Load data when restaurant changes
   useEffect(() => {
     if (selectedRestaurantId) {
+      setPage(1);
+      setHasMore(true);
       loadData();
       loadPayments();
     }
@@ -214,9 +253,17 @@ export default function MarketplaceOrdersScreen({ navigation }) {
 
       const silentRefresh = async () => {
         try {
-          const response = await api.get(`/owner/marketplace/orders?restaurantId=${selectedRestaurantId}`);
+          const params = new URLSearchParams({ restaurantId: selectedRestaurantId, page: '1', pageSize: '20' });
+          const response = await api.get(`/owner/marketplace/orders?${params}`);
           if (response.data.ok) {
-            setOrders(response.data.data || []);
+            const responseData = response.data.data;
+            if (responseData && responseData.items) {
+              setOrders(responseData.items);
+              setHasMore(responseData.page * responseData.pageSize < responseData.total);
+              setPage(1);
+            } else {
+              setOrders(responseData || []);
+            }
           }
         } catch (error) {
           // Silent fail
@@ -239,8 +286,10 @@ export default function MarketplaceOrdersScreen({ navigation }) {
 
   const onRefresh = async () => {
     setRefreshing(true);
+    setPage(1);
+    setHasMore(true);
     await loadRestaurants();
-    loadData();
+    loadData(1, false);
     loadPayments();
   };
 
@@ -699,6 +748,12 @@ export default function MarketplaceOrdersScreen({ navigation }) {
                 </TouchableOpacity>
               </View>
             }
+            onEndReached={handleLoadMore}
+            onEndReachedThreshold={0.3}
+            ListFooterComponent={renderOrdersFooter}
+            initialNumToRender={10}
+            maxToRenderPerBatch={10}
+            removeClippedSubviews={true}
           />
         </>
       ) : (
@@ -748,6 +803,9 @@ export default function MarketplaceOrdersScreen({ navigation }) {
                 </TouchableOpacity>
               </View>
             }
+            initialNumToRender={10}
+            maxToRenderPerBatch={10}
+            removeClippedSubviews={true}
           />
         )
       )}

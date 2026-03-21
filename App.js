@@ -15,6 +15,8 @@ import { NavigationContainer } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import AppNavigator from './src/navigation/AppNavigator';
 import { RestaurantProvider } from './src/context/RestaurantContext';
+import ErrorBoundary from './src/components/ErrorBoundary';
+import OfflineBanner from './src/components/OfflineBanner';
 import { getMessaging, requestPermission as requestFCMPermission, onNotificationOpenedApp, getInitialNotification, AuthorizationStatus } from '@react-native-firebase/messaging';
 import notifee, { AndroidImportance } from '@notifee/react-native';
 import { Alert, PermissionsAndroid, Platform } from 'react-native';
@@ -33,13 +35,16 @@ export default function App() {
   }, []);
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <RestaurantProvider>
-        <NavigationContainer ref={navigationRef}>
-          <AppNavigator />
-        </NavigationContainer>
-      </RestaurantProvider>
-    </GestureHandlerRootView>
+    <ErrorBoundary>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <OfflineBanner />
+        <RestaurantProvider>
+          <NavigationContainer ref={navigationRef}>
+            <AppNavigator />
+          </NavigationContainer>
+        </RestaurantProvider>
+      </GestureHandlerRootView>
+    </ErrorBoundary>
   );
 }
 

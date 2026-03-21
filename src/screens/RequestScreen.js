@@ -472,6 +472,9 @@ export default function RequestScreen({ navigation }) {
             </Text>
           </View>
         }
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        removeClippedSubviews={true}
       />
 
       {/* ========== ORDER MODAL ========== */}

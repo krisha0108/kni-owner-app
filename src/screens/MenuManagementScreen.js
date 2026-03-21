@@ -296,6 +296,9 @@ export default function MenuManagementScreen({ navigation }) {
           </View>
         }
         ListFooterComponent={<View style={{ height: scale(100) }} />}
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        removeClippedSubviews={true}
       />
 
       {/* Request New Category Button */}

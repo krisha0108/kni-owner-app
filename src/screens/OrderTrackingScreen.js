@@ -670,6 +670,9 @@ export default function OrderTrackingScreen({ navigation }) {
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} />}
           ListEmptyComponent={renderEmpty}
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          removeClippedSubviews={true}
         />
       ) : (
         <FlatList
@@ -681,6 +684,9 @@ export default function OrderTrackingScreen({ navigation }) {
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} />}
           ListEmptyComponent={renderEmpty}
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          removeClippedSubviews={true}
         />
       )}
 

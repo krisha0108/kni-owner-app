@@ -470,6 +470,9 @@ export default function TeamManagementScreen({ navigation }) {
             )}
           </View>
         }
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        removeClippedSubviews={true}
       />
 
       {/* ========== INVITE MODAL ========== */}

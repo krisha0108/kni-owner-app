@@ -81,6 +81,9 @@ export default function MyBookingsScreen({ navigation }) {
   const [bookings, setBookings] = useState([]);
   const [activeStatusTab, setActiveStatusTab] = useState('all');
   const [menuVisible, setMenuVisible] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   // Calculate status counts
   const statusCounts = useMemo(() => {
@@ -98,36 +101,69 @@ export default function MyBookingsScreen({ navigation }) {
     }, [selectedRestaurant])
   );
 
-  const loadData = async () => {
+  const loadData = async (pageNum = 1, append = false) => {
     if (!selectedRestaurant) {
       setLoading(false);
       return;
     }
 
+    if (pageNum === 1) setLoading(true);
+    else setLoadingMore(true);
+
     try {
-      setLoading(true);
-      const params = new URLSearchParams({ restaurantId: selectedRestaurant });
+      const params = new URLSearchParams({ restaurantId: selectedRestaurant, page: pageNum.toString(), pageSize: '20' });
       const response = await api.get(`/owner/bookings?${params}`);
       if (response.data.ok) {
-        setBookings(response.data.data || []);
+        const responseData = response.data.data;
+        if (responseData && responseData.items) {
+          const { items, total, page: currentPage, pageSize } = responseData;
+          if (append) {
+            setBookings(prev => [...prev, ...items]);
+          } else {
+            setBookings(items);
+          }
+          setHasMore(currentPage * pageSize < total);
+          setPage(currentPage);
+        } else {
+          setBookings(responseData || []);
+          setHasMore(false);
+        }
       }
     } catch (error) {
       console.error('Error loading bookings:', error);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
       setRefreshing(false);
     }
   };
 
   const filteredBookings = useMemo(() => {
     if (activeStatusTab === 'all') return bookings;
-    return bookings.filter(b => b.status === activeStatusTab);
+    return bookings.filter(b => (b.status || 'PENDING_PAYMENT') === activeStatusTab);
   }, [bookings, activeStatusTab]);
+
+  const handleLoadMore = () => {
+    if (!loadingMore && hasMore && !loading) {
+      loadData(page + 1, true);
+    }
+  };
+
+  const renderFooter = () => {
+    if (!loadingMore) return null;
+    return (
+      <View style={{ padding: 16, alignItems: 'center' }}>
+        <ActivityIndicator size="small" color="#EF3A3A" />
+      </View>
+    );
+  };
 
   const onRefresh = async () => {
     setRefreshing(true);
+    setPage(1);
+    setHasMore(true);
     await loadRestaurants();
-    await loadData();
+    await loadData(1, false);
   };
 
   // Render status tab
@@ -382,6 +418,12 @@ export default function MyBookingsScreen({ navigation }) {
             </Text>
           </View>
         }
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.3}
+        ListFooterComponent={renderFooter}
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        removeClippedSubviews={true}
       />
 
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />

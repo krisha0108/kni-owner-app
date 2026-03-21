@@ -92,6 +92,9 @@ export default function MarketplaceScreen({ navigation }) {
   const [menuVisible, setMenuVisible] = useState(false);
   const [priceRequestProduct, setPriceRequestProduct] = useState(null);
   const [isPriceRequestOpen, setIsPriceRequestOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   // Animate cart button when items added
   const animateCart = () => {
@@ -122,39 +125,63 @@ export default function MarketplaceScreen({ navigation }) {
     loadCart();
   }, [loadCart]);
 
-  const loadData = useCallback(async (showLoader = true) => {
+  const loadData = useCallback(async (showLoader = true, pageNum = 1, append = false) => {
     if (!selectedRestaurantId) return;
 
     try {
-      if (showLoader) setLoading(true);
+      if (pageNum === 1 && showLoader) setLoading(true);
+      else if (pageNum > 1) setLoadingMore(true);
+
       const params = new URLSearchParams();
       params.append('restaurantId', selectedRestaurantId);
+      params.append('page', pageNum.toString());
+      params.append('pageSize', '20');
       if (selectedCategory && selectedCategory !== 'all') {
         params.append('categoryId', selectedCategory);
       }
 
       const response = await api.get(`/owner/marketplace/products?${params}`);
       if (response.data.ok) {
-        setProducts(response.data.data || []);
+        const responseData = response.data.data;
+        if (responseData && responseData.items) {
+          const { items, total, page: currentPage, pageSize } = responseData;
+          if (append) {
+            setProducts(prev => [...prev, ...items]);
+          } else {
+            setProducts(items);
+          }
+          setHasMore(currentPage * pageSize < total);
+          setPage(currentPage);
+        } else {
+          setProducts(responseData || []);
+          setHasMore(false);
+        }
       }
 
-      try {
-        const catRes = await api.get('/public/marketplace-categories');
-        if (catRes.data.ok) {
-          setCategories(catRes.data.data || []);
+      if (pageNum === 1) {
+        try {
+          const catRes = await api.get('/public/marketplace-categories');
+          if (catRes.data.ok) {
+            setCategories(catRes.data.data || []);
+          }
+        } catch (e) {
+          console.error('Error loading categories:', e);
         }
-      } catch (e) {}
+      }
     } catch (error) {
       console.error('Error loading marketplace:', error);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
       setRefreshing(false);
     }
   }, [selectedRestaurantId, selectedCategory]);
 
   useEffect(() => {
     if (selectedRestaurantId) {
-      loadData();
+      setPage(1);
+      setHasMore(true);
+      loadData(true, 1, false);
     }
   }, [selectedRestaurantId, selectedCategory, loadData]);
 
@@ -172,9 +199,26 @@ export default function MarketplaceScreen({ navigation }) {
 
   const onRefresh = async () => {
     setRefreshing(true);
+    setPage(1);
+    setHasMore(true);
     await loadRestaurants();
-    await loadData();
+    await loadData(true, 1, false);
     await loadCart();
+  };
+
+  const handleLoadMore = () => {
+    if (!loadingMore && hasMore && !loading) {
+      loadData(false, page + 1, true);
+    }
+  };
+
+  const renderListFooter = () => {
+    if (!loadingMore) return null;
+    return (
+      <View style={{ padding: 16, alignItems: 'center' }}>
+        <ActivityIndicator size="small" color="#EF3A3A" />
+      </View>
+    );
   };
 
   // Cart Functions - Server-side API
@@ -671,6 +715,12 @@ export default function MarketplaceScreen({ navigation }) {
             tintColor={C.primary}
           />
         }
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.3}
+        ListFooterComponent={renderListFooter}
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        removeClippedSubviews={true}
       />
 
       {/* Floating Cart Button with Item Preview */}

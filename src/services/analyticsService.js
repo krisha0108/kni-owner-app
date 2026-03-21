@@ -206,17 +206,11 @@ export const exportAnalyticsPDF = async (restaurantId) => {
       }
     }
 
-    // Handle blob response (legacy format)
     const timestamp = Date.now();
     const fileName = `analytics-${restaurantId}-${timestamp}.pdf`;
     const path = `${RNFS.DocumentDirectoryPath}/${fileName}`;
 
-    let base64Data = response.data;
-    if (typeof base64Data !== 'string') {
-      base64Data = await blobToBase64(response.data);
-    }
-
-    await RNFS.writeFile(path, base64Data, 'base64');
+    await RNFS.writeFile(path, response.data, 'base64');
     return path;
   } catch (error) {
     console.error('Export analytics PDF error:', error);
@@ -263,17 +257,11 @@ export const exportSpendingReportPDF = async (restaurantId, filters = {}) => {
       }
     }
 
-    // Handle blob response (legacy format)
     const timestamp = Date.now();
     const fileName = `spending-report-${restaurantId || 'all'}-${timestamp}.pdf`;
     const path = `${RNFS.DocumentDirectoryPath}/${fileName}`;
 
-    let base64Data = response.data;
-    if (typeof base64Data !== 'string') {
-      base64Data = await blobToBase64(response.data);
-    }
-
-    await RNFS.writeFile(path, base64Data, 'base64');
+    await RNFS.writeFile(path, response.data, 'base64');
     return path;
   } catch (error) {
     console.error('Export spending report PDF error:', error);
@@ -317,23 +305,6 @@ export const sharePDF = async (filePath) => {
   }
 };
 
-/**
- * Convert blob to base64 string
- * @param {Blob} blob - Blob data
- * @returns {Promise<string>} Base64 encoded string
- */
-const blobToBase64 = (blob) => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = reject;
-    reader.onload = () => {
-      const dataUrl = reader.result;
-      const base64 = dataUrl.split(',')[1];
-      resolve(base64);
-    };
-    reader.readAsDataURL(blob);
-  });
-};
 
 /**
  * Delete file from device

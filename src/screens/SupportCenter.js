@@ -106,6 +106,9 @@ export default function SupportCenter({ navigation }) {
   const [restaurantPickerVisible, setRestaurantPickerVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('all');
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [formData, setFormData] = useState({ title: '', equipmentName: '', category: 'General', description: '' });
@@ -119,6 +122,40 @@ export default function SupportCenter({ navigation }) {
   const [newMessage, setNewMessage] = useState('');
   const [replyImageUri, setReplyImageUri] = useState('');
   const [isSending, setIsSending] = useState(false);
+
+  const loadTickets = useCallback(async (restaurantId, pageNum = 1, append = false) => {
+    if (!restaurantId) return;
+
+    if (pageNum === 1 && !append) setLoading(true);
+    else if (pageNum > 1) setLoadingMore(true);
+
+    try {
+      const params = new URLSearchParams({ restaurantId, page: pageNum.toString(), pageSize: '20' });
+      const response = await api.get(`/owner/support?${params}`);
+      if (response.data.ok) {
+        const responseData = response.data.data;
+        if (responseData && responseData.items) {
+          const { items, total, page: currentPage, pageSize } = responseData;
+          if (append) {
+            setTickets(prev => [...prev, ...items]);
+          } else {
+            setTickets(items);
+          }
+          setHasMore(currentPage * pageSize < total);
+          setPage(currentPage);
+        } else {
+          setTickets(responseData || []);
+          setHasMore(false);
+        }
+      }
+    } catch (e) {
+      console.error('Error loading tickets:', e);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+      setRefreshing(false);
+    }
+  }, []);
 
   const loadData = useCallback(async (restaurantId = null) => {
     try {
@@ -135,8 +172,9 @@ export default function SupportCenter({ navigation }) {
         if (!target && approved.length > 0) target = approved[0];
         if (target) {
           setCurrentRestaurant(target);
-          const response = await api.get(`/owner/support?restaurantId=${target.id}`);
-          if (response.data.ok) setTickets(response.data.data || []);
+          setPage(1);
+          setHasMore(true);
+          await loadTickets(target.id, 1, false);
         }
       }
     } catch (e) {
@@ -145,7 +183,7 @@ export default function SupportCenter({ navigation }) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [loadTickets]);
 
   useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
 
@@ -154,19 +192,42 @@ export default function SupportCenter({ navigation }) {
     if (r.id !== currentRestaurant?.id) {
       setCurrentRestaurant(r);
       setTickets([]);
+      setPage(1);
+      setHasMore(true);
       loadData(r.id);
     }
   };
 
-  const onRefresh = () => { setRefreshing(true); loadData(currentRestaurant?.id); };
+  const onRefresh = () => {
+    setRefreshing(true);
+    setPage(1);
+    setHasMore(true);
+    loadData(currentRestaurant?.id);
+  };
+
+  const handleStatusTabChange = (statusKey) => {
+    setActiveTab(statusKey);
+  };
+
+  const handleLoadMore = () => {
+    if (!loadingMore && hasMore && !loading && currentRestaurant?.id) {
+      loadTickets(currentRestaurant.id, page + 1, true);
+    }
+  };
+
+  const renderListFooter = () => {
+    if (!loadingMore) return null;
+    return (
+      <View style={{ padding: 16, alignItems: 'center' }}>
+        <ActivityIndicator size="small" color="#EF3A3A" />
+      </View>
+    );
+  };
 
   const filteredTickets = useMemo(() => {
     let result = tickets;
     if (activeTab !== 'all') {
-      result = result.filter(t => {
-        const s = t.status?.toUpperCase();
-        return s === activeTab;
-      });
+      result = result.filter(t => (t.status?.toUpperCase() || 'PENDING') === activeTab);
     }
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
@@ -471,7 +532,7 @@ export default function SupportCenter({ navigation }) {
         <View style={st.summaryGrid}>
           <TouchableOpacity
             style={[st.summaryCard, activeTab === 'PENDING' && st.summaryCardActive]}
-            onPress={() => setActiveTab(activeTab === 'PENDING' ? 'all' : 'PENDING')}
+            onPress={() => handleStatusTabChange(activeTab === 'PENDING' ? 'all' : 'PENDING')}
           >
             <LinearGradient colors={['#FEF3C7', '#FDE68A']} style={st.summaryIconCircle}>
               <Icon name="time" size={scale(18)} color="#D97706" />
@@ -482,7 +543,7 @@ export default function SupportCenter({ navigation }) {
 
           <TouchableOpacity
             style={[st.summaryCard, activeTab === 'ON_WORK' && st.summaryCardActive]}
-            onPress={() => setActiveTab(activeTab === 'ON_WORK' ? 'all' : 'ON_WORK')}
+            onPress={() => handleStatusTabChange(activeTab === 'ON_WORK' ? 'all' : 'ON_WORK')}
           >
             <LinearGradient colors={['#E0E7FF', '#C7D2FE']} style={st.summaryIconCircle}>
               <Icon name="construct" size={scale(18)} color="#4F46E5" />
@@ -493,7 +554,7 @@ export default function SupportCenter({ navigation }) {
 
           <TouchableOpacity
             style={[st.summaryCard, activeTab === 'COMPLETED' && st.summaryCardActive]}
-            onPress={() => setActiveTab(activeTab === 'COMPLETED' ? 'all' : 'COMPLETED')}
+            onPress={() => handleStatusTabChange(activeTab === 'COMPLETED' ? 'all' : 'COMPLETED')}
           >
             <LinearGradient colors={['#D1FAE5', '#A7F3D0']} style={st.summaryIconCircle}>
               <Icon name="checkmark-circle" size={scale(18)} color="#059669" />
@@ -504,7 +565,7 @@ export default function SupportCenter({ navigation }) {
 
           <TouchableOpacity
             style={[st.summaryCard, activeTab === 'all' && st.summaryCardActive]}
-            onPress={() => setActiveTab('all')}
+            onPress={() => handleStatusTabChange('all')}
           >
             <LinearGradient colors={['#FEE2E2', '#FECACA']} style={st.summaryIconCircle}>
               <Icon name="documents" size={scale(18)} color={C.primary} />
@@ -546,7 +607,7 @@ export default function SupportCenter({ navigation }) {
               <TouchableOpacity
                 key={tab.key}
                 style={[st.tab, isActive && st.tabActive]}
-                onPress={() => setActiveTab(tab.key)}
+                onPress={() => handleStatusTabChange(tab.key)}
                 activeOpacity={0.7}
               >
                 <Icon name={tab.icon} size={scale(14)} color={isActive ? '#fff' : C.muted} style={{ marginRight: scale(5) }} />
@@ -576,11 +637,25 @@ export default function SupportCenter({ navigation }) {
         keyExtractor={item => item.id?.toString()}
         renderItem={renderTicketCard}
         ListEmptyComponent={renderEmpty}
-        ListFooterComponent={filteredTickets.length > 0 ? renderHelpCard : null}
+        ListFooterComponent={() => (
+          <>
+            {loadingMore && (
+              <View style={{ padding: 16, alignItems: 'center' }}>
+                <ActivityIndicator size="small" color="#EF3A3A" />
+              </View>
+            )}
+            {!loadingMore && filteredTickets.length > 0 ? renderHelpCard() : null}
+          </>
+        )}
         contentContainerStyle={st.listContent}
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} />}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.3}
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        removeClippedSubviews={true}
       />
 
       {/* ─── FAB (hide when empty state shows its own button) ─── */}

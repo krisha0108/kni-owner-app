@@ -480,6 +480,9 @@ export default function ExpensesScreen({ navigation }) {
             )}
           </View>
         }
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        removeClippedSubviews={true}
       />
 
       {/* Add/Edit Modal - Full screen (no transparent) to fix Android scroll */}
