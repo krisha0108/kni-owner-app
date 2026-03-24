@@ -1,11 +1,13 @@
 // components/KniBottomNav.js
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { scale, moderateScale, isTablet, getContainerMaxWidth, BREAKPOINTS } from '../utils/responsive';
 import { usePermissions } from '../utils/usePermissions';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { api } from '../api/client';
 
 /* ---------- THEME ---------- */
 const C = {
@@ -16,7 +18,7 @@ const C = {
 export default function KniBottomNav({
   active = 'home',
   cartCount = 0,
-  notifCount = 0,
+  notifCount: notifCountProp = 0,
   onFabPress,
 }) {
   const navigation = useNavigation();
@@ -24,6 +26,21 @@ export default function KniBottomNav({
   const { width } = useWindowDimensions();
   const { can } = usePermissions();
   const showFab = can('marketplace:create');
+  const [notifCount, setNotifCount] = useState(notifCountProp);
+
+  useEffect(() => {
+    const fetchCount = async () => {
+      try {
+        const response = await api.get('/notifications/unread-count');
+        if (response.data?.ok) {
+          setNotifCount(response.data.data?.count || 0);
+        }
+      } catch (e) {
+        // silently fail
+      }
+    };
+    fetchCount();
+  }, [active]);
 
   // Responsive sizing
   const isTabletDevice = isTablet(width);

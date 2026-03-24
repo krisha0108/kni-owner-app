@@ -72,6 +72,7 @@ export default function AMCRequestsListScreen({ navigation }) {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
 
   const statusCounts = useMemo(() => {
     const counts = { all: requests.length };
@@ -99,8 +100,13 @@ export default function AMCRequestsListScreen({ navigation }) {
         const responseData = response.data.data;
         if (responseData && responseData.items) {
           const { items, total, page: currentPage, pageSize } = responseData;
+          setTotalCount(total);
           if (append) {
-            setRequests(prev => [...prev, ...items]);
+            setRequests(prev => {
+              const existingIds = new Set(prev.map(r => r.id));
+              const uniqueNew = items.filter(r => !existingIds.has(r.id));
+              return [...prev, ...uniqueNew];
+            });
           } else {
             setRequests(items);
           }
@@ -266,7 +272,7 @@ export default function AMCRequestsListScreen({ navigation }) {
 
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{requests.length}</Text>
+            <Text style={styles.statValue}>{totalCount || requests.length}</Text>
             <Text style={styles.statLabel}>Total</Text>
           </View>
           <View style={styles.statDivider} />

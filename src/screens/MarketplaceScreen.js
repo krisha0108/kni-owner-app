@@ -146,7 +146,11 @@ export default function MarketplaceScreen({ navigation }) {
         if (responseData && responseData.items) {
           const { items, total, page: currentPage, pageSize } = responseData;
           if (append) {
-            setProducts(prev => [...prev, ...items]);
+            setProducts(prev => {
+              const existingIds = new Set(prev.map(p => p.id));
+              const uniqueNew = items.filter(p => !existingIds.has(p.id));
+              return [...prev, ...uniqueNew];
+            });
           } else {
             setProducts(items);
           }

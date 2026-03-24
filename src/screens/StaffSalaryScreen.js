@@ -109,6 +109,7 @@ export default function StaffSalaryScreen({ navigation }) {
       }
     } catch (error) {
       console.error('Error loading salaries:', error);
+      Alert.alert('Error', 'Failed to load salary data');
     } finally {
       setLoading(false);
       setRefreshing(false);

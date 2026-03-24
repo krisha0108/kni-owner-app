@@ -74,14 +74,20 @@ export default function RestaurantCreateScreen({ navigation }) {
   useEffect(() => {
     api.get('/public/locations?type=states').then(res => {
       if (res.data.ok) setStates(res.data.data || []);
-    }).catch(() => {});
+    }).catch((error) => {
+      console.error('Failed to load states:', error);
+      Alert.alert('Error', 'Failed to load states');
+    });
   }, []);
 
   useEffect(() => {
     if (selectedStateId) {
       api.get(`/public/locations?type=cities&stateId=${selectedStateId}`).then(res => {
         if (res.data.ok) setCities(res.data.data || []);
-      }).catch(() => {});
+      }).catch((error) => {
+        console.error('Failed to load cities:', error);
+        Alert.alert('Error', 'Failed to load cities');
+      });
     } else {
       setCities([]);
     }

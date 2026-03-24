@@ -84,6 +84,7 @@ export default function MyBookingsScreen({ navigation }) {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
 
   // Calculate status counts
   const statusCounts = useMemo(() => {
@@ -117,8 +118,13 @@ export default function MyBookingsScreen({ navigation }) {
         const responseData = response.data.data;
         if (responseData && responseData.items) {
           const { items, total, page: currentPage, pageSize } = responseData;
+          setTotalCount(total);
           if (append) {
-            setBookings(prev => [...prev, ...items]);
+            setBookings(prev => {
+              const existingIds = new Set(prev.map(b => b.id));
+              const uniqueNew = items.filter(b => !existingIds.has(b.id));
+              return [...prev, ...uniqueNew];
+            });
           } else {
             setBookings(items);
           }
@@ -351,7 +357,7 @@ export default function MyBookingsScreen({ navigation }) {
         {/* Stats Row */}
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{bookings.length}</Text>
+            <Text style={styles.statValue}>{totalCount || bookings.length}</Text>
             <Text style={styles.statLabel}>Total</Text>
           </View>
           <View style={styles.statDivider} />

@@ -113,6 +113,7 @@ export default function StaffScreen({ navigation }) {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
   const [modalVisible, setModalVisible] = useState(false);
   const [actionModalVisible, setActionModalVisible] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState(null);
@@ -157,8 +158,13 @@ export default function StaffScreen({ navigation }) {
         const responseData = response.data.data;
         if (responseData && responseData.items) {
           const { items, total, page: currentPage, pageSize } = responseData;
+          setTotalCount(total);
           if (append) {
-            setStaff(prev => [...prev, ...items]);
+            setStaff(prev => {
+              const existingIds = new Set(prev.map(s => s.id));
+              const uniqueNew = items.filter(s => !existingIds.has(s.id));
+              return [...prev, ...uniqueNew];
+            });
           } else {
             setStaff(items);
           }
@@ -171,6 +177,7 @@ export default function StaffScreen({ navigation }) {
       }
     } catch (error) {
       console.error('Error loading staff:', error);
+      Alert.alert('Error', 'Failed to load staff data');
     } finally {
       setLoading(false);
       setLoadingMore(false);
@@ -386,7 +393,7 @@ export default function StaffScreen({ navigation }) {
       <View style={st.statsContainer}>
         <View style={[st.statCard, { backgroundColor: C.primaryLight }]}>
           <Icon name="people" size={scale(24)} color={C.primary} />
-          <Text style={[st.statValue, { color: C.primary }]}>{staff.length}</Text>
+          <Text style={[st.statValue, { color: C.primary }]}>{totalCount || staff.length}</Text>
           <Text style={st.statLabel}>Total Staff</Text>
         </View>
         <View style={[st.statCard, { backgroundColor: C.successLight }]}>

@@ -109,6 +109,7 @@ export default function SupportCenter({ navigation }) {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
 
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [formData, setFormData] = useState({ title: '', equipmentName: '', category: 'General', description: '' });
@@ -136,8 +137,13 @@ export default function SupportCenter({ navigation }) {
         const responseData = response.data.data;
         if (responseData && responseData.items) {
           const { items, total, page: currentPage, pageSize } = responseData;
+          setTotalCount(total);
           if (append) {
-            setTickets(prev => [...prev, ...items]);
+            setTickets(prev => {
+              const existingIds = new Set(prev.map(t => t.id));
+              const uniqueNew = items.filter(t => !existingIds.has(t.id));
+              return [...prev, ...uniqueNew];
+            });
           } else {
             setTickets(items);
           }
@@ -570,7 +576,7 @@ export default function SupportCenter({ navigation }) {
             <LinearGradient colors={['#FEE2E2', '#FECACA']} style={st.summaryIconCircle}>
               <Icon name="documents" size={scale(18)} color={C.primary} />
             </LinearGradient>
-            <Text style={st.summaryCount}>{tickets.length}</Text>
+            <Text style={st.summaryCount}>{totalCount || tickets.length}</Text>
             <Text style={st.summaryLabel}>Total</Text>
           </TouchableOpacity>
         </View>

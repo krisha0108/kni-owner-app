@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, SectionList, TouchableOpacity, Animated,
-  RefreshControl, ScrollView, Dimensions
+  RefreshControl, ScrollView, Dimensions, ActivityIndicator
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -127,39 +127,74 @@ export default function Notifications({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [ownerId, setOwnerId] = useState(null);
   const [token, setToken] = useState(null);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const PAGE_SIZE = 20;
 
   const pulse = useRef(new Animated.Value(0.5)).current;
 
-  const fetchNotifications = useCallback(async (userOwnerId = null, userToken = null) => {
+  const mapNotification = (n) => ({
+    id: n.id,
+    type: n.type || 'restaurant_approved',
+    title: n.title,
+    body: n.message,
+    ts: n.createdAt || n.created_at,
+    unread: !n.isRead && !n.is_read,
+    meta: {
+      restaurantId: n.restaurant_id,
+      notificationId: n.id,
+      orderId: n.equipment_request_id || n.order_id,
+      equipment_request_id: n.equipment_request_id,
+      ticketId: n.ticket_id,
+    }
+  });
+
+  const fetchNotifications = useCallback(async (userOwnerId = null, userToken = null, pageNum = 1, append = false) => {
     try {
-      setLoading(true);
+      if (pageNum === 1) setLoading(true);
+      else setLoadingMore(true);
       const currentOwnerId = userOwnerId || ownerId;
       const currentToken = userToken || token;
       if (!currentOwnerId || !currentToken) { setLoading(false); return; }
-      const res = await api.get('/owner/notifications', { headers: { Authorization: `Bearer ${currentToken}` } });
+      const res = await api.get(`/owner/notifications?page=${pageNum}&pageSize=${PAGE_SIZE}`, { headers: { Authorization: `Bearer ${currentToken}` } });
       const json = res.data;
-      const arr = json?.data || (Array.isArray(json) ? json : []);
+
+      let arr = [];
+      let total = 0;
+      if (json?.data?.items) {
+        arr = json.data.items;
+        total = json.data.total || json.total || 0;
+      } else {
+        arr = json?.data || (Array.isArray(json) ? json : []);
+        total = json?.total || arr.length;
+      }
+
+      setTotalNotifCount(total);
+
       if (arr && Array.isArray(arr) && arr.length > 0) {
-        setItems(arr.map(n => ({
-          id: n.id,
-          type: n.type || 'restaurant_approved',
-          title: n.title,
-          body: n.message,
-          ts: n.createdAt || n.created_at,
-          unread: !n.isRead && !n.is_read,
-          meta: {
-            restaurantId: n.restaurant_id,
-            notificationId: n.id,
-            orderId: n.equipment_request_id || n.order_id,
-            equipment_request_id: n.equipment_request_id,
-            ticketId: n.ticket_id,
-          }
-        })));
-      } else { setItems([]); }
+        const mapped = arr.map(mapNotification);
+        if (append) {
+          setItems(prev => {
+            const existingIds = new Set(prev.map(n => n.id));
+            const uniqueNew = mapped.filter(n => !existingIds.has(n.id));
+            return [...prev, ...uniqueNew];
+          });
+        } else {
+          setItems(mapped);
+        }
+        setHasMore(pageNum * PAGE_SIZE < total);
+        setPage(pageNum);
+      } else if (pageNum === 1) {
+        setItems([]);
+        setHasMore(false);
+      } else {
+        setHasMore(false);
+      }
     } catch (e) {
       console.log("Error fetching notifications:", e.message);
-      setItems([]);
-    } finally { setLoading(false); setRefreshing(false); }
+      if (pageNum === 1) setItems([]);
+    } finally { setLoading(false); setRefreshing(false); setLoadingMore(false); }
   }, [ownerId, token]);
 
   const initializeUserData = useCallback(async () => {
@@ -170,7 +205,7 @@ export default function Notifications({ navigation }) {
         const user = JSON.parse(userData);
         setOwnerId(user.id);
         setToken(authToken);
-        fetchNotifications(user.id, authToken);
+        fetchNotifications(user.id, authToken, 1, false);
       } else { setLoading(false); }
     } catch (e) { console.log('Error getting user data:', e); setLoading(false); }
   }, [fetchNotifications]);
@@ -186,7 +221,7 @@ export default function Notifications({ navigation }) {
   }, [pulse, initializeUserData]);
 
   const filterCounts = useMemo(() => {
-    const c = { all: items.length, orders: 0, tickets: 0, restaurants: 0, product: 0 };
+    const c = { all: totalNotifCount || items.length, orders: 0, tickets: 0, restaurants: 0, product: 0 };
     items.forEach(x => { c[getCatKey(x.type)]++; });
     return c;
   }, [items]);
@@ -198,7 +233,22 @@ export default function Notifications({ navigation }) {
 
   const sections = useMemo(() => loading ? [] : groupSections(filtered), [filtered, loading]);
 
-  const onRefresh = () => { setRefreshing(true); fetchNotifications(); };
+  const onRefresh = () => { setRefreshing(true); setPage(1); setHasMore(true); fetchNotifications(null, null, 1, false); };
+
+  const handleLoadMore = () => {
+    if (!loadingMore && hasMore && !loading) {
+      fetchNotifications(null, null, page + 1, true);
+    }
+  };
+
+  const renderFooter = () => {
+    if (!loadingMore) return null;
+    return (
+      <View style={{ padding: scale(16), alignItems: 'center' }}>
+        <ActivityIndicator size="small" color={C.primary} />
+      </View>
+    );
+  };
 
   const markNotificationRead = async (id) => {
     try {
@@ -232,7 +282,26 @@ export default function Notifications({ navigation }) {
     markAllReadApi();
   };
 
-  const unreadCount = useMemo(() => items.filter(x => x.unread).length, [items]);
+  const [realUnreadCount, setRealUnreadCount] = useState(0);
+  const [totalNotifCount, setTotalNotifCount] = useState(0);
+
+  useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        const response = await api.get('/notifications/unread-count');
+        if (response.data?.ok) {
+          setRealUnreadCount(response.data.data?.count || 0);
+        }
+        const allResponse = await api.get('/notifications?page=1&pageSize=1');
+        if (allResponse.data?.ok) {
+          setTotalNotifCount(allResponse.data.data?.total || allResponse.data.total || items.length);
+        }
+      } catch (e) {}
+    };
+    fetchCounts();
+  }, [items]);
+
+  const unreadCount = realUnreadCount;
 
   /* ───── RENDER NOTIFICATION CARD ───── */
   const renderCard = ({ item }) => {
@@ -352,7 +421,7 @@ export default function Notifications({ navigation }) {
             <LinearGradient colors={['#FEE2E2', '#FECACA']} style={st.summaryIconCircle}>
               <Icon name="notifications" size={scale(18)} color={C.primary} />
             </LinearGradient>
-            <Text style={st.summaryCount}>{items.length}</Text>
+            <Text style={st.summaryCount}>{totalNotifCount || items.length}</Text>
             <Text style={st.summaryLabel}>Total</Text>
           </TouchableOpacity>
         </View>
@@ -401,6 +470,9 @@ export default function Notifications({ navigation }) {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} />}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: insets.bottom + scale(100) }}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.3}
+          ListFooterComponent={renderFooter}
           renderSectionHeader={({ section: { title, data } }) => (
             <View style={st.sectionHeaderRow}>
               <View style={st.sectionDot} />

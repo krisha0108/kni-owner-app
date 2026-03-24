@@ -78,6 +78,7 @@ export default function HomeScreen({ navigation }) {
   const [feed, setFeed] = useState([]);
   const [cartCount, setCartCount] = useState(0);
   const [marketplaceCartCount, setMarketplaceCartCount] = useState(0);
+  const [notifCount, setNotifCount] = useState(0);
   const [menuVisible, setMenuVisible] = useState(false);
 
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
@@ -263,6 +264,7 @@ export default function HomeScreen({ navigation }) {
       }
     } catch (error) {
       console.error('Analytics error:', error);
+      Alert.alert('Error', 'Failed to load analytics data');
     } finally {
       setAnalyticsLoading(false);
     }
@@ -277,6 +279,17 @@ export default function HomeScreen({ navigation }) {
       setMarketplaceCartCount(items.length || 0);
     } catch { setMarketplaceCartCount(0); }
   }, [restaurantId]);
+
+  const fetchNotifCount = useCallback(async () => {
+    try {
+      const response = await api.get('/notifications/unread-count');
+      if (response.data?.ok) {
+        setNotifCount(response.data.data?.count || 0);
+      }
+    } catch (error) {
+      // silently fail
+    }
+  }, []);
 
   /* ═══════════ LIFECYCLE ═══════════ */
   // Load all home data on screen focus (covers first mount + every tab switch)
@@ -299,6 +312,7 @@ export default function HomeScreen({ navigation }) {
       loadAll();
       calculateCartCount();
       loadMarketplaceCartCount();
+      fetchNotifCount();
       if (restaurantId) loadAnalytics();
     }, [loadRestaurants, fetchBanners, fetchFeed, fetchSponsored, fetchGuides, calculateCartCount, loadMarketplaceCartCount, restaurantId, loadAnalytics])
   );
@@ -447,6 +461,11 @@ export default function HomeScreen({ navigation }) {
             )}
             <TouchableOpacity onPress={() => navigation.navigate?.('Notifications')} style={st.headerBtn}>
               <Icon name="notifications-outline" size={scale(18)} color="#fff" />
+              {notifCount > 0 && (
+                <View style={{position:'absolute',top:-4,right:-4,backgroundColor:'#FF3B30',borderRadius:10,minWidth:18,height:18,justifyContent:'center',alignItems:'center',paddingHorizontal:4}}>
+                  <Text style={{color:'#fff',fontSize:10,fontWeight:'700'}}>{notifCount > 99 ? '99+' : notifCount}</Text>
+                </View>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -961,7 +980,7 @@ export default function HomeScreen({ navigation }) {
         )}
       </ScrollView>
 
-      <KniBottomNav navigation={navigation} active="home" cartCount={cartCount} notifCount={0} />
+      <KniBottomNav navigation={navigation} active="home" cartCount={cartCount} notifCount={notifCount} />
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
     </SafeAreaView>
   );

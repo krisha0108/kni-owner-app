@@ -12,6 +12,7 @@ import {
   ScrollView,
   TextInput,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -275,6 +276,7 @@ export default function OrderTrackingScreen({ navigation }) {
       }
     } catch (error) {
       console.error('Error loading tracking data:', error);
+      Alert.alert('Error', 'Failed to load tracking data');
     } finally {
       setLoading(false);
       setRefreshing(false);

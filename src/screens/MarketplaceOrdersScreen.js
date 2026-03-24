@@ -117,6 +117,7 @@ export default function MarketplaceOrdersScreen({ navigation }) {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
 
   // Order Detail Modal
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -177,8 +178,13 @@ export default function MarketplaceOrdersScreen({ navigation }) {
         const responseData = response.data.data;
         if (responseData && responseData.items) {
           const { items, total, page: currentPage, pageSize } = responseData;
+          setTotalCount(total);
           if (append) {
-            setOrders(prev => [...prev, ...items]);
+            setOrders(prev => {
+              const existingIds = new Set(prev.map(o => o.id));
+              const uniqueNew = items.filter(o => !existingIds.has(o.id));
+              return [...prev, ...uniqueNew];
+            });
           } else {
             setOrders(items);
           }
@@ -620,7 +626,7 @@ export default function MarketplaceOrdersScreen({ navigation }) {
         {/* Order Stats Summary */}
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{orders.length}</Text>
+            <Text style={styles.statNumber}>{totalCount || orders.length}</Text>
             <Text style={styles.statLabel}>Total</Text>
           </View>
           <View style={styles.statDivider} />

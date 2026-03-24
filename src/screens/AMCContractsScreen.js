@@ -56,6 +56,7 @@ export default function AMCContractsScreen({ navigation }) {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
 
   const statusCounts = useMemo(() => {
     const counts = { all: contracts.length };
@@ -81,8 +82,13 @@ export default function AMCContractsScreen({ navigation }) {
         const responseData = response.data.data;
         if (responseData && responseData.items) {
           const { items, total, page: currentPage, pageSize } = responseData;
+          setTotalCount(total);
           if (append) {
-            setContracts(prev => [...prev, ...items]);
+            setContracts(prev => {
+              const existingIds = new Set(prev.map(c => c.id));
+              const uniqueNew = items.filter(c => !existingIds.has(c.id));
+              return [...prev, ...uniqueNew];
+            });
           } else {
             setContracts(items);
           }
@@ -273,7 +279,7 @@ export default function AMCContractsScreen({ navigation }) {
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{contracts.length}</Text>
+            <Text style={styles.statValue}>{totalCount || contracts.length}</Text>
             <Text style={styles.statLabel}>Total</Text>
           </View>
           <View style={styles.statDivider} />
