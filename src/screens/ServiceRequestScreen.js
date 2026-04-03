@@ -31,6 +31,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import Icon from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary } from 'react-native-image-picker';
 import Clipboard from '@react-native-clipboard/clipboard';
+import RazorpayCheckout from 'react-native-razorpay';
 import { api, uploadFile } from '../api/client';
 import { useRestaurant } from '../context/RestaurantContext';
 import KniBottomNav from '../components/KniBottomNav';
@@ -272,7 +273,119 @@ export default function ServiceRequestScreen({ navigation, route }) {
     }
   };
 
-  // Submit booking
+  // Razorpay payment
+  const paymentInProgress = React.useRef(false);
+  const handleRazorpayPayment = async () => {
+    if (paymentInProgress.current) return;
+    if (!selectedRestaurantId) {
+      Alert.alert('Error', 'Please select a restaurant');
+      return;
+    }
+    if (selectedItems.size === 0) {
+      Alert.alert('Error', 'Please select at least one service or part');
+      return;
+    }
+    if (!selectedDate || !selectedSlot) {
+      Alert.alert('Error', 'Please select date and time');
+      return;
+    }
+
+    paymentInProgress.current = true;
+    setIsSubmitting(true);
+    try {
+      const slot = TIME_SLOTS.find(s => s.id === selectedSlot);
+      if (!slot) throw new Error('Invalid time slot');
+
+      const slotStart = new Date(selectedDate);
+      const [startHour, startMin] = slot.start.split(':').map(Number);
+      slotStart.setHours(startHour, startMin, 0, 0);
+
+      const slotEnd = new Date(selectedDate);
+      const [endHour, endMin] = slot.end.split(':').map(Number);
+      slotEnd.setHours(endHour, endMin, 0, 0);
+
+      const items = [];
+      selectedItems.forEach(item => {
+        items.push({
+          itemType: item.type === 'service' ? 'SERVICE' : 'PART',
+          itemId: item.id,
+          qty: item.qty,
+          priceSnapshot: item.price,
+        });
+      });
+
+      // 1. Create booking first (without payment)
+      const bookingRes = await api.post('/owner/bookings', {
+        restaurantId: selectedRestaurantId,
+        equipmentId: equipmentId || undefined,
+        slotStartDateTime: slotStart.toISOString(),
+        slotEndDateTime: slotEnd.toISOString(),
+        problemDescription: problemDescription || `Service request for ${equipmentName || 'Equipment'}`,
+        tip,
+        items,
+      });
+
+      if (!bookingRes.data?.ok) {
+        throw new Error(bookingRes.data?.error || 'Failed to create booking');
+      }
+
+      const bookingId = bookingRes.data.data.id;
+
+      // 2. Create Razorpay order
+      const orderRes = await api.post('/razorpay/create-order', {
+        amount: totals.total,
+        type: 'SERVICE_BOOKING',
+        referenceId: bookingId,
+      });
+
+      if (!orderRes.data.ok) {
+        throw new Error(orderRes.data.error || 'Failed to create payment order');
+      }
+
+      const { orderId, amount, currency, keyId, prefill } = orderRes.data.data;
+
+      // 3. Open Razorpay checkout
+      const options = {
+        key: keyId,
+        amount,
+        currency,
+        name: 'KNI Super App',
+        description: `Service Booking - ${equipmentName || 'Equipment'}`,
+        order_id: orderId,
+        prefill: prefill || {},
+        theme: { color: '#EF3A3A' },
+      };
+
+      const paymentData = await RazorpayCheckout.open(options);
+
+      // 4. Verify payment
+      const verifyRes = await api.post('/razorpay/verify', {
+        type: 'SERVICE_BOOKING',
+        razorpay_order_id: paymentData.razorpay_order_id,
+        razorpay_payment_id: paymentData.razorpay_payment_id,
+        razorpay_signature: paymentData.razorpay_signature,
+        bookingId,
+      });
+
+      if (verifyRes.data.ok) {
+        setStep('confirm');
+      } else {
+        Alert.alert('Verification Failed', verifyRes.data.error || 'Payment verification failed');
+      }
+    } catch (error) {
+      if (error.code === 'PAYMENT_CANCELLED') {
+        Alert.alert('Info', 'Payment cancelled. Your booking has been created — you can pay later from My Bookings.');
+      } else {
+        console.error('Razorpay payment error:', error);
+        Alert.alert('Error', error.description || error.message || 'Payment failed. Please try again.');
+      }
+    } finally {
+      setIsSubmitting(false);
+      paymentInProgress.current = false;
+    }
+  };
+
+  // Submit booking (legacy manual flow - kept for reference)
   const handleSubmit = async () => {
     if (!selectedRestaurantId) {
       Alert.alert('Error', 'Please select a restaurant');
@@ -559,82 +672,36 @@ export default function ServiceRequestScreen({ navigation, route }) {
               </View>
             </View>
 
-            {/* UPI Payment */}
+            {/* Razorpay Payment */}
             <View style={st.section}>
               <View style={st.sectionHeader}>
                 <Icon name="card-outline" size={20} color={C.primary} />
-                <Text style={st.sectionTitle}>Pay via UPI</Text>
+                <Text style={st.sectionTitle}>Payment</Text>
               </View>
 
-              {paymentSettings ? (
-                <>
-                  {/* QR Code Display */}
-                  {paymentSettings.qrCodeImageUrl && (
-                    <View style={st.qrContainer}>
-                      <Image
-                        source={{ uri: paymentSettings.qrCodeImageUrl.startsWith('http')
-                          ? paymentSettings.qrCodeImageUrl
-                          : `${api.defaults.baseURL?.replace('/api', '')}${paymentSettings.qrCodeImageUrl}` }}
-                        style={st.qrImage}
-                        resizeMode="contain"
-                      />
-                    </View>
-                  )}
-
-                  {/* UPI Details */}
-                  <View style={st.upiCard}>
-                    <View style={st.upiRow}>
-                      <Text style={st.upiLabel}>UPI ID</Text>
-                      <TouchableOpacity style={st.copyBtn} onPress={copyUpiId}>
-                        <Icon name="copy-outline" size={16} color={C.primary} />
-                        <Text style={st.copyText}>Copy</Text>
-                      </TouchableOpacity>
-                    </View>
-                    <Text style={st.upiId}>{paymentSettings.upiId}</Text>
-
-                    <View style={st.upiDivider} />
-                    <Text style={st.upiLabel}>Account Name</Text>
-                    <Text style={st.accountName}>{paymentSettings.accountHolderName}</Text>
-                  </View>
-
-                  {/* Payment Instructions */}
-                  {paymentSettings.instructions && (
-                    <View style={st.instructionsCard}>
-                      <Text style={st.instructionsText}>{paymentSettings.instructions}</Text>
-                    </View>
-                  )}
-                </>
-              ) : (
-                <View style={st.warningCard}>
-                  <Icon name="warning-outline" size={20} color={C.warn} />
-                  <Text style={st.warningText}>Payment settings not configured. Please contact admin.</Text>
+              <View style={[st.summaryCard, { alignItems: 'center', paddingVertical: scale(24) }]}>
+                <View style={{
+                  width: scale(64), height: scale(64), borderRadius: scale(32),
+                  backgroundColor: '#DBEAFE', alignItems: 'center', justifyContent: 'center',
+                  marginBottom: scale(12),
+                }}>
+                  <Icon name="shield-checkmark" size={32} color={C.info} />
                 </View>
-              )}
+                <Text style={{ fontSize: moderateScale(16), fontWeight: '700', color: C.ink, marginBottom: scale(4) }}>
+                  Secure Payment via Razorpay
+                </Text>
+                <Text style={{ fontSize: moderateScale(13), color: C.muted, textAlign: 'center', lineHeight: moderateScale(18) }}>
+                  Pay using UPI, Credit/Debit Card, NetBanking, or Wallets.{'\n'}Your booking will be confirmed instantly.
+                </Text>
+              </View>
 
-              {/* Screenshot Upload */}
-              <Text style={st.uploadLabel}>Upload Payment Screenshot</Text>
-              <TouchableOpacity
-                style={st.uploadBox}
-                onPress={handleScreenshotUpload}
-                disabled={isUploading}
-              >
-                {isUploading ? (
-                  <ActivityIndicator color={C.primary} />
-                ) : paymentScreenshot ? (
-                  <View style={st.uploadedBox}>
-                    <Icon name="checkmark-circle" size={32} color={C.ok} />
-                    <Text style={st.uploadedText}>Screenshot uploaded</Text>
-                    <TouchableOpacity onPress={() => setPaymentScreenshot(null)}>
-                      <Text style={st.removeText}>Remove</Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  <>
-                    <Icon name="cloud-upload-outline" size={32} color={C.muted} />
-                    <Text style={st.uploadText}>Click to upload screenshot</Text>
-                  </>
-                )}
-              </TouchableOpacity>
+              <View style={{
+                flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+                backgroundColor: '#FEE2E2', borderRadius: scale(12), padding: scale(16), marginTop: scale(12),
+              }}>
+                <Text style={{ fontSize: moderateScale(14), fontWeight: '600', color: '#DC2626' }}>Amount to Pay</Text>
+                <Text style={{ fontSize: moderateScale(22), fontWeight: '800', color: '#DC2626' }}>{formatPrice(totals.total)}</Text>
+              </View>
             </View>
 
             <View style={{ height: scale(240) }} />
@@ -674,7 +741,7 @@ export default function ServiceRequestScreen({ navigation, route }) {
     const itemCount = selectedItems.size;
     const canContinue = step === 'select' ? itemCount > 0
       : step === 'date' ? selectedDate && selectedSlot
-      : step === 'payment' ? paymentScreenshot
+      : step === 'payment' ? true
       : false;
 
     // Calculate proper bottom position: nav height + safe area + extra gap
@@ -724,16 +791,16 @@ export default function ServiceRequestScreen({ navigation, route }) {
 
             {step === 'payment' && (
               <TouchableOpacity
-                style={[st.continueBtn, (!canContinue || isSubmitting) && st.continueBtnDisabled]}
-                disabled={!canContinue || isSubmitting}
-                onPress={handleSubmit}
+                style={[st.continueBtn, isSubmitting && st.continueBtnDisabled]}
+                disabled={isSubmitting}
+                onPress={handleRazorpayPayment}
               >
                 {isSubmitting ? (
                   <ActivityIndicator color="#fff" size="small" />
                 ) : (
                   <>
-                    <Text style={st.continueBtnText}>Confirm Booking</Text>
-                    <Icon name="checkmark-circle" size={18} color="#fff" />
+                    <Icon name="card" size={18} color="#fff" />
+                    <Text style={st.continueBtnText}>Pay with Razorpay</Text>
                   </>
                 )}
               </TouchableOpacity>

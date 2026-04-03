@@ -53,9 +53,7 @@ import TeamAcceptScreen from '../screens/TeamAcceptScreen';
 import RestaurantCreateScreen from '../screens/RestaurantCreateScreen';
 
 // Phase 4: Feature Parity Screens
-import NewBookingScreen from '../screens/NewBookingScreen';
 import CategoryDetailScreen from '../screens/CategoryDetailScreen';
-import PaymentTrackingScreen from '../screens/PaymentTrackingScreen';
 
 // Marketplace
 import MarketplaceScreen from '../screens/MarketplaceScreen';
@@ -200,9 +198,7 @@ export default function AppNavigator() {
         <Stack.Screen name="CreateMarketplaceOrder" component={CreateMarketplaceOrderScreen} />
 
         {/* Phase 4: Feature Parity Screens */}
-        <Stack.Screen name="NewBooking" component={NewBookingScreen} />
         <Stack.Screen name="CategoryDetail" component={CategoryDetailScreen} />
-        <Stack.Screen name="PaymentTracking" component={PaymentTrackingScreen} />
         <Stack.Screen name="OrderTracking" component={OrderTrackingScreen} />
 
         {/* AMC Screens */}

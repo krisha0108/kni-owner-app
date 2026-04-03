@@ -15,6 +15,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary } from 'react-native-image-picker';
 import Clipboard from '@react-native-clipboard/clipboard';
+import RazorpayCheckout from 'react-native-razorpay';
 import { api, getImageUrl, uploadFile } from '../api/client';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
@@ -65,8 +66,7 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
-  const [paymentSettings, setPaymentSettings] = useState(null);
-  const [uploading, setUploading] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [categories, setCategories] = useState([]);
 
@@ -94,9 +94,6 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
   }, [requestId, loadRequest]);
 
   useEffect(() => {
-    api.get('/public/payment-settings').then(r => {
-      if (r.data?.ok) setPaymentSettings(r.data.data);
-    }).catch(() => {});
     // Load categories to map IDs to names
     api.get('/app/categories').then(r => {
       if (r.data?.ok) setCategories(r.data.data || []);
@@ -144,26 +141,59 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
     } finally { setSubmitting(false); }
   };
 
-  const handleUploadPayment = async () => {
+  const handleRazorpayPayment = async () => {
+    if (!request?.payment || isProcessingPayment) return;
+    setIsProcessingPayment(true);
     try {
-      const result = await launchImageLibrary({ mediaType: 'photo', quality: 0.8, maxWidth: 1920, maxHeight: 1920 });
-      if (result.didCancel || !result.assets?.[0]) return;
+      // 1. Create Razorpay order
+      const orderRes = await api.post('/razorpay/create-order', {
+        amount: request.payment.amount,
+        type: 'AMC_PAYMENT',
+        referenceId: request.payment.id,
+      });
+      if (!orderRes.data.ok) {
+        Alert.alert('Error', orderRes.data.error || 'Failed to create payment order');
+        setIsProcessingPayment(false);
+        return;
+      }
 
-      setUploading(true);
-      const asset = result.assets[0];
-      const formData = new FormData();
-      formData.append('file', { uri: asset.uri, type: asset.type || 'image/jpeg', name: asset.fileName || `amc-payment-${Date.now()}.jpg` });
-      formData.append('folder', 'amc-payments');
+      const { orderId, amount, currency, keyId, prefill } = orderRes.data.data;
 
-      const uploadRes = await uploadFile(formData);
-      if (!uploadRes.data?.ok || !uploadRes.data?.url) throw new Error('Upload failed');
+      // 2. Open Razorpay checkout
+      const paymentData = await RazorpayCheckout.open({
+        key: keyId,
+        amount,
+        currency,
+        name: 'KNI Super App',
+        description: 'AMC Contract Payment',
+        order_id: orderId,
+        prefill: prefill || {},
+        theme: { color: '#7C3AED' },
+      });
 
-      await api.post(`/owner/amc-payment/${request.payment.id}/upload`, { screenshotUrl: uploadRes.data.url });
-      Alert.alert('Success', 'Payment screenshot uploaded!');
-      loadRequest();
-    } catch (e) {
-      Alert.alert('Error', e.response?.data?.error || e.message || 'Upload failed');
-    } finally { setUploading(false); }
+      // 3. Verify payment
+      const verifyRes = await api.post('/razorpay/verify', {
+        type: 'AMC_PAYMENT',
+        razorpay_order_id: paymentData.razorpay_order_id,
+        razorpay_payment_id: paymentData.razorpay_payment_id,
+        razorpay_signature: paymentData.razorpay_signature,
+        amcPaymentId: request.payment.id,
+      });
+
+      if (verifyRes.data.ok) {
+        Alert.alert('Payment Successful!', 'Your AMC contract is now active.', [
+          { text: 'OK', onPress: () => loadRequest() },
+        ]);
+      } else {
+        Alert.alert('Verification Failed', verifyRes.data.error || 'Payment verification failed');
+      }
+    } catch (error) {
+      if (error.code !== 'PAYMENT_CANCELLED') {
+        Alert.alert('Payment Failed', error.description || error.message || 'Payment was not completed.');
+      }
+    } finally {
+      setIsProcessingPayment(false);
+    }
   };
 
   const handleCancelRequest = () => {
@@ -599,7 +629,46 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
                 </View>
               )}
 
-              {/* Uploaded screenshot preview */}
+              {/* Razorpay Payment */}
+              {canUploadPayment && (
+                <View style={{ alignItems: 'center', paddingVertical: scale(16) }}>
+                  <View style={{
+                    width: scale(64), height: scale(64), borderRadius: scale(32),
+                    backgroundColor: C.purpleLight, alignItems: 'center', justifyContent: 'center',
+                    marginBottom: scale(12),
+                  }}>
+                    <Icon name="shield-checkmark" size={32} color={C.purple} />
+                  </View>
+                  <Text style={{ fontSize: moderateScale(16), fontWeight: '700', color: C.ink, marginBottom: scale(4) }}>
+                    Secure Payment via Razorpay
+                  </Text>
+                  <Text style={{ fontSize: moderateScale(13), color: C.muted, textAlign: 'center', lineHeight: moderateScale(18) }}>
+                    Pay using UPI, Credit/Debit Card, NetBanking, or Wallets.{'\n'}Your AMC contract will be activated instantly.
+                  </Text>
+                  <TouchableOpacity
+                    style={{
+                      backgroundColor: C.purple, borderRadius: scale(12), paddingVertical: scale(14),
+                      paddingHorizontal: scale(24), marginTop: scale(16), width: '100%',
+                      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: scale(8),
+                    }}
+                    onPress={handleRazorpayPayment}
+                    disabled={isProcessingPayment}
+                  >
+                    {isProcessingPayment ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <>
+                        <Icon name="card" size={20} color="#fff" />
+                        <Text style={{ color: '#fff', fontWeight: '700', fontSize: moderateScale(15) }}>
+                          Pay ₹{(payment.amount || 0).toLocaleString('en-IN')} with Razorpay
+                        </Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* Payment Uploaded - legacy screenshot */}
               {payment.screenshotUrl && (
                 <View style={{ alignItems: 'center', marginTop: scale(12) }}>
                   <Image
@@ -608,51 +677,6 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
                     resizeMode="contain"
                   />
                 </View>
-              )}
-
-              {/* QR Code & UPI - only show when can upload */}
-              {canUploadPayment && paymentSettings && (
-                <>
-                  {paymentSettings.qrCodeImageUrl && (
-                    <View style={styles.qrContainer}>
-                      <Image
-                        source={{ uri: paymentSettings.qrCodeImageUrl.startsWith('http') ? paymentSettings.qrCodeImageUrl : getImageUrl(paymentSettings.qrCodeImageUrl) }}
-                        style={styles.qrImage}
-                        resizeMode="contain"
-                      />
-                    </View>
-                  )}
-                  <View style={styles.upiCard}>
-                    <View style={styles.upiRow}>
-                      <Text style={styles.upiLabel}>UPI ID</Text>
-                      <TouchableOpacity style={styles.copyBtn} onPress={copyUpiId}>
-                        <Icon name="copy-outline" size={16} color={C.purple} />
-                        <Text style={styles.copyText}>Copy</Text>
-                      </TouchableOpacity>
-                    </View>
-                    <Text style={styles.upiId}>{paymentSettings.upiId}</Text>
-                    {paymentSettings.accountHolderName && (
-                      <>
-                        <View style={styles.upiDivider} />
-                        <Text style={styles.upiLabel}>Account Name</Text>
-                        <Text style={styles.accountName}>{paymentSettings.accountHolderName}</Text>
-                      </>
-                    )}
-                  </View>
-
-                  {/* Upload */}
-                  <Text style={styles.uploadLabel}>Upload Payment Screenshot</Text>
-                  <TouchableOpacity style={styles.uploadBox} onPress={handleUploadPayment} disabled={uploading}>
-                    {uploading ? (
-                      <ActivityIndicator color={C.purple} />
-                    ) : (
-                      <>
-                        <Icon name="cloud-upload-outline" size={32} color={C.muted} />
-                        <Text style={styles.uploadText}>{isPaymentRejected ? 'Re-upload screenshot' : 'Tap to upload screenshot'}</Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
-                </>
               )}
             </View>
           </View>

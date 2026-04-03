@@ -25,6 +25,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { launchImageLibrary } from 'react-native-image-picker';
+import RazorpayCheckout from 'react-native-razorpay';
 import { api, getImageUrl } from '../api/client';
 import uploadService from '../services/uploadService';
 import cartService from '../services/marketplaceCartService';
@@ -78,6 +79,12 @@ export default function MarketplacePaymentScreen({ navigation, route }) {
   const [paymentStatus, setPaymentStatus] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
 
+  // Razorpay states
+  const [paymentMode, setPaymentMode] = useState('razorpay'); // 'razorpay' or 'manual'
+  const [useRazorpay, setUseRazorpay] = useState(false);
+  const [razorpaySuccess, setRazorpaySuccess] = useState(false);
+  const [razorpayOrderIdResult, setRazorpayOrderIdResult] = useState(null);
+
   const totalAmount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
   // Fetch vendor payment info (QR code + UPI)
@@ -104,6 +111,14 @@ export default function MarketplacePaymentScreen({ navigation, route }) {
       const response = await api.get(`/owner/marketplace/vendor-payment-info?vendorId=${vendorId}`);
       if (response.data.ok) {
         setVendorPaymentInfo(response.data.data);
+        // Enable Razorpay for admin store (KNI Official Store)
+        if (response.data.data.useRazorpay) {
+          setUseRazorpay(true);
+          setPaymentMode('razorpay');
+        } else {
+          setUseRazorpay(false);
+          setPaymentMode('manual');
+        }
       } else {
         Alert.alert('Error', response.data.error || 'Failed to load payment info');
       }
@@ -129,6 +144,82 @@ export default function MarketplacePaymentScreen({ navigation, route }) {
       }
     } catch (error) {
       console.error('Check payment status error:', error);
+    }
+  };
+
+  // ==================== RAZORPAY PAYMENT ====================
+  const handleRazorpayPayment = async () => {
+    setIsSubmitting(true);
+    try {
+      // 1. Create Razorpay order on server
+      const orderRes = await api.post('/razorpay/create-order', {
+        amount: totalAmount,
+        type: 'MARKETPLACE',
+        referenceId: restaurantId,
+        notes: { vendorId, restaurantId },
+      });
+
+      if (!orderRes.data.ok) {
+        Alert.alert('Error', orderRes.data.error || 'Failed to create payment order');
+        setIsSubmitting(false);
+        return;
+      }
+
+      const { orderId, amount, currency, keyId, prefill } = orderRes.data.data;
+
+      // 2. Open Razorpay checkout
+      const options = {
+        key: keyId,
+        amount: amount,
+        currency: currency,
+        name: 'KNI Official Store',
+        description: `Order - ${items.length} items`,
+        order_id: orderId,
+        prefill: prefill || {},
+        theme: { color: '#EF3A3A' },
+      };
+
+      const paymentData = await RazorpayCheckout.open(options);
+
+      // 3. Verify payment on server
+      const verifyRes = await api.post('/razorpay/verify', {
+        type: 'MARKETPLACE',
+        razorpay_order_id: paymentData.razorpay_order_id,
+        razorpay_payment_id: paymentData.razorpay_payment_id,
+        razorpay_signature: paymentData.razorpay_signature,
+        vendorId,
+        restaurantId,
+        items: items.map(item => ({
+          productId: item.product?.id || item.id || item.productId,
+          qty: item.quantity,
+        })),
+        deliveryAddress: deliveryAddress || undefined,
+        notes: deliveryNotes || undefined,
+      });
+
+      if (verifyRes.data.ok) {
+        // Clear cart
+        try {
+          await cartService.clearCart(restaurantId, { vendorId });
+        } catch (e) {
+          console.warn('Failed to clear cart:', e);
+        }
+        setRazorpaySuccess(true);
+        setRazorpayOrderIdResult(verifyRes.data.data.orderId);
+      } else {
+        Alert.alert('Verification Failed', verifyRes.data.error || 'Payment verification failed');
+      }
+    } catch (error) {
+      // Razorpay checkout was dismissed or failed
+      if (error.code !== 'PAYMENT_CANCELLED') {
+        console.error('Razorpay payment error:', error);
+        Alert.alert(
+          'Payment Failed',
+          error.description || error.message || 'Payment was not completed. Please try again.'
+        );
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -227,6 +318,48 @@ export default function MarketplacePaymentScreen({ navigation, route }) {
     setScreenshotUri(null);
     setScreenshotUrl('');
   };
+
+  // ==================== RAZORPAY SUCCESS VIEW ====================
+  if (razorpaySuccess) {
+    return (
+      <SafeAreaView style={st.container} edges={['top']}>
+        <StatusBar barStyle="dark-content" backgroundColor={C.card} />
+        <View style={st.header}>
+          <TouchableOpacity style={st.headerBackBtn} onPress={() => navigation.goBack()}>
+            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
+          </TouchableOpacity>
+          <Text style={st.headerTitle}>Payment Successful</Text>
+          <View style={{ width: scale(40) }} />
+        </View>
+
+        <ScrollView contentContainerStyle={st.statusContainer}>
+          <View style={[st.statusIconCircle, { backgroundColor: C.successLight }]}>
+            <Icon name="checkmark-circle" size={scale(48)} color={C.success} />
+          </View>
+          <Text style={st.statusTitle}>Payment Verified!</Text>
+          <Text style={st.statusSubtitle}>
+            Your payment of {formatPrice(totalAmount)} via Razorpay has been verified.
+            {'\n'}Order has been placed successfully with {isAdminStore ? 'KNI Official Store' : vendorName}.
+          </Text>
+          <TouchableOpacity
+            style={st.viewOrdersBtn}
+            onPress={() => navigation.navigate('MarketplaceOrders')}
+          >
+            <LinearGradient
+              colors={[C.gradient1, C.gradient2]}
+              style={st.viewOrdersGradient}
+            >
+              <Icon name="receipt-outline" size={scale(20)} color="#fff" />
+              <Text style={st.viewOrdersBtnText}>View My Orders</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+          <TouchableOpacity style={st.goBackBtn} onPress={() => navigation.goBack()}>
+            <Text style={st.goBackBtnText}>Back to Marketplace</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
 
   // ==================== PAYMENT SUBMITTED VIEW ====================
   if (paymentSubmitted) {
@@ -370,138 +503,223 @@ export default function MarketplacePaymentScreen({ navigation, route }) {
           </View>
         </View>
 
-        {/* Payment Details - QR + UPI */}
-        <View style={st.section}>
-          <View style={st.sectionHeader}>
-            <Icon name="qr-code" size={scale(20)} color={C.primary} />
-            <Text style={st.sectionTitle}>Payment Details</Text>
+        {/* Payment Method Selector (only for admin store with Razorpay) */}
+        {useRazorpay && (
+          <View style={st.section}>
+            <View style={st.sectionHeader}>
+              <Icon name="card" size={scale(20)} color={C.primary} />
+              <Text style={st.sectionTitle}>Choose Payment Method</Text>
+            </View>
+
+            {/* Razorpay Option */}
+            <TouchableOpacity
+              style={[st.methodCard, paymentMode === 'razorpay' && st.methodCardActive]}
+              onPress={() => setPaymentMode('razorpay')}
+            >
+              <View style={[st.methodIcon, paymentMode === 'razorpay' && st.methodIconActive]}>
+                <Icon name="card" size={scale(22)} color={paymentMode === 'razorpay' ? '#fff' : C.muted} />
+              </View>
+              <View style={st.methodInfo}>
+                <Text style={[st.methodTitle, paymentMode === 'razorpay' && st.methodTitleActive]}>Pay with Razorpay</Text>
+                <Text style={st.methodSubtitle}>UPI, Card, NetBanking, Wallets</Text>
+              </View>
+              {paymentMode === 'razorpay' && (
+                <View style={st.recommendedBadge}>
+                  <Text style={st.recommendedText}>Recommended</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+
+            {/* Manual Option */}
+            <TouchableOpacity
+              style={[st.methodCard, paymentMode === 'manual' && st.methodCardActive, { marginTop: scale(10) }]}
+              onPress={() => setPaymentMode('manual')}
+            >
+              <View style={[st.methodIcon, paymentMode === 'manual' && st.methodIconActive]}>
+                <Icon name="phone-portrait" size={scale(22)} color={paymentMode === 'manual' ? '#fff' : C.muted} />
+              </View>
+              <View style={st.methodInfo}>
+                <Text style={[st.methodTitle, paymentMode === 'manual' && st.methodTitleActive]}>Pay Manually (UPI/QR)</Text>
+                <Text style={st.methodSubtitle}>Scan QR & upload screenshot</Text>
+              </View>
+            </TouchableOpacity>
           </View>
+        )}
 
-          {loadingPaymentInfo ? (
-            <View style={st.loadingBox}>
-              <ActivityIndicator size="small" color={C.primary} />
-              <Text style={st.loadingText}>Loading payment details...</Text>
-            </View>
-          ) : !vendorPaymentInfo ? (
-            <View style={st.noPaymentInfo}>
-              <Icon name="alert-circle-outline" size={scale(32)} color={C.warning} />
-              <Text style={st.noPaymentInfoText}>
-                Vendor has not set up payment details yet. Please contact them directly.
-              </Text>
-            </View>
-          ) : (
+        {/* RAZORPAY PAYMENT SECTION */}
+        {paymentMode === 'razorpay' && useRazorpay && (
+          <View style={st.section}>
             <View style={st.paymentInfoCard}>
-              {/* QR Code */}
-              {vendorPaymentInfo.paymentQrCodeUrl && (
-                <View style={st.qrSection}>
-                  <Text style={st.qrLabel}>Scan QR Code to Pay</Text>
-                  <Image
-                    source={{ uri: getImageUrl(vendorPaymentInfo.paymentQrCodeUrl) }}
-                    style={st.qrImage}
-                    resizeMode="contain"
-                  />
+              <View style={{ alignItems: 'center', paddingVertical: scale(16) }}>
+                <View style={[st.statusIconCircle, { backgroundColor: C.infoLight, width: scale(70), height: scale(70), borderRadius: scale(35), marginBottom: scale(12) }]}>
+                  <Icon name="shield-checkmark" size={scale(32)} color={C.info} />
                 </View>
-              )}
-
-              {/* UPI ID */}
-              {vendorPaymentInfo.paymentUpiId && (
-                <View style={st.upiSection}>
-                  <Text style={st.upiLabel}>UPI ID</Text>
-                  <View style={st.upiRow}>
-                    <Text style={st.upiId}>{vendorPaymentInfo.paymentUpiId}</Text>
-                  </View>
-                </View>
-              )}
-
-              {/* Account Name */}
-              {vendorPaymentInfo.paymentAccountName && (
-                <View style={st.accountSection}>
-                  <Text style={st.accountLabel}>Account Name</Text>
-                  <Text style={st.accountName}>{vendorPaymentInfo.paymentAccountName}</Text>
-                </View>
-              )}
-
-              {/* Amount to Pay */}
+                <Text style={{ fontSize: moderateScale(16), fontWeight: '700', color: C.ink, marginBottom: scale(6) }}>
+                  Secure Payment via Razorpay
+                </Text>
+                <Text style={{ fontSize: moderateScale(13), color: C.muted, textAlign: 'center', lineHeight: moderateScale(18) }}>
+                  Pay using UPI, Credit/Debit Card, NetBanking, or Wallets.{'\n'}Your order will be confirmed instantly.
+                </Text>
+              </View>
               <View style={st.amountHighlight}>
                 <Text style={st.amountLabel}>Amount to Pay</Text>
                 <Text style={st.amountValue}>{formatPrice(totalAmount)}</Text>
               </View>
             </View>
-          )}
-        </View>
-
-        {/* Screenshot Upload */}
-        <View style={st.section}>
-          <View style={st.sectionHeader}>
-            <Icon name="camera" size={scale(20)} color={C.primary} />
-            <Text style={st.sectionTitle}>Upload Payment Screenshot</Text>
           </View>
+        )}
 
-          <TouchableOpacity style={st.uploadArea} onPress={handlePickImage} disabled={isUploading}>
-            {screenshotUri ? (
-              <View style={st.uploadedContainer}>
-                <Image source={{ uri: screenshotUri }} style={st.uploadedImage} resizeMode="cover" />
-                {isUploading && (
-                  <View style={st.uploadingOverlay}>
-                    <ActivityIndicator size="large" color="#fff" />
-                    <Text style={st.uploadingText}>Uploading...</Text>
-                  </View>
-                )}
-                {screenshotUrl && !isUploading && (
-                  <View style={st.uploadedBadge}>
-                    <Icon name="checkmark-circle" size={scale(20)} color={C.success} />
-                    <Text style={st.uploadedBadgeText}>Uploaded</Text>
-                  </View>
-                )}
+        {/* MANUAL PAYMENT SECTION - QR + UPI + Screenshot */}
+        {paymentMode === 'manual' && (
+          <>
+            <View style={st.section}>
+              <View style={st.sectionHeader}>
+                <Icon name="qr-code" size={scale(20)} color={C.primary} />
+                <Text style={st.sectionTitle}>Payment Details</Text>
               </View>
-            ) : (
-              <View style={st.uploadPlaceholder}>
-                <View style={st.uploadIconCircle}>
-                  <Icon name="cloud-upload-outline" size={scale(32)} color={C.primary} />
+
+              {loadingPaymentInfo ? (
+                <View style={st.loadingBox}>
+                  <ActivityIndicator size="small" color={C.primary} />
+                  <Text style={st.loadingText}>Loading payment details...</Text>
                 </View>
-                <Text style={st.uploadTitle}>Tap to upload screenshot</Text>
-                <Text style={st.uploadSubtitle}>
-                  Take a screenshot of your payment confirmation
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
+              ) : !vendorPaymentInfo ? (
+                <View style={st.noPaymentInfo}>
+                  <Icon name="alert-circle-outline" size={scale(32)} color={C.warning} />
+                  <Text style={st.noPaymentInfoText}>
+                    Vendor has not set up payment details yet. Please contact them directly.
+                  </Text>
+                </View>
+              ) : (
+                <View style={st.paymentInfoCard}>
+                  {vendorPaymentInfo.paymentQrCodeUrl && (
+                    <View style={st.qrSection}>
+                      <Text style={st.qrLabel}>Scan QR Code to Pay</Text>
+                      <Image
+                        source={{ uri: getImageUrl(vendorPaymentInfo.paymentQrCodeUrl) }}
+                        style={st.qrImage}
+                        resizeMode="contain"
+                      />
+                    </View>
+                  )}
+                  {vendorPaymentInfo.paymentUpiId && (
+                    <View style={st.upiSection}>
+                      <Text style={st.upiLabel}>UPI ID</Text>
+                      <View style={st.upiRow}>
+                        <Text style={st.upiId}>{vendorPaymentInfo.paymentUpiId}</Text>
+                      </View>
+                    </View>
+                  )}
+                  {vendorPaymentInfo.paymentAccountName && (
+                    <View style={st.accountSection}>
+                      <Text style={st.accountLabel}>Account Name</Text>
+                      <Text style={st.accountName}>{vendorPaymentInfo.paymentAccountName}</Text>
+                    </View>
+                  )}
+                  <View style={st.amountHighlight}>
+                    <Text style={st.amountLabel}>Amount to Pay</Text>
+                    <Text style={st.amountValue}>{formatPrice(totalAmount)}</Text>
+                  </View>
+                </View>
+              )}
+            </View>
 
-          {screenshotUri && (
-            <TouchableOpacity style={st.changeImageBtn} onPress={handlePickImage}>
-              <Icon name="camera-outline" size={scale(16)} color={C.primary} />
-              <Text style={st.changeImageText}>Change Screenshot</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+            {/* Screenshot Upload */}
+            <View style={st.section}>
+              <View style={st.sectionHeader}>
+                <Icon name="camera" size={scale(20)} color={C.primary} />
+                <Text style={st.sectionTitle}>Upload Payment Screenshot</Text>
+              </View>
+
+              <TouchableOpacity style={st.uploadArea} onPress={handlePickImage} disabled={isUploading}>
+                {screenshotUri ? (
+                  <View style={st.uploadedContainer}>
+                    <Image source={{ uri: screenshotUri }} style={st.uploadedImage} resizeMode="cover" />
+                    {isUploading && (
+                      <View style={st.uploadingOverlay}>
+                        <ActivityIndicator size="large" color="#fff" />
+                        <Text style={st.uploadingText}>Uploading...</Text>
+                      </View>
+                    )}
+                    {screenshotUrl && !isUploading && (
+                      <View style={st.uploadedBadge}>
+                        <Icon name="checkmark-circle" size={scale(20)} color={C.success} />
+                        <Text style={st.uploadedBadgeText}>Uploaded</Text>
+                      </View>
+                    )}
+                  </View>
+                ) : (
+                  <View style={st.uploadPlaceholder}>
+                    <View style={st.uploadIconCircle}>
+                      <Icon name="cloud-upload-outline" size={scale(32)} color={C.primary} />
+                    </View>
+                    <Text style={st.uploadTitle}>Tap to upload screenshot</Text>
+                    <Text style={st.uploadSubtitle}>
+                      Take a screenshot of your payment confirmation
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+
+              {screenshotUri && (
+                <TouchableOpacity style={st.changeImageBtn} onPress={handlePickImage}>
+                  <Icon name="camera-outline" size={scale(16)} color={C.primary} />
+                  <Text style={st.changeImageText}>Change Screenshot</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </>
+        )}
 
         <View style={{ height: scale(120) }} />
       </ScrollView>
 
-      {/* Submit Button */}
+      {/* Footer Button */}
       <View style={st.footer}>
-        <TouchableOpacity
-          style={[
-            st.submitBtn,
-            (!screenshotUrl || isSubmitting || isUploading) && st.submitBtnDisabled,
-          ]}
-          onPress={handleSubmitPayment}
-          disabled={!screenshotUrl || isSubmitting || isUploading}
-        >
-          <LinearGradient
-            colors={(!screenshotUrl || isSubmitting || isUploading) ? ['#ccc', '#bbb'] : [C.gradient1, C.gradient2]}
-            style={st.submitGradient}
+        {paymentMode === 'razorpay' && useRazorpay ? (
+          <TouchableOpacity
+            style={[st.submitBtn, isSubmitting && st.submitBtnDisabled]}
+            onPress={handleRazorpayPayment}
+            disabled={isSubmitting}
           >
-            {isSubmitting ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <>
-                <Icon name="send" size={scale(20)} color="#fff" />
-                <Text style={st.submitText}>Submit Payment</Text>
-              </>
-            )}
-          </LinearGradient>
-        </TouchableOpacity>
+            <LinearGradient
+              colors={isSubmitting ? ['#ccc', '#bbb'] : [C.gradient1, C.gradient2]}
+              style={st.submitGradient}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <>
+                  <Icon name="card" size={scale(20)} color="#fff" />
+                  <Text style={st.submitText}>Pay {formatPrice(totalAmount)} with Razorpay</Text>
+                </>
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={[
+              st.submitBtn,
+              (!screenshotUrl || isSubmitting || isUploading) && st.submitBtnDisabled,
+            ]}
+            onPress={handleSubmitPayment}
+            disabled={!screenshotUrl || isSubmitting || isUploading}
+          >
+            <LinearGradient
+              colors={(!screenshotUrl || isSubmitting || isUploading) ? ['#ccc', '#bbb'] : [C.gradient1, C.gradient2]}
+              style={st.submitGradient}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <>
+                  <Icon name="send" size={scale(20)} color="#fff" />
+                  <Text style={st.submitText}>Submit Payment</Text>
+                </>
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -973,5 +1191,59 @@ const st = StyleSheet.create({
     fontSize: moderateScale(14),
     fontWeight: '600',
     color: C.muted,
+  },
+
+  // Payment Method Selector
+  methodCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: C.card,
+    borderRadius: scale(14),
+    padding: scale(16),
+    borderWidth: 2,
+    borderColor: C.border,
+  },
+  methodCardActive: {
+    borderColor: C.primary,
+    backgroundColor: C.primaryLight,
+  },
+  methodIcon: {
+    width: scale(44),
+    height: scale(44),
+    borderRadius: scale(22),
+    backgroundColor: C.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: scale(12),
+  },
+  methodIconActive: {
+    backgroundColor: C.primary,
+  },
+  methodInfo: {
+    flex: 1,
+  },
+  methodTitle: {
+    fontSize: moderateScale(14),
+    fontWeight: '700',
+    color: C.ink,
+  },
+  methodTitleActive: {
+    color: C.primaryDark,
+  },
+  methodSubtitle: {
+    fontSize: moderateScale(12),
+    color: C.muted,
+    marginTop: scale(2),
+  },
+  recommendedBadge: {
+    backgroundColor: C.primary,
+    paddingHorizontal: scale(8),
+    paddingVertical: scale(4),
+    borderRadius: scale(6),
+  },
+  recommendedText: {
+    fontSize: moderateScale(10),
+    fontWeight: '700',
+    color: '#fff',
   },
 });
