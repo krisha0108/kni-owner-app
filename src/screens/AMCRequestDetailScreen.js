@@ -188,7 +188,14 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
         Alert.alert('Verification Failed', verifyRes.data.error || 'Payment verification failed');
       }
     } catch (error) {
-      if (error.code !== 'PAYMENT_CANCELLED') {
+      const dismissed = error.code === 0 || error.code === 2 || error.code === 'PAYMENT_CANCELLED';
+      if (dismissed) {
+        Alert.alert(
+          'Payment Cancelled',
+          'You cancelled the payment. You can try again whenever you\'re ready.',
+          [{ text: 'OK' }]
+        );
+      } else {
         Alert.alert('Payment Failed', error.description || error.message || 'Payment was not completed.');
       }
     } finally {

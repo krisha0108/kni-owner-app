@@ -373,11 +373,16 @@ export default function ServiceRequestScreen({ navigation, route }) {
         Alert.alert('Verification Failed', verifyRes.data.error || 'Payment verification failed');
       }
     } catch (error) {
-      if (error.code === 'PAYMENT_CANCELLED') {
-        Alert.alert('Info', 'Payment cancelled. Your booking has been created — you can pay later from My Bookings.');
+      const dismissed = error.code === 0 || error.code === 2 || error.code === 'PAYMENT_CANCELLED';
+      if (dismissed) {
+        Alert.alert(
+          'Payment Cancelled',
+          'Payment cancelled. Your booking has been created — you can pay later from My Bookings.',
+          [{ text: 'OK' }]
+        );
       } else {
         console.error('Razorpay payment error:', error);
-        Alert.alert('Error', error.description || error.message || 'Payment failed. Please try again.');
+        Alert.alert('Payment Failed', error.description || error.message || 'Payment failed. Please try again.');
       }
     } finally {
       setIsSubmitting(false);
