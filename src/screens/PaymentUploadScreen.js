@@ -28,6 +28,18 @@ const C = {
   border: '#E5E7EB',
 };
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+
+const getMimeType = (uri) => {
+  const ext = (uri || '').split('.').pop()?.toLowerCase();
+  const mimeMap = {
+    jpg: 'image/jpeg', jpeg: 'image/jpeg',
+    png: 'image/png', gif: 'image/gif',
+    webp: 'image/webp', heic: 'image/heic',
+  };
+  return mimeMap[ext] || 'image/jpeg';
+};
+
 export default function PaymentUploadScreen({ route, navigation }) {
   const { bookingId } = route.params;
   const [imageUri, setImageUri] = useState(null);
@@ -44,7 +56,11 @@ export default function PaymentUploadScreen({ route, navigation }) {
     });
 
     if (!result.didCancel && result.assets?.[0]) {
-      setImageUri(result.assets[0].uri);
+      const asset = result.assets[0];
+      if (asset.fileSize && asset.fileSize > MAX_FILE_SIZE) {
+        return Alert.alert('File Too Large', 'Please select an image under 10 MB.');
+      }
+      setImageUri(asset.uri);
     }
   };
 
@@ -59,10 +75,12 @@ export default function PaymentUploadScreen({ route, navigation }) {
       formData.append('bookingId', bookingId);
 
       if (imageUri) {
+        const mimeType = getMimeType(imageUri);
+        const ext = mimeType.split('/')[1] || 'jpg';
         formData.append('payment', {
           uri: imageUri,
-          type: 'image/jpeg',
-          name: `payment-${bookingId}-${Date.now()}.jpg`,
+          type: mimeType,
+          name: `payment-${bookingId}-${Date.now()}.${ext}`,
         });
       } else if (paymentUrl) {
         formData.append('paymentUrl', paymentUrl);

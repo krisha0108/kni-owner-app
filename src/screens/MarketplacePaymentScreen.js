@@ -5,7 +5,7 @@
  * ============================================================================
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,12 +15,15 @@ import {
   Alert,
   ActivityIndicator,
   StatusBar,
+  Image,
 } from 'react-native';
+import { CommonActions } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import RazorpayCheckout from 'react-native-razorpay';
-import { api } from '../api/client';
+import { launchImageLibrary } from 'react-native-image-picker';
+import { api, uploadFile } from '../api/client';
 import cartService from '../services/marketplaceCartService';
 
 import { scale, moderateScale } from '../utils/responsive';
@@ -64,12 +67,182 @@ export default function MarketplacePaymentScreen({ navigation, route }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [razorpaySuccess, setRazorpaySuccess] = useState(false);
   const [razorpayOrderIdResult, setRazorpayOrderIdResult] = useState(null);
+  const isSubmittingRef = useRef(false);
+
+  // Manual payment state (for non-admin vendors)
+  const [vendorPaymentInfo, setVendorPaymentInfo] = useState(null);
+  const [loadingPaymentInfo, setLoadingPaymentInfo] = useState(!isAdminStore);
+  const [screenshotUri, setScreenshotUri] = useState(null);
+  const [manualPaymentSuccess, setManualPaymentSuccess] = useState(false);
 
   const totalAmount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
+  // Fetch vendor payment info for non-admin stores
+  useEffect(() => {
+    if (isAdminStore || !vendorId) return;
+    const fetchVendorPaymentInfo = async () => {
+      try {
+        setLoadingPaymentInfo(true);
+        const res = await api.get(`/owner/marketplace/vendor-payment-info?vendorId=${vendorId}`);
+        if (res.data.ok) {
+          setVendorPaymentInfo(res.data.data);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch vendor payment info:', err);
+      } finally {
+        setLoadingPaymentInfo(false);
+      }
+    };
+    fetchVendorPaymentInfo();
+  }, [vendorId, isAdminStore]);
+
+  // Pick screenshot for manual payment
+  const handlePickScreenshot = async () => {
+    const result = await launchImageLibrary({ mediaType: 'photo', quality: 0.8 });
+    if (!result.didCancel && result.assets?.[0]) {
+      setScreenshotUri(result.assets[0].uri);
+    }
+  };
+
+  // Submit manual payment (screenshot upload)
+  const handleManualPayment = async () => {
+    if (isSubmittingRef.current || !screenshotUri) return;
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
+    try {
+      // 1. Upload screenshot (using native fetch — axios FormData unreliable on Android)
+      const uploadForm = new FormData();
+      const ext = (screenshotUri || '').split('.').pop()?.toLowerCase();
+      const mimeMap = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
+      uploadForm.append('file', {
+        uri: screenshotUri,
+        type: mimeMap[ext] || 'image/jpeg',
+        name: `payment-${Date.now()}.${ext || 'jpg'}`,
+      });
+      const uploadRes = await uploadFile(uploadForm);
+      const screenshotUrl = uploadRes.data?.data?.url;
+      if (!screenshotUrl) throw new Error('Upload failed');
+
+      // 2. Submit payment
+      const payRes = await api.post('/owner/marketplace/payments', {
+        restaurantId,
+        vendorId,
+        items: items.map(item => ({
+          productId: item.product?.id || item.id || item.productId,
+          qty: item.quantity,
+        })),
+        screenshotUrl,
+        deliveryAddress: deliveryAddress || undefined,
+        notes: deliveryNotes || undefined,
+      });
+
+      if (payRes.data.ok) {
+        await clearCartWithRetry();
+        setManualPaymentSuccess(true);
+      } else {
+        Alert.alert('Error', payRes.data.error || 'Payment submission failed');
+      }
+    } catch (error) {
+      console.error('Manual payment error:', error);
+      Alert.alert('Error', error.message || 'Failed to submit payment');
+    } finally {
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
+    }
+  };
+
+  // Generate a simple idempotency key
+  const generateIdempotencyKey = () =>
+    `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
+
+  // Clear cart with retry (Bug #10)
+  const clearCartWithRetry = async () => {
+    for (let i = 0; i < 3; i++) {
+      try {
+        await cartService.clearCart(restaurantId, { vendorId });
+        return true;
+      } catch (e) {
+        console.warn(`Cart clear attempt ${i + 1} failed:`, e);
+        if (i < 2) await new Promise(r => setTimeout(r, 1000));
+      }
+    }
+    return false;
+  };
+
+  // Verify payment with retry and exponential backoff (Bugs #1, #6)
+  const verifyPaymentWithRetry = async (paymentData, idempotencyKey) => {
+    const RETRY_DELAYS = [2000, 4000, 8000];
+
+    for (let attempt = 0; attempt <= 3; attempt++) {
+      try {
+        const verifyRes = await api.post('/razorpay/verify', {
+          type: 'MARKETPLACE',
+          razorpay_order_id: paymentData.razorpay_order_id,
+          razorpay_payment_id: paymentData.razorpay_payment_id,
+          razorpay_signature: paymentData.razorpay_signature,
+          vendorId,
+          restaurantId,
+          items: items.map(item => ({
+            productId: item.product?.id || item.id || item.productId,
+            qty: item.quantity,
+          })),
+          deliveryAddress: deliveryAddress || undefined,
+          notes: deliveryNotes || undefined,
+        }, {
+          headers: { 'X-Idempotency-Key': idempotencyKey },
+          timeout: 30000,
+        });
+
+        if (verifyRes.data.ok) {
+          const cartCleared = await clearCartWithRetry();
+          if (!cartCleared) {
+            Alert.alert(
+              'Note',
+              'Payment successful! Cart could not be cleared automatically — you may see old items in your cart.',
+              [{ text: 'OK' }]
+            );
+          }
+          setRazorpaySuccess(true);
+          setRazorpayOrderIdResult(verifyRes.data.data?.orderId || null);
+          return;
+        } else {
+          throw new Error(verifyRes.data.error || 'Verification failed');
+        }
+      } catch (error) {
+        if (attempt < 3) {
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAYS[attempt]));
+          continue;
+        }
+        // All retries exhausted — money was charged but verification pending
+        Alert.alert(
+          'Payment Verification Pending',
+          `Your payment of ${formatPrice(totalAmount)} was charged successfully but verification could not be completed. Your order will be processed automatically. If you don't see it in your orders within 15 minutes, please contact support.`,
+          [
+            {
+              text: 'View Orders',
+              onPress: () => navigation.dispatch(
+                CommonActions.reset({
+                  index: 1,
+                  routes: [{ name: 'Home' }, { name: 'MarketplaceOrders' }],
+                })
+              ),
+            },
+            { text: 'OK' },
+          ]
+        );
+        return;
+      }
+    }
+  };
+
   // ==================== RAZORPAY PAYMENT ====================
   const handleRazorpayPayment = async () => {
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
+
+    const idempotencyKey = generateIdempotencyKey();
+
     try {
       // 1. Create Razorpay order on server
       const orderRes = await api.post('/razorpay/create-order', {
@@ -77,76 +250,53 @@ export default function MarketplacePaymentScreen({ navigation, route }) {
         type: 'MARKETPLACE',
         referenceId: restaurantId,
         notes: { vendorId, restaurantId },
+      }, {
+        headers: { 'X-Idempotency-Key': idempotencyKey },
       });
 
       if (!orderRes.data.ok) {
         Alert.alert('Error', orderRes.data.error || 'Failed to create payment order');
-        setIsSubmitting(false);
         return;
       }
 
       const { orderId, amount, currency, keyId, prefill } = orderRes.data.data;
 
-      // 2. Open Razorpay checkout
-      const options = {
-        key: keyId,
-        amount: amount,
-        currency: currency,
-        name: 'KNI Official Store',
-        description: `Order - ${items.length} items`,
-        order_id: orderId,
-        prefill: prefill || {},
-        theme: { color: '#EF3A3A' },
-      };
-
-      const paymentData = await RazorpayCheckout.open(options);
-
-      // 3. Verify payment on server
-      const verifyRes = await api.post('/razorpay/verify', {
-        type: 'MARKETPLACE',
-        razorpay_order_id: paymentData.razorpay_order_id,
-        razorpay_payment_id: paymentData.razorpay_payment_id,
-        razorpay_signature: paymentData.razorpay_signature,
-        vendorId,
-        restaurantId,
-        items: items.map(item => ({
-          productId: item.product?.id || item.id || item.productId,
-          qty: item.quantity,
-        })),
-        deliveryAddress: deliveryAddress || undefined,
-        notes: deliveryNotes || undefined,
-      });
-
-      if (verifyRes.data.ok) {
-        // Clear cart
-        try {
-          await cartService.clearCart(restaurantId, { vendorId });
-        } catch (e) {
-          console.warn('Failed to clear cart:', e);
+      // 2. Open Razorpay checkout (no money charged if this fails)
+      let paymentData;
+      try {
+        paymentData = await RazorpayCheckout.open({
+          key: keyId,
+          amount: amount,
+          currency: currency,
+          name: 'KNI Official Store',
+          description: `Order - ${items.length} items`,
+          order_id: orderId,
+          prefill: prefill || {},
+          theme: { color: '#EF3A3A' },
+        });
+      } catch (checkoutError) {
+        // User cancelled or Razorpay SDK error — no money charged
+        const dismissed = checkoutError.code === 0 || checkoutError.code === 2 || checkoutError.code === 'PAYMENT_CANCELLED';
+        if (dismissed) {
+          Alert.alert('Payment Cancelled', 'You cancelled the payment. You can try again whenever you\'re ready.', [{ text: 'OK' }]);
+        } else {
+          Alert.alert(
+            'Payment Failed',
+            checkoutError.description || checkoutError.message || 'Payment was not completed. Please try again.',
+            [{ text: 'Retry', onPress: handleRazorpayPayment }, { text: 'Cancel', style: 'cancel' }]
+          );
         }
-        setRazorpaySuccess(true);
-        setRazorpayOrderIdResult(verifyRes.data.data.orderId);
-      } else {
-        Alert.alert('Verification Failed', verifyRes.data.error || 'Payment verification failed');
+        return;
       }
+
+      // 3. Verify payment with retry (money IS charged at this point)
+      await verifyPaymentWithRetry(paymentData, idempotencyKey);
+
     } catch (error) {
-      // Razorpay returns code 0 or 2 when user dismisses/cancels checkout
-      const dismissed = error.code === 0 || error.code === 2 || error.code === 'PAYMENT_CANCELLED';
-      if (dismissed) {
-        Alert.alert(
-          'Payment Cancelled',
-          'You cancelled the payment. You can try again whenever you\'re ready.',
-          [{ text: 'OK' }]
-        );
-      } else {
-        console.error('Razorpay payment error:', error);
-        Alert.alert(
-          'Payment Failed',
-          error.description || error.message || 'Payment was not completed. Please try again.',
-          [{ text: 'Retry', onPress: handleRazorpayPayment }, { text: 'Cancel', style: 'cancel' }]
-        );
-      }
+      console.error('Payment flow error:', error);
+      Alert.alert('Error', 'Something went wrong. Please check your orders or contact support.');
     } finally {
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };
@@ -175,7 +325,12 @@ export default function MarketplacePaymentScreen({ navigation, route }) {
           </Text>
           <TouchableOpacity
             style={st.viewOrdersBtn}
-            onPress={() => navigation.navigate('MarketplaceOrders')}
+            onPress={() => navigation.dispatch(
+              CommonActions.reset({
+                index: 1,
+                routes: [{ name: 'Home' }, { name: 'MarketplaceOrders' }],
+              })
+            )}
           >
             <LinearGradient
               colors={[C.gradient1, C.gradient2]}
@@ -185,7 +340,50 @@ export default function MarketplacePaymentScreen({ navigation, route }) {
               <Text style={st.viewOrdersBtnText}>View My Orders</Text>
             </LinearGradient>
           </TouchableOpacity>
-          <TouchableOpacity style={st.goBackBtn} onPress={() => navigation.goBack()}>
+          <TouchableOpacity
+            style={st.goBackBtn}
+            onPress={() => navigation.dispatch(
+              CommonActions.reset({
+                index: 0,
+                routes: [{ name: 'Home' }],
+              })
+            )}
+          >
+            <Text style={st.goBackBtnText}>Back to Marketplace</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  // ==================== MANUAL PAYMENT SUCCESS VIEW ====================
+  if (manualPaymentSuccess) {
+    return (
+      <SafeAreaView style={st.container} edges={['top']}>
+        <StatusBar barStyle="dark-content" backgroundColor={C.card} />
+        <ScrollView contentContainerStyle={st.statusContainer}>
+          <View style={[st.statusIconCircle, { backgroundColor: C.warningLight }]}>
+            <Icon name="time" size={scale(48)} color={C.warning} />
+          </View>
+          <Text style={st.statusTitle}>Payment Submitted!</Text>
+          <Text style={st.statusSubtitle}>
+            Your payment screenshot has been sent to {vendorName}.{'\n'}They will verify it shortly and your order will be created.
+          </Text>
+          <TouchableOpacity
+            style={st.viewOrdersBtn}
+            onPress={() => navigation.dispatch(
+              CommonActions.reset({ index: 1, routes: [{ name: 'Home' }, { name: 'MarketplaceOrders' }] })
+            )}
+          >
+            <LinearGradient colors={[C.gradient1, C.gradient2]} style={st.viewOrdersGradient}>
+              <Icon name="receipt-outline" size={scale(20)} color="#fff" />
+              <Text style={st.viewOrdersBtnText}>View My Orders</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={st.goBackBtn}
+            onPress={() => navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'Home' }] }))}
+          >
             <Text style={st.goBackBtnText}>Back to Marketplace</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -243,26 +441,103 @@ export default function MarketplacePaymentScreen({ navigation, route }) {
           </View>
         </View>
 
-        {/* RAZORPAY PAYMENT SECTION */}
-        <View style={st.section}>
-          <View style={st.paymentInfoCard}>
-            <View style={{ alignItems: 'center', paddingVertical: scale(16) }}>
-              <View style={[st.statusIconCircle, { backgroundColor: C.infoLight, width: scale(70), height: scale(70), borderRadius: scale(35), marginBottom: scale(12) }]}>
-                <Icon name="shield-checkmark" size={scale(32)} color={C.info} />
+        {isAdminStore ? (
+          /* ==================== RAZORPAY PAYMENT (KNI Store) ==================== */
+          <View style={st.section}>
+            <View style={st.paymentInfoCard}>
+              <View style={{ alignItems: 'center', paddingVertical: scale(16) }}>
+                <View style={[st.statusIconCircle, { backgroundColor: C.infoLight, width: scale(70), height: scale(70), borderRadius: scale(35), marginBottom: scale(12) }]}>
+                  <Icon name="shield-checkmark" size={scale(32)} color={C.info} />
+                </View>
+                <Text style={{ fontSize: moderateScale(16), fontWeight: '700', color: C.ink, marginBottom: scale(6) }}>
+                  Secure Payment via Razorpay
+                </Text>
+                <Text style={{ fontSize: moderateScale(13), color: C.muted, textAlign: 'center', lineHeight: moderateScale(18) }}>
+                  Pay using UPI, Credit/Debit Card, NetBanking, or Wallets.{'\n'}Your order will be confirmed instantly.
+                </Text>
               </View>
-              <Text style={{ fontSize: moderateScale(16), fontWeight: '700', color: C.ink, marginBottom: scale(6) }}>
-                Secure Payment via Razorpay
-              </Text>
-              <Text style={{ fontSize: moderateScale(13), color: C.muted, textAlign: 'center', lineHeight: moderateScale(18) }}>
-                Pay using UPI, Credit/Debit Card, NetBanking, or Wallets.{'\n'}Your order will be confirmed instantly.
-              </Text>
-            </View>
-            <View style={st.amountHighlight}>
-              <Text style={st.amountLabel}>Amount to Pay</Text>
-              <Text style={st.amountValue}>{formatPrice(totalAmount)}</Text>
+              <View style={st.amountHighlight}>
+                <Text style={st.amountLabel}>Amount to Pay</Text>
+                <Text style={st.amountValue}>{formatPrice(totalAmount)}</Text>
+              </View>
             </View>
           </View>
-        </View>
+        ) : (
+          /* ==================== MANUAL PAYMENT (Other Vendors) ==================== */
+          <View style={st.section}>
+            {/* Vendor Payment Info (QR + UPI) */}
+            <View style={st.paymentInfoCard}>
+              {loadingPaymentInfo ? (
+                <View style={{ alignItems: 'center', padding: scale(20) }}>
+                  <ActivityIndicator size="small" color={C.muted} />
+                  <Text style={{ color: C.muted, marginTop: scale(8), fontSize: moderateScale(13) }}>Loading payment details...</Text>
+                </View>
+              ) : vendorPaymentInfo ? (
+                <View style={{ gap: scale(12) }}>
+                  {vendorPaymentInfo.paymentQrCodeUrl && (
+                    <View style={{ alignItems: 'center' }}>
+                      <Text style={{ fontSize: moderateScale(13), color: C.muted, marginBottom: scale(8) }}>Scan QR Code to Pay</Text>
+                      <Image
+                        source={{ uri: vendorPaymentInfo.paymentQrCodeUrl }}
+                        style={{ width: scale(180), height: scale(180), borderRadius: scale(12), borderWidth: 1, borderColor: C.border }}
+                        resizeMode="contain"
+                      />
+                    </View>
+                  )}
+                  {vendorPaymentInfo.paymentUpiId && (
+                    <View style={{ backgroundColor: C.bg, borderRadius: scale(10), padding: scale(12) }}>
+                      <Text style={{ fontSize: moderateScale(11), color: C.muted, marginBottom: scale(4) }}>UPI ID</Text>
+                      <Text style={{ fontSize: moderateScale(15), fontWeight: '700', color: C.ink }}>{vendorPaymentInfo.paymentUpiId}</Text>
+                    </View>
+                  )}
+                  {vendorPaymentInfo.paymentAccountName && (
+                    <View>
+                      <Text style={{ fontSize: moderateScale(11), color: C.muted }}>Account Name</Text>
+                      <Text style={{ fontSize: moderateScale(14), fontWeight: '600', color: C.ink }}>{vendorPaymentInfo.paymentAccountName}</Text>
+                    </View>
+                  )}
+                  <View style={st.amountHighlight}>
+                    <Text style={st.amountLabel}>Amount to Pay</Text>
+                    <Text style={st.amountValue}>{formatPrice(totalAmount)}</Text>
+                  </View>
+                </View>
+              ) : (
+                <View style={{ alignItems: 'center', padding: scale(20) }}>
+                  <Icon name="warning" size={scale(32)} color={C.warning} />
+                  <Text style={{ color: C.muted, marginTop: scale(8), textAlign: 'center', fontSize: moderateScale(13) }}>
+                    Vendor has not set up payment details yet. Please contact them directly.
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {/* Screenshot Upload */}
+            <View style={[st.paymentInfoCard, { marginTop: scale(16) }]}>
+              <Text style={{ fontSize: moderateScale(14), fontWeight: '700', color: C.ink, marginBottom: scale(12) }}>
+                Upload Payment Screenshot
+              </Text>
+              {screenshotUri ? (
+                <View>
+                  <Image source={{ uri: screenshotUri }} style={{ width: '100%', height: scale(200), borderRadius: scale(12) }} resizeMode="contain" />
+                  <TouchableOpacity
+                    style={{ alignSelf: 'center', marginTop: scale(8), padding: scale(8) }}
+                    onPress={() => setScreenshotUri(null)}
+                  >
+                    <Text style={{ color: C.danger, fontSize: moderateScale(13), fontWeight: '600' }}>Remove</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={{ borderWidth: 2, borderStyle: 'dashed', borderColor: C.border, borderRadius: scale(12), padding: scale(24), alignItems: 'center' }}
+                  onPress={handlePickScreenshot}
+                >
+                  <Icon name="cloud-upload-outline" size={scale(32)} color={C.muted} />
+                  <Text style={{ color: C.muted, marginTop: scale(8), fontSize: moderateScale(13) }}>Tap to upload screenshot</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        )}
 
         <View style={{ height: scale(120) }} />
       </ScrollView>
@@ -271,11 +546,11 @@ export default function MarketplacePaymentScreen({ navigation, route }) {
       <View style={st.footer}>
         <TouchableOpacity
           style={[st.submitBtn, isSubmitting && st.submitBtnDisabled]}
-          onPress={handleRazorpayPayment}
-          disabled={isSubmitting}
+          onPress={isAdminStore ? handleRazorpayPayment : handleManualPayment}
+          disabled={isSubmitting || (!isAdminStore && !screenshotUri)}
         >
           <LinearGradient
-            colors={isSubmitting ? ['#ccc', '#bbb'] : [C.gradient1, C.gradient2]}
+            colors={isSubmitting || (!isAdminStore && !screenshotUri) ? ['#ccc', '#bbb'] : [C.gradient1, C.gradient2]}
             style={st.submitGradient}
           >
             {isSubmitting ? (
@@ -283,7 +558,9 @@ export default function MarketplacePaymentScreen({ navigation, route }) {
             ) : (
               <>
                 <Icon name="card" size={scale(20)} color="#fff" />
-                <Text style={st.submitText}>Pay {formatPrice(totalAmount)} with Razorpay</Text>
+                <Text style={st.submitText}>
+                  {isAdminStore ? `Pay ${formatPrice(totalAmount)} with Razorpay` : 'Submit Payment'}
+                </Text>
               </>
             )}
           </LinearGradient>

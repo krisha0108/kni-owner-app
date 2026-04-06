@@ -159,15 +159,18 @@ export default function SlotBookingScreen({ navigation, route }) {
 
         Alert.alert(
           'Booking Created',
-          'Your service slot has been booked successfully. You will receive a confirmation shortly.',
+          'Your service slot has been booked. Please complete payment to confirm.',
           [
             {
-              text: 'View Bookings',
-              onPress: () => navigation.navigate('MyBookings'),
+              text: 'Pay Now',
+              onPress: () => navigation.replace('BookingDetail', {
+                bookingId: response.data.data.id,
+              }),
             },
             {
-              text: 'OK',
-              onPress: () => navigation.goBack(),
+              text: 'Later',
+              onPress: () => navigation.navigate('MyBookings'),
+              style: 'cancel',
             },
           ]
         );

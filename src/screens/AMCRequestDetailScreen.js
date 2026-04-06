@@ -4,7 +4,7 @@
  * ============================================================================
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   ActivityIndicator, RefreshControl, Image, Alert, TextInput,
@@ -141,9 +141,13 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
     } finally { setSubmitting(false); }
   };
 
+  const paymentInProgressRef = useRef(false);
+
   const handleRazorpayPayment = async () => {
-    if (!request?.payment || isProcessingPayment) return;
+    if (!request?.payment || paymentInProgressRef.current) return;
+    paymentInProgressRef.current = true;
     setIsProcessingPayment(true);
+
     try {
       // 1. Create Razorpay order
       const orderRes = await api.post('/razorpay/create-order', {
@@ -153,52 +157,74 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
       });
       if (!orderRes.data.ok) {
         Alert.alert('Error', orderRes.data.error || 'Failed to create payment order');
-        setIsProcessingPayment(false);
         return;
       }
 
       const { orderId, amount, currency, keyId, prefill } = orderRes.data.data;
 
-      // 2. Open Razorpay checkout
-      const paymentData = await RazorpayCheckout.open({
-        key: keyId,
-        amount,
-        currency,
-        name: 'KNI Super App',
-        description: 'AMC Contract Payment',
-        order_id: orderId,
-        prefill: prefill || {},
-        theme: { color: '#7C3AED' },
-      });
+      // 2. Open Razorpay checkout (no money charged if this fails)
+      let paymentData;
+      try {
+        paymentData = await RazorpayCheckout.open({
+          key: keyId,
+          amount,
+          currency,
+          name: 'KNI Super App',
+          description: 'AMC Contract Payment',
+          order_id: orderId,
+          prefill: prefill || {},
+          theme: { color: '#7C3AED' },
+        });
+      } catch (checkoutError) {
+        const dismissed = checkoutError.code === 0 || checkoutError.code === 2 || checkoutError.code === 'PAYMENT_CANCELLED';
+        if (dismissed) {
+          Alert.alert('Payment Cancelled', 'You cancelled the payment. You can try again whenever you\'re ready.', [{ text: 'OK' }]);
+        } else {
+          Alert.alert('Payment Failed', checkoutError.description || checkoutError.message || 'Payment was not completed.', [
+            { text: 'Retry', onPress: handleRazorpayPayment },
+            { text: 'Cancel', style: 'cancel' },
+          ]);
+        }
+        return;
+      }
 
-      // 3. Verify payment
-      const verifyRes = await api.post('/razorpay/verify', {
-        type: 'AMC_PAYMENT',
-        razorpay_order_id: paymentData.razorpay_order_id,
-        razorpay_payment_id: paymentData.razorpay_payment_id,
-        razorpay_signature: paymentData.razorpay_signature,
-        amcPaymentId: request.payment.id,
-      });
+      // 3. Verify payment with retry (money IS charged at this point)
+      const RETRY_DELAYS = [2000, 4000, 8000];
+      for (let attempt = 0; attempt <= 3; attempt++) {
+        try {
+          const verifyRes = await api.post('/razorpay/verify', {
+            type: 'AMC_PAYMENT',
+            razorpay_order_id: paymentData.razorpay_order_id,
+            razorpay_payment_id: paymentData.razorpay_payment_id,
+            razorpay_signature: paymentData.razorpay_signature,
+            amcPaymentId: request.payment.id,
+          });
 
-      if (verifyRes.data.ok) {
-        Alert.alert('Payment Successful!', 'Your AMC contract is now active.', [
-          { text: 'OK', onPress: () => loadRequest() },
-        ]);
-      } else {
-        Alert.alert('Verification Failed', verifyRes.data.error || 'Payment verification failed');
+          if (verifyRes.data.ok) {
+            Alert.alert('Payment Successful!', 'Your AMC contract is now active.', [
+              { text: 'OK', onPress: () => loadRequest() },
+            ]);
+            return;
+          } else {
+            throw new Error(verifyRes.data.error || 'Verification failed');
+          }
+        } catch (err) {
+          if (attempt < 3) {
+            await new Promise(r => setTimeout(r, RETRY_DELAYS[attempt]));
+            continue;
+          }
+          Alert.alert(
+            'Payment Verification Pending',
+            `Your payment of ₹${(request.payment.amount || 0).toLocaleString('en-IN')} was charged but verification could not be completed. It will be processed automatically. Contact support if not reflected within 15 minutes.`,
+            [{ text: 'OK', onPress: () => loadRequest() }]
+          );
+        }
       }
     } catch (error) {
-      const dismissed = error.code === 0 || error.code === 2 || error.code === 'PAYMENT_CANCELLED';
-      if (dismissed) {
-        Alert.alert(
-          'Payment Cancelled',
-          'You cancelled the payment. You can try again whenever you\'re ready.',
-          [{ text: 'OK' }]
-        );
-      } else {
-        Alert.alert('Payment Failed', error.description || error.message || 'Payment was not completed.');
-      }
+      console.error('AMC payment error:', error);
+      Alert.alert('Error', 'Something went wrong. Please try again or contact support.');
     } finally {
+      paymentInProgressRef.current = false;
       setIsProcessingPayment(false);
     }
   };

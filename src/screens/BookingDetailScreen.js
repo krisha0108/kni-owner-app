@@ -15,6 +15,7 @@ import {
   Image,
   RefreshControl,
   Linking,
+  Alert,
   useWindowDimensions,
   StatusBar,
   AppState,
@@ -22,6 +23,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
+import RazorpayCheckout from 'react-native-razorpay';
 import { api, getImageUrl } from '../api/client';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
@@ -105,6 +107,8 @@ export default function BookingDetailScreen({ navigation, route }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [isPayingRazorpay, setIsPayingRazorpay] = useState(false);
+  const isPayingRef = useRef(false);
 
   const loadBooking = useCallback(async () => {
     try {
@@ -141,8 +145,8 @@ export default function BookingDetailScreen({ navigation, route }) {
         if (response.data.ok) {
           setBooking(response.data.data);
         }
-      } catch (error) {
-        // Silent fail
+      } catch (err) {
+        console.warn('[BookingDetail] Silent refresh failed:', err?.message);
       }
     };
 
@@ -170,6 +174,97 @@ export default function BookingDetailScreen({ navigation, route }) {
   const callEngineer = (phone) => {
     if (phone) {
       Linking.openURL(`tel:${phone}`);
+    }
+  };
+
+  // ==================== RAZORPAY PAYMENT FOR BOOKING ====================
+  const handleBookingRazorpayPayment = async () => {
+    if (isPayingRef.current || !booking) return;
+    isPayingRef.current = true;
+    setIsPayingRazorpay(true);
+
+    try {
+      // totalAmount already includes GST + tip from backend
+      const totalPayable = booking.totalAmount || 0;
+
+      // 1. Create Razorpay order
+      const orderRes = await api.post('/razorpay/create-order', {
+        amount: totalPayable,
+        type: 'SERVICE_BOOKING',
+        referenceId: booking.id,
+      });
+
+      if (!orderRes.data.ok) {
+        Alert.alert('Error', orderRes.data.error || 'Failed to create payment order');
+        return;
+      }
+
+      const { orderId, amount, currency, keyId, prefill } = orderRes.data.data;
+
+      // 2. Open Razorpay checkout
+      let paymentData;
+      try {
+        paymentData = await RazorpayCheckout.open({
+          key: keyId,
+          amount,
+          currency,
+          name: 'KNI Super App',
+          description: `Service Booking - ${booking.restaurant?.name || 'Booking'}`,
+          order_id: orderId,
+          prefill: prefill || {},
+          theme: { color: '#EF3A3A' },
+        });
+      } catch (checkoutError) {
+        const dismissed = checkoutError.code === 0 || checkoutError.code === 2 || checkoutError.code === 'PAYMENT_CANCELLED';
+        if (dismissed) {
+          Alert.alert('Payment Cancelled', 'You cancelled the payment. You can try again anytime.');
+        } else {
+          Alert.alert('Payment Failed', checkoutError.description || 'Payment was not completed.', [
+            { text: 'Retry', onPress: handleBookingRazorpayPayment },
+            { text: 'Cancel', style: 'cancel' },
+          ]);
+        }
+        return;
+      }
+
+      // 3. Verify payment with retry
+      const RETRY_DELAYS = [2000, 4000, 8000];
+      for (let attempt = 0; attempt <= 3; attempt++) {
+        try {
+          const verifyRes = await api.post('/razorpay/verify', {
+            type: 'SERVICE_BOOKING',
+            razorpay_order_id: paymentData.razorpay_order_id,
+            razorpay_payment_id: paymentData.razorpay_payment_id,
+            razorpay_signature: paymentData.razorpay_signature,
+            bookingId: booking.id,
+          });
+
+          if (verifyRes.data.ok) {
+            Alert.alert('Payment Successful!', 'Your booking payment has been verified. An engineer will be assigned shortly.', [
+              { text: 'OK', onPress: () => loadBooking() },
+            ]);
+            return;
+          } else {
+            throw new Error(verifyRes.data.error || 'Verification failed');
+          }
+        } catch (err) {
+          if (attempt < 3) {
+            await new Promise(r => setTimeout(r, RETRY_DELAYS[attempt]));
+            continue;
+          }
+          Alert.alert(
+            'Payment Verification Pending',
+            `Your payment of ${formatPrice(booking.totalAmount || 0)} was charged but verification could not be completed. It will be processed automatically. Contact support if not reflected within 15 minutes.`,
+            [{ text: 'OK', onPress: () => loadBooking() }]
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Booking payment error:', error);
+      Alert.alert('Error', 'Something went wrong. Please try again or contact support.');
+    } finally {
+      isPayingRef.current = false;
+      setIsPayingRazorpay(false);
     }
   };
 
@@ -252,7 +347,9 @@ export default function BookingDetailScreen({ navigation, route }) {
     (sum, item) => sum + item.priceSnapshot * item.qty, 0
   );
   const gstAmount = booking.gstAmount || Math.round(itemSubtotal * GST_RATE);
-  const tipAmount = booking.tipAmount || Math.max(0, (booking.totalAmount || 0) - itemSubtotal - gstAmount);
+  const tipAmount = booking.tipAmount != null
+    ? Math.max(0, booking.tipAmount)
+    : Math.max(0, (booking.totalAmount || 0) - itemSubtotal - gstAmount);
 
   const engineer = booking.engineerAssignments?.[0];
 
@@ -610,13 +707,13 @@ export default function BookingDetailScreen({ navigation, route }) {
               <View
                 style={[
                   styles.proofStatusBadge,
-                  { backgroundColor: booking.paymentProof.status === 'VERIFIED' ? C.okLight : C.warnLight },
+                  { backgroundColor: booking.paymentProof.status === 'VERIFIED' ? C.okLight : booking.paymentProof.status === 'REJECTED' ? C.dangerLight : C.warnLight },
                 ]}
               >
                 <Text
                   style={[
                     styles.proofStatusText,
-                    { color: booking.paymentProof.status === 'VERIFIED' ? C.ok : C.warn },
+                    { color: booking.paymentProof.status === 'VERIFIED' ? C.ok : booking.paymentProof.status === 'REJECTED' ? C.danger : C.warn },
                   ]}
                 >
                   {booking.paymentProof.status}
@@ -630,6 +727,55 @@ export default function BookingDetailScreen({ navigation, route }) {
                 resizeMode="contain"
               />
             )}
+            {booking.paymentProof.status === 'REJECTED' && (
+              <TouchableOpacity
+                style={[styles.payNowBtn, isPayingRazorpay && { opacity: 0.6 }]}
+                onPress={handleBookingRazorpayPayment}
+                disabled={isPayingRazorpay}
+              >
+                {isPayingRazorpay ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Icon name="card" size={scale(18)} color="#fff" />
+                    <Text style={styles.payNowBtnText}>Retry Payment</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+
+        {/* Payment Required - Pay via Razorpay */}
+        {!booking.paymentProof && (booking.status === 'SLOT_SELECTED' || booking.status === 'PAYMENT_REJECTED') && (
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <View style={[styles.cardIconBox, { backgroundColor: C.warn + '15' }]}>
+                <Icon name="card" size={20} color={C.warn} />
+              </View>
+              <Text style={styles.cardTitle}>Payment Required</Text>
+            </View>
+            <Text style={{ color: C.muted, fontSize: moderateScale(13), marginBottom: scale(12), paddingHorizontal: scale(4) }}>
+              {booking.status === 'PAYMENT_REJECTED'
+                ? 'Your previous payment was rejected. Please retry payment.'
+                : 'Please complete payment to proceed with your booking.'}
+            </Text>
+            <TouchableOpacity
+              style={[styles.payNowBtn, isPayingRazorpay && { opacity: 0.6 }]}
+              onPress={handleBookingRazorpayPayment}
+              disabled={isPayingRazorpay}
+            >
+              {isPayingRazorpay ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <>
+                  <Icon name="card" size={scale(18)} color="#fff" />
+                  <Text style={styles.payNowBtnText}>
+                    {booking.status === 'PAYMENT_REJECTED' ? 'Retry Payment' : 'Pay Now'}
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
           </View>
         )}
 
@@ -1129,6 +1275,22 @@ const styles = StyleSheet.create({
     width: '100%',
     height: scale(200),
     backgroundColor: C.bg,
+  },
+  payNowBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: C.primary,
+    borderRadius: scale(12),
+    paddingVertical: scale(14),
+    marginHorizontal: scale(16),
+    marginBottom: scale(16),
+    gap: scale(8),
+  },
+  payNowBtnText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: moderateScale(15),
   },
 
   // Problem

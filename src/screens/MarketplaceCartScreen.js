@@ -141,9 +141,22 @@ export default function MarketplaceCartScreen({ navigation, route }) {
     return Object.values(groups);
   };
 
-  const handlePayAndOrder = (vendorGroup) => {
+  const handlePayAndOrder = async (vendorGroup) => {
     if (!restaurantId) return Alert.alert('Error', 'Please select a restaurant');
     if (!deliveryAddress.trim()) return Alert.alert('Error', 'Please enter delivery address');
+
+    // Re-fetch cart to ensure items are still valid before proceeding to payment
+    try {
+      const freshCart = await cartService.getCart(restaurantId);
+      if (!freshCart || freshCart.length === 0) {
+        Alert.alert('Cart Empty', 'Your cart appears to be empty. Items may have been removed.');
+        loadCart();
+        return;
+      }
+    } catch (err) {
+      // If cart validation fails, proceed anyway — server will validate during payment
+      console.warn('Cart pre-validation failed, proceeding:', err);
+    }
 
     navigation.navigate('MarketplacePayment', {
       vendorId: vendorGroup.vendorId,

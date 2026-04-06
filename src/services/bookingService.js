@@ -108,12 +108,18 @@ class BookingService {
     try {
       console.log('📸 Uploading payment proof for booking:', bookingId);
 
+      // Detect MIME type from file extension
+      const ext = (paymentProofUri || '').split('.').pop()?.toLowerCase();
+      const mimeMap = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp', heic: 'image/heic' };
+      const mimeType = mimeMap[ext] || 'image/jpeg';
+      const fileExt = mimeType.split('/')[1] || 'jpg';
+
       // Create FormData
       const formData = new FormData();
       formData.append('paymentProof', {
         uri: paymentProofUri,
-        type: 'image/jpeg',
-        name: 'payment-proof.jpg',
+        type: mimeType,
+        name: `payment-proof.${fileExt}`,
       });
 
       const response = await api.post(
