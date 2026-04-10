@@ -147,28 +147,52 @@ export default function OrdersListScreen({ navigation }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [counts, setCounts] = useState({ active: 0, past: 0 });
   const [menuVisible, setMenuVisible] = useState(false);
 
   // Fetch orders
-  const fetchOrders = useCallback(async (isRefresh = false) => {
+  const fetchOrders = useCallback(async (pageNum = 1, append = false) => {
     try {
-      if (isRefresh) setRefreshing(true);
-      else setLoading(true);
+      if (pageNum === 1 && !append) setLoading(true);
+      else if (append) setLoadingMore(true);
 
       const status = activeTab === 'active' ? 'active' : 'completed';
-      const res = await api.get(`/app_api/owner/orders?status=${status}`);
+      const res = await api.get(`/app_api/owner/orders?status=${status}&page=${pageNum}&pageSize=20`);
 
-      if (res.data?.success) {
-        setOrders(res.data.data || []);
+      if (res.data?.success || res.data?.ok) {
+        const items = res.data.data?.items || res.data.data || [];
+        const total = res.data.data?.total || res.data.total || 0;
+        if (append) {
+          setOrders(prev => {
+            const ids = new Set(prev.map(i => i.id));
+            return [...prev, ...items.filter(i => !ids.has(i.id))];
+          });
+        } else {
+          setOrders(items);
+        }
+        setPage(pageNum);
+        setHasMore(pageNum * 20 < total);
       }
     } catch (err) {
       console.error('Failed to fetch orders:', err);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
       setRefreshing(false);
     }
   }, [activeTab]);
+
+  const handleLoadMore = useCallback(() => {
+    if (!loadingMore && hasMore && !loading) fetchOrders(page + 1, true);
+  }, [loadingMore, hasMore, loading, page, fetchOrders]);
+
+  const renderFooter = useCallback(() => {
+    if (!loadingMore) return null;
+    return <View style={{ padding: 16, alignItems: 'center' }}><ActivityIndicator size="small" color="#EF3A3A" /></View>;
+  }, [loadingMore]);
 
   // Fetch counts for both tabs
   const fetchCounts = useCallback(async () => {
@@ -187,7 +211,9 @@ export default function OrdersListScreen({ navigation }) {
   }, []);
 
   useEffect(() => {
-    fetchOrders();
+    setPage(1);
+    setHasMore(true);
+    fetchOrders(1, false);
   }, [activeTab, fetchOrders]);
 
   useEffect(() => {
@@ -260,12 +286,15 @@ export default function OrdersListScreen({ navigation }) {
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
-              onRefresh={() => fetchOrders(true)}
+              onRefresh={() => { setPage(1); setHasMore(true); setRefreshing(true); fetchOrders(1, false); }}
               colors={[C.primary]}
               tintColor={C.primary}
             />
           }
           ItemSeparatorComponent={() => <View style={{ height: scale(12) }} />}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.3}
+          ListFooterComponent={renderFooter}
           showsVerticalScrollIndicator={false}
           initialNumToRender={10}
           maxToRenderPerBatch={10}

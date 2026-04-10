@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Image, TouchableOpacity,
-  TextInput, RefreshControl, Animated, Dimensions, Modal, Linking, Platform
+  TextInput, RefreshControl, Animated, Dimensions, Modal, Linking, Platform, ActivityIndicator
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -85,6 +85,9 @@ export default function RestaurantsScreen({ navigation }) {
   const [filter, setFilter] = useState('all');
   const [items, setItems] = useState([]);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   // modals
   const [formOpen, setFormOpen] = useState(false);
@@ -99,35 +102,57 @@ export default function RestaurantsScreen({ navigation }) {
     })();
   }, []);
 
+  const mapRestaurant = (r) => ({
+    id: r.id,
+    name: r.hotel_name,
+    address: r.address,
+    desc: r.description || '',
+    fssai: r.fssai_number,
+    fssaiPdf: r.fssai_certificate ? `${IMAGE_BASE_URL}/${r.fssai_certificate}` : '',
+    status: r.status,
+    photos: [
+      r.main_image ? `${IMAGE_BASE_URL}/${r.main_image}` : '',
+      ...(Array.isArray(r.gallery_images)
+        ? r.gallery_images.map((img) => `${IMAGE_BASE_URL}/${img}`)
+        : []),
+      r.business_card ? `${IMAGE_BASE_URL}/${r.business_card}` : '',
+    ].filter(Boolean),
+  });
+
   // Restaurant list
-  const fetchRestaurants = useCallback(async () => {
+  const fetchRestaurants = useCallback(async (pageNum = 1, append = false) => {
     try {
-      setLoading(true);
-      const res = await api.get('/restaurants');
+      if (append) {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
+      }
+      const res = await api.get('/restaurants', {
+        params: { page: pageNum, pageSize: 20 }
+      });
 
-      const mapped = res.data.data.map((r) => ({
-        id: r.id,
-        name: r.hotel_name,
-        address: r.address,
-        desc: r.description || '',
-        fssai: r.fssai_number,
-        fssaiPdf: r.fssai_certificate ? `${IMAGE_BASE_URL}/${r.fssai_certificate}` : '',
-        status: r.status,
-        photos: [
-          r.main_image ? `${IMAGE_BASE_URL}/${r.main_image}` : '',
-          ...(Array.isArray(r.gallery_images)
-            ? r.gallery_images.map((img) => `${IMAGE_BASE_URL}/${img}`)
-            : []),
-          r.business_card ? `${IMAGE_BASE_URL}/${r.business_card}` : '',
-        ].filter(Boolean),
-      }));
+      const resData = res.data?.data;
+      const rawItems = Array.isArray(resData) ? resData : (resData?.data || resData?.items || []);
+      const total = resData?.total || resData?.totalCount || 0;
+      const mapped = rawItems.map(mapRestaurant);
 
-      setItems(mapped);
+      if (append) {
+        setItems(prev => {
+          const ids = new Set(prev.map(i => i.id));
+          return [...prev, ...mapped.filter(i => !ids.has(i.id))];
+        });
+      } else {
+        setItems(mapped);
+      }
+      setPage(pageNum);
+      const currentCount = append ? (items.length + mapped.length) : mapped.length;
+      setHasMore(total > 0 ? currentCount < total : mapped.length >= 20);
     } catch (err) {
       console.error(err);
       show('Failed to fetch restaurants', 'error');
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   }, [show]);
 
@@ -137,8 +162,16 @@ export default function RestaurantsScreen({ navigation }) {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchRestaurants();
+    setPage(1);
+    setHasMore(true);
+    await fetchRestaurants(1, false);
     setRefreshing(false);
+  };
+
+  const handleLoadMore = () => {
+    if (!loadingMore && hasMore && !loading) {
+      fetchRestaurants(page + 1, true);
+    }
   };
 
   // form state
@@ -458,17 +491,32 @@ export default function RestaurantsScreen({ navigation }) {
         {loading ? (
           Array.from({ length: 4 }).map((_, i) => <SkeletonRestaurantCard key={i} />)
         ) : (
-          filtered.map(r=> (
-            <RestaurantCard
-              key={r.id}
-              r={r}
-              onView={()=>navigation.navigate?.('RestaurantView',{ restaurant:r })}
-              onEdit={()=>startEdit(r)}
-              onFSSAI={()=> openPdf(r.fssaiPdf)}
-              onDelete={()=>askDelete(r)}
-              openPdf={openPdf}
-            />
-          ))
+          <>
+            {filtered.map(r=> (
+              <RestaurantCard
+                key={r.id}
+                r={r}
+                onView={()=>navigation.navigate?.('RestaurantView',{ restaurant:r })}
+                onEdit={()=>startEdit(r)}
+                onFSSAI={()=> openPdf(r.fssaiPdf)}
+                onDelete={()=>askDelete(r)}
+                openPdf={openPdf}
+              />
+            ))}
+            {hasMore && !loading && (
+              <TouchableOpacity
+                style={{ alignItems:'center', paddingVertical:scale(14), marginTop:scale(4), marginBottom:scale(12), backgroundColor:C.card, borderRadius:scale(12), borderWidth:1, borderColor:C.primary+'30' }}
+                onPress={handleLoadMore}
+                disabled={loadingMore}
+              >
+                {loadingMore ? (
+                  <ActivityIndicator size="small" color={C.primary} />
+                ) : (
+                  <Text style={{ fontSize:moderateScale(14), fontWeight:'600', color:C.primary }}>Load More</Text>
+                )}
+              </TouchableOpacity>
+            )}
+          </>
         )}
       </ScrollView>
 

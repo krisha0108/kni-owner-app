@@ -89,6 +89,9 @@ export default function ExpensesScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [expenses, setExpenses] = useState([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [saving, setSaving] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -125,24 +128,48 @@ export default function ExpensesScreen({ navigation }) {
 
   useFocusEffect(useCallback(() => { loadData(); }, [selectedRestaurant]));
 
-  const loadData = async () => {
+  const loadData = async (pageNum = 1, append = false) => {
     if (!selectedRestaurant) { setLoading(false); return; }
     try {
-      setLoading(true);
-      const params = new URLSearchParams({ restaurantId: selectedRestaurant });
+      if (pageNum === 1) setLoading(true);
+      else setLoadingMore(true);
+      const params = new URLSearchParams({ restaurantId: selectedRestaurant, page: pageNum.toString(), pageSize: '20' });
       const response = await api.get(`/owner/expenses?${params}`);
       if (response.data.ok) {
-        setExpenses(response.data.data.expenses || []);
+        const items = response.data.data?.expenses || response.data.data?.items || [];
+        const total = response.data.data?.total || 0;
+        if (append) {
+          setExpenses(prev => {
+            const ids = new Set(prev.map(i => i.id));
+            return [...prev, ...items.filter(i => !ids.has(i.id))];
+          });
+        } else {
+          setExpenses(items);
+        }
+        setPage(pageNum);
+        setHasMore(pageNum * 20 < total);
       }
     } catch (error) {
       console.error('Error loading expenses:', error);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
       setRefreshing(false);
     }
   };
 
-  const onRefresh = async () => { setRefreshing(true); await loadRestaurants(); await loadData(); };
+  const handleLoadMore = () => {
+    if (!loadingMore && hasMore && !loading) {
+      loadData(page + 1, true);
+    }
+  };
+
+  const renderFooter = () => {
+    if (!loadingMore) return null;
+    return <View style={{ padding: 16, alignItems: 'center' }}><ActivityIndicator size="small" color="#EF3A3A" /></View>;
+  };
+
+  const onRefresh = async () => { setRefreshing(true); setPage(1); setHasMore(true); await loadRestaurants(); await loadData(1, false); };
 
   const onDateChange = (event, selectedDate) => {
     setShowDatePicker(Platform.OS === 'ios');
@@ -465,6 +492,9 @@ export default function ExpensesScreen({ navigation }) {
         columnWrapperStyle={gridColumns > 1 ? st.columnWrapper : undefined}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.warning]} />}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.3}
+        ListFooterComponent={renderFooter}
         ListEmptyComponent={
           <View style={st.emptyState}>
             <View style={st.emptyIcon}>

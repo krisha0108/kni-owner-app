@@ -44,6 +44,9 @@ export default function MenuManagementScreen({ navigation }) {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [activeTab, setActiveTab] = useState('services'); // 'services' or 'parts'
   const [menuVisible, setMenuVisible] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -54,7 +57,9 @@ export default function MenuManagementScreen({ navigation }) {
 
   useEffect(() => {
     if (selectedCategory) {
-      loadCategoryItems();
+      setPage(1);
+      setHasMore(true);
+      loadCategoryItems(1, false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCategory, activeTab]);
@@ -84,29 +89,69 @@ export default function MenuManagementScreen({ navigation }) {
     }
   };
 
-  const loadCategoryItems = async () => {
+  const loadCategoryItems = async (pageNum = 1, append = false) => {
     if (!selectedCategory) return;
+    if (append) {
+      setLoadingMore(true);
+    }
 
     try {
-      const endpoint = activeTab === 'services'
+      const base = activeTab === 'services'
         ? `/public/services?categoryId=${selectedCategory.id}`
         : `/public/parts?categoryId=${selectedCategory.id}`;
+      const endpoint = `${base}&page=${pageNum}&pageSize=20`;
 
       const response = await api.get(endpoint);
       if (response.data.ok) {
-        if (activeTab === 'services') {
-          setServices(response.data.data || []);
+        const resData = response.data.data;
+        const items = Array.isArray(resData) ? resData : (resData?.data || resData?.items || []);
+        const total = resData?.total || resData?.totalCount || 0;
+
+        if (append) {
+          const setter = activeTab === 'services' ? setServices : setParts;
+          setter(prev => {
+            const ids = new Set(prev.map(i => i.id));
+            return [...prev, ...items.filter(i => !ids.has(i.id))];
+          });
         } else {
-          setParts(response.data.data || []);
+          if (activeTab === 'services') {
+            setServices(items);
+          } else {
+            setParts(items);
+          }
         }
+        setPage(pageNum);
+        const currentCount = append
+          ? ((activeTab === 'services' ? services : parts).length + items.length)
+          : items.length;
+        setHasMore(total > 0 ? currentCount < total : items.length >= 20);
       }
     } catch (error) {
       console.log('Error loading items:', error);
+    } finally {
+      setLoadingMore(false);
     }
+  };
+
+  const handleLoadMore = () => {
+    if (!loadingMore && hasMore && !loading) {
+      loadCategoryItems(page + 1, true);
+    }
+  };
+
+  const renderListFooter = () => {
+    if (!loadingMore) return <View style={{ height: scale(100) }} />;
+    return (
+      <View style={{ padding: 16, alignItems: 'center' }}>
+        <ActivityIndicator size="small" color={C.primary} />
+      </View>
+    );
   };
 
   const onRefresh = () => {
     setRefreshing(true);
+    setPage(1);
+    setHasMore(true);
     loadData();
   };
 
@@ -283,6 +328,8 @@ export default function MenuManagementScreen({ navigation }) {
         renderItem={renderItemCard}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.listContent}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.3}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} />
         }
@@ -295,7 +342,7 @@ export default function MenuManagementScreen({ navigation }) {
             </Text>
           </View>
         }
-        ListFooterComponent={<View style={{ height: scale(100) }} />}
+        ListFooterComponent={renderListFooter}
         initialNumToRender={10}
         maxToRenderPerBatch={10}
         removeClippedSubviews={true}

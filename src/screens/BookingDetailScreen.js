@@ -568,8 +568,8 @@ export default function BookingDetailScreen({ navigation, route }) {
           </View>
         )}
 
-        {/* Service PIN Card */}
-        {engineer && engineer.servicePin && engineer.servicePinExpiresAt && new Date() < new Date(engineer.servicePinExpiresAt) && (
+        {/* ==> Service PIN Card — TEMPORARILY DISABLED (client request — will re-enable later) */}
+        {/* {engineer && engineer.servicePin && engineer.servicePinExpiresAt && new Date() < new Date(engineer.servicePinExpiresAt) && (
           <View style={styles.pinCard}>
             <View style={styles.pinHeader}>
               <View style={[styles.cardIconBox, { backgroundColor: '#FEF3C7' }]}>
@@ -592,7 +592,7 @@ export default function BookingDetailScreen({ navigation, route }) {
               </Text>
             </View>
           </View>
-        )}
+        )} */}
 
         {/* Items by Category */}
         <View style={styles.card}>

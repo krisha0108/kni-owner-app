@@ -81,6 +81,9 @@ export default function VendorLedgerScreen({ navigation }) {
   const [entries, setEntries] = useState([]);
   const [summary, setSummary] = useState({ totalVendors: 0, totalDue: 0, totalAdvance: 0, netBalance: 0 });
   const [activeTab, setActiveTab] = useState('summary');
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
 
   // Modal states
@@ -121,23 +124,38 @@ export default function VendorLedgerScreen({ navigation }) {
     }
   };
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (pageNum = 1, append = false) => {
     if (!selectedRestaurantId) { setLoading(false); return; }
     try {
-      setLoading(true);
+      if (pageNum === 1) setLoading(true);
+      else setLoadingMore(true);
       const [summaryRes, entriesRes] = await Promise.all([
-        api.get(`/owner/vendor-ledger/summary?restaurantId=${selectedRestaurantId}`),
-        api.get(`/owner/vendor-ledger?restaurantId=${selectedRestaurantId}`),
+        pageNum === 1 ? api.get(`/owner/vendor-ledger/summary?restaurantId=${selectedRestaurantId}`) : Promise.resolve(null),
+        api.get(`/owner/vendor-ledger?restaurantId=${selectedRestaurantId}&page=${pageNum}&pageSize=20`),
       ]);
-      if (summaryRes.data.ok) {
+      if (summaryRes?.data?.ok) {
         setVendors(summaryRes.data.data.vendors || []);
         setSummary(summaryRes.data.data.summary || { totalVendors: 0, totalDue: 0, totalAdvance: 0, netBalance: 0 });
       }
-      if (entriesRes.data.ok) setEntries(entriesRes.data.data || []);
+      if (entriesRes.data.ok) {
+        const items = entriesRes.data.data?.items || entriesRes.data.data || [];
+        const total = entriesRes.data.data?.total || 0;
+        if (append) {
+          setEntries(prev => {
+            const ids = new Set(prev.map(i => i.id));
+            return [...prev, ...items.filter(i => !ids.has(i.id))];
+          });
+        } else {
+          setEntries(items);
+        }
+        setPage(pageNum);
+        setHasMore(pageNum * 20 < total);
+      }
     } catch (error) {
       console.error('Error loading vendor ledger:', error);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
       setRefreshing(false);
     }
   }, [selectedRestaurantId]);
@@ -146,10 +164,21 @@ export default function VendorLedgerScreen({ navigation }) {
     if (selectedRestaurantId) loadData();
   }, [selectedRestaurantId, loadData]);
 
+  const handleLoadMore = () => {
+    if (!loadingMore && hasMore && !loading) loadData(page + 1, true);
+  };
+
+  const renderListFooter = () => {
+    if (!loadingMore) return null;
+    return <View style={{ padding: 16, alignItems: 'center' }}><ActivityIndicator size="small" color="#EF3A3A" /></View>;
+  };
+
   const onRefresh = async () => {
     setRefreshing(true);
+    setPage(1);
+    setHasMore(true);
     await loadRestaurants();
-    await loadData();
+    await loadData(1, false);
   };
 
   const openEntryModal = (type = 'PURCHASE', vendor = null) => {
@@ -448,6 +477,9 @@ export default function VendorLedgerScreen({ navigation }) {
         columnWrapperStyle={numColumns > 1 ? st.columnWrapper : undefined}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} />}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.3}
+        ListFooterComponent={renderListFooter}
         ListEmptyComponent={
           <View style={st.emptyState}>
             <Icon name={activeTab === 'summary' ? 'business-outline' : 'document-text-outline'} size={scale(64)} color={C.muted} />

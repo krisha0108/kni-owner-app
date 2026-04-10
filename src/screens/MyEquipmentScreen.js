@@ -128,6 +128,9 @@ export default function MyEquipmentScreen({ navigation }) {
   const [categories, setCategories] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const [form, setForm] = useState({
     id: null, categoryId: '', subCategoryId: '', brand: '', model: '',
@@ -161,16 +164,31 @@ export default function MyEquipmentScreen({ navigation }) {
   }, [form.categoryId, categories]);
 
   // Fetch equipment
-  const fetchEquipments = useCallback(async () => {
+  const fetchEquipments = useCallback(async (pageNum = 1, append = false) => {
     if (!selectedRestaurantId) return;
     try {
-      const { data } = await api.get(`/owner/equipment?restaurantId=${selectedRestaurantId}`);
-      if (data.ok && data.data) setEquipments(data.data.items || []);
+      if (pageNum > 1) setLoadingMore(true);
+      const { data } = await api.get(`/owner/equipment?restaurantId=${selectedRestaurantId}&page=${pageNum}&pageSize=20`);
+      if (data.ok && data.data) {
+        const items = data.data.items || [];
+        const total = data.data.total || 0;
+        if (append) {
+          setEquipments(prev => {
+            const ids = new Set(prev.map(i => i.id));
+            return [...prev, ...items.filter(i => !ids.has(i.id))];
+          });
+        } else {
+          setEquipments(items);
+        }
+        setPage(pageNum);
+        setHasMore(pageNum * 20 < total);
+      }
     } catch (error) {
       console.log('Error fetching equipment:', error);
       Alert.alert('Error', 'Failed to load equipment');
     } finally {
       setLoading(false);
+      setLoadingMore(false);
       setRefreshing(false);
     }
   }, [selectedRestaurantId]);
@@ -183,10 +201,21 @@ export default function MyEquipmentScreen({ navigation }) {
     }
   }, [selectedRestaurantId, fetchEquipments]);
 
+  const handleLoadMore = () => {
+    if (!loadingMore && hasMore && !loading) fetchEquipments(page + 1, true);
+  };
+
+  const renderListFooter = () => {
+    if (!loadingMore) return null;
+    return <View style={{ padding: 16, alignItems: 'center' }}><ActivityIndicator size="small" color="#EF3A3A" /></View>;
+  };
+
   const onRefresh = async () => {
     setRefreshing(true);
+    setPage(1);
+    setHasMore(true);
     await loadRestaurants();
-    await fetchEquipments();
+    await fetchEquipments(1, false);
   };
 
   // Status counts
@@ -580,6 +609,9 @@ export default function MyEquipmentScreen({ navigation }) {
         columnWrapperStyle={gridColumns > 1 ? st.columnWrapper : undefined}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} />}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.3}
+        ListFooterComponent={renderListFooter}
         ListEmptyComponent={
           <View style={st.emptyState}>
             <View style={st.emptyIconContainer}>
