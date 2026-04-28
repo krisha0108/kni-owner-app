@@ -4,14 +4,15 @@
  * ============================================================================
  */
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList,
   TextInput, ActivityIndicator, Alert, Modal, StatusBar,
   useWindowDimensions, Dimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
+// Custom date picker - no external dependency needed
 import { api } from '../api/client';
 import { useRestaurant } from '../context/RestaurantContext';
 import KniBottomNav from '../components/KniBottomNav';
@@ -104,18 +105,51 @@ export default function AMCRequestScreen({ navigation }) {
     }).catch(() => {}).finally(() => setCategoriesLoading(false));
   }, []);
 
-  // Next 90 days for date picker
-  const next90Days = useMemo(() => {
-    const days = [];
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    for (let i = 1; i <= 90; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() + i);
-      days.push(date);
-    }
-    return days;
-  }, []);
+  // Custom date picker state
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const MONTHS_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const [pickerDay, setPickerDay] = useState(() => new Date().getDate());
+  const [pickerMonth, setPickerMonth] = useState(() => new Date().getMonth());
+  const [pickerYear, setPickerYear] = useState(() => new Date().getFullYear());
+  const dayListRef = useRef(null);
+  const monthListRef = useRef(null);
+
+  const getDaysInMonth = (m, y) => new Date(y, m + 1, 0).getDate();
+  const daysInPickerMonth = getDaysInMonth(pickerMonth, pickerYear);
+
+  const handleMonthChange = (m) => {
+    const maxDay = getDaysInMonth(m, pickerYear);
+    setPickerMonth(m);
+    if (pickerDay > maxDay) setPickerDay(maxDay);
+  };
+
+  const handleYearChange = (y) => {
+    const maxDay = getDaysInMonth(pickerMonth, y);
+    setPickerYear(y);
+    if (pickerDay > maxDay) setPickerDay(maxDay);
+  };
+
+  const openDateModal = () => {
+    const d = preferredStartDate || new Date();
+    const day = d.getDate();
+    const month = d.getMonth();
+    setPickerDay(day);
+    setPickerMonth(month);
+    setPickerYear(d.getFullYear());
+    setDateModal(true);
+    // Auto-scroll to selected items after modal renders
+    setTimeout(() => {
+      dayListRef.current?.scrollToIndex?.({ index: Math.max(0, day - 3), animated: false });
+      monthListRef.current?.scrollToIndex?.({ index: Math.max(0, month - 2), animated: false });
+    }, 150);
+  };
+
+  const confirmDatePicker = () => {
+    const d = new Date(pickerYear, pickerMonth, pickerDay);
+    d.setHours(0, 0, 0, 0);
+    setPreferredStartDate(d);
+    setDateModal(false);
+  };
 
   const toggleCategory = (catId) => {
     setSelectedCategories(prev =>
@@ -245,7 +279,19 @@ export default function AMCRequestScreen({ navigation }) {
         )}
       </View>
 
-      <View style={{ height: scale(200) }} />
+      {/* Continue Button */}
+      <View style={styles.inlineFooter}>
+        <TouchableOpacity
+          style={[styles.continueBtn, !canContinue && styles.continueBtnDisabled]}
+          disabled={!canContinue}
+          onPress={handleNext}
+        >
+          <Text style={styles.continueBtnText}>Continue</Text>
+          <Icon name="arrow-forward" size={scale(18)} color="#fff" />
+        </TouchableOpacity>
+      </View>
+
+      <View style={{ height: scale(120) }} />
     </ScrollView>
   );
 
@@ -302,7 +348,7 @@ export default function AMCRequestScreen({ navigation }) {
           <Icon name="calendar-outline" size={scale(20)} color={C.purple} />
           <Text style={styles.sectionTitle}>Preferred Start Date</Text>
         </View>
-        <TouchableOpacity style={styles.dropdownBtn} onPress={() => setDateModal(true)}>
+        <TouchableOpacity style={styles.dropdownBtn} onPress={() => openDateModal()}>
           <Icon name="calendar" size={scale(20)} color={C.purple} />
           <Text style={preferredStartDate ? styles.dropdownText : styles.dropdownPlaceholder}>
             {preferredStartDate ? preferredStartDate.toDateString() : 'Tap to select date'}
@@ -311,7 +357,24 @@ export default function AMCRequestScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      <View style={{ height: scale(200) }} />
+      {/* Continue Button */}
+      <View style={styles.inlineFooter}>
+        {step > 1 && (
+          <TouchableOpacity style={styles.footerBackBtn} onPress={() => setStep(step - 1)}>
+            <Icon name="arrow-back" size={scale(20)} color={C.ink} />
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity
+          style={[styles.continueBtn, !canContinue && styles.continueBtnDisabled]}
+          disabled={!canContinue}
+          onPress={handleNext}
+        >
+          <Text style={styles.continueBtnText}>Continue</Text>
+          <Icon name="arrow-forward" size={scale(18)} color="#fff" />
+        </TouchableOpacity>
+      </View>
+
+      <View style={{ height: scale(120) }} />
     </ScrollView>
   );
 
@@ -378,7 +441,28 @@ export default function AMCRequestScreen({ navigation }) {
           />
         </View>
 
-        <View style={{ height: scale(200) }} />
+        {/* Submit Button */}
+        <View style={styles.inlineFooter}>
+          <TouchableOpacity style={styles.footerBackBtn} onPress={() => setStep(step - 1)}>
+            <Icon name="arrow-back" size={scale(20)} color={C.ink} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.continueBtn, !canContinue && styles.continueBtnDisabled]}
+            disabled={!canContinue || submitting}
+            onPress={handleNext}
+          >
+            {submitting ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <>
+                <Text style={styles.continueBtnText}>Submit Request</Text>
+                <Icon name="checkmark-circle" size={scale(18)} color="#fff" />
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        <View style={{ height: scale(120) }} />
       </ScrollView>
     );
   };
@@ -430,31 +514,6 @@ export default function AMCRequestScreen({ navigation }) {
       {step === 2 && renderStep2()}
       {step === 3 && renderStep3()}
 
-      {/* Footer */}
-      <View style={[styles.footer, { bottom: scale(100) + Math.max(insets.bottom, scale(10)) + scale(20) }]}>
-        <View style={styles.footerContent}>
-          {step > 1 && (
-            <TouchableOpacity style={styles.footerBackBtn} onPress={() => setStep(step - 1)}>
-              <Icon name="arrow-back" size={scale(20)} color={C.ink} />
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity
-            style={[styles.continueBtn, !canContinue && styles.continueBtnDisabled]}
-            disabled={!canContinue || submitting}
-            onPress={handleNext}
-          >
-            {submitting ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <>
-                <Text style={styles.continueBtnText}>{step === 3 ? 'Submit Request' : 'Continue'}</Text>
-                <Icon name={step === 3 ? 'checkmark-circle' : 'arrow-forward'} size={scale(18)} color="#fff" />
-              </>
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
-
       {/* Kitchen Type Modal */}
       <Modal visible={kitchenModal} transparent animationType="slide" onRequestClose={() => setKitchenModal(false)}>
         <View style={styles.modalBackdrop}>
@@ -479,48 +538,105 @@ export default function AMCRequestScreen({ navigation }) {
         </View>
       </Modal>
 
-      {/* Date Modal */}
+      {/* Custom Date Picker Modal */}
       <Modal visible={dateModal} transparent animationType="slide" onRequestClose={() => setDateModal(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalSheet}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Start Date</Text>
-              <TouchableOpacity onPress={() => setDateModal(false)} style={styles.modalCloseBtn}>
-                <Icon name="close" size={scale(22)} color={C.ink} />
+            {/* Header */}
+            <View style={styles.datePickerHeader}>
+              <TouchableOpacity onPress={() => setDateModal(false)}>
+                <Text style={styles.datePickerCancel}>Cancel</Text>
+              </TouchableOpacity>
+              <Text style={styles.datePickerTitle}>Select Date</Text>
+              <TouchableOpacity onPress={confirmDatePicker}>
+                <Text style={styles.datePickerDone}>Done</Text>
               </TouchableOpacity>
             </View>
-            <View style={styles.calendarHeader}>
-              {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
-                <Text key={i} style={styles.calendarDay}>{d}</Text>
-              ))}
+
+            {/* Preview */}
+            <View style={styles.datePickerPreview}>
+              <Text style={styles.datePickerPreviewText}>
+                {pickerDay} {MONTHS_FULL[pickerMonth]} {pickerYear}
+              </Text>
             </View>
-            <ScrollView style={{ maxHeight: scale(300) }}>
-              <View style={styles.calendarGrid}>
-                {Array(next90Days[0]?.getDay() || 0).fill(null).map((_, i) => (
-                  <View key={`pad-${i}`} style={styles.calendarCell} />
-                ))}
-                {next90Days.map((date) => {
-                  const isSelected = preferredStartDate?.toDateString() === date.toDateString();
-                  return (
+
+            {/* 3-Column Picker */}
+            <View style={styles.datePickerColumns}>
+              {/* Day Column */}
+              <View style={styles.datePickerCol}>
+                <Text style={styles.datePickerColLabel}>Day</Text>
+                <FlatList
+                  ref={dayListRef}
+                  data={Array.from({ length: daysInPickerMonth }, (_, i) => i + 1)}
+                  keyExtractor={(item) => String(item)}
+                  style={styles.datePickerScroll}
+                  showsVerticalScrollIndicator={false}
+                  getItemLayout={(_, index) => ({ length: scale(42), offset: scale(42) * index, index })}
+                  onScrollToIndexFailed={() => {}}
+                  renderItem={({ item: d }) => (
                     <TouchableOpacity
-                      key={date.toISOString()}
-                      style={[styles.calendarCell, isSelected && styles.calendarCellActive]}
-                      onPress={() => setPreferredStartDate(date)}
+                      style={[styles.datePickerItem, pickerDay === d && styles.datePickerItemActive]}
+                      onPress={() => setPickerDay(d)}
                     >
-                      <Text style={[styles.calendarCellText, isSelected && styles.calendarCellTextActive]}>
-                        {date.getDate()}
+                      <Text style={[styles.datePickerItemText, pickerDay === d && styles.datePickerItemTextActive]}>
+                        {d}
                       </Text>
                     </TouchableOpacity>
-                  );
-                })}
+                  )}
+                />
               </View>
-            </ScrollView>
-            <TouchableOpacity
-              style={[styles.modalBtn, !preferredStartDate && styles.modalBtnDisabled]}
-              disabled={!preferredStartDate}
-              onPress={() => setDateModal(false)}
-            >
-              <Text style={styles.modalBtnText}>Confirm</Text>
+
+              {/* Month Column */}
+              <View style={[styles.datePickerCol, { flex: 1.3 }]}>
+                <Text style={styles.datePickerColLabel}>Month</Text>
+                <FlatList
+                  ref={monthListRef}
+                  data={MONTHS}
+                  keyExtractor={(item) => item}
+                  style={styles.datePickerScroll}
+                  showsVerticalScrollIndicator={false}
+                  getItemLayout={(_, index) => ({ length: scale(42), offset: scale(42) * index, index })}
+                  onScrollToIndexFailed={() => {}}
+                  renderItem={({ item: m, index: i }) => (
+                    <TouchableOpacity
+                      style={[styles.datePickerItem, pickerMonth === i && styles.datePickerItemActive]}
+                      onPress={() => handleMonthChange(i)}
+                    >
+                      <Text style={[styles.datePickerItemText, pickerMonth === i && styles.datePickerItemTextActive]}>
+                        {m}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                />
+              </View>
+
+              {/* Year Column — Stepper for unlimited range */}
+              <View style={styles.datePickerCol}>
+                <Text style={styles.datePickerColLabel}>Year</Text>
+                <View style={styles.yearStepper}>
+                  <TouchableOpacity
+                    style={styles.yearStepperBtn}
+                    onPress={() => handleYearChange(pickerYear + 1)}
+                  >
+                    <Icon name="chevron-up" size={scale(24)} color={C.ink} />
+                  </TouchableOpacity>
+                  <View style={styles.yearStepperValue}>
+                    <Text style={styles.yearStepperText}>{pickerYear}</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.yearStepperBtn}
+                    onPress={() => handleYearChange(pickerYear - 1)}
+                  >
+                    <Icon name="chevron-down" size={scale(24)} color={C.ink} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+
+            {/* Confirm Button */}
+            <TouchableOpacity style={styles.datePickerConfirmBtn} onPress={confirmDatePicker}>
+              <Icon name="checkmark-circle" size={scale(20)} color="#FFFFFF" />
+              <Text style={styles.datePickerConfirmText}>Confirm Date</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -672,15 +788,10 @@ const styles = StyleSheet.create({
   },
 
   // Footer
-  footer: {
-    position: 'absolute', left: 0, right: 0,
-    backgroundColor: C.card, borderTopWidth: 1, borderTopColor: C.border,
-    borderTopLeftRadius: scale(20), borderTopRightRadius: scale(20),
-    paddingHorizontal: scale(16), paddingVertical: scale(14),
-    shadowColor: '#000', shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1, shadowRadius: 12, elevation: 10,
+  inlineFooter: {
+    flexDirection: 'row', gap: scale(10), justifyContent: 'flex-end',
+    paddingHorizontal: scale(16), paddingTop: scale(16), paddingBottom: scale(8),
   },
-  footerContent: { flexDirection: 'row', gap: scale(10), justifyContent: 'flex-end' },
   footerBackBtn: {
     width: scale(44), height: scale(44), borderRadius: scale(12), backgroundColor: C.bg,
     alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.border,
@@ -719,14 +830,50 @@ const styles = StyleSheet.create({
   modalBtnDisabled: { backgroundColor: '#C4B5FD' },
   modalBtnText: { fontSize: moderateScale(16), fontWeight: '700', color: '#fff' },
 
-  // Calendar
-  calendarHeader: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: scale(8) },
-  calendarDay: { width: scale(40), textAlign: 'center', fontSize: moderateScale(13), fontWeight: '700', color: C.muted },
-  calendarGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-start' },
-  calendarCell: {
-    width: '14.28%', aspectRatio: 1, alignItems: 'center', justifyContent: 'center', marginBottom: scale(4),
+  // Custom Date Picker
+  datePickerHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingBottom: scale(12), borderBottomWidth: 1, borderBottomColor: C.border, marginBottom: scale(12),
   },
-  calendarCellActive: { backgroundColor: C.purple, borderRadius: scale(10) },
-  calendarCellText: { fontSize: moderateScale(14), fontWeight: '600', color: C.ink },
-  calendarCellTextActive: { color: '#fff' },
+  datePickerCancel: { fontSize: moderateScale(14), color: C.muted, fontWeight: '600' },
+  datePickerTitle: { fontSize: moderateScale(16), fontWeight: '700', color: C.ink },
+  datePickerDone: { fontSize: moderateScale(14), color: C.primary, fontWeight: '700' },
+  datePickerPreview: {
+    backgroundColor: C.ink, borderRadius: scale(12), paddingVertical: scale(14),
+    paddingHorizontal: scale(20), alignItems: 'center', marginBottom: scale(16),
+  },
+  datePickerPreviewText: { fontSize: moderateScale(18), fontWeight: '700', color: '#FFFFFF' },
+  datePickerColumns: { flexDirection: 'row', gap: scale(8), marginBottom: scale(16) },
+  datePickerCol: { flex: 1 },
+  datePickerColLabel: {
+    fontSize: moderateScale(11), fontWeight: '700', color: C.muted, textAlign: 'center',
+    textTransform: 'uppercase', letterSpacing: 1, marginBottom: scale(8),
+  },
+  datePickerScroll: { maxHeight: scale(200) },
+  datePickerItem: {
+    height: scale(38), paddingHorizontal: scale(6),
+    borderRadius: scale(8), alignItems: 'center', justifyContent: 'center', marginBottom: scale(4),
+  },
+  datePickerItemActive: { backgroundColor: C.primary },
+  datePickerItemText: { fontSize: moderateScale(14), fontWeight: '600', color: C.ink },
+  datePickerItemTextActive: { color: '#FFFFFF', fontWeight: '700' },
+  yearStepper: {
+    flex: 1, alignItems: 'center', justifyContent: 'center',
+  },
+  yearStepperBtn: {
+    width: scale(52), height: scale(44), borderRadius: scale(10),
+    backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', marginVertical: scale(6),
+  },
+  yearStepperValue: {
+    backgroundColor: C.primary, borderRadius: scale(12),
+    paddingVertical: scale(16), paddingHorizontal: scale(14), alignItems: 'center',
+  },
+  yearStepperText: {
+    fontSize: moderateScale(20), fontWeight: '800', color: '#FFFFFF',
+  },
+  datePickerConfirmBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: scale(8),
+    backgroundColor: C.primary, borderRadius: scale(12), paddingVertical: scale(14),
+  },
+  datePickerConfirmText: { fontSize: moderateScale(15), fontWeight: '700', color: '#FFFFFF' },
 });

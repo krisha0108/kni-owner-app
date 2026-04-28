@@ -21,9 +21,9 @@
  * ============================================================================
  */
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList,
   TextInput, ActivityIndicator, Alert, Modal, Image,
   useWindowDimensions, Dimensions,
 } from 'react-native';
@@ -113,18 +113,70 @@ export default function ServiceRequestScreen({ navigation, route }) {
   const [menuVisible, setMenuVisible] = useState(false);
   const [dateModalVisible, setDateModalVisible] = useState(false);
 
-  // Generate next 30 days
-  const next30Days = useMemo(() => {
-    const days = [];
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    for (let i = 0; i < 30; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() + i);
-      days.push(date);
-    }
-    return days;
-  }, []);
+  // Custom date picker
+  const MONTHS_S = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const MONTHS_F = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const [pickerDay, setPickerDay] = useState(() => new Date().getDate());
+  const [pickerMonth, setPickerMonth] = useState(() => new Date().getMonth());
+  const [pickerYear, setPickerYear] = useState(() => new Date().getFullYear());
+  const dayListRef = useRef(null);
+  const monthListRef = useRef(null);
+
+  const getDaysInMonth = (m, y) => new Date(y, m + 1, 0).getDate();
+  const daysInPickerMonth = getDaysInMonth(pickerMonth, pickerYear);
+  const handleMonthChange = (m) => { const mx = getDaysInMonth(m, pickerYear); setPickerMonth(m); if (pickerDay > mx) setPickerDay(mx); };
+  const handleYearChange = (y) => { const mx = getDaysInMonth(pickerMonth, y); setPickerYear(y); if (pickerDay > mx) setPickerDay(mx); };
+
+  const openDateModal = () => {
+    const d = selectedDate || new Date();
+    setPickerDay(d.getDate()); setPickerMonth(d.getMonth()); setPickerYear(d.getFullYear());
+    setDateModalVisible(true);
+    setTimeout(() => {
+      dayListRef.current?.scrollToIndex?.({ index: Math.max(0, d.getDate() - 3), animated: false });
+      monthListRef.current?.scrollToIndex?.({ index: Math.max(0, d.getMonth() - 2), animated: false });
+    }, 150);
+  };
+  const confirmDatePicker = () => {
+    const d = new Date(pickerYear, pickerMonth, pickerDay); d.setHours(0, 0, 0, 0);
+    setSelectedDate(d); setDateModalVisible(false);
+  };
+
+  // Custom time picker
+  const HOURS_LIST = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+  const MINS_LIST = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
+  const [timeModalVisible, setTimeModalVisible] = useState(false);
+  const [pickerHour, setPickerHour] = useState(9);
+  const [pickerMinute, setPickerMinute] = useState(0);
+  const [pickerAmPm, setPickerAmPm] = useState('AM');
+  const hourListRef = useRef(null);
+
+  const openTimeModal = () => {
+    if (selectedSlot) {
+      const slot = TIME_SLOTS.find(s => s.id === selectedSlot);
+      if (slot) {
+        const [h, m] = slot.start.split(':').map(Number);
+        setPickerHour(h > 12 ? h - 12 : h === 0 ? 12 : h);
+        setPickerMinute(m);
+        setPickerAmPm(h >= 12 ? 'PM' : 'AM');
+      }
+    } else { setPickerHour(9); setPickerMinute(0); setPickerAmPm('AM'); }
+    setTimeModalVisible(true);
+  };
+  const confirmTimePicker = () => {
+    let h24 = pickerHour;
+    if (pickerAmPm === 'PM' && h24 !== 12) h24 += 12;
+    if (pickerAmPm === 'AM' && h24 === 12) h24 = 0;
+    const endH24 = h24 + 2;
+    const startStr = `${String(h24).padStart(2, '0')}:${String(pickerMinute).padStart(2, '0')}`;
+    const endStr = `${String(endH24).padStart(2, '0')}:${String(pickerMinute).padStart(2, '0')}`;
+    const label = `${pickerHour}:${String(pickerMinute).padStart(2, '0')} ${pickerAmPm} - ${endH24 > 12 ? endH24 - 12 : endH24}:${String(pickerMinute).padStart(2, '0')} ${endH24 >= 12 ? 'PM' : 'AM'}`;
+    // Use 'custom' as slot id with custom start/end
+    setSelectedSlot('custom');
+    // Store as a custom TIME_SLOT-compatible object
+    setCustomSlot({ id: 'custom', label, start: startStr, end: endStr });
+    setTimeModalVisible(false);
+  };
+  const [customSlot, setCustomSlot] = useState(null);
 
   // Fetch services and parts by category
   useEffect(() => {
@@ -293,7 +345,7 @@ export default function ServiceRequestScreen({ navigation, route }) {
     paymentInProgress.current = true;
     setIsSubmitting(true);
     try {
-      const slot = TIME_SLOTS.find(s => s.id === selectedSlot);
+      const slot = selectedSlot === 'custom' ? customSlot : TIME_SLOTS.find(s => s.id === selectedSlot);
       if (!slot) throw new Error('Invalid time slot');
 
       const slotStart = new Date(selectedDate);
@@ -411,7 +463,7 @@ export default function ServiceRequestScreen({ navigation, route }) {
 
     setIsSubmitting(true);
     try {
-      const slot = TIME_SLOTS.find(s => s.id === selectedSlot);
+      const slot = selectedSlot === 'custom' ? customSlot : TIME_SLOTS.find(s => s.id === selectedSlot);
       if (!slot) throw new Error('Invalid time slot');
 
       // Build slot datetime
@@ -577,10 +629,10 @@ export default function ServiceRequestScreen({ navigation, route }) {
                 <Icon name="calendar-outline" size={20} color={C.primary} />
                 <Text style={st.sectionTitle}>Select Date</Text>
               </View>
-              <TouchableOpacity style={st.datePickerBtn} onPress={() => setDateModalVisible(true)}>
-                <Icon name="calendar" size={20} color={C.primary} />
-                <Text style={st.datePickerText}>
-                  {selectedDate ? selectedDate.toDateString() : 'Tap to select date'}
+              <TouchableOpacity style={st.datePickerBtn} onPress={openDateModal}>
+                <Icon name="calendar" size={20} color={selectedDate ? C.primary : C.muted} />
+                <Text style={[st.datePickerText, !selectedDate && { color: C.muted }]}>
+                  {selectedDate ? `${selectedDate.getDate()} ${MONTHS_F[selectedDate.getMonth()]} ${selectedDate.getFullYear()}` : 'Tap to select date'}
                 </Text>
                 <Icon name="chevron-forward" size={20} color={C.muted} />
               </TouchableOpacity>
@@ -592,19 +644,15 @@ export default function ServiceRequestScreen({ navigation, route }) {
                 <Icon name="time-outline" size={20} color={C.primary} />
                 <Text style={st.sectionTitle}>Select Time Slot</Text>
               </View>
-              <View style={st.slotsGrid}>
-                {TIME_SLOTS.map(slot => (
-                  <TouchableOpacity
-                    key={slot.id}
-                    style={[st.slotBtn, selectedSlot === slot.id && st.slotBtnActive]}
-                    onPress={() => setSelectedSlot(slot.id)}
-                  >
-                    <Text style={[st.slotText, selectedSlot === slot.id && st.slotTextActive]}>
-                      {slot.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+              <TouchableOpacity style={st.datePickerBtn} onPress={openTimeModal}>
+                <Icon name="time" size={20} color={selectedSlot ? C.primary : C.muted} />
+                <Text style={[st.datePickerText, !selectedSlot && { color: C.muted }]}>
+                  {selectedSlot
+                    ? (selectedSlot === 'custom' ? customSlot?.label : TIME_SLOTS.find(s => s.id === selectedSlot)?.label)
+                    : 'Tap to select time'}
+                </Text>
+                <Icon name="chevron-forward" size={20} color={C.muted} />
+              </TouchableOpacity>
             </View>
 
             {/* Problem Description */}
@@ -906,62 +954,78 @@ export default function ServiceRequestScreen({ navigation, route }) {
       {/* Footer */}
       {renderOrderSummary()}
 
-      {/* Date Modal */}
-      <Modal
-        visible={dateModalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setDateModalVisible(false)}
-      >
-        <View style={st.modalBackdrop}>
-          <View style={st.modalSheet}>
-            <View style={st.modalHeader}>
-              <Text style={st.modalTitle}>Select Date</Text>
-              <TouchableOpacity onPress={() => setDateModalVisible(false)} style={st.modalCloseBtn}>
-                <Icon name="close" size={22} color={C.ink} />
-              </TouchableOpacity>
+      {/* Custom Date Picker Modal */}
+      <Modal visible={dateModalVisible} transparent animationType="slide" onRequestClose={() => setDateModalVisible(false)}>
+        <View style={st.dpBackdrop}>
+          <View style={st.dpSheet}>
+            <View style={st.dpHeader}>
+              <TouchableOpacity onPress={() => setDateModalVisible(false)}><Text style={st.dpCancel}>Cancel</Text></TouchableOpacity>
+              <Text style={st.dpTitle}>Select Date</Text>
+              <TouchableOpacity onPress={confirmDatePicker}><Text style={st.dpDone}>Done</Text></TouchableOpacity>
             </View>
-
-            <View style={st.calendarHeader}>
-              {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
-                <Text key={i} style={st.calendarDay}>{d}</Text>
-              ))}
+            <View style={st.dpPreview}><Text style={st.dpPreviewText}>{pickerDay} {MONTHS_F[pickerMonth]} {pickerYear}</Text></View>
+            <View style={st.dpColumns}>
+              <View style={st.dpCol}>
+                <Text style={st.dpColLabel}>DAY</Text>
+                <FlatList ref={dayListRef} data={Array.from({ length: daysInPickerMonth }, (_, i) => i + 1)} keyExtractor={i => String(i)} style={st.dpScroll} showsVerticalScrollIndicator={false} getItemLayout={(_, i) => ({ length: scale(42), offset: scale(42) * i, index: i })} onScrollToIndexFailed={() => {}} renderItem={({ item: d }) => (
+                  <TouchableOpacity style={[st.dpItem, pickerDay === d && st.dpItemActive]} onPress={() => setPickerDay(d)}><Text style={[st.dpItemText, pickerDay === d && st.dpItemTextActive]}>{d}</Text></TouchableOpacity>
+                )} />
+              </View>
+              <View style={[st.dpCol, { flex: 1.3 }]}>
+                <Text style={st.dpColLabel}>MONTH</Text>
+                <FlatList ref={monthListRef} data={MONTHS_S} keyExtractor={i => i} style={st.dpScroll} showsVerticalScrollIndicator={false} getItemLayout={(_, i) => ({ length: scale(42), offset: scale(42) * i, index: i })} onScrollToIndexFailed={() => {}} renderItem={({ item: m, index: i }) => (
+                  <TouchableOpacity style={[st.dpItem, pickerMonth === i && st.dpItemActive]} onPress={() => handleMonthChange(i)}><Text style={[st.dpItemText, pickerMonth === i && st.dpItemTextActive]}>{m}</Text></TouchableOpacity>
+                )} />
+              </View>
+              <View style={st.dpCol}>
+                <Text style={st.dpColLabel}>YEAR</Text>
+                <View style={st.dpYearStepper}>
+                  <TouchableOpacity style={st.dpYearBtn} onPress={() => handleYearChange(pickerYear + 1)}><Icon name="chevron-up" size={scale(24)} color={C.ink} /></TouchableOpacity>
+                  <View style={st.dpYearValue}><Text style={st.dpYearText}>{pickerYear}</Text></View>
+                  <TouchableOpacity style={st.dpYearBtn} onPress={() => handleYearChange(pickerYear - 1)}><Icon name="chevron-down" size={scale(24)} color={C.ink} /></TouchableOpacity>
+                </View>
+              </View>
             </View>
+            <TouchableOpacity style={st.dpConfirmBtn} onPress={confirmDatePicker}><Icon name="checkmark-circle" size={scale(20)} color="#FFFFFF" /><Text style={st.dpConfirmText}>Confirm Date</Text></TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
-            <View style={st.calendarGrid}>
-              {/* Add padding for first week */}
-              {Array(next30Days[0]?.getDay() || 0).fill(null).map((_, i) => (
-                <View key={`pad-${i}`} style={st.calendarCell} />
-              ))}
-              {next30Days.map((date, idx) => {
-                const isSelected = selectedDate?.toDateString() === date.toDateString();
-                const isToday = new Date().toDateString() === date.toDateString();
-                return (
-                  <TouchableOpacity
-                    key={date.toISOString()}
-                    style={[
-                      st.calendarCell,
-                      isSelected && st.calendarCellActive,
-                      isToday && !isSelected && st.calendarCellToday
-                    ]}
-                    onPress={() => setSelectedDate(date)}
-                  >
-                    <Text style={[
-                      st.calendarCellText,
-                      isSelected && st.calendarCellTextActive
-                    ]}>{date.getDate()}</Text>
-                  </TouchableOpacity>
-                );
-              })}
+      {/* Custom Time Picker Modal */}
+      <Modal visible={timeModalVisible} transparent animationType="slide" onRequestClose={() => setTimeModalVisible(false)}>
+        <View style={st.dpBackdrop}>
+          <View style={st.dpSheet}>
+            <View style={st.dpHeader}>
+              <TouchableOpacity onPress={() => setTimeModalVisible(false)}><Text style={st.dpCancel}>Cancel</Text></TouchableOpacity>
+              <Text style={st.dpTitle}>Select Time</Text>
+              <TouchableOpacity onPress={confirmTimePicker}><Text style={st.dpDone}>Done</Text></TouchableOpacity>
             </View>
-
-            <TouchableOpacity
-              style={[st.modalBtn, !selectedDate && st.modalBtnDisabled]}
-              disabled={!selectedDate}
-              onPress={() => setDateModalVisible(false)}
-            >
-              <Text style={st.modalBtnText}>Confirm</Text>
-            </TouchableOpacity>
+            <View style={st.dpPreview}><Text style={st.dpPreviewText}>{String(pickerHour).padStart(2, '0')}:{String(pickerMinute).padStart(2, '0')} {pickerAmPm}</Text></View>
+            <View style={st.dpColumns}>
+              <View style={st.dpCol}>
+                <Text style={st.dpColLabel}>HOUR</Text>
+                <FlatList ref={hourListRef} data={HOURS_LIST} keyExtractor={i => String(i)} style={st.dpScroll} showsVerticalScrollIndicator={false} getItemLayout={(_, i) => ({ length: scale(42), offset: scale(42) * i, index: i })} onScrollToIndexFailed={() => {}} renderItem={({ item: h }) => (
+                  <TouchableOpacity style={[st.dpItem, pickerHour === h && st.dpItemActive]} onPress={() => setPickerHour(h)}><Text style={[st.dpItemText, pickerHour === h && st.dpItemTextActive]}>{String(h).padStart(2, '0')}</Text></TouchableOpacity>
+                )} />
+              </View>
+              <View style={st.dpCol}>
+                <Text style={st.dpColLabel}>MINUTE</Text>
+                <FlatList data={MINS_LIST} keyExtractor={i => String(i)} style={st.dpScroll} showsVerticalScrollIndicator={false} getItemLayout={(_, i) => ({ length: scale(42), offset: scale(42) * i, index: i })} onScrollToIndexFailed={() => {}} renderItem={({ item: m }) => (
+                  <TouchableOpacity style={[st.dpItem, pickerMinute === m && st.dpItemActive]} onPress={() => setPickerMinute(m)}><Text style={[st.dpItemText, pickerMinute === m && st.dpItemTextActive]}>{String(m).padStart(2, '0')}</Text></TouchableOpacity>
+                )} />
+              </View>
+              <View style={st.dpCol}>
+                <Text style={st.dpColLabel}>AM/PM</Text>
+                <View style={st.dpAmPmWrap}>
+                  {['AM', 'PM'].map(v => (
+                    <TouchableOpacity key={v} style={[st.dpAmPmBtn, pickerAmPm === v && st.dpAmPmBtnActive]} onPress={() => setPickerAmPm(v)}>
+                      <Text style={[st.dpAmPmText, pickerAmPm === v && st.dpAmPmTextActive]}>{v}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </View>
+            <TouchableOpacity style={st.dpConfirmBtn} onPress={confirmTimePicker}><Icon name="checkmark-circle" size={scale(20)} color="#FFFFFF" /><Text style={st.dpConfirmText}>Confirm Time</Text></TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -1213,4 +1277,33 @@ const st = StyleSheet.create({
   calendarCellToday: { borderWidth: scale(2), borderColor: C.primary, borderRadius: scale(10) },
   calendarCellText: { fontSize: moderateScale(14), fontWeight: '600', color: C.ink },
   calendarCellTextActive: { color: '#fff' },
+
+  // Custom Date/Time Picker Modal
+  dpBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  dpSheet: { backgroundColor: '#fff', borderTopLeftRadius: scale(20), borderTopRightRadius: scale(20), paddingHorizontal: scale(20), paddingTop: scale(16), paddingBottom: scale(30) },
+  dpHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: scale(12), borderBottomWidth: 1, borderBottomColor: C.border, marginBottom: scale(12) },
+  dpCancel: { fontSize: moderateScale(14), color: C.muted, fontWeight: '600' },
+  dpTitle: { fontSize: moderateScale(16), fontWeight: '700', color: C.ink },
+  dpDone: { fontSize: moderateScale(14), color: C.primary, fontWeight: '700' },
+  dpPreview: { backgroundColor: C.ink, borderRadius: scale(12), paddingVertical: scale(14), paddingHorizontal: scale(20), alignItems: 'center', marginBottom: scale(16) },
+  dpPreviewText: { fontSize: moderateScale(18), fontWeight: '700', color: '#FFFFFF' },
+  dpColumns: { flexDirection: 'row', gap: scale(8), marginBottom: scale(16) },
+  dpCol: { flex: 1 },
+  dpColLabel: { fontSize: moderateScale(11), fontWeight: '700', color: C.muted, textAlign: 'center', letterSpacing: 1, marginBottom: scale(8) },
+  dpScroll: { maxHeight: scale(200) },
+  dpItem: { height: scale(38), paddingHorizontal: scale(6), borderRadius: scale(8), alignItems: 'center', justifyContent: 'center', marginBottom: scale(4) },
+  dpItemActive: { backgroundColor: C.primary },
+  dpItemText: { fontSize: moderateScale(14), fontWeight: '600', color: C.ink },
+  dpItemTextActive: { color: '#FFFFFF', fontWeight: '700' },
+  dpYearStepper: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  dpYearBtn: { width: scale(52), height: scale(44), borderRadius: scale(10), backgroundColor: '#F5F7FA', alignItems: 'center', justifyContent: 'center', marginVertical: scale(6) },
+  dpYearValue: { backgroundColor: C.primary, borderRadius: scale(12), paddingVertical: scale(16), paddingHorizontal: scale(14), alignItems: 'center' },
+  dpYearText: { fontSize: moderateScale(20), fontWeight: '800', color: '#FFFFFF' },
+  dpAmPmWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: scale(10) },
+  dpAmPmBtn: { width: '100%', paddingVertical: scale(18), borderRadius: scale(12), backgroundColor: '#F5F7FA', alignItems: 'center' },
+  dpAmPmBtnActive: { backgroundColor: C.primary },
+  dpAmPmText: { fontSize: moderateScale(16), fontWeight: '700', color: C.ink },
+  dpAmPmTextActive: { color: '#FFFFFF' },
+  dpConfirmBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: scale(8), backgroundColor: C.primary, borderRadius: scale(12), paddingVertical: scale(14) },
+  dpConfirmText: { fontSize: moderateScale(15), fontWeight: '700', color: '#FFFFFF' },
 });
