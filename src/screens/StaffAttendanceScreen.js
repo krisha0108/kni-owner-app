@@ -103,7 +103,7 @@ export default function StaffAttendanceScreen({ navigation }) {
       // Fetch active staff
       const staffRes = await api.get(`/owner/staff?restaurantId=${selectedRestaurantId}&status=ACTIVE`);
       if (staffRes.data.ok) {
-        setStaff(staffRes.data.data || []);
+        setStaff(staffRes.data.data?.items || staffRes.data.data || []);
       }
 
       // Fetch attendance for selected date

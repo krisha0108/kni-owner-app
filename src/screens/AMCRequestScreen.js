@@ -91,7 +91,8 @@ export default function AMCRequestScreen({ navigation }) {
     setActiveAMC(null);
     api.get(`/owner/amc-contracts?restaurantId=${restaurantId}`)
       .then(r => {
-        const active = (r.data?.data || []).find(c => c.status === 'ACTIVE');
+        const contracts = r.data?.data?.items || r.data?.data || [];
+        const active = contracts.find(c => c.status === 'ACTIVE');
         setActiveAMC(active || null);
       })
       .catch(() => {})

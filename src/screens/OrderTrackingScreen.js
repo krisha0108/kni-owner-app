@@ -204,11 +204,16 @@ export default function OrderTrackingScreen({ navigation }) {
             api.get(`/owner/marketplace/orders?restaurantId=${targetRestaurant.id}`).catch(() => ({ data: { ok: false } })),
             api.get(`/owner/marketplace/payments?restaurantId=${targetRestaurant.id}`).catch(() => ({ data: { ok: false } })),
           ]);
-          if (bookingsRes.data.ok) setServiceBookings(bookingsRes.data.data || []);
+          if (bookingsRes.data.ok) {
+            const bData = bookingsRes.data.data;
+            setServiceBookings(Array.isArray(bData) ? bData : (bData?.items || []));
+          }
 
           // Build unified tracking items from payments + orders
-          const orders = ordersRes.data.ok ? (ordersRes.data.data || []) : [];
-          const payments = paymentsRes.data.ok ? (paymentsRes.data.data || []) : [];
+          const oData = ordersRes.data.ok ? ordersRes.data.data : [];
+          const pData = paymentsRes.data.ok ? paymentsRes.data.data : [];
+          const orders = Array.isArray(oData) ? oData : (oData?.items || []);
+          const payments = Array.isArray(pData) ? pData : (pData?.items || []);
 
           // Map orderId → order for quick lookup
           const orderMap = {};

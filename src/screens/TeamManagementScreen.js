@@ -154,7 +154,7 @@ export default function TeamManagementScreen({ navigation }) {
       setLoading(true);
       const response = await api.get(`/owner/team?restaurantId=${selectedRestaurantId}`);
       if (response.data.ok) {
-        setTeamMembers(response.data.data || []);
+        setTeamMembers(response.data.data?.items || response.data.data || []);
       }
     } catch (error) {
       console.error('Error loading team:', error);
