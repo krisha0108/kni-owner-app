@@ -96,7 +96,7 @@ export default function PaymentUploadScreen({ route, navigation }) {
         Alert.alert('Success', 'Payment proof uploaded successfully', [
           {
             text: 'OK',
-            onPress: () => navigation.goBack(),
+            onPress: () => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home')),
           },
         ]);
       } else {
@@ -114,7 +114,7 @@ export default function PaymentUploadScreen({ route, navigation }) {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
           <Icon name="arrow-back" size={scale(24)} color={C.ink} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Upload Payment Proof</Text>

@@ -20,6 +20,7 @@ import { api, getImageUrl, uploadFile } from '../api/client';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 import { scale, moderateScale } from '../utils/responsive';
+import useKeyboardHeight from '../utils/useKeyboardHeight';
 
 const C = {
   primary: '#EF3A3A', primaryDark: '#DC2626', ink: '#1D2254', text: '#334155',
@@ -62,6 +63,7 @@ const formatPrice = (amount) => '₹' + (parseFloat(amount) || 0).toLocaleString
 export default function AMCRequestDetailScreen({ navigation, route }) {
   const { requestId } = route.params || {};
 
+  const keyboardHeight = useKeyboardHeight();
   const [request, setRequest] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -237,7 +239,7 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
           try {
             await api.delete(`/owner/amc-requests/${requestId}`);
             Alert.alert('Cancelled', 'AMC request cancelled');
-            navigation.goBack();
+            (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'));
           } catch (e) {
             Alert.alert('Error', e.response?.data?.error || 'Failed to cancel');
           }
@@ -273,7 +275,7 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
         <StatusBar barStyle="light-content" backgroundColor={C.purple} />
         <LinearGradient colors={[C.purple, C.purpleDark]} style={styles.heroHeader}>
           <View style={styles.heroContent}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
               <Icon name="arrow-back" size={24} color="#fff" />
             </TouchableOpacity>
             <Text style={styles.heroTitle}>AMC Request</Text>
@@ -296,7 +298,7 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
         <StatusBar barStyle="light-content" backgroundColor={C.purple} />
         <LinearGradient colors={[C.purple, C.purpleDark]} style={styles.heroHeader}>
           <View style={styles.heroContent}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
               <Icon name="arrow-back" size={24} color="#fff" />
             </TouchableOpacity>
             <Text style={styles.heroTitle}>AMC Request</Text>
@@ -330,7 +332,7 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
       {/* Hero */}
       <LinearGradient colors={[C.purple, C.purpleDark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroHeader}>
         <View style={styles.heroContent}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
             <Icon name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.heroTitle}>AMC Request</Text>
@@ -763,7 +765,7 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
             <Text style={styles.rejectModalTitle}>Reject Proposal</Text>
             <View style={{ width: scale(40) }} />
           </View>
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: scale(16) }}>
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: scale(16) }} keyboardShouldPersistTaps="handled">
             <Text style={{ fontSize: moderateScale(14), color: C.text, marginBottom: scale(12) }}>
               Please provide a reason for rejecting this proposal. This helps the admin understand your concerns.
             </Text>

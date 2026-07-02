@@ -239,7 +239,7 @@ export default function AMCContractsScreen({ navigation }) {
         <StatusBar barStyle="light-content" backgroundColor="#059669" />
         <LinearGradient colors={['#059669', '#047857']} style={styles.heroHeader}>
           <View style={styles.heroContent}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
               <Icon name="arrow-back" size={24} color="#fff" />
             </TouchableOpacity>
             <Text style={styles.heroTitle}>AMC Contracts</Text>
@@ -263,7 +263,7 @@ export default function AMCContractsScreen({ navigation }) {
 
       <LinearGradient colors={['#059669', '#047857']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroHeader}>
         <View style={styles.heroContent}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
             <Icon name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.heroTitle}>AMC Contracts</Text>

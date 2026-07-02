@@ -11,8 +11,10 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Modal,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import LinearGradient from 'react-native-linear-gradient';
 import { api } from '../api/client';
 import auth from '@react-native-firebase/auth';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
@@ -26,6 +28,8 @@ export default function RestaurantLogin({ navigation }) {
   const [secureText, setSecureText] = useState(true);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  // Holds { destination, initial } when a Google user needs to add a phone number
+  const [phonePrompt, setPhonePrompt] = useState(null);
 
   useEffect(() => {
     GoogleSignin.configure({
@@ -173,14 +177,24 @@ export default function RestaurantLogin({ navigation }) {
           await AsyncStorage.setItem('selectedRestaurant', JSON.stringify(restaurants[0]));
         }
 
-        // Navigate based on status
-        if (hasApprovedRestaurant) {
-          navigation.replace('Home');
-        } else if (restaurants && restaurants.length > 0) {
-          navigation.replace('PendingApproval');
+        // Decide where this user should land after login
+        const destination = hasApprovedRestaurant
+          ? 'Home'
+          : (restaurants && restaurants.length > 0 ? 'PendingApproval' : 'RestaurantOnboarding');
+
+        // Google-registered users usually have no mobile number yet.
+        // Show the add-phone modal first (needed for OTP login, SMS alerts, bookings),
+        // then navigate. If a valid phone already exists, navigate straight away.
+        const phoneOk = /^\+?[0-9][0-9\s-]{6,}$/.test(String(user?.phone || '').trim());
+        if (phoneOk) {
+          navigation.replace(destination);
         } else {
-          // New user with no restaurant - go to onboarding
-          navigation.replace('RestaurantOnboarding');
+          const fn = (user?.name || '').split(' ')[0] || '';
+          const ln = (user?.name || '').split(' ').slice(1).join(' ') || '';
+          setPhonePrompt({
+            destination,
+            initial: { first_name: fn, last_name: ln, email: user?.email || '', phone: '', password: '' },
+          });
         }
       } else {
         Alert.alert('Login Failed', response.data?.error || 'Google sign-in failed');
@@ -200,6 +214,17 @@ export default function RestaurantLogin({ navigation }) {
       }
     } finally {
       setGoogleLoading(false);
+    }
+  };
+
+  // Close the add-phone modal and continue. `addNow` => open the edit-profile screen.
+  const resolvePhonePrompt = (addNow) => {
+    const p = phonePrompt;
+    setPhonePrompt(null);
+    if (!p) return;
+    navigation.replace(p.destination);
+    if (addNow) {
+      setTimeout(() => navigation.navigate('EditOwnerProfile', { initial: p.initial }), 350);
     }
   };
 
@@ -317,6 +342,57 @@ export default function RestaurantLogin({ navigation }) {
           </View>
         </View>
       </ScrollView>
+
+      {/* Add-phone modal (shown to Google users without a mobile number) */}
+      <Modal
+        visible={!!phonePrompt}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => resolvePhonePrompt(false)}
+      >
+        <View style={styles.pmOverlay}>
+          <View style={styles.pmCard}>
+            <LinearGradient
+              colors={['#EF3A3A', '#D42E2E']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.pmIconBadge}
+            >
+              <Icon name="call" size={scale(30)} color="#fff" />
+            </LinearGradient>
+
+            <Text style={styles.pmTitle}>Add your mobile number</Text>
+            <Text style={styles.pmMessage}>
+              Add your mobile number to receive OTP login, SMS alerts and booking updates.
+            </Text>
+
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => resolvePhonePrompt(true)}
+              style={styles.pmPrimaryBtn}
+            >
+              <LinearGradient
+                colors={['#EF3A3A', '#D42E2E']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.pmPrimaryGrad}
+              >
+                <Icon name="add-circle-outline" size={scale(18)} color="#fff" />
+                <Text style={styles.pmPrimaryText}>Add Now</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => resolvePhonePrompt(false)}
+              style={styles.pmGhostBtn}
+            >
+              <Text style={styles.pmGhostText}>Maybe later</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -325,6 +401,85 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8F9FA',
+  },
+
+  /* Add-phone modal */
+  pmOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15,23,42,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: scale(24),
+  },
+  pmCard: {
+    width: '100%',
+    maxWidth: scale(400),
+    backgroundColor: '#fff',
+    borderRadius: scale(24),
+    paddingHorizontal: scale(24),
+    paddingTop: scale(28),
+    paddingBottom: scale(20),
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: scale(10) },
+    shadowOpacity: 0.25,
+    shadowRadius: scale(20),
+    elevation: 14,
+  },
+  pmIconBadge: {
+    width: scale(64),
+    height: scale(64),
+    borderRadius: scale(32),
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: scale(18),
+    shadowColor: '#EF3A3A',
+    shadowOffset: { width: 0, height: scale(6) },
+    shadowOpacity: 0.4,
+    shadowRadius: scale(12),
+    elevation: 8,
+  },
+  pmTitle: {
+    fontSize: moderateScale(19),
+    fontWeight: '800',
+    color: '#1D2254',
+    textAlign: 'center',
+    marginBottom: scale(8),
+  },
+  pmMessage: {
+    fontSize: moderateScale(13.5),
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: moderateScale(20),
+    marginBottom: scale(22),
+  },
+  pmPrimaryBtn: {
+    width: '100%',
+    borderRadius: scale(14),
+    overflow: 'hidden',
+  },
+  pmPrimaryGrad: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: scale(14),
+    gap: scale(8),
+  },
+  pmPrimaryText: {
+    color: '#fff',
+    fontSize: moderateScale(15),
+    fontWeight: '700',
+  },
+  pmGhostBtn: {
+    width: '100%',
+    alignItems: 'center',
+    paddingVertical: scale(12),
+    marginTop: scale(4),
+  },
+  pmGhostText: {
+    color: '#9CA3AF',
+    fontSize: moderateScale(13.5),
+    fontWeight: '600',
   },
   scrollContent: {
     flexGrow: 1,

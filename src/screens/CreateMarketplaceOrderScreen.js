@@ -17,6 +17,7 @@ import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
 import { scale, moderateScale } from '../utils/responsive';
+import useKeyboardHeight from '../utils/useKeyboardHeight';
 
 const C = {
   primary: '#EF3A3A',
@@ -48,6 +49,7 @@ export default function CreateMarketplaceOrderScreen({ navigation, route }) {
   const [deliveryNotes, setDeliveryNotes] = useState('');
   const [step, setStep] = useState(1); // 1: Select Restaurant, 2: Review & Confirm
   const [menuVisible, setMenuVisible] = useState(false);
+  const keyboardHeight = useKeyboardHeight();
 
   // Filter to approved restaurants only
   const restaurants = allRestaurants.filter(r => r.status === 'APPROVED');
@@ -134,7 +136,7 @@ export default function CreateMarketplaceOrderScreen({ navigation, route }) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
             <Icon name="arrow-back" size={scale(22)} color={C.ink} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Place Order</Text>
@@ -154,7 +156,7 @@ export default function CreateMarketplaceOrderScreen({ navigation, route }) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
             <Icon name="arrow-back" size={scale(22)} color={C.ink} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Place Order</Text>
@@ -181,7 +183,7 @@ export default function CreateMarketplaceOrderScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
           <Icon name="arrow-back" size={scale(22)} color={C.ink} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Place Order</Text>
@@ -217,7 +219,7 @@ export default function CreateMarketplaceOrderScreen({ navigation, route }) {
         </Text>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: scale(40) + keyboardHeight }} keyboardShouldPersistTaps="handled">
         {/* Step 1: Select Restaurant */}
         {step === 1 && (
           <View style={styles.stepContainer}>

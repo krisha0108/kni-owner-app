@@ -12,6 +12,7 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import { api, IMAGE_BASE_URL } from '../api/client';
 
 import { scale, moderateScale } from '../utils/responsive';
+import useKeyboardHeight from '../utils/useKeyboardHeight';
 const toStorageUrl = (u) => {
   if (!u) return '';
   const s = String(u).trim();
@@ -55,6 +56,7 @@ const fmt = (d) => new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 
 
 export default function SupportTicketDetail({ navigation, route }) {
   const insets = useSafeAreaInsets();
+  const keyboardHeight = useKeyboardHeight();
   const ticketId = route?.params?.ticketId;
   const [ticket, setTicket] = useState(null);
   const [thread, setThread] = useState([]);
@@ -68,7 +70,7 @@ export default function SupportTicketDetail({ navigation, route }) {
     try {
       await api.delete(`/support/tickets/${ticketId}`);
       setAskDelete(false);
-      navigation.goBack();
+      (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'));
     } catch (error) {
       if (error.response?.status === 405) alert('Server error: Method not allowed.');
       else if (error.response?.status === 403) alert(error.response.data?.message || 'Not authorized');
@@ -171,7 +173,7 @@ export default function SupportTicketDetail({ navigation, route }) {
       {/* Gradient Header */}
       <LinearGradient colors={[C.primary, C.primaryDark]} style={st.headerGrad}>
         <View style={st.headerLeft}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={st.hBtn}>
+          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.hBtn}>
             <Icon name="chevron-back" size={scale(20)} color="#fff" />
           </TouchableOpacity>
           <Text style={st.hTitle} numberOfLines={1}>Ticket</Text>
@@ -364,7 +366,7 @@ export default function SupportTicketDetail({ navigation, route }) {
               <TouchableOpacity onPress={() => setAskDelete(false)} style={[st.outBtn, { flex: 1 }]}>
                 <Text style={st.outTxt}>No, keep</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => { setAskDelete(false); navigation.goBack(); }} style={{ flex: 1 }}>
+              <TouchableOpacity onPress={() => { setAskDelete(false); (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home')); }} style={{ flex: 1 }}>
                 <LinearGradient colors={['#F87171', '#DC2626']} style={st.dangerBtn}>
                   <Text style={st.dangerTxt}>Delete</Text>
                 </LinearGradient>

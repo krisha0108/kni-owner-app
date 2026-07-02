@@ -33,6 +33,7 @@ import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
 import { scale, moderateScale } from '../utils/responsive';
+import useKeyboardHeight from '../utils/useKeyboardHeight';
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // App Theme Color Palette
@@ -124,6 +125,7 @@ export default function MarketplaceOrdersScreen({ navigation }) {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
 
   // Rating Modal
+  const keyboardHeight = useKeyboardHeight();
   const [ratingModalVisible, setRatingModalVisible] = useState(false);
   const [orderToRate, setOrderToRate] = useState(null);
   const [rating, setRating] = useState(5);
@@ -597,7 +599,7 @@ export default function MarketplaceOrdersScreen({ navigation }) {
       >
         <View style={styles.heroContent}>
           <View style={styles.heroLeft}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
               <Icon name="arrow-back" size={scale(22)} color="#fff" />
             </TouchableOpacity>
             <View>

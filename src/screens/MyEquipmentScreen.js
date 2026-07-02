@@ -104,7 +104,7 @@ const DELIVERY_OPTIONS = [
 ];
 
 export default function MyEquipmentScreen({ navigation }) {
-  const { width } = useWindowDimensions();
+  const { width, height: winHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const isTablet = width >= 768;
   const { can } = usePermissions();
@@ -501,7 +501,7 @@ export default function MyEquipmentScreen({ navigation }) {
         style={st.heroSection}
       >
         <View style={st.heroContent}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
+          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
             <Icon name="arrow-back" size={scale(22)} color="#fff" />
           </TouchableOpacity>
           <View style={st.heroTextContainer}>
@@ -637,7 +637,7 @@ export default function MyEquipmentScreen({ navigation }) {
       {/* Add/Edit Modal */}
       <Modal visible={modalVisible} animationType="slide" transparent>
         <View style={st.modalOverlay}>
-          <View style={st.modalContainer}>
+          <View style={[st.modalContainer, { maxHeight: winHeight * 0.9 }]}>
             <LinearGradient colors={[C.gradient1, C.gradient2]} style={st.modalHeader}>
               <Text style={st.modalTitle}>{form.id ? 'Edit Equipment' : 'Add Equipment'}</Text>
               <TouchableOpacity onPress={() => setModalVisible(false)} style={st.modalCloseBtn}>
@@ -645,7 +645,7 @@ export default function MyEquipmentScreen({ navigation }) {
               </TouchableOpacity>
             </LinearGradient>
 
-            <ScrollView style={st.modalBody} contentContainerStyle={st.modalBodyContent} showsVerticalScrollIndicator={true}>
+            <ScrollView style={st.modalBody} contentContainerStyle={st.modalBodyContent} showsVerticalScrollIndicator={true} keyboardShouldPersistTaps="handled">
               {/* Restaurant */}
               <Text style={st.inputLabel}>Restaurant</Text>
               <View style={st.readOnlyInput}>

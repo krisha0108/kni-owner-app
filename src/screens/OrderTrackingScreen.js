@@ -535,7 +535,7 @@ export default function OrderTrackingScreen({ navigation }) {
     return (
       <SafeAreaView style={s.container}>
         <LinearGradient colors={[C.primary, C.primaryDark]} style={s.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={s.headerBtn}>
+          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={s.headerBtn}>
             <Icon name="arrow-back" size={scale(22)} color="#fff" />
           </TouchableOpacity>
           <Text style={s.headerTitle}>Order Tracking</Text>
@@ -558,7 +558,7 @@ export default function OrderTrackingScreen({ navigation }) {
         end={{ x: 1, y: 1 }}
         style={s.header}
       >
-        <TouchableOpacity onPress={() => navigation.goBack()} style={s.headerBtn}>
+        <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={s.headerBtn}>
           <Icon name="arrow-back" size={scale(22)} color="#fff" />
         </TouchableOpacity>
         <View style={s.headerCenter}>

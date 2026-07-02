@@ -115,7 +115,7 @@ export default function AMCDashboardScreen({ navigation }) {
         <StatusBar barStyle="light-content" backgroundColor={C.purple} />
         <LinearGradient colors={[C.purple, C.purpleDark]} style={styles.heroHeader}>
           <View style={styles.heroContent}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
               <Icon name="arrow-back" size={scale(24)} color="#fff" />
             </TouchableOpacity>
             <View style={styles.heroTitleRow}>
@@ -149,7 +149,7 @@ export default function AMCDashboardScreen({ navigation }) {
         style={styles.heroHeader}
       >
         <View style={styles.heroContent}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
             <Icon name="arrow-back" size={scale(24)} color="#fff" />
           </TouchableOpacity>
           <View style={styles.heroTitleRow}>

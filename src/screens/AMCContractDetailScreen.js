@@ -17,6 +17,7 @@ import { api, API_BASE_URL } from '../api/client';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 import { scale, moderateScale } from '../utils/responsive';
+import useKeyboardHeight from '../utils/useKeyboardHeight';
 
 const C = {
   primary: '#EF3A3A', primaryDark: '#DC2626', ink: '#1D2254', text: '#334155',
@@ -63,6 +64,7 @@ const formatPrice = (amount) => '₹' + (parseFloat(amount) || 0).toLocaleString
 export default function AMCContractDetailScreen({ navigation, route }) {
   const { contractId } = route.params || {};
 
+  const keyboardHeight = useKeyboardHeight();
   const [contract, setContract] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -162,7 +164,7 @@ export default function AMCContractDetailScreen({ navigation, route }) {
         <StatusBar barStyle="light-content" backgroundColor="#059669" />
         <LinearGradient colors={['#059669', '#047857']} style={styles.heroHeader}>
           <View style={styles.heroContent}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
               <Icon name="arrow-back" size={24} color="#fff" />
             </TouchableOpacity>
             <Text style={styles.heroTitle}>Contract Details</Text>
@@ -185,7 +187,7 @@ export default function AMCContractDetailScreen({ navigation, route }) {
         <StatusBar barStyle="light-content" backgroundColor="#059669" />
         <LinearGradient colors={['#059669', '#047857']} style={styles.heroHeader}>
           <View style={styles.heroContent}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
               <Icon name="arrow-back" size={24} color="#fff" />
             </TouchableOpacity>
             <Text style={styles.heroTitle}>Contract Details</Text>
@@ -225,7 +227,7 @@ export default function AMCContractDetailScreen({ navigation, route }) {
       {/* Hero */}
       <LinearGradient colors={['#059669', '#047857']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroHeader}>
         <View style={styles.heroContent}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
             <Icon name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.heroTitle}>{contractNum}</Text>
@@ -504,7 +506,11 @@ export default function AMCContractDetailScreen({ navigation, route }) {
             <View style={{ width: scale(40) }} />
           </View>
 
-          <ScrollView style={{ flex: 1, padding: scale(16) }}>
+          <ScrollView
+            style={{ flex: 1, padding: scale(16) }}
+            contentContainerStyle={{ paddingBottom: scale(40) + keyboardHeight }}
+            keyboardShouldPersistTaps="handled"
+          >
             <View style={[styles.noteBox, { backgroundColor: C.infoLight, marginBottom: scale(20) }]}>
               <Text style={{ color: C.info, fontSize: moderateScale(13) }}>
                 Free breakdowns: {breakdownsUsed}/{breakdownsTotal} used.

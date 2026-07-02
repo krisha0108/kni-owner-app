@@ -241,7 +241,7 @@ export default function OrdersListScreen({ navigation }) {
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top', 'left', 'right']}>
       {/* Header */}
       <View style={st.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={st.hBtn}>
+        <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.hBtn}>
           <Icon name="chevron-back" size={scale(20)} color={C.ink} />
         </TouchableOpacity>
         <Text style={st.hTitle}>My Orders</Text>

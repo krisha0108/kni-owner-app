@@ -450,7 +450,7 @@ export default function StaffScreen({ navigation }) {
     return (
       <SafeAreaView style={st.container}>
         <View style={st.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
+          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
             <Icon name="arrow-back" size={scale(22)} color={C.ink} />
           </TouchableOpacity>
           <View style={st.headerCenter}>
@@ -476,7 +476,7 @@ export default function StaffScreen({ navigation }) {
     return (
       <SafeAreaView style={st.container}>
         <View style={st.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
+          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
             <Icon name="arrow-back" size={scale(22)} color={C.ink} />
           </TouchableOpacity>
           <View style={st.headerCenter}>
@@ -505,7 +505,7 @@ export default function StaffScreen({ navigation }) {
     <SafeAreaView style={st.container}>
       {/* Header */}
       <View style={st.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
+        <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
           <Icon name="arrow-back" size={scale(22)} color={C.ink} />
         </TouchableOpacity>
         <View style={st.headerCenter}>

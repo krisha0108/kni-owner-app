@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ScrollView, Platform, Alert,
-  ActivityIndicator, Image, Modal, Dimensions
+  ActivityIndicator, Image, Modal, Dimensions, BackHandler, Keyboard
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary } from 'react-native-image-picker';
 import LinearGradient from 'react-native-linear-gradient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api, uploadFile } from '../api/client';
 
 import { scale, moderateScale } from '../utils/responsive';
@@ -37,6 +38,77 @@ const OUTLET_TYPES = [
 
 const RestaurantOnboarding = ({ navigation, route }) => {
   const isFirstRestaurant = route?.params?.isFirstRestaurant !== false; // default true for backward compatibility
+
+  // Back handling. Existing users (added another restaurant) simply pop back.
+  // First-time Google users arrive here via replace() with no screen behind, so
+  // let them exit setup by signing out and returning to the login screen.
+  const handleBack = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    Alert.alert(
+      'Exit setup?',
+      'You need to add a restaurant to use the app. Do you want to exit for now? You can sign in again anytime.',
+      [
+        { text: 'Stay', style: 'cancel' },
+        {
+          text: 'Exit',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await AsyncStorage.multiRemove([
+                'userToken', 'user', 'ownerId', 'ownerData', 'ownerToken',
+                'token', 'restaurants', 'selectedRestaurant', 'authProvider',
+              ]);
+              try { delete api.defaults.headers.common.Authorization; } catch (_) {}
+            } catch (_) {}
+            navigation.reset({ index: 0, routes: [{ name: 'RestaurantLogin' }] });
+          },
+        },
+      ]
+    );
+  };
+
+  useEffect(() => {
+    const onHardwareBack = () => {
+      if (navigation.canGoBack()) return false; // let the default pop happen
+      handleBack(); // no back stack -> show exit confirmation
+      return true;  // prevent the app from closing
+    };
+    const sub = BackHandler.addEventListener('hardwareBackPress', onHardwareBack);
+    return () => sub.remove();
+  }, [navigation]);
+
+  // Track keyboard height so we can pad the form's bottom by exactly that much.
+  // This lets the whole form scroll above the keyboard even when the OS window
+  // doesn't resize (common on Android with the new architecture / edge-to-edge).
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  useEffect(() => {
+    const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvt = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSub = Keyboard.addListener(showEvt, (e) =>
+      setKeyboardHeight(e?.endCoordinates?.height || 0)
+    );
+    const hideSub = Keyboard.addListener(hideEvt, () => setKeyboardHeight(0));
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  // Auto-scroll the focused input above the keyboard. Falls back gracefully
+  // (no-op) if the scroll responder isn't available; the keyboard-height
+  // padding above still lets the user scroll manually.
+  const scrollRef = useRef(null);
+  const scrollFocusedIntoView = (e) => {
+    const node = e?.target;
+    if (node == null) return;
+    setTimeout(() => {
+      const responder = scrollRef.current?.getScrollResponder?.();
+      responder?.scrollResponderScrollNativeHandleToKeyboard?.(node, scale(100), true);
+    }, 60);
+  };
   const [form, setForm] = useState({
     hotelName: '',
     address: '',
@@ -259,7 +331,7 @@ const RestaurantOnboarding = ({ navigation, route }) => {
             [
               {
                 text: 'OK',
-                onPress: () => navigation.goBack(), // Go back to MyRestaurants
+                onPress: () => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home')), // Go back to MyRestaurants
               },
             ]
           );
@@ -281,9 +353,22 @@ const RestaurantOnboarding = ({ navigation, route }) => {
 
   return (
     <LinearGradient colors={['#f2f4f7', '#dfe7ee']} style={styles.container}>
+      <TouchableOpacity
+        onPress={handleBack}
+        style={styles.floatBackBtn}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+      >
+        <Icon name="arrow-back" size={scale(22)} color={C.ink} />
+      </TouchableOpacity>
+
       <ScrollView
-        contentContainerStyle={styles.scrollContainer}
+        ref={scrollRef}
+        contentContainerStyle={[
+          styles.scrollContainer,
+          { paddingBottom: scale(40) + keyboardHeight },
+        ]}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
         <Text style={styles.heading}>Set Up Your Restaurant</Text>
         <Text style={styles.subheading}>
@@ -317,6 +402,7 @@ const RestaurantOnboarding = ({ navigation, route }) => {
             <Icon name="business" size={scale(18)} color={C.primary} style={styles.inputIcon} />
             <TextInput
               placeholder="Restaurant/Hotel Name *"
+              onFocus={scrollFocusedIntoView}
               style={styles.input}
               value={form.hotelName}
               onChangeText={text => handleChange('hotelName', text)}
@@ -330,6 +416,7 @@ const RestaurantOnboarding = ({ navigation, route }) => {
             <Icon name="location" size={scale(18)} color={C.primary} style={[styles.inputIcon, { marginTop: scale(12) }]} />
             <TextInput
               placeholder="Full Address (Street, Area, Landmark) *"
+              onFocus={scrollFocusedIntoView}
               style={[styles.input, { minHeight: scale(70), textAlignVertical: 'top', paddingTop: scale(10) }]}
               multiline
               numberOfLines={3}
@@ -372,6 +459,7 @@ const RestaurantOnboarding = ({ navigation, route }) => {
             <Icon name="location-outline" size={scale(18)} color={C.primary} style={styles.inputIcon} />
             <TextInput
               placeholder="Pincode (6 digits, optional)"
+              onFocus={scrollFocusedIntoView}
               style={styles.input}
               value={form.pincode}
               onChangeText={text => handleChange('pincode', text)}
@@ -396,6 +484,7 @@ const RestaurantOnboarding = ({ navigation, route }) => {
             <Icon name="document-text" size={scale(18)} color={C.primary} style={styles.inputIcon} />
             <TextInput
               placeholder="FSSAI Number (14 digits) *"
+              onFocus={scrollFocusedIntoView}
               style={styles.input}
               value={form.fssaiNumber}
               onChangeText={text => handleChange('fssaiNumber', text)}
@@ -562,8 +651,29 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  flex1: {
+    flex: 1,
+  },
+  floatBackBtn: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? scale(54) : scale(28),
+    left: scale(16),
+    zIndex: 10,
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(20),
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: scale(2) },
+    shadowOpacity: 0.12,
+    shadowRadius: scale(4),
+    elevation: 4,
+  },
   scrollContainer: {
-    paddingBottom: scale(60),
+    flexGrow: 1,
+    paddingBottom: scale(120),
   },
   heading: {
     fontSize: moderateScale(26),

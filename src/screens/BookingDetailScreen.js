@@ -275,7 +275,7 @@ export default function BookingDetailScreen({ navigation, route }) {
         <StatusBar barStyle="light-content" backgroundColor={C.primary} />
         <LinearGradient colors={[C.primary, C.primaryDark]} style={styles.heroHeader}>
           <View style={styles.heroContent}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
               <Icon name="arrow-back" size={24} color="#fff" />
             </TouchableOpacity>
             <Text style={styles.heroTitle}>Booking Details</Text>
@@ -299,7 +299,7 @@ export default function BookingDetailScreen({ navigation, route }) {
         <StatusBar barStyle="light-content" backgroundColor={C.primary} />
         <LinearGradient colors={[C.primary, C.primaryDark]} style={styles.heroHeader}>
           <View style={styles.heroContent}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
               <Icon name="arrow-back" size={24} color="#fff" />
             </TouchableOpacity>
             <Text style={styles.heroTitle}>Booking Details</Text>
@@ -365,7 +365,7 @@ export default function BookingDetailScreen({ navigation, route }) {
         style={styles.heroHeader}
       >
         <View style={styles.heroContent}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
             <Icon name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.heroTitle}>#{booking.id.slice(0, 8).toUpperCase()}</Text>

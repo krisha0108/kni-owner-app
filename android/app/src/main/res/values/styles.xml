@@ -4,6 +4,12 @@
     <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
         <!-- Customize your theme here. -->
         <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
+        <!-- Brand-red status bar with white icons. Opt out of Android 15 (API 35)
+             forced edge-to-edge so the native statusBarColor is respected again
+             (the JS StatusBar backgroundColor prop is a no-op under edge-to-edge). -->
+        <item name="android:statusBarColor">#EF3A3A</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowOptOutEdgeToEdgeEnforcement">true</item>
     </style>
 
 </resources>

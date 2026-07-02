@@ -12,6 +12,7 @@ import {
   ScrollView,
   Alert,
   Dimensions,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -84,6 +85,7 @@ const formatDate = (dateString) => {
 export default function TeamManagementScreen({ navigation }) {
   // RBAC permissions
   const { can } = usePermissions();
+  const { height: winHeight } = useWindowDimensions();
 
   // Global restaurant context
   const {
@@ -98,7 +100,7 @@ export default function TeamManagementScreen({ navigation }) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
             <Icon name="arrow-back" size={scale(22)} color={C.ink} />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
@@ -115,7 +117,7 @@ export default function TeamManagementScreen({ navigation }) {
           <Text style={styles.emptyText}>
             You don't have permission to view team management. Contact the restaurant owner for access.
           </Text>
-          <TouchableOpacity style={styles.emptyBtn} onPress={() => navigation.goBack()}>
+          <TouchableOpacity style={styles.emptyBtn} onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}>
             <Icon name="arrow-back-outline" size={scale(18)} color="#fff" />
             <Text style={styles.emptyBtnText}>Go Back</Text>
           </TouchableOpacity>
@@ -381,7 +383,7 @@ export default function TeamManagementScreen({ navigation }) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
             <Icon name="arrow-back" size={scale(22)} color={C.ink} />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
@@ -406,7 +408,7 @@ export default function TeamManagementScreen({ navigation }) {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
           <Icon name="arrow-back" size={scale(22)} color={C.ink} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
@@ -486,7 +488,7 @@ export default function TeamManagementScreen({ navigation }) {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+            <ScrollView style={[styles.modalBody, { maxHeight: winHeight * 0.72 }]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               {/* Name */}
               <Text style={styles.inputLabel}>Full Name *</Text>
               <TextInput

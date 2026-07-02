@@ -274,7 +274,7 @@ export default function RestaurantStatusScreen({ navigation, route }) {
           colors={[C.primary, C.primaryDark]}
           style={styles.header}
         >
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
             <Icon name="arrow-back" size={scale(22)} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Restaurant Status</Text>
@@ -295,7 +295,7 @@ export default function RestaurantStatusScreen({ navigation, route }) {
           colors={[C.primary, C.primaryDark]}
           style={styles.header}
         >
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
             <Icon name="arrow-back" size={scale(22)} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Restaurant Status</Text>
@@ -339,7 +339,7 @@ export default function RestaurantStatusScreen({ navigation, route }) {
         end={{ x: 1, y: 1 }}
         style={styles.header}
       >
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
           <Icon name="arrow-back" size={scale(22)} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Restaurant Status</Text>

@@ -46,7 +46,7 @@ const SplashScreen = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
+      <StatusBar backgroundColor="#EF3A3A" barStyle="light-content" />
 
       {/* Subtle red circle background */}
       <View style={styles.circleBg} />

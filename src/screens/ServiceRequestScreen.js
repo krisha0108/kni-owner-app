@@ -37,6 +37,7 @@ import { useRestaurant } from '../context/RestaurantContext';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 import { scale, moderateScale, isTablet, getContainerMaxWidth } from '../utils/responsive';
+import useKeyboardHeight from '../utils/useKeyboardHeight';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // Constants - matching owner web
@@ -86,6 +87,7 @@ export default function ServiceRequestScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const isTabletDevice = isTablet(width);
   const containerMaxWidth = getContainerMaxWidth(width);
+  const keyboardHeight = useKeyboardHeight();
   // Bottom nav height: bar (74) + wrap padding (12) + extra spacing
   const BOTTOM_NAV_HEIGHT = 100;
 
@@ -622,7 +624,7 @@ export default function ServiceRequestScreen({ navigation, route }) {
 
       case 'date':
         return (
-          <ScrollView style={st.scrollContent} showsVerticalScrollIndicator={false}>
+          <ScrollView style={st.scrollContent} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: scale(40) + keyboardHeight }} keyboardShouldPersistTaps="handled">
             {/* Date Selection */}
             <View style={st.section}>
               <View style={st.sectionHeader}>
@@ -869,7 +871,7 @@ export default function ServiceRequestScreen({ navigation, route }) {
     return (
       <SafeAreaView style={st.container} edges={['top']}>
         <View style={st.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={st.headerBackBtn}>
+          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.headerBackBtn}>
             <Icon name="arrow-back" size={22} color={C.ink} />
           </TouchableOpacity>
           <Text style={st.headerTitle}>Request Service</Text>
@@ -896,7 +898,7 @@ export default function ServiceRequestScreen({ navigation, route }) {
     <SafeAreaView style={st.container} edges={['top']}>
       {/* Header */}
       <View style={st.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={st.headerBackBtn}>
+        <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.headerBackBtn}>
           <Icon name="arrow-back" size={22} color={C.ink} />
         </TouchableOpacity>
         <Text style={st.headerTitle}>Request Service</Text>

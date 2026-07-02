@@ -12,6 +12,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import messaging from '@react-native-firebase/messaging';
 
 import { scale, moderateScale } from '../utils/responsive';
+import useKeyboardHeight from '../utils/useKeyboardHeight';
 const C = {
   primary: '#EF3A3A',
   ink: '#1D2254',
@@ -38,6 +39,7 @@ export default function RestaurantRegisterScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [passwordErrors, setPasswordErrors] = useState([]);
+  const keyboardHeight = useKeyboardHeight();
 
   useEffect(() => {
     GoogleSignin.configure({
@@ -267,7 +269,7 @@ export default function RestaurantRegisterScreen({ navigation }) {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: scale(40) }}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: scale(40) + keyboardHeight }} keyboardShouldPersistTaps="handled">
       {/* Logo */}
       <Image
         source={require('../assets/images/kni-logo.png')}

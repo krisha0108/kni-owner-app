@@ -54,7 +54,7 @@ export default function MarketplaceProductScreen({ navigation, route }) {
   useEffect(() => {
     if (!productParam) {
       Alert.alert('Error', 'Product not found');
-      navigation.goBack();
+      (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'));
     }
   }, [productParam, navigation]);
 
@@ -274,7 +274,7 @@ export default function MarketplaceProductScreen({ navigation, route }) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
             <Icon name="arrow-back" size={scale(22)} color={C.ink} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Product Details</Text>
@@ -302,7 +302,7 @@ export default function MarketplaceProductScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
           <Icon name="arrow-back" size={scale(22)} color={C.ink} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Product Details</Text>

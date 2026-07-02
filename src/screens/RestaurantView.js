@@ -100,7 +100,7 @@ export default function RestaurantView({ navigation, route }) {
           setRestaurant(found);
         } else {
           Alert.alert('Error', 'Restaurant not found');
-          navigation.goBack();
+          (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'));
         }
       }
     } catch (error) {
@@ -125,7 +125,7 @@ export default function RestaurantView({ navigation, route }) {
   if (loading) {
     return (
       <SafeAreaView style={st.container} edges={['top']}>
-        <StatusBar barStyle="dark-content" />
+        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
         <View style={st.loadingBox}>
           <ActivityIndicator size="large" color={C.primary} />
           <Text style={st.loadingText}>Loading restaurant...</Text>
@@ -142,7 +142,7 @@ export default function RestaurantView({ navigation, route }) {
 
   return (
     <SafeAreaView style={st.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
 
       <ScrollView
         style={{ flex: 1 }}
@@ -170,7 +170,7 @@ export default function RestaurantView({ navigation, route }) {
           {/* Back Button */}
           <TouchableOpacity
             style={st.heroBackBtn}
-            onPress={() => navigation.goBack()}
+            onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
           >
             <Icon name="arrow-back" size={scale(22)} color="#fff" />
           </TouchableOpacity>

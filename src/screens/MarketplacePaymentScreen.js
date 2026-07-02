@@ -305,9 +305,9 @@ export default function MarketplacePaymentScreen({ navigation, route }) {
   if (razorpaySuccess) {
     return (
       <SafeAreaView style={st.container} edges={['top']}>
-        <StatusBar barStyle="dark-content" backgroundColor={C.card} />
+        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
         <View style={st.header}>
-          <TouchableOpacity style={st.headerBackBtn} onPress={() => navigation.goBack()}>
+          <TouchableOpacity style={st.headerBackBtn} onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}>
             <Icon name="arrow-back" size={scale(22)} color={C.ink} />
           </TouchableOpacity>
           <Text style={st.headerTitle}>Payment Successful</Text>
@@ -360,7 +360,7 @@ export default function MarketplacePaymentScreen({ navigation, route }) {
   if (manualPaymentSuccess) {
     return (
       <SafeAreaView style={st.container} edges={['top']}>
-        <StatusBar barStyle="dark-content" backgroundColor={C.card} />
+        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
         <ScrollView contentContainerStyle={st.statusContainer}>
           <View style={[st.statusIconCircle, { backgroundColor: C.warningLight }]}>
             <Icon name="time" size={scale(48)} color={C.warning} />
@@ -398,7 +398,7 @@ export default function MarketplacePaymentScreen({ navigation, route }) {
 
       {/* Header */}
       <LinearGradient colors={[C.gradient1, C.gradient2]} style={st.heroHeader}>
-        <TouchableOpacity style={st.heroBackBtn} onPress={() => navigation.goBack()}>
+        <TouchableOpacity style={st.heroBackBtn} onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}>
           <Icon name="arrow-back" size={scale(22)} color="#fff" />
         </TouchableOpacity>
         <View style={st.heroTextContainer}>

@@ -18,6 +18,7 @@ import { useRestaurant } from '../context/RestaurantContext';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 import { scale, moderateScale } from '../utils/responsive';
+import useKeyboardHeight from '../utils/useKeyboardHeight';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const C = {
@@ -52,6 +53,7 @@ const KITCHEN_TYPES = [
 
 export default function AMCRequestScreen({ navigation }) {
   const insets = useSafeAreaInsets();
+  const keyboardHeight = useKeyboardHeight();
   const { restaurants, selectedRestaurantId } = useRestaurant();
 
   const [step, setStep] = useState(1);
@@ -382,7 +384,7 @@ export default function AMCRequestScreen({ navigation }) {
   const renderStep3 = () => {
     const catNames = categories.filter(c => selectedCategories.includes(c.id)).map(c => c.name).join(', ');
     return (
-      <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: scale(40) + keyboardHeight }} keyboardShouldPersistTaps="handled">
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Icon name="document-text-outline" size={scale(20)} color={C.purple} />
@@ -470,11 +472,11 @@ export default function AMCRequestScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor={C.card} />
+      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => step > 1 ? setStep(step - 1) : navigation.goBack()} style={styles.headerBackBtn}>
+        <TouchableOpacity onPress={() => step > 1 ? setStep(step - 1) : (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.headerBackBtn}>
           <Icon name="arrow-back" size={scale(22)} color={C.ink} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>New AMC Request</Text>

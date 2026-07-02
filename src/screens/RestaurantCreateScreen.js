@@ -180,7 +180,7 @@ export default function RestaurantCreateScreen({ navigation }) {
           [
             {
               text: 'OK',
-              onPress: () => navigation.goBack(),
+              onPress: () => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home')),
             },
           ]
         );
@@ -233,7 +233,7 @@ export default function RestaurantCreateScreen({ navigation }) {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
           <Icon name="arrow-back" size={scale(22)} color={C.ink} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Add New Restaurant</Text>

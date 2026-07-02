@@ -107,7 +107,7 @@ export default function SearchScreen({ navigation }) {
     <SafeAreaView style={st.container}>
       {/* ── Search Bar ── */}
       <View style={st.searchBarRow}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
+        <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
           <Icon name="arrow-back" size={scale(22)} color={C.ink} />
         </TouchableOpacity>
         <View style={st.inputWrap}>

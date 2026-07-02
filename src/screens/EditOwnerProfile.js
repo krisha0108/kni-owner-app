@@ -88,7 +88,7 @@ export default function EditOwnerProfile() {
       setSaving(true);
       await api.put('/app_api/owner/profile', payload);
       Alert.alert('Saved', 'Your profile has been updated.', [
-        { text: 'OK', onPress: () => navigation.goBack() }
+        { text: 'OK', onPress: () => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home')) }
       ]);
     } catch (e) {
       Alert.alert('Error', e?.response?.data?.message || 'Unable to update.');
@@ -100,9 +100,9 @@ export default function EditOwnerProfile() {
   if (loading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top', 'left', 'right']}>
-        <StatusBar barStyle="light-content" />
+        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
         <LinearGradient colors={[C.primary, C.primaryDark]} style={st.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
+          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
             <Icon name="chevron-back" size={scale(20)} color="#fff" />
           </TouchableOpacity>
           <Text style={st.headerTitle}>Edit Profile</Text>
@@ -118,11 +118,11 @@ export default function EditOwnerProfile() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top', 'left', 'right']}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
 
       {/* ===== HEADER ===== */}
       <LinearGradient colors={[C.primary, C.primaryDark]} style={st.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
+        <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
           <Icon name="chevron-back" size={scale(20)} color="#fff" />
         </TouchableOpacity>
         <Text style={st.headerTitle}>Edit Profile</Text>
@@ -233,7 +233,7 @@ export default function EditOwnerProfile() {
             </LinearGradient>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => navigation.goBack()} style={st.cancelBtn}>
+          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.cancelBtn}>
             <Text style={st.cancelBtnText}>Cancel</Text>
           </TouchableOpacity>
 

@@ -452,9 +452,9 @@ export default function CashbookScreen({ navigation }) {
   if (loading && !refreshing && entries.length === 0) {
     return (
       <SafeAreaView style={st.container} edges={['top']}>
-        <StatusBar barStyle="dark-content" backgroundColor={C.card} />
+        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
         <View style={st.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={st.headerBackBtn}>
+          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.headerBackBtn}>
             <Icon name="arrow-back" size={scale(22)} color={C.ink} />
           </TouchableOpacity>
           <View style={st.headerCenter}>
@@ -480,9 +480,9 @@ export default function CashbookScreen({ navigation }) {
   if (!hasRestaurants) {
     return (
       <SafeAreaView style={st.container} edges={['top']}>
-        <StatusBar barStyle="dark-content" backgroundColor={C.card} />
+        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
         <View style={st.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={st.headerBackBtn}>
+          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.headerBackBtn}>
             <Icon name="arrow-back" size={scale(22)} color={C.ink} />
           </TouchableOpacity>
           <View style={st.headerCenter}>
@@ -510,11 +510,11 @@ export default function CashbookScreen({ navigation }) {
   // ==================== MAIN RENDER ====================
   return (
     <SafeAreaView style={st.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor={C.card} />
+      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
 
       {/* White Header */}
       <View style={st.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={st.headerBackBtn}>
+        <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.headerBackBtn}>
           <Icon name="arrow-back" size={scale(22)} color={C.ink} />
         </TouchableOpacity>
         <View style={st.headerCenter}>

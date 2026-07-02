@@ -243,7 +243,7 @@ export default function KhatabookScreen({ navigation }) {
         style={st.heroSection}
       >
         <View style={st.heroContent}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
+          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
             <Icon name="arrow-back" size={scale(22)} color="#fff" />
           </TouchableOpacity>
           <View style={st.heroTextContainer}>

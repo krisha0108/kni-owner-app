@@ -392,9 +392,9 @@ export default function VendorLedgerScreen({ navigation }) {
   if (loading && !refreshing) {
     return (
       <SafeAreaView style={st.container} edges={['top']}>
-        <StatusBar barStyle="dark-content" backgroundColor={C.card} />
+        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
         <View style={st.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
+          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
             <Icon name="arrow-back" size={scale(22)} color={C.ink} />
           </TouchableOpacity>
           <Text style={st.headerTitle}>Vendor Ledger</Text>
@@ -413,9 +413,9 @@ export default function VendorLedgerScreen({ navigation }) {
   if (!hasRestaurants) {
     return (
       <SafeAreaView style={st.container} edges={['top']}>
-        <StatusBar barStyle="dark-content" backgroundColor={C.card} />
+        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
         <View style={st.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
+          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
             <Icon name="arrow-back" size={scale(22)} color={C.ink} />
           </TouchableOpacity>
           <Text style={st.headerTitle}>Vendor Ledger</Text>
@@ -439,11 +439,11 @@ export default function VendorLedgerScreen({ navigation }) {
 
   return (
     <SafeAreaView style={st.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor={C.card} />
+      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
 
       {/* Header */}
       <View style={st.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
+        <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
           <Icon name="arrow-back" size={scale(22)} color={C.ink} />
         </TouchableOpacity>
         <View style={st.headerCenter}>

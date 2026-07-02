@@ -10,6 +10,7 @@ import { api } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRestaurant } from '../context/RestaurantContext';
 import { scale, verticalScale, moderateScale, isTablet, getContainerMaxWidth } from '../utils/responsive';
+import useKeyboardHeight from '../utils/useKeyboardHeight';
 
 const C = {
   primary: '#EF3A3A',
@@ -58,6 +59,7 @@ export default function SlotBookingScreen({ navigation, route }) {
   const [problemDescription, setProblemDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [step, setStep] = useState(1); // 1: Restaurant, 2: Equipment, 3: Date/Time, 4: Confirm
+  const keyboardHeight = useKeyboardHeight();
 
   const today = startOfDay(new Date());
 
@@ -285,7 +287,7 @@ export default function SlotBookingScreen({ navigation, route }) {
     return (
       <SafeAreaView style={st.container}>
         <View style={st.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
+          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
             <Icon name="arrow-back" size={22} color={C.ink} />
           </TouchableOpacity>
           <Text style={st.headerTitle}>Book a Slot</Text>
@@ -301,7 +303,7 @@ export default function SlotBookingScreen({ navigation, route }) {
   return (
     <SafeAreaView style={st.container}>
       <View style={st.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
+        <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
           <Icon name="arrow-back" size={22} color={C.ink} />
         </TouchableOpacity>
         <Text style={st.headerTitle}>Book a Slot</Text>
@@ -330,7 +332,7 @@ export default function SlotBookingScreen({ navigation, route }) {
         <Text style={[st.progressLabel, step === 4 && st.progressLabelActive]}>Confirm</Text>
       </View>
 
-      <ScrollView style={st.content} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: scale(120) }}>
+      <ScrollView style={st.content} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: scale(120) + keyboardHeight }} keyboardShouldPersistTaps="handled">
         {/* Step 1: Select Restaurant */}
         {step === 1 && (
           <View style={st.stepContainer}>

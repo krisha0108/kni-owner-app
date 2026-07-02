@@ -85,12 +85,12 @@ export default function RestaurantEditScreen({ navigation, route }) {
         setFssaiCertificateUrl(restaurant.fssaiCertificateUrl);
       } else {
         Alert.alert('Error', response.data.error || 'Failed to load restaurant');
-        navigation.goBack();
+        (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'));
       }
     } catch (error) {
       console.error('Error loading restaurant:', error);
       Alert.alert('Error', 'Failed to load restaurant details');
-      navigation.goBack();
+      (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'));
     } finally {
       setLoading(false);
     }
@@ -269,7 +269,7 @@ export default function RestaurantEditScreen({ navigation, route }) {
 
       if (response.data?.ok) {
         Alert.alert('Success', 'Restaurant updated successfully', [
-          { text: 'OK', onPress: () => navigation.goBack() }
+          { text: 'OK', onPress: () => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home')) }
         ]);
       } else {
         Alert.alert('Error', response.data?.error || 'Failed to update restaurant');
@@ -286,7 +286,7 @@ export default function RestaurantEditScreen({ navigation, route }) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
             <Icon name="arrow-back" size={scale(24)} color={C.ink} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Edit Restaurant</Text>
@@ -306,7 +306,7 @@ export default function RestaurantEditScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
           <Icon name="arrow-back" size={scale(24)} color={C.ink} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Edit Restaurant</Text>
@@ -464,7 +464,7 @@ export default function RestaurantEditScreen({ navigation, route }) {
         <View style={styles.buttonContainer}>
           <TouchableOpacity
             style={styles.cancelButton}
-            onPress={() => navigation.goBack()}
+            onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
             disabled={saving}
           >
             <Text style={styles.cancelButtonText}>Cancel</Text>

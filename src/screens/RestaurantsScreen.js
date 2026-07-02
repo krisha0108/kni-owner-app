@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Image, TouchableOpacity,
-  TextInput, RefreshControl, Animated, Dimensions, Modal, Linking, Platform, ActivityIndicator
+  TextInput, RefreshControl, Animated, Dimensions, Modal, Linking, Platform, ActivityIndicator, useWindowDimensions
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -77,6 +77,7 @@ function useToast() {
 /* ---------------------- MAIN ---------------------- */
 export default function RestaurantsScreen({ navigation }) {
   const insets = useSafeAreaInsets();
+  const { height: winHeight } = useWindowDimensions();
   const { show, ToastView } = useToast();
 
   const [loading, setLoading] = useState(true);
@@ -523,7 +524,7 @@ export default function RestaurantsScreen({ navigation }) {
       {/* ADD / EDIT MODAL */}
       <Modal visible={formOpen} transparent animationType="fade" onRequestClose={()=>setFormOpen(false)}>
         <View style={st.overlay}>
-          <View style={st.modalCard}>
+          <View style={[st.modalCard, { height: winHeight * 0.8 }]}>
             <View style={st.modalHeader}>
               <Text style={st.modalTitle}>{form?.id?'Edit hotel':'Add hotel'}</Text>
               <TouchableOpacity onPress={()=>setFormOpen(false)} style={st.close}>
@@ -531,7 +532,7 @@ export default function RestaurantsScreen({ navigation }) {
               </TouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               {/* Basic fields */}
               {[
                 {key:'name',    label:'Name',      icon:'business-outline', placeholder:'Restaurant name'},

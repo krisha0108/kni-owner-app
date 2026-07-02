@@ -30,6 +30,7 @@ import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
 import { scale, moderateScale } from '../utils/responsive';
+import useKeyboardHeight from '../utils/useKeyboardHeight';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 // Premium Color Palette
 const C = {
@@ -80,6 +81,7 @@ export default function StaffSalaryScreen({ navigation }) {
     loading: restaurantsLoading,
     loadRestaurants,
   } = useRestaurant();
+  const keyboardHeight = useKeyboardHeight();
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -263,9 +265,9 @@ export default function StaffSalaryScreen({ navigation }) {
   if (loading && !refreshing) {
     return (
       <SafeAreaView style={st.container}>
-        <StatusBar barStyle="dark-content" backgroundColor={C.card} />
+        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
         <View style={st.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
+          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
             <Icon name="arrow-back" size={scale(22)} color={C.ink} />
           </TouchableOpacity>
           <View style={st.headerCenter}>
@@ -388,11 +390,11 @@ export default function StaffSalaryScreen({ navigation }) {
   // ==================== MAIN RENDER ====================
   return (
     <SafeAreaView style={st.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={C.card} />
+      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
 
       {/* Header */}
       <View style={st.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
+        <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
           <Icon name="arrow-back" size={scale(22)} color={C.ink} />
         </TouchableOpacity>
         <View style={st.headerCenter}>
@@ -615,7 +617,7 @@ export default function StaffSalaryScreen({ navigation }) {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={st.modalBody} showsVerticalScrollIndicator={false}>
+            <ScrollView style={st.modalBody} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               <Text style={st.paymentSubtitle}>
                 Record salary payment for {paymentModal?.staff?.name}
               </Text>

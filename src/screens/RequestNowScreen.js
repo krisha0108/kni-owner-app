@@ -1453,7 +1453,7 @@ export default function RequestNow({ navigation, route }) {
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top','left','right']}>
       {/* Header */}
       <View style={st.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={st.hBtn}>
+        <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.hBtn}>
           <Icon name="chevron-back" size={scale(22)} color={C.ink} />
         </TouchableOpacity>
         <Text style={st.hTitle}>Your cart</Text>
@@ -2239,7 +2239,7 @@ export default function RequestNow({ navigation, route }) {
             </Text>
             <TouchableOpacity onPress={()=>{
               setSuccessModal(false);
-              navigation.goBack();
+              (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'));
             }} style={st.successBtn}>
               <Text style={st.successBtnTxt}>Okay</Text>
             </TouchableOpacity>

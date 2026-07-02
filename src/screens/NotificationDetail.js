@@ -50,7 +50,7 @@ export default function NotificationDetail({ navigation, route }) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top', 'left', 'right']}>
         <LinearGradient colors={[C.primary, C.primaryDark]} style={st.headerGrad}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={st.hBtn}>
+          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.hBtn}>
             <Icon name="chevron-back" size={scale(20)} color="#fff" />
           </TouchableOpacity>
           <Text style={st.hTitle}>Notification</Text>
@@ -85,7 +85,7 @@ export default function NotificationDetail({ navigation, route }) {
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top', 'left', 'right']}>
       {/* Gradient Header */}
       <LinearGradient colors={[C.primary, C.primaryDark]} style={st.headerGrad}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={st.hBtn}>
+        <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.hBtn}>
           <Icon name="chevron-back" size={scale(20)} color="#fff" />
         </TouchableOpacity>
         <Text style={st.hTitle}>Notification</Text>

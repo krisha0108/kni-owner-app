@@ -19,6 +19,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useRestaurant } from '../context/RestaurantContext';
 
 import { scale, moderateScale } from '../utils/responsive';
+import useKeyboardHeight from '../utils/useKeyboardHeight';
 const C = {
   primary: '#EF3A3A', primaryDark: '#D42E2E', ink: '#1D2254',
   bg: '#F5F7FA', card: '#FFFFFF', text: '#0F172A',
@@ -111,6 +112,7 @@ const PasswordChangeModal = ({ visible, onClose }) => {
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const keyboardHeight = useKeyboardHeight();
 
   const resetForm = () => {
     setCurrentPassword(''); setNewPassword(''); setConfirmPassword('');
@@ -161,7 +163,7 @@ const PasswordChangeModal = ({ visible, onClose }) => {
               <Icon name="close" size={scale(20)} color={C.muted} />
             </TouchableOpacity>
           </View>
-          <ScrollView style={{ padding: scale(20) }} showsVerticalScrollIndicator={false}>
+          <ScrollView style={{ padding: scale(20) }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             <PwInput label="Current Password" value={currentPassword} onChange={setCurrentPassword}
               placeholder="Enter current password" show={showCurrent} toggleShow={() => setShowCurrent(!showCurrent)} />
             <PwInput label="New Password" value={newPassword} onChange={setNewPassword}
@@ -380,6 +382,9 @@ export default function ProfileScreen({ navigation }) {
   };
 
   const initial = ((user?.name || 'U')[0] || 'U').toUpperCase();
+  // Google-signup users have no real phone yet (older ones may carry a Firebase UID);
+  // a valid phone is 7+ digits with no letters. Anything else => prompt to add one.
+  const needsPhone = !/^\+?[0-9][0-9\s-]{6,}$/.test(String(user?.phone || '').trim());
   const CARD_W = W * 0.82;
   const GAP = 12;
   const hotelsData = [...(hotels || []), { id: 'more', type: 'more' }];
@@ -505,7 +510,7 @@ export default function ProfileScreen({ navigation }) {
                 </View>
                 <View style={st.pInfoRow}>
                   <Icon name="call-outline" size={scale(13)} color={C.muted} />
-                  <Text style={st.pInfoText}>{user?.phone ?? '-'}</Text>
+                  <Text style={st.pInfoText}>{needsPhone ? 'Not added' : user.phone}</Text>
                 </View>
                 {selectedRestaurant?.restaurantRole && (
                   <View style={st.pInfoRow}>
@@ -520,6 +525,18 @@ export default function ProfileScreen({ navigation }) {
                 <Icon name="create-outline" size={scale(16)} color={C.primary} />
               </TouchableOpacity>
             </View>
+
+            {/* Add-phone prompt (mainly for Google-signup owners with no mobile number) */}
+            {needsPhone && (
+              <TouchableOpacity activeOpacity={0.8} onPress={navigateEdit} style={st.phonePrompt}>
+                <Icon name="call-outline" size={scale(16)} color={C.primary} />
+                <View style={{ flex: 1, marginLeft: scale(10) }}>
+                  <Text style={st.phonePromptTitle}>Add your mobile number</Text>
+                  <Text style={st.phonePromptSub}>Needed for OTP login, SMS alerts & bookings.</Text>
+                </View>
+                <Icon name="chevron-forward" size={scale(16)} color={C.primary} />
+              </TouchableOpacity>
+            )}
 
             {/* Stats */}
             <View style={st.statsRow}>
@@ -821,6 +838,13 @@ const st = StyleSheet.create({
     borderWidth: 1, borderColor: '#EEF2F7',
   },
   profileTop: { flexDirection: 'row', alignItems: 'center' },
+  phonePrompt: {
+    flexDirection: 'row', alignItems: 'center', marginTop: scale(14),
+    backgroundColor: '#FFF5F5', borderRadius: scale(12), padding: scale(12),
+    borderWidth: 1, borderColor: '#FFD9D9',
+  },
+  phonePromptTitle: { color: C.primaryDark, fontWeight: '800', fontSize: moderateScale(13) },
+  phonePromptSub: { color: C.muted, fontSize: moderateScale(11), marginTop: scale(2) },
   avatar: {
     width: scale(60), height: scale(60), borderRadius: scale(20), alignItems: 'center', justifyContent: 'center',
     shadowColor: C.primary, shadowOpacity: 0.3, shadowRadius: scale(8), elevation: 5,

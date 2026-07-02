@@ -521,7 +521,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
     return (
       <SafeAreaView style={st.container} edges={['top']}>
         <View style={st.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
+          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
             <Icon name="arrow-back" size={scale(22)} color={C.ink} />
           </TouchableOpacity>
           <Text style={st.headerTitle}>Equipment Profile</Text>
@@ -546,7 +546,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
     <SafeAreaView style={st.container} edges={['top']}>
       {/* Header */}
       <View style={st.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={st.backBtn}>
+        <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
           <Icon name="arrow-back" size={scale(22)} color={C.ink} />
         </TouchableOpacity>
         <Text style={st.headerTitle} numberOfLines={1}>{equipment.name}</Text>

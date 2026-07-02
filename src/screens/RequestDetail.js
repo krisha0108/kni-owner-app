@@ -984,7 +984,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   View, Text, StyleSheet, Image, ImageBackground, Animated, Easing,
   TouchableOpacity, ScrollView, FlatList, Share, RefreshControl, Alert,
-  Modal, TextInput, Dimensions
+  Modal, TextInput, Dimensions, useWindowDimensions
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -1130,6 +1130,7 @@ function buildStoryImages(d = {}, headerItem = {}) {
 
 /* ---------- ENQUIRY MODAL ---------- */
 const EnquiryModal = ({ visible, onClose, product, onSubmit, loading }) => {
+  const { height: winHeight } = useWindowDimensions();
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -1170,7 +1171,7 @@ const EnquiryModal = ({ visible, onClose, product, onSubmit, loading }) => {
     >
       <View style={st.modalOverlay}>
         <View style={st.modalContent}>
-          <ScrollView style={st.modalScroll} showsVerticalScrollIndicator={false}>
+          <ScrollView style={[st.modalScroll, { maxHeight: winHeight * 0.68 }]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             <View style={st.modalHeader}>
               <Text style={st.modalTitle}>Product Enquiry</Text>
               <TouchableOpacity onPress={onClose} style={st.closeButton}>
@@ -2007,7 +2008,7 @@ const handleEnquirySubmit = async (formData, product) => {
     <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.22)' }]} />
 
     <View style={[st.actionsWrap, { paddingTop: scale(8) }]}>
-      <TouchableOpacity onPress={() => navigation.goBack()} style={st.glassBtn} hitSlop={{ top: scale(8), bottom: scale(8), left: scale(8), right: scale(8) }}>
+      <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.glassBtn} hitSlop={{ top: scale(8), bottom: scale(8), left: scale(8), right: scale(8) }}>
         <Icon name="close" size={scale(18)} color={C.ink} />
       </TouchableOpacity>
       <TouchableOpacity onPress={shareIt} style={[st.glassBtn, { marginLeft: scale(8) }]}>
