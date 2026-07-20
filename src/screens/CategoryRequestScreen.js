@@ -12,7 +12,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  Alert,
   ActivityIndicator,
   Platform,
   StatusBar,
@@ -30,6 +29,7 @@ import { useRestaurant } from '../context/RestaurantContext';
 
 import { scale, moderateScale } from '../utils/responsive';
 import { usePermissions } from '../utils/usePermissions';
+import AppAlert from '../utils/AppAlert';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 // Premium Color Palette
 const C = {
@@ -128,7 +128,7 @@ export default function CategoryRequestScreen({ navigation }) {
 
   const handleSubmit = async () => {
     if (!categoryName.trim()) {
-      return Alert.alert('Error', 'Category name is required');
+      return AppAlert.alert('Error', 'Category name is required');
     }
 
     setSubmitting(true);
@@ -141,7 +141,7 @@ export default function CategoryRequestScreen({ navigation }) {
       });
 
       if (response.data?.ok) {
-        Alert.alert('Success', 'Your category request has been submitted for review.');
+        AppAlert.alert('Success', 'Your category request has been submitted for review.');
         setCategoryName('');
         setDescription('');
         setReason('');
@@ -152,14 +152,14 @@ export default function CategoryRequestScreen({ navigation }) {
       }
     } catch (error) {
       console.error('Category request error:', error);
-      Alert.alert('Error', error.message || 'Could not submit category request');
+      AppAlert.alert('Error', error.message || 'Could not submit category request');
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDelete = (request) => {
-    Alert.alert(
+    AppAlert.alert(
       'Delete Request',
       `Are you sure you want to delete "${request.requestedName}" request?`,
       [
@@ -172,13 +172,13 @@ export default function CategoryRequestScreen({ navigation }) {
             try {
               const response = await api.delete(`/owner/category-request/${request.id}`);
               if (response.data?.ok) {
-                Alert.alert('Deleted', 'Request deleted successfully');
+                AppAlert.alert('Deleted', 'Request deleted successfully');
                 loadMyRequests();
               } else {
                 throw new Error(response.data?.error || 'Failed to delete');
               }
             } catch (error) {
-              Alert.alert('Error', error.message || 'Could not delete request');
+              AppAlert.alert('Error', error.message || 'Could not delete request');
             } finally {
               setDeletingId(null);
             }

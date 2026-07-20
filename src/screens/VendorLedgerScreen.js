@@ -7,7 +7,7 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl,
-  ActivityIndicator, Modal, TextInput, ScrollView, Alert, StatusBar,
+  ActivityIndicator, Modal, TextInput, ScrollView, StatusBar,
   useWindowDimensions, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -21,6 +21,7 @@ import NavigationMenu from '../components/NavigationMenu';
 
 import { scale, moderateScale } from '../utils/responsive';
 import { usePermissions } from '../utils/usePermissions';
+import AppAlert from '../utils/AppAlert';
 // Keep original colors - not flashy
 const C = {
   primary: '#EF3A3A',
@@ -161,7 +162,7 @@ export default function VendorLedgerScreen({ navigation }) {
   }, [selectedRestaurantId]);
 
   useEffect(() => {
-    if (selectedRestaurantId) loadData();
+    loadData();
   }, [selectedRestaurantId, loadData]);
 
   const handleLoadMore = () => {
@@ -195,9 +196,9 @@ export default function VendorLedgerScreen({ navigation }) {
   };
 
   const saveEntry = async () => {
-    if (!form.vendorName.trim()) { Alert.alert('Error', 'Vendor name is required'); return; }
-    if (!form.amount || parseFloat(form.amount) <= 0) { Alert.alert('Error', 'Please enter a valid amount'); return; }
-    if (!form.description.trim()) { Alert.alert('Error', 'Description is required'); return; }
+    if (!form.vendorName.trim()) { AppAppAlert.alert('Error', 'Vendor name is required'); return; }
+    if (!form.amount || parseFloat(form.amount) <= 0) { AppAppAlert.alert('Error', 'Please enter a valid amount'); return; }
+    if (!form.description.trim()) { AppAppAlert.alert('Error', 'Description is required'); return; }
 
     setSaving(true);
     try {
@@ -216,14 +217,14 @@ export default function VendorLedgerScreen({ navigation }) {
         entryDate: form.entryDate,
       });
       if (response.data.ok) {
-        Alert.alert('Success', 'Entry added successfully');
+        AppAlert.alert('Success', 'Entry added successfully');
         setEntryModal(false);
         loadData();
       } else {
-        Alert.alert('Error', response.data.error || 'Failed to add entry');
+        AppAlert.alert('Error', response.data.error || 'Failed to add entry');
       }
     } catch (error) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to add entry');
+      AppAlert.alert('Error', error.response?.data?.error || 'Failed to add entry');
     } finally {
       setSaving(false);
     }

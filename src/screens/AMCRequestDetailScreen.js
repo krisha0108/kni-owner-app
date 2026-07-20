@@ -7,20 +7,22 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, RefreshControl, Image, Alert, TextInput,
+  ActivityIndicator, RefreshControl, Image, TextInput,
   StatusBar, Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { launchImageLibrary } from 'react-native-image-picker';
 import Clipboard from '@react-native-clipboard/clipboard';
 import RazorpayCheckout from 'react-native-razorpay';
-import { api, getImageUrl, uploadFile } from '../api/client';
+import { api, getImageUrl } from '../api/client';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
+import CounterOfferModal from '../components/CounterOfferModal';
 import { scale, moderateScale } from '../utils/responsive';
 import useKeyboardHeight from '../utils/useKeyboardHeight';
+import { invalidate } from '../utils/focusCache';
+import AppAlert from '../utils/AppAlert';
 
 const C = {
   primary: '#EF3A3A', primaryDark: '#DC2626', ink: '#1D2254', text: '#334155',
@@ -75,6 +77,7 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
   // Reject modal state (Alert.prompt is iOS-only)
   const [rejectModalVisible, setRejectModalVisible] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
+  const [isCounterOfferOpen, setIsCounterOfferOpen] = useState(false);
 
   const loadRequest = useCallback(async () => {
     try {
@@ -95,6 +98,7 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
     if (requestId) loadRequest();
   }, [requestId, loadRequest]);
 
+
   useEffect(() => {
     // Load categories to map IDs to names
     api.get('/app/categories').then(r => {
@@ -105,17 +109,18 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
   const onRefresh = () => { setRefreshing(true); loadRequest(); };
 
   const handleAcceptProposal = async () => {
-    Alert.alert('Accept Proposal', 'Are you sure you want to accept this proposal?', [
+    AppAlert.alert('Accept Proposal', 'Are you sure you want to accept this proposal?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Accept', onPress: async () => {
           setSubmitting(true);
           try {
             await api.post(`/owner/amc-proposals/${request.proposal.id}/accept`);
-            Alert.alert('Success', 'Proposal accepted!');
+            invalidate(`AMCRequestsList-${request.restaurant?.id}`);
+            AppAlert.alert('Success', 'Proposal accepted!');
             loadRequest();
           } catch (e) {
-            Alert.alert('Error', e.response?.data?.error || 'Failed to accept proposal');
+            AppAlert.alert('Error', e.response?.data?.error || 'Failed to accept proposal');
           } finally { setSubmitting(false); }
         }
       },
@@ -129,17 +134,18 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
 
   const handleRejectProposal = async () => {
     if (!rejectReason.trim()) {
-      Alert.alert('Error', 'Please provide a reason for rejection');
+      AppAlert.alert('Error', 'Please provide a reason for rejection');
       return;
     }
     setRejectModalVisible(false);
     setSubmitting(true);
     try {
       await api.post(`/owner/amc-proposals/${request.proposal.id}/reject`, { reason: rejectReason.trim() });
-      Alert.alert('Done', 'Proposal rejected');
+      invalidate(`AMCRequestsList-${request.restaurant?.id}`);
+      AppAlert.alert('Done', 'Proposal rejected');
       loadRequest();
     } catch (e) {
-      Alert.alert('Error', e.response?.data?.error || 'Failed to reject proposal');
+      AppAlert.alert('Error', e.response?.data?.error || 'Failed to reject proposal');
     } finally { setSubmitting(false); }
   };
 
@@ -158,7 +164,7 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
         referenceId: request.payment.id,
       });
       if (!orderRes.data.ok) {
-        Alert.alert('Error', orderRes.data.error || 'Failed to create payment order');
+        AppAlert.alert('Error', orderRes.data.error || 'Failed to create payment order');
         return;
       }
 
@@ -180,9 +186,9 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
       } catch (checkoutError) {
         const dismissed = checkoutError.code === 0 || checkoutError.code === 2 || checkoutError.code === 'PAYMENT_CANCELLED';
         if (dismissed) {
-          Alert.alert('Payment Cancelled', 'You cancelled the payment. You can try again whenever you\'re ready.', [{ text: 'OK' }]);
+          AppAlert.alert('Payment Cancelled', 'You cancelled the payment. You can try again whenever you\'re ready.', [{ text: 'OK' }]);
         } else {
-          Alert.alert('Payment Failed', checkoutError.description || checkoutError.message || 'Payment was not completed.', [
+          AppAlert.alert('Payment Failed', checkoutError.description || checkoutError.message || 'Payment was not completed.', [
             { text: 'Retry', onPress: handleRazorpayPayment },
             { text: 'Cancel', style: 'cancel' },
           ]);
@@ -203,7 +209,11 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
           });
 
           if (verifyRes.data.ok) {
-            Alert.alert('Payment Successful!', 'Your AMC contract is now active.', [
+            const rId = request.restaurant?.id;
+            invalidate(`AMCRequestsList-${rId}`);
+            invalidate(`AMCContracts-${rId}`);
+            invalidate(`AMCDashboard-${rId}`);
+            AppAlert.alert('Payment Successful!', 'Your AMC contract is now active.', [
               { text: 'OK', onPress: () => loadRequest() },
             ]);
             return;
@@ -215,7 +225,7 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
             await new Promise(r => setTimeout(r, RETRY_DELAYS[attempt]));
             continue;
           }
-          Alert.alert(
+          AppAlert.alert(
             'Payment Verification Pending',
             `Your payment of ₹${(request.payment.amount || 0).toLocaleString('en-IN')} was charged but verification could not be completed. It will be processed automatically. Contact support if not reflected within 15 minutes.`,
             [{ text: 'OK', onPress: () => loadRequest() }]
@@ -224,7 +234,7 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
       }
     } catch (error) {
       console.error('AMC payment error:', error);
-      Alert.alert('Error', 'Something went wrong. Please try again or contact support.');
+      AppAlert.alert('Error', 'Something went wrong. Please try again or contact support.');
     } finally {
       paymentInProgressRef.current = false;
       setIsProcessingPayment(false);
@@ -232,16 +242,17 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
   };
 
   const handleCancelRequest = () => {
-    Alert.alert('Cancel Request', 'Are you sure you want to cancel this AMC request?', [
+    AppAlert.alert('Cancel Request', 'Are you sure you want to cancel this AMC request?', [
       { text: 'No', style: 'cancel' },
       {
         text: 'Yes, Cancel', style: 'destructive', onPress: async () => {
           try {
             await api.delete(`/owner/amc-requests/${requestId}`);
-            Alert.alert('Cancelled', 'AMC request cancelled');
+            invalidate(`AMCRequestsList-${request.restaurant?.id}`);
+            AppAlert.alert('Cancelled', 'AMC request cancelled');
             (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'));
           } catch (e) {
-            Alert.alert('Error', e.response?.data?.error || 'Failed to cancel');
+            AppAlert.alert('Error', e.response?.data?.error || 'Failed to cancel');
           }
         }
       },
@@ -251,7 +262,7 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
   const copyUpiId = () => {
     if (paymentSettings?.upiId) {
       Clipboard.setString(paymentSettings.upiId);
-      Alert.alert('Copied!', 'UPI ID copied to clipboard');
+      AppAlert.alert('Copied!', 'UPI ID copied to clipboard');
     }
   };
 
@@ -323,7 +334,7 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
   const contract = proposal?.contract;
   const isPaymentRejected = payment?.status === 'REJECTED';
   const isPaymentPhase = ['PAYMENT_PENDING', 'PAYMENT_UPLOADED'].includes(request.status) || isPaymentRejected;
-  const canUploadPayment = request.status === 'PAYMENT_PENDING' || isPaymentRejected;
+  const canPayNow = request.status === 'PAYMENT_PENDING' || isPaymentRejected;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -484,37 +495,21 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
               <Text style={styles.cardTitle}>Proposal</Text>
               {proposal.status && (
                 <View style={[styles.detailBadge, {
-                  backgroundColor: proposal.status === 'ACCEPTED' ? C.okLight : proposal.status === 'REJECTED' ? C.dangerLight : '#E0E7FF',
+                  backgroundColor: proposal.status === 'ACCEPTED' ? C.okLight : proposal.status === 'REJECTED' ? C.dangerLight : proposal.status === 'COUNTERED' ? C.warnLight : '#E0E7FF',
                 }]}>
                   <Text style={{
-                    color: proposal.status === 'ACCEPTED' ? C.ok : proposal.status === 'REJECTED' ? C.danger : '#4F46E5',
+                    color: proposal.status === 'ACCEPTED' ? C.ok : proposal.status === 'REJECTED' ? C.danger : proposal.status === 'COUNTERED' ? C.warn : '#4F46E5',
                     fontWeight: '600', fontSize: moderateScale(11),
                   }}>{proposal.status}</Text>
                 </View>
               )}
             </View>
             <View style={styles.cardBody}>
-              {/* Pricing Grid */}
+              {/* Pricing */}
               <Text style={styles.pricingTitle}>Pricing</Text>
-              <View style={styles.pricingGrid}>
-                {proposal.monthlyPrice != null && (
-                  <View style={[styles.pricingItem, { borderWidth: 1, borderColor: '#DBEAFE' }]}>
-                    <Text style={styles.pricingLabel}>Monthly</Text>
-                    <Text style={[styles.pricingValue, { color: C.info }]}>{formatPrice(proposal.monthlyPrice)}</Text>
-                  </View>
-                )}
-                {proposal.quarterlyPrice != null && (
-                  <View style={[styles.pricingItem, { borderWidth: 1, borderColor: '#D1FAE5' }]}>
-                    <Text style={styles.pricingLabel}>Quarterly</Text>
-                    <Text style={[styles.pricingValue, { color: C.ok }]}>{formatPrice(proposal.quarterlyPrice)}</Text>
-                  </View>
-                )}
-                {proposal.annualPrice != null && (
-                  <View style={[styles.pricingItem, { borderWidth: 1, borderColor: '#F3E8FF' }]}>
-                    <Text style={styles.pricingLabel}>Annual</Text>
-                    <Text style={[styles.pricingValue, { color: C.purple }]}>{formatPrice(proposal.annualPrice)}</Text>
-                  </View>
-                )}
+              <View style={[styles.pricingItem, { borderWidth: 1, borderColor: '#DBEAFE', alignSelf: 'flex-start', minWidth: scale(140) }]}>
+                <Text style={styles.pricingLabel}>{proposal.contractPeriod === '2 YEAR' ? 'For 2 years' : 'For 1 year'}</Text>
+                <Text style={[styles.pricingValue, { color: C.info }]}>{formatPrice(proposal.price)}</Text>
               </View>
 
               {/* Coverage */}
@@ -599,21 +594,51 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
                 </View>
               )}
 
-              {/* Accept/Reject buttons */}
+              {/* Admin note (e.g. after revising a countered price) */}
+              {proposal.adminNote && (
+                <View style={[styles.noteBox, { backgroundColor: C.infoLight, marginTop: scale(12) }]}>
+                  <Text style={{ color: C.info, fontWeight: '700', fontSize: moderateScale(13), marginBottom: scale(4) }}>Note from admin</Text>
+                  <Text style={{ color: C.info, fontSize: moderateScale(13) }}>{proposal.adminNote}</Text>
+                </View>
+              )}
+
+              {/* Accept/Reject/Negotiate buttons */}
               {request.status === 'PROPOSAL_SENT' && proposal.status === 'SENT' && (
-                <View style={styles.proposalActions}>
-                  <TouchableOpacity style={styles.rejectBtn} onPress={openRejectModal} disabled={submitting}>
-                    <Icon name="close-circle-outline" size={20} color={C.danger} />
-                    <Text style={styles.rejectBtnText}>Reject</Text>
+                <>
+                  <View style={styles.proposalActions}>
+                    <TouchableOpacity style={styles.rejectBtn} onPress={openRejectModal} disabled={submitting}>
+                      <Icon name="close-circle-outline" size={20} color={C.danger} />
+                      <Text style={styles.rejectBtnText}>Reject</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.acceptBtn} onPress={handleAcceptProposal} disabled={submitting}>
+                      {submitting ? <ActivityIndicator color="#fff" size="small" /> : (
+                        <>
+                          <Icon name="checkmark-circle-outline" size={20} color="#fff" />
+                          <Text style={styles.acceptBtnText}>Accept</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                  <TouchableOpacity
+                    style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: scale(6), marginTop: scale(10), paddingVertical: scale(10), borderRadius: scale(10), borderWidth: 1, borderColor: C.primary }}
+                    onPress={() => setIsCounterOfferOpen(true)}
+                    disabled={submitting}
+                  >
+                    <Icon name="pricetag-outline" size={18} color={C.primary} />
+                    <Text style={{ color: C.primary, fontWeight: '700', fontSize: moderateScale(14) }}>Found it cheaper? Negotiate Price</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.acceptBtn} onPress={handleAcceptProposal} disabled={submitting}>
-                    {submitting ? <ActivityIndicator color="#fff" size="small" /> : (
-                      <>
-                        <Icon name="checkmark-circle-outline" size={20} color="#fff" />
-                        <Text style={styles.acceptBtnText}>Accept</Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
+                </>
+              )}
+
+              {/* Owner's pending counter-offer */}
+              {proposal.status === 'COUNTERED' && (
+                <View style={[styles.noteBox, { backgroundColor: C.warnLight, marginTop: scale(12) }]}>
+                  <Text style={{ color: '#92400E', fontWeight: '700', fontSize: moderateScale(13), marginBottom: scale(4) }}>
+                    You proposed {formatPrice(proposal.ownerCounterPrice)} — awaiting admin's response
+                  </Text>
+                  {proposal.ownerCounterMessage && (
+                    <Text style={{ color: '#92400E', fontSize: moderateScale(13) }}>{proposal.ownerCounterMessage}</Text>
+                  )}
                 </View>
               )}
             </View>
@@ -665,7 +690,7 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
               )}
 
               {/* Razorpay Payment */}
-              {canUploadPayment && (
+              {canPayNow && (
                 <View style={{ alignItems: 'center', paddingVertical: scale(16) }}>
                   <View style={{
                     width: scale(64), height: scale(64), borderRadius: scale(32),
@@ -797,6 +822,17 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
           </View>
         </SafeAreaView>
       </Modal>
+
+      <CounterOfferModal
+        visible={isCounterOfferOpen}
+        endpoint={proposal ? `/owner/amc-proposals/${proposal.id}/counter` : undefined}
+        currentPrice={proposal?.price}
+        onClose={() => setIsCounterOfferOpen(false)}
+        onSuccess={() => {
+          invalidate(`AMCRequestsList-${request?.restaurant?.id}`);
+          loadRequest();
+        }}
+      />
 
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
       <KniBottomNav navigation={navigation} />
@@ -945,14 +981,6 @@ const styles = StyleSheet.create({
   upiId: { fontSize: moderateScale(16), fontWeight: '700', color: C.ink, marginTop: scale(4), fontFamily: 'monospace' },
   upiDivider: { height: 1, backgroundColor: C.border, marginVertical: scale(10) },
   accountName: { fontSize: moderateScale(15), fontWeight: '600', color: C.ink, marginTop: scale(4) },
-
-  // Upload
-  uploadLabel: { fontSize: moderateScale(14), fontWeight: '600', color: C.ink, marginBottom: scale(8) },
-  uploadBox: {
-    borderWidth: 2, borderColor: C.border, borderStyle: 'dashed', borderRadius: scale(12),
-    padding: scale(24), alignItems: 'center', justifyContent: 'center', backgroundColor: C.card,
-  },
-  uploadText: { fontSize: moderateScale(14), color: C.muted, marginTop: scale(8) },
 
   // Contract
   contractNumber: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink, marginBottom: scale(12) },

@@ -12,7 +12,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   StatusBar,
   Image,
@@ -24,9 +23,11 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import RazorpayCheckout from 'react-native-razorpay';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { api, uploadFile } from '../api/client';
+import AppAlert from '../utils/AppAlert';
 import cartService from '../services/marketplaceCartService';
 
 import { scale, moderateScale } from '../utils/responsive';
+import { invalidate } from '../utils/focusCache';
 
 const C = {
   primary: '#EF3A3A',
@@ -138,13 +139,14 @@ export default function MarketplacePaymentScreen({ navigation, route }) {
 
       if (payRes.data.ok) {
         await clearCartWithRetry();
+        invalidate(`OrderTracking-${restaurantId}`);
         setManualPaymentSuccess(true);
       } else {
-        Alert.alert('Error', payRes.data.error || 'Payment submission failed');
+        AppAlert.alert('Error', payRes.data.error || 'Payment submission failed');
       }
     } catch (error) {
       console.error('Manual payment error:', error);
-      Alert.alert('Error', error.message || 'Failed to submit payment');
+      AppAlert.alert('Error', error.message || 'Failed to submit payment');
     } finally {
       isSubmittingRef.current = false;
       setIsSubmitting(false);
@@ -196,12 +198,13 @@ export default function MarketplacePaymentScreen({ navigation, route }) {
         if (verifyRes.data.ok) {
           const cartCleared = await clearCartWithRetry();
           if (!cartCleared) {
-            Alert.alert(
+            AppAlert.alert(
               'Note',
               'Payment successful! Cart could not be cleared automatically — you may see old items in your cart.',
               [{ text: 'OK' }]
             );
           }
+          invalidate(`OrderTracking-${restaurantId}`);
           setRazorpaySuccess(true);
           setRazorpayOrderIdResult(verifyRes.data.data?.orderId || null);
           return;
@@ -214,7 +217,7 @@ export default function MarketplacePaymentScreen({ navigation, route }) {
           continue;
         }
         // All retries exhausted — money was charged but verification pending
-        Alert.alert(
+        AppAlert.alert(
           'Payment Verification Pending',
           `Your payment of ${formatPrice(totalAmount)} was charged successfully but verification could not be completed. Your order will be processed automatically. If you don't see it in your orders within 15 minutes, please contact support.`,
           [
@@ -255,7 +258,7 @@ export default function MarketplacePaymentScreen({ navigation, route }) {
       });
 
       if (!orderRes.data.ok) {
-        Alert.alert('Error', orderRes.data.error || 'Failed to create payment order');
+        AppAlert.alert('Error', orderRes.data.error || 'Failed to create payment order');
         return;
       }
 
@@ -278,9 +281,9 @@ export default function MarketplacePaymentScreen({ navigation, route }) {
         // User cancelled or Razorpay SDK error — no money charged
         const dismissed = checkoutError.code === 0 || checkoutError.code === 2 || checkoutError.code === 'PAYMENT_CANCELLED';
         if (dismissed) {
-          Alert.alert('Payment Cancelled', 'You cancelled the payment. You can try again whenever you\'re ready.', [{ text: 'OK' }]);
+          AppAlert.alert('Payment Cancelled', 'You cancelled the payment. You can try again whenever you\'re ready.', [{ text: 'OK' }]);
         } else {
-          Alert.alert(
+          AppAlert.alert(
             'Payment Failed',
             checkoutError.description || checkoutError.message || 'Payment was not completed. Please try again.',
             [{ text: 'Retry', onPress: handleRazorpayPayment }, { text: 'Cancel', style: 'cancel' }]
@@ -294,7 +297,7 @@ export default function MarketplacePaymentScreen({ navigation, route }) {
 
     } catch (error) {
       console.error('Payment flow error:', error);
-      Alert.alert('Error', 'Something went wrong. Please check your orders or contact support.');
+      AppAlert.alert('Error', 'Something went wrong. Please check your orders or contact support.');
     } finally {
       isSubmittingRef.current = false;
       setIsSubmitting(false);

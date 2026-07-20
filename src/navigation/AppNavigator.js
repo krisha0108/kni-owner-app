@@ -13,6 +13,7 @@ import EmailVerificationScreen from '../screens/EmailVerificationScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import RestaurantOnboarding from '../screens/RestaurantOnboardingScreen';
 import PendingApprovalScreen from '../screens/PendingApprovalScreen';
+import OwnerApprovalPendingScreen from '../screens/OwnerApprovalPendingScreen';
 
 // Dashboard & Analytics
 import DashboardScreen from '../screens/DashboardScreen';
@@ -22,7 +23,6 @@ import AnalyticsScreen from '../screens/AnalyticsScreen';
 import MyRestaurantsScreen from '../screens/MyRestaurantsScreen';
 import RestaurantEditScreen from '../screens/RestaurantEditScreen';
 import RestaurantStatusScreen from '../screens/RestaurantStatusScreen';
-import MenuManagementScreen from '../screens/MenuManagementScreen';
 
 // Equipment
 import MyEquipmentScreen from '../screens/MyEquipmentScreen';
@@ -32,6 +32,7 @@ import EquipmentProfileScreen from '../screens/EquipmentProfileScreen';
 import MyBookingsScreen from '../screens/MyBookingsScreen';
 import ServiceRequestScreen from '../screens/ServiceRequestScreen';
 import OrderTrackingScreen from '../screens/OrderTrackingScreen';
+import OffersScreen from '../screens/OffersScreen';
 
 // Finance
 import ExpensesScreen from '../screens/ExpensesScreen';
@@ -49,12 +50,6 @@ import StaffSalaryScreen from '../screens/StaffSalaryScreen';
 import TeamManagementScreen from '../screens/TeamManagementScreen';
 import TeamAcceptScreen from '../screens/TeamAcceptScreen';
 
-// Restaurant Create
-import RestaurantCreateScreen from '../screens/RestaurantCreateScreen';
-
-// Phase 4: Feature Parity Screens
-import CategoryDetailScreen from '../screens/CategoryDetailScreen';
-
 // Marketplace
 import MarketplaceScreen from '../screens/MarketplaceScreen';
 import MarketplaceProductScreen from '../screens/MarketplaceProductScreen';
@@ -66,15 +61,12 @@ import MarketplacePaymentScreen from '../screens/MarketplacePaymentScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import EditOwnerProfile from '../screens/EditOwnerProfile';
 import SupportCenter from '../screens/SupportCenter';
-import SupportTicketDetail from '../screens/SupportTicketDetail';
 import Notifications from '../screens/Notifications';
 import NotificationDetail from '../screens/NotificationDetail';
 
 // Phase 3: Advanced Features
-import PaymentUploadScreen from '../screens/PaymentUploadScreen';
 import CategoryRequestScreen from '../screens/CategoryRequestScreen';
 import CartScreen from '../screens/CartScreen';
-import CreateMarketplaceOrderScreen from '../screens/CreateMarketplaceOrderScreen';
 import SlotBookingScreen from '../screens/SlotBookingScreen';
 
 // Search
@@ -92,11 +84,12 @@ import AMCContractDetailScreen from '../screens/AMCContractDetailScreen';
 // RequestScreen removed - using MarketplaceScreen instead
 // RequestDetail removed - using BookingDetail instead
 // RequestNow screen removed - use Cart screen instead
+// RestaurantsScreen, PaymentUploadScreen, OrdersListScreen, CreateMarketplaceOrderScreen,
+// CategoryDetailScreen, RestaurantCreateScreen, MenuManagementScreen, SupportTicketDetail
+// removed - unreachable dead code with stale/nonexistent API endpoints (audited 2026-07-10)
 import RestaurantView from '../screens/RestaurantView';
-import RestaurantsScreen from '../screens/RestaurantsScreen';
 import BookingDetailScreen from '../screens/BookingDetailScreen';
 import Home from '../screens/HomeScreen';
-import OrdersListScreen from '../screens/OrdersListScreen';
 import SpendingReportsScreen from '../screens/SpendingReportsScreen';
 
 const Stack = createNativeStackNavigator();
@@ -146,6 +139,7 @@ export default function AppNavigator() {
         <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
         <Stack.Screen name="RestaurantOnboarding" component={RestaurantOnboarding} />
         <Stack.Screen name="PendingApproval" component={PendingApprovalScreen} />
+        <Stack.Screen name="OwnerApprovalPending" component={OwnerApprovalPendingScreen} />
         <Stack.Screen name="TeamAccept" component={TeamAcceptScreen} />
 
         {/* Main App Screens */}
@@ -154,11 +148,10 @@ export default function AppNavigator() {
         <Stack.Screen name="Analytics" component={AnalyticsScreen} />
         <Stack.Screen name="MyRestaurants" component={MyRestaurantsScreen} />
         <Stack.Screen name="RestaurantEdit" component={RestaurantEditScreen} />
-        <Stack.Screen name="RestaurantCreate" component={RestaurantCreateScreen} />
         <Stack.Screen name="RestaurantStatus" component={RestaurantStatusScreen} />
-        <Stack.Screen name="MenuManagement" component={MenuManagementScreen} />
         <Stack.Screen name="TeamManagement" component={TeamManagementScreen} />
         <Stack.Screen name="MyBookings" component={MyBookingsScreen} />
+        <Stack.Screen name="Offers" component={OffersScreen} />
         <Stack.Screen name="Expenses" component={ExpensesScreen} />
         <Stack.Screen name="ExpenseReports" component={ExpenseReportsScreen} />
         <Stack.Screen name="Khatabook" component={KhatabookScreen} />
@@ -186,19 +179,15 @@ export default function AppNavigator() {
         {/* Profile Screens */}
         <Stack.Screen name="Profile" component={ProfileScreen} />
         <Stack.Screen name="EditOwnerProfile" component={EditOwnerProfile} />
-        <Stack.Screen name="SupportTicketDetail" component={SupportTicketDetail} />
         <Stack.Screen name="Notifications" component={Notifications} />
         <Stack.Screen name="NotificationDetail" component={NotificationDetail} />
 
         {/* Phase 3: Advanced Feature Screens */}
-        <Stack.Screen name="PaymentUpload" component={PaymentUploadScreen} />
         <Stack.Screen name="CategoryRequest" component={CategoryRequestScreen} />
         <Stack.Screen name="Cart" component={CartScreen} />
         <Stack.Screen name="SlotBooking" component={SlotBookingScreen} />
-        <Stack.Screen name="CreateMarketplaceOrder" component={CreateMarketplaceOrderScreen} />
 
         {/* Phase 4: Feature Parity Screens */}
-        <Stack.Screen name="CategoryDetail" component={CategoryDetailScreen} />
         <Stack.Screen name="OrderTracking" component={OrderTrackingScreen} />
 
         {/* AMC Screens */}
@@ -209,14 +198,10 @@ export default function AppNavigator() {
         <Stack.Screen name="AMCContracts" component={AMCContractsScreen} />
         <Stack.Screen name="AMCContractDetail" component={AMCContractDetailScreen} />
 
-        {/* Legacy screens kept for compatibility */}
-        {/* RequestScreen removed - using MarketplaceScreen instead */}
-        {/* RequestDetail removed - using BookingDetail instead */}
-        {/* RequestNow screen removed - use Cart screen for cart flow */}
-        <Stack.Screen name="Restaurants" component={RestaurantsScreen} />
+        {/* RequestScreen, RequestDetail, RequestNow, Restaurants, OrdersList removed -
+            unreachable dead code, see the comment near the top imports */}
         <Stack.Screen name="RestaurantView" component={RestaurantView} />
         <Stack.Screen name="BookingDetail" component={BookingDetailScreen} />
-        <Stack.Screen name="OrdersList" component={OrdersListScreen} />
       </Stack.Navigator>
     </SafeAreaProvider>
   );

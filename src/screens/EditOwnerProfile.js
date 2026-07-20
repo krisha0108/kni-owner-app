@@ -1,7 +1,7 @@
 // screens/EditOwnerProfile.js
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, Alert, ScrollView,
+  View, Text, TextInput, TouchableOpacity, ScrollView,
   StyleSheet, ActivityIndicator, StatusBar, KeyboardAvoidingView, Platform
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
@@ -11,6 +11,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import { api } from '../api/client';
 
 import { scale, moderateScale } from '../utils/responsive';
+import AppAlert from '../utils/AppAlert';
 const C = {
   primary: '#EF3A3A', primaryDark: '#D42E2E', ink: '#1D2254',
   text: '#0F172A', muted: '#6B7280', border: '#E5E7EB', bg: '#F5F7FA',
@@ -81,17 +82,17 @@ export default function EditOwnerProfile() {
   }), [firstName, lastName, email, phone, password, restaurantName, locations]);
 
   const onSave = async () => {
-    if (!firstName.trim()) return Alert.alert('Validation', 'First name is required.');
-    if (!email.trim()) return Alert.alert('Validation', 'Email is required.');
-    if (!phone.trim()) return Alert.alert('Validation', 'Phone is required.');
+    if (!firstName.trim()) return AppAlert.alert('Validation', 'First name is required.');
+    if (!email.trim()) return AppAlert.alert('Validation', 'Email is required.');
+    if (!phone.trim()) return AppAlert.alert('Validation', 'Phone is required.');
     try {
       setSaving(true);
       await api.put('/app_api/owner/profile', payload);
-      Alert.alert('Saved', 'Your profile has been updated.', [
+      AppAlert.alert('Saved', 'Your profile has been updated.', [
         { text: 'OK', onPress: () => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home')) }
       ]);
     } catch (e) {
-      Alert.alert('Error', e?.response?.data?.message || 'Unable to update.');
+      AppAlert.alert('Error', e?.response?.data?.message || 'Unable to update.');
     } finally { setSaving(false); }
   };
 

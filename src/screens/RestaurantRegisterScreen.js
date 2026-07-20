@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  Image, ScrollView, ActivityIndicator, Alert
+  Image, ScrollView, ActivityIndicator
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { api } from '../api/client';
@@ -10,6 +10,7 @@ import auth from '@react-native-firebase/auth';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import messaging from '@react-native-firebase/messaging';
+import AppAlert from '../utils/AppAlert';
 
 import { scale, moderateScale } from '../utils/responsive';
 import useKeyboardHeight from '../utils/useKeyboardHeight';
@@ -112,18 +113,18 @@ export default function RestaurantRegisterScreen({ navigation }) {
     const { name, email, password, confirmPassword } = form;
 
     if (!name || name.trim().length < 2) {
-      Alert.alert('Validation Error', 'Name must be at least 2 characters');
+      AppAlert.alert('Validation Error', 'Name must be at least 2 characters');
       return false;
     }
 
     if (!email || !email.includes('@')) {
-      Alert.alert('Validation Error', 'Please enter a valid email address');
+      AppAlert.alert('Validation Error', 'Please enter a valid email address');
       return false;
     }
 
     const passwordValidationErrors = validatePassword(password);
     if (passwordValidationErrors.length > 0) {
-      Alert.alert(
+      AppAlert.alert(
         'Password Requirements',
         'Password must have:\n' + passwordValidationErrors.map(e => `• ${e}`).join('\n')
       );
@@ -131,7 +132,7 @@ export default function RestaurantRegisterScreen({ navigation }) {
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Validation Error', 'Passwords do not match');
+      AppAlert.alert('Validation Error', 'Passwords do not match');
       return false;
     }
 
@@ -160,7 +161,7 @@ export default function RestaurantRegisterScreen({ navigation }) {
 
         if (requiresVerification) {
           // Redirect to email verification screen
-          Alert.alert(
+          AppAlert.alert(
             'Verify Your Email',
             'A verification code has been sent to your email address.',
             [
@@ -178,7 +179,7 @@ export default function RestaurantRegisterScreen({ navigation }) {
           // Fallback: if no verification needed (shouldn't happen for new owners)
           const token = res.data?.data?.token;
           await saveSessionAndFcm(token, user, 'password');
-          Alert.alert(
+          AppAlert.alert(
             'Welcome to KNI Super App!',
             'Registration successful. Let\'s set up your restaurant.',
             [
@@ -190,14 +191,14 @@ export default function RestaurantRegisterScreen({ navigation }) {
           );
         }
       } else {
-        Alert.alert('Registration Failed', res.data?.error || 'Please try again.');
+        AppAlert.alert('Registration Failed', res.data?.error || 'Please try again.');
       }
     } catch (err) {
       console.log('Register error:', err?.response?.data || err.message);
       const errorMessage = err?.response?.data?.error ||
                           err?.response?.data?.message ||
                           'Something went wrong. Please try again.';
-      Alert.alert('Registration Failed', errorMessage);
+      AppAlert.alert('Registration Failed', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -242,7 +243,7 @@ export default function RestaurantRegisterScreen({ navigation }) {
 
       // Check if user needs to complete restaurant onboarding
       if (!res.data?.hasRestaurant) {
-        Alert.alert(
+        AppAlert.alert(
           'Welcome!',
           'Let\'s set up your restaurant.',
           [
@@ -257,7 +258,7 @@ export default function RestaurantRegisterScreen({ navigation }) {
       }
     } catch (e) {
       console.log('[Google register error]', e?.message || e);
-      Alert.alert(
+      AppAlert.alert(
         'Google Sign-In Failed',
         e?.message?.includes('token')
           ? 'Could not retrieve authentication token. Please check your Firebase configuration.'

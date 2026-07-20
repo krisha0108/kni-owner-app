@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  Alert,
   FlatList,
   ActivityIndicator,
 } from 'react-native';
@@ -14,10 +13,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 import { api, getImageUrl } from '../api/client';
+import AppAlert from '../utils/AppAlert';
 import cartService from '../services/marketplaceCartService';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 import PriceRequestModal from '../components/PriceRequestModal';
+import CounterOfferModal from '../components/CounterOfferModal';
+import ConfirmQuoteModal from '../components/ConfirmQuoteModal';
 
 import { scale, moderateScale } from '../utils/responsive';
 import { usePermissions } from '../utils/usePermissions';
@@ -43,6 +45,8 @@ export default function MarketplaceProductScreen({ navigation, route }) {
   const [cart, setCart] = useState([]);
   const [menuVisible, setMenuVisible] = useState(false);
   const [isPriceRequestOpen, setIsPriceRequestOpen] = useState(false);
+  const [isCounterOfferOpen, setIsCounterOfferOpen] = useState(false);
+  const [isConfirmQuoteOpen, setIsConfirmQuoteOpen] = useState(false);
   const cartQty = cart.find(i => i.product?.id === product?.id)?.quantity || 0;
 
   // Related products state
@@ -53,7 +57,7 @@ export default function MarketplaceProductScreen({ navigation, route }) {
 
   useEffect(() => {
     if (!productParam) {
-      Alert.alert('Error', 'Product not found');
+      AppAlert.alert('Error', 'Product not found');
       (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'));
     }
   }, [productParam, navigation]);
@@ -114,7 +118,7 @@ export default function MarketplaceProductScreen({ navigation, route }) {
   const addToCart = async () => {
     if (!product) return;
     if (!restaurantId) {
-      Alert.alert('Error', 'Restaurant not selected');
+      AppAlert.alert('Error', 'Restaurant not selected');
       return;
     }
 
@@ -127,7 +131,7 @@ export default function MarketplaceProductScreen({ navigation, route }) {
       const items = await cartService.addItem(restaurantId, product.id, newQuantity);
       setCart(items || []);
     } catch (error) {
-      Alert.alert('Error', error.message || 'Failed to add to cart');
+      AppAlert.alert('Error', error.message || 'Failed to add to cart');
     }
   };
 
@@ -140,16 +144,16 @@ export default function MarketplaceProductScreen({ navigation, route }) {
 
     try {
       if (newQty <= 0) {
-        await cartService.removeItem(item.id);
+        await cartService.removeItem(item.id, restaurantId);
       } else {
         const clamped = Math.min(newQty, product.stockQuantity || 999);
-        const items = await cartService.updateItemQuantity(item.id, clamped);
+        const items = await cartService.updateItemQuantity(item.id, clamped, restaurantId);
         setCart(items || []);
         return;
       }
       await loadCart();
     } catch (error) {
-      Alert.alert('Error', error.message || 'Failed to update cart');
+      AppAlert.alert('Error', error.message || 'Failed to update cart');
     }
   };
 
@@ -162,7 +166,7 @@ export default function MarketplaceProductScreen({ navigation, route }) {
       const items = await cartService.addItem(restaurantId, productId, newQty);
       setCart(items || []);
     } catch (error) {
-      Alert.alert('Error', error.message || 'Failed to add to cart');
+      AppAlert.alert('Error', error.message || 'Failed to add to cart');
     }
   };
 
@@ -172,14 +176,14 @@ export default function MarketplaceProductScreen({ navigation, route }) {
     const newQty = item.quantity + delta;
     try {
       if (newQty <= 0) {
-        await cartService.removeItem(item.id);
+        await cartService.removeItem(item.id, restaurantId);
         await loadCart();
       } else {
-        const items = await cartService.updateItemQuantity(item.id, newQty);
+        const items = await cartService.updateItemQuantity(item.id, newQty, restaurantId);
         setCart(items || []);
       }
     } catch (error) {
-      Alert.alert('Error', error.message || 'Failed to update cart');
+      AppAlert.alert('Error', error.message || 'Failed to update cart');
     }
   };
 
@@ -189,7 +193,7 @@ export default function MarketplaceProductScreen({ navigation, route }) {
 
   const handleRequestPrice = () => {
     if (!restaurantId) {
-      Alert.alert('Error', 'Restaurant not selected');
+      AppAlert.alert('Error', 'Restaurant not selected');
       return;
     }
     setIsPriceRequestOpen(true);
@@ -373,6 +377,12 @@ export default function MarketplaceProductScreen({ navigation, route }) {
                     <Text style={styles.statusBadgePendingText}>Requested</Text>
                   </View>
                 )}
+                {product.priceUnlock?.status === 'COUNTERED' && (
+                  <View style={styles.statusBadgePending}>
+                    <Icon name="swap-horizontal-outline" size={scale(14)} color="#1E40AF" />
+                    <Text style={styles.statusBadgePendingText}>Counter-offer sent</Text>
+                  </View>
+                )}
                 {product.priceUnlock?.status === 'DECLINED' && (
                   <View style={styles.statusBadgeDeclined}>
                     <Icon name="close-circle-outline" size={scale(14)} color="#DC2626" />
@@ -505,7 +515,30 @@ export default function MarketplaceProductScreen({ navigation, route }) {
 
       {/* Bottom Bar */}
       {can('marketplace:create') && (
-        product.priceOnRequest && !product.canPurchase ? (
+        product.priceUnlock?.status === 'UNLOCKED' && !product.priceUnlock.isExpired && product.priceUnlock.unlockedPrice ? (
+          <View style={styles.bottomBar}>
+            <TouchableOpacity
+              style={styles.negotiateIconBtn}
+              onPress={() => setIsCounterOfferOpen(true)}
+            >
+              <Icon name="swap-horizontal-outline" size={scale(20)} color={C.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.addToCartBtn}
+              onPress={() => setIsConfirmQuoteOpen(true)}
+            >
+              <Icon name="checkmark-circle-outline" size={scale(20)} color="#fff" />
+              <Text style={styles.addToCartText}>Confirm Quote</Text>
+            </TouchableOpacity>
+          </View>
+        ) : product.priceUnlock?.status === 'COUNTERED' ? (
+          <View style={styles.bottomBar}>
+            <View style={styles.requestedBottomBar}>
+              <Icon name="swap-horizontal-outline" size={scale(20)} color="#1E40AF" />
+              <Text style={styles.requestedBottomText}>Counter-offer sent, awaiting admin</Text>
+            </View>
+          </View>
+        ) : product.priceOnRequest && !product.canPurchase ? (
           <View style={styles.bottomBar}>
             {product.priceUnlock?.status === 'PENDING' ? (
               <View style={styles.requestedBottomBar}>
@@ -526,6 +559,14 @@ export default function MarketplaceProductScreen({ navigation, route }) {
           </View>
         ) : canPurchase ? (
           <View style={styles.bottomBar}>
+            {product.isAdminStore && (
+              <TouchableOpacity
+                style={styles.negotiateIconBtn}
+                onPress={handleRequestPrice}
+              >
+                <Icon name="pricetag-outline" size={scale(20)} color={C.primary} />
+              </TouchableOpacity>
+            )}
             {cartQty > 0 ? (
               <>
                 <View style={styles.quantityControl}>
@@ -568,6 +609,26 @@ export default function MarketplaceProductScreen({ navigation, route }) {
         onClose={() => setIsPriceRequestOpen(false)}
         onSuccess={() => {
           setProduct({ ...product, priceUnlock: { status: 'PENDING', unlockedPrice: null, validUntil: null, isExpired: false } });
+        }}
+      />
+      <CounterOfferModal
+        visible={isCounterOfferOpen}
+        endpoint={`/owner/marketplace/price-requests/${product.priceUnlock?.id}/counter`}
+        currentPrice={product.priceUnlock?.unlockedPrice}
+        onClose={() => setIsCounterOfferOpen(false)}
+        onSuccess={() => {
+          setProduct({ ...product, priceUnlock: { ...product.priceUnlock, status: 'COUNTERED' } });
+        }}
+      />
+      <ConfirmQuoteModal
+        visible={isConfirmQuoteOpen}
+        priceUnlockId={product.priceUnlock?.id}
+        unlockedPrice={product.priceUnlock?.unlockedPrice}
+        maxQty={Math.max(1, Math.min(stockQty, product.priceUnlock?.quantity ?? stockQty))}
+        onClose={() => setIsConfirmQuoteOpen(false)}
+        onConfirmed={() => {
+          setIsConfirmQuoteOpen(false);
+          navigation.navigate('MarketplaceOrders', { restaurantId });
         }}
       />
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
@@ -722,6 +783,15 @@ const styles = StyleSheet.create({
     backgroundColor: C.primary,
   },
   addToCartText: { fontSize: moderateScale(15), fontWeight: '700', color: '#fff' },
+  negotiateIconBtn: {
+    width: scale(48),
+    height: scale(48),
+    borderRadius: scale(12),
+    borderWidth: 1,
+    borderColor: C.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
   // Price on Request styles
   priceOnRequestContainer: {

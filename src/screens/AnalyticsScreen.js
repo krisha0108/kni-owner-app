@@ -8,7 +8,6 @@ import {
   RefreshControl,
   ActivityIndicator,
   Dimensions,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -22,6 +21,8 @@ import { useRestaurant } from '../context/RestaurantContext';
 import { RestaurantSelectorBar } from '../components/RestaurantSelector';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
+import { isStale, markFetched } from '../utils/focusCache';
+import AppAlert from '../utils/AppAlert';
 
 import { scale, moderateScale } from '../utils/responsive';
 const C = {
@@ -65,9 +66,13 @@ export default function AnalyticsScreen({ navigation }) {
 
   useFocusEffect(
     useCallback(() => {
-      loadData();
+      const key = `Analytics-${selectedRestaurant}-${selectedPeriod}`;
+      if (isStale(key) || !analytics) {
+        loadData();
+        markFetched(key);
+      }
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedRestaurant, selectedPeriod])
+    }, [selectedRestaurant, selectedPeriod, analytics])
   );
 
   const loadData = async () => {
@@ -96,20 +101,21 @@ export default function AnalyticsScreen({ navigation }) {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadRestaurants();
+    await loadRestaurants({ force: true });
     await loadData();
+    markFetched(`Analytics-${selectedRestaurant}-${selectedPeriod}`);
   };
 
   const handleExportPDF = async () => {
     if (!selectedRestaurant) {
-      Alert.alert('Error', 'Please select a restaurant first');
+      AppAlert.alert('Error', 'Please select a restaurant first');
       return;
     }
 
     setExporting(true);
     try {
       const filePath = await exportAnalyticsPDF(selectedRestaurant);
-      Alert.alert(
+      AppAlert.alert(
         'Export Successful',
         'Analytics report has been exported',
         [
@@ -118,7 +124,7 @@ export default function AnalyticsScreen({ navigation }) {
         ]
       );
     } catch (error) {
-      Alert.alert('Export Failed', error.message || 'Could not export analytics');
+      AppAlert.alert('Export Failed', error.message || 'Could not export analytics');
     } finally {
       setExporting(false);
     }
@@ -261,10 +267,10 @@ export default function AnalyticsScreen({ navigation }) {
         {analytics?.trends && (
           <>
             {/* Booking Trends Line Chart */}
-            {trends.bookingsByDay && trends.bookingsByDay.length > 0 && (
+            {trends.dailyBookings && trends.dailyBookings.length > 0 && (
               <LineChartCard
                 title="Booking Trends"
-                data={trends.bookingsByDay}
+                data={trends.dailyBookings}
                 labelKey="date"
                 valueKey="count"
               />
@@ -282,11 +288,11 @@ export default function AnalyticsScreen({ navigation }) {
               />
             )}
 
-            {/* Revenue vs Expenses Bar Chart */}
-            {trends.dailyRevenue && trends.dailyRevenue.length > 0 && (
+            {/* Daily Revenue Bar Chart - dailyBookings carries per-day revenue too */}
+            {trends.dailyBookings && trends.dailyBookings.length > 0 && (
               <BarChartCard
                 title="Daily Revenue"
-                data={trends.dailyRevenue}
+                data={trends.dailyBookings}
                 labelKey="date"
                 valueKey="revenue"
               />
@@ -373,12 +379,20 @@ const getCategoryColor = (index) => {
   return colors[index % colors.length];
 };
 
+// Keyed on the real ServiceBookingStatus enum (prisma/schema.prisma).
 const getStatusColor = (status) => {
   const statusColors = {
-    'PENDING': '#F59E0B',
-    'CONFIRMED': '#10B981',
-    'COMPLETED': '#3B82F6',
-    'CANCELLED': '#EF4444',
+    DRAFT: '#94A3B8',
+    SLOT_SELECTED: '#F59E0B',
+    PAYMENT_UPLOADED: '#3B82F6',
+    PAYMENT_VERIFIED: '#10B981',
+    PAYMENT_REJECTED: '#EF4444',
+    ENGINEER_ASSIGNED: '#6366F1',
+    ACCEPTED_BY_ENGINEER: '#6366F1',
+    IN_PROGRESS: '#F59E0B',
+    REJECTED_BY_ENGINEER: '#EF4444',
+    COMPLETED: '#3B82F6',
+    CANCELLED: '#EF4444',
   };
   return statusColors[status] || '#6B7280';
 };

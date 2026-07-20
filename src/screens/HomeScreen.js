@@ -3,8 +3,9 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   View, Text, StyleSheet, Image, ImageBackground, TouchableOpacity,
   ScrollView, FlatList, Animated, Easing, RefreshControl, Linking,
-  useWindowDimensions, Alert, ActivityIndicator, Dimensions, StatusBar
+  useWindowDimensions, ActivityIndicator, Dimensions, StatusBar
 } from 'react-native';
+import AppAlert from '../utils/AppAlert';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
@@ -22,6 +23,7 @@ import BarChartCard from '../components/charts/BarChartCard';
 import { exportAnalyticsPDF, openPDF } from '../services/analyticsService';
 import { scale, moderateScale } from '../utils/responsive';
 import { usePermissions } from '../utils/usePermissions';
+import { isStale, markFetched } from '../utils/focusCache';
 
 const ION_GLYPHS = (Icon.getRawGlyphMap?.() ?? {});
 const hasIonicon = (name) => !!name && Object.prototype.hasOwnProperty.call(ION_GLYPHS, name);
@@ -43,8 +45,21 @@ const C = {
 /* ──────── HELPERS ──────── */
 const open = async (url) => { try { await Linking.openURL(url); } catch { } };
 const getCategoryColor = (i) => [C.primary, C.info, C.warn, C.ok, C.danger][i % 5];
+// Keyed on the real ServiceBookingStatus enum (prisma/schema.prisma).
 const getStatusColor = (s) =>
-  ({ PENDING: '#F59E0B', CONFIRMED: '#10B981', COMPLETED: '#3B82F6', CANCELLED: '#EF4444' })[s] || '#6B7280';
+  ({
+    DRAFT: '#94A3B8',
+    SLOT_SELECTED: '#F59E0B',
+    PAYMENT_UPLOADED: '#3B82F6',
+    PAYMENT_VERIFIED: '#10B981',
+    PAYMENT_REJECTED: '#EF4444',
+    ENGINEER_ASSIGNED: '#6366F1',
+    ACCEPTED_BY_ENGINEER: '#6366F1',
+    IN_PROGRESS: '#F59E0B',
+    REJECTED_BY_ENGINEER: '#EF4444',
+    COMPLETED: '#3B82F6',
+    CANCELLED: '#EF4444',
+  })[s] || '#6B7280';
 
 /* ──────── QUICK ACTION DATA ──────── */
 const QA = [
@@ -72,7 +87,7 @@ export default function HomeScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [sponsoredData, setSponsoredData] = useState([]);
-  const [banners, setBanners] = useState([]);
+  const [offers, setOffers] = useState([]);
   const [heroIdx, setHeroIdx] = useState(0);
   const [guides, setGuides] = useState([]);
   const [feed, setFeed] = useState([]);
@@ -160,21 +175,17 @@ export default function HomeScreen({ navigation }) {
     }
   }, []);
 
-  const fetchBanners = useCallback(async () => {
+  const fetchOffers = useCallback(async () => {
     try {
-      const { data } = await api.get('/app_api/banners', {
-        params: { per_page: 10, status: 'published' }
+      const { data } = await api.get('/owner/offers', {
+        params: restaurantId ? { restaurantId } : {}
       });
-      const list = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []);
-      const published = list
-        .filter(b => (b.status || '').toLowerCase() === 'published')
-        .sort((a, b) => (Number(a.sort_order) || 9999) - (Number(b.sort_order) || 9999));
-      setBanners(published);
+      setOffers(Array.isArray(data?.data) ? data.data : []);
       setHeroIdx(0);
     } catch (e) {
-      console.error('Banner load error', e);
+      console.error('Offers load error', e);
     }
-  }, []);
+  }, [restaurantId]);
 
   const calculateCartCount = useCallback(async () => {
     try {
@@ -264,7 +275,7 @@ export default function HomeScreen({ navigation }) {
       }
     } catch (error) {
       console.error('Analytics error:', error);
-      Alert.alert('Error', 'Failed to load analytics data');
+      AppAlert.alert('Error', 'Failed to load analytics data');
     } finally {
       setAnalyticsLoading(false);
     }
@@ -295,15 +306,14 @@ export default function HomeScreen({ navigation }) {
   // Load all home data on screen focus (covers first mount + every tab switch)
   useFocusEffect(
     useCallback(() => {
+      const contentKey = 'Home-content';
       const loadAll = async () => {
         if (isFirstLoad.current) setLoading(true);
-        await Promise.all([
-          loadRestaurants(),
-          fetchBanners(),
-          fetchFeed(),
-          fetchSponsored(),
-          fetchGuides(),
-        ]);
+        loadRestaurants(); // internally staleness-guarded
+        if (isStale(contentKey)) {
+          await Promise.all([fetchOffers(), fetchFeed(), fetchSponsored(), fetchGuides()]);
+          markFetched(contentKey);
+        }
         if (isFirstLoad.current) {
           setLoading(false);
           isFirstLoad.current = false;
@@ -311,15 +321,21 @@ export default function HomeScreen({ navigation }) {
       };
       loadAll();
       calculateCartCount();
-      loadMarketplaceCartCount();
-      fetchNotifCount();
-      if (restaurantId) loadAnalytics();
-    }, [loadRestaurants, fetchBanners, fetchFeed, fetchSponsored, fetchGuides, calculateCartCount, loadMarketplaceCartCount, restaurantId, loadAnalytics])
+
+      const notifKey = 'Home-notifCount';
+      if (isStale(notifKey)) { fetchNotifCount(); markFetched(notifKey); }
+
+      const cartKey = `Home-marketplaceCart-${restaurantId}`;
+      if (isStale(cartKey)) { loadMarketplaceCartCount(); markFetched(cartKey); }
+
+      const analyticsKey = `Home-analytics-${restaurantId}-${selectedPeriod}`;
+      if (isStale(analyticsKey)) { loadAnalytics(); markFetched(analyticsKey); }
+    }, [loadRestaurants, fetchOffers, fetchFeed, fetchSponsored, fetchGuides, calculateCartCount, loadMarketplaceCartCount, restaurantId, loadAnalytics, fetchNotifCount, selectedPeriod])
   );
 
   // Reload analytics when restaurant or period changes
   useEffect(() => {
-    if (restaurantId) loadAnalytics();
+    loadAnalytics();
   }, [restaurantId, selectedPeriod, loadAnalytics]);
 
   /* ═══════════ BANNER ANIMATION ═══════════ */
@@ -338,7 +354,7 @@ export default function HomeScreen({ navigation }) {
   }, []);
 
   const cycle = useCallback(() => {
-    if (!banners.length) return;
+    if (!offers.length) return;
     bar.setValue(0);
     Animated.timing(bar, {
       toValue: 1,
@@ -347,48 +363,54 @@ export default function HomeScreen({ navigation }) {
       useNativeDriver: false,
     }).start(({ finished }) => {
       if (!finished) return;
-      setHeroIdx(i => (i + 1) % banners.length);
+      setHeroIdx(i => (i + 1) % offers.length);
     });
-  }, [banners.length, bar]);
+  }, [offers.length, bar]);
 
   useEffect(() => {
     bar.stopAnimation();
-    if (!showSkel && banners.length) cycle();
+    if (!showSkel && offers.length) cycle();
     return () => bar.stopAnimation();
-  }, [heroIdx, showSkel, cycle, banners.length, bar]);
+  }, [heroIdx, showSkel, cycle, offers.length, bar]);
 
   /* ═══════════ ACTIONS ═══════════ */
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     (async () => {
       await Promise.all([
-        fetchBanners(),
+        fetchOffers(),
         fetchFeed(),
         fetchSponsored(),
         fetchGuides(),
-        loadRestaurants(),
+        loadRestaurants({ force: true }),
         loadAnalytics(),
         calculateCartCount(),
         loadMarketplaceCartCount(),
       ]);
+      markFetched('Home-content');
+      markFetched('Home-notifCount');
+      if (restaurantId) {
+        markFetched(`Home-marketplaceCart-${restaurantId}`);
+        markFetched(`Home-analytics-${restaurantId}-${selectedPeriod}`);
+      }
       setTimeout(() => setRefreshing(false), 300);
     })();
-  }, [fetchBanners, fetchFeed, fetchSponsored, fetchGuides, loadRestaurants, loadAnalytics, calculateCartCount, loadMarketplaceCartCount]);
+  }, [fetchOffers, fetchFeed, fetchSponsored, fetchGuides, loadRestaurants, loadAnalytics, calculateCartCount, loadMarketplaceCartCount, restaurantId, selectedPeriod]);
 
   const handleExportPDF = async () => {
     if (!restaurantId) {
-      Alert.alert('Error', 'Please select a restaurant first');
+      AppAlert.alert('Error', 'Please select a restaurant first');
       return;
     }
     setExporting(true);
     try {
       const filePath = await exportAnalyticsPDF(restaurantId);
-      Alert.alert('Export Successful', 'Analytics report has been exported', [
+      AppAlert.alert('Export Successful', 'Analytics report has been exported', [
         { text: 'Open', onPress: () => openPDF(filePath) },
         { text: 'OK', style: 'cancel' }
       ]);
     } catch (error) {
-      Alert.alert('Export Failed', error.message || 'Could not export analytics');
+      AppAlert.alert('Export Failed', error.message || 'Could not export analytics');
     } finally {
       setExporting(false);
     }
@@ -408,7 +430,7 @@ export default function HomeScreen({ navigation }) {
      ═══════════════════════════════════════════════════════════════════════ */
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['left', 'right']}>
-      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
 
       {/* ══════ GRADIENT HEADER ══════ */}
       <LinearGradient
@@ -490,47 +512,39 @@ export default function HomeScreen({ navigation }) {
               </View>
             )}
 
-            {/* ══════ HERO BANNER ══════ */}
+            {/* ══════ HERO OFFER ══════ */}
             <View style={{ paddingHorizontal: scale(16), marginTop: scale(14) }}>
-              {banners.length ? (() => {
-                const rawUrl = banners[heroIdx]?.image_url || '';
-                const bannerImgUri = rawUrl.startsWith('http') ? rawUrl : `${IMAGE_BASE_URL}${rawUrl}`;
-                return (
-                <View style={st.bannerWrap}>
-                  <ImageBackground
-                    source={{ uri: bannerImgUri }}
-                    style={st.bannerImg}
-                    imageStyle={{ borderRadius: scale(20) }}
-                  >
+              {offers.length ? (() => {
+                const activeOffer = offers[heroIdx];
+                const rawUrl = activeOffer?.imageUrl || '';
+                const offerImgUri = rawUrl ? (rawUrl.startsWith('http') ? rawUrl : `${IMAGE_BASE_URL}${rawUrl}`) : null;
+                const InnerContent = (
+                  <>
                     <LinearGradient
                       colors={['transparent', 'rgba(0,0,0,0.6)']}
                       style={st.bannerOverlay}
                     />
-                    {banners[heroIdx]?.badge ? (
-                      <View style={st.bannerBadge}>
-                        <Text style={st.bannerBadgeTxt}>{banners[heroIdx].badge}</Text>
-                      </View>
-                    ) : null}
+                    <View style={st.bannerBadge}>
+                      <Text style={st.bannerBadgeTxt}>{activeOffer.discountPercent}% OFF</Text>
+                    </View>
                     <View style={st.bannerContent}>
                       <Text style={st.bannerTitle} numberOfLines={2}>
-                        {banners[heroIdx]?.title ?? ''}
+                        {activeOffer?.name ?? ''}
                       </Text>
-                      {!!banners[heroIdx]?.subtitle && (
-                        <Text style={st.bannerSub} numberOfLines={2}>{banners[heroIdx].subtitle}</Text>
+                      {!!activeOffer?.description && (
+                        <Text style={st.bannerSub} numberOfLines={2}>{activeOffer.description}</Text>
                       )}
-                      {!!banners[heroIdx]?.cta_text && !!banners[heroIdx]?.cta_link && (
-                        <TouchableOpacity onPress={() => open(banners[heroIdx].cta_link)} style={st.bannerCta}>
-                          <Text style={st.bannerCtaTxt}>{banners[heroIdx].cta_text}</Text>
-                          <Icon name="arrow-forward" size={scale(14)} color="#fff" />
-                        </TouchableOpacity>
-                      )}
+                      <TouchableOpacity onPress={() => navigation.navigate('Offers')} style={st.bannerCta}>
+                        <Text style={st.bannerCtaTxt}>View Offer</Text>
+                        <Icon name="arrow-forward" size={scale(14)} color="#fff" />
+                      </TouchableOpacity>
                     </View>
 
                     {/* Dots + Progress */}
                     <View style={st.bannerBottom}>
-                      {banners.length > 1 && (
+                      {offers.length > 1 && (
                         <View style={st.dotsRow}>
-                          {banners.map((_, i) => (
+                          {offers.map((_, i) => (
                             <View key={i} style={[st.dot, i === heroIdx && st.dotActive]} />
                           ))}
                         </View>
@@ -543,13 +557,34 @@ export default function HomeScreen({ navigation }) {
                         />
                       </View>
                     </View>
-                  </ImageBackground>
+                  </>
+                );
+                return (
+                <View style={st.bannerWrap}>
+                  {offerImgUri ? (
+                    <ImageBackground
+                      source={{ uri: offerImgUri }}
+                      style={st.bannerImg}
+                      imageStyle={{ borderRadius: scale(20) }}
+                    >
+                      {InnerContent}
+                    </ImageBackground>
+                  ) : (
+                    <LinearGradient
+                      colors={[C.ink, C.primary]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={[st.bannerImg, { borderRadius: scale(20) }]}
+                    >
+                      {InnerContent}
+                    </LinearGradient>
+                  )}
                 </View>
                 );
               })() : (
                 <View style={st.bannerEmpty}>
-                  <Icon name="image-outline" size={scale(36)} color={C.muted} />
-                  <Text style={{ color: C.muted, fontWeight: '700', marginTop: scale(8) }}>No banners yet</Text>
+                  <Icon name="gift-outline" size={scale(36)} color={C.muted} />
+                  <Text style={{ color: C.muted, fontWeight: '700', marginTop: scale(8) }}>No offers right now</Text>
                 </View>
               )}
             </View>
@@ -766,10 +801,10 @@ export default function HomeScreen({ navigation }) {
 
                 {showCharts && (
                   <View style={{ marginTop: scale(12), marginHorizontal: scale(-16), overflow: 'hidden' }}>
-                    {trends.bookingsByDay && trends.bookingsByDay.length > 0 && (
+                    {trends.dailyBookings && trends.dailyBookings.length > 0 && (
                       <LineChartCard
                         title="Booking Trends"
-                        data={trends.bookingsByDay}
+                        data={trends.dailyBookings}
                         labelKey="date"
                         valueKey="count"
                       />
@@ -784,10 +819,10 @@ export default function HomeScreen({ navigation }) {
                         }))}
                       />
                     )}
-                    {trends.dailyRevenue && trends.dailyRevenue.length > 0 && (
+                    {trends.dailyBookings && trends.dailyBookings.length > 0 && (
                       <BarChartCard
                         title="Daily Revenue"
-                        data={trends.dailyRevenue}
+                        data={trends.dailyBookings}
                         labelKey="date"
                         valueKey="revenue"
                       />
@@ -896,7 +931,7 @@ export default function HomeScreen({ navigation }) {
                   contentContainerStyle={{ paddingHorizontal: scale(16) }}
                   renderItem={({ item }) => (
                     <TouchableOpacity
-                      onPress={() => Linking.openURL(item.link)}
+                      onPress={() => item.link && open(item.link)}
                       activeOpacity={0.9}
                       style={[st.sponsorCard, { width: Math.min(scale(280), width * 0.75) }]}
                     >

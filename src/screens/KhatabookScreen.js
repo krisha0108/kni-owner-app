@@ -121,10 +121,16 @@ export default function KhatabookScreen({ navigation }) {
   }, [pulse]);
 
   const loadData = useCallback(async () => {
-    if (!selectedRestaurantId) return;
+    if (!selectedRestaurantId) { setLoading(false); return; }
     try {
       setLoading(true);
-      const res = await api.get(`/owner/finance-reports?restaurantId=${selectedRestaurantId}&period=${selectedPeriod}`);
+      // Backend only filters on startDate/endDate, not a period-in-days param.
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - selectedPeriod);
+      const res = await api.get(
+        `/owner/finance-reports?restaurantId=${selectedRestaurantId}&startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`
+      );
       if (res.data.ok) setData(res.data.data);
     } catch (e) {
       console.error('Error loading khatabook:', e);
@@ -135,7 +141,7 @@ export default function KhatabookScreen({ navigation }) {
   }, [selectedRestaurantId, selectedPeriod]);
 
   useEffect(() => {
-    if (selectedRestaurantId) loadData();
+    loadData();
   }, [selectedRestaurantId, selectedPeriod, loadData]);
 
   const onRefresh = async () => {
@@ -144,7 +150,7 @@ export default function KhatabookScreen({ navigation }) {
     await loadData();
   };
 
-  const netRevenue = (data?.totalRevenue || 0) - (data?.totalExpenses || 0);
+  const netRevenue = data?.summary?.netBalance ?? ((data?.summary?.totalIncome || 0) - (data?.summary?.totalExpenses || 0));
   const isProfit = netRevenue >= 0;
 
   /* ─── Breakdown sections ─── */
@@ -169,8 +175,8 @@ export default function KhatabookScreen({ navigation }) {
       });
     }
 
-    if (data.vendorLedger) {
-      const vl = data.vendorLedger;
+    if (data.vendors) {
+      const vl = data.vendors;
       sections.push({
         title: 'Vendor Ledger',
         icon: 'people',
@@ -184,26 +190,26 @@ export default function KhatabookScreen({ navigation }) {
       });
     }
 
-    if (data.staffSalary) {
-      const ss = data.staffSalary;
+    if (data.salary) {
+      const ss = data.salary;
       sections.push({
         title: 'Staff Salary',
         icon: 'briefcase',
         gradient: ['#F472B6', '#EC4899'],
         rows: [
-          { label: 'Payable', value: fmtFull(ss.payable), icon: 'time', color: C.warning },
-          { label: 'Paid', value: fmtFull(ss.paid), icon: 'checkmark-circle', color: C.success },
+          { label: 'Payable', value: fmtFull(ss.totalPayable), icon: 'time', color: C.warning },
+          { label: 'Paid', value: fmtFull(ss.totalPaid), icon: 'checkmark-circle', color: C.success },
           { label: 'Pending', value: fmtFull(ss.pending), icon: 'alert-circle', color: C.danger },
         ].filter(r => r.value !== '₹0'),
       });
     }
 
-    if (data.categoryExpenses && data.categoryExpenses.length > 0) {
+    if (data.expenses?.byCategory && data.expenses.byCategory.length > 0) {
       sections.push({
         title: 'Expense Categories',
         icon: 'pie-chart',
         gradient: ['#FBBF24', '#F59E0B'],
-        rows: data.categoryExpenses.map(cat => ({
+        rows: data.expenses.byCategory.map(cat => ({
           label: cat.category || cat.name || 'Other',
           value: fmtFull(cat.total || cat.amount),
           icon: 'pricetag',
@@ -319,7 +325,7 @@ export default function KhatabookScreen({ navigation }) {
             <LinearGradient colors={['#D1FAE5', '#A7F3D0']} style={st.miniCardIcon}>
               <Icon name="arrow-down-circle" size={scale(18)} color={C.success} />
             </LinearGradient>
-            <Text style={st.miniCardValue}>{fmt(data?.totalRevenue)}</Text>
+            <Text style={st.miniCardValue}>{fmt(data?.summary?.totalIncome)}</Text>
             <Text style={st.miniCardLabel}>REVENUE</Text>
           </View>
 
@@ -327,7 +333,7 @@ export default function KhatabookScreen({ navigation }) {
             <LinearGradient colors={['#FEE2E2', '#FECACA']} style={st.miniCardIcon}>
               <Icon name="arrow-up-circle" size={scale(18)} color={C.danger} />
             </LinearGradient>
-            <Text style={st.miniCardValue}>{fmt(data?.totalExpenses)}</Text>
+            <Text style={st.miniCardValue}>{fmt(data?.summary?.totalExpenses)}</Text>
             <Text style={st.miniCardLabel}>EXPENSES</Text>
           </View>
 
@@ -335,7 +341,7 @@ export default function KhatabookScreen({ navigation }) {
             <LinearGradient colors={['#FEF3C7', '#FDE68A']} style={st.miniCardIcon}>
               <Icon name="time" size={scale(18)} color={C.warning} />
             </LinearGradient>
-            <Text style={st.miniCardValue}>{fmt(data?.pendingDues)}</Text>
+            <Text style={st.miniCardValue}>{fmt(data?.vendors?.totalDue)}</Text>
             <Text style={st.miniCardLabel}>DUES</Text>
           </View>
 
@@ -343,7 +349,7 @@ export default function KhatabookScreen({ navigation }) {
             <LinearGradient colors={['#DBEAFE', '#BFDBFE']} style={st.miniCardIcon}>
               <Icon name="wallet" size={scale(18)} color={C.info} />
             </LinearGradient>
-            <Text style={st.miniCardValue}>{fmt(data?.cashBalance)}</Text>
+            <Text style={st.miniCardValue}>{fmt(data?.cashbook?.cashBalance)}</Text>
             <Text style={st.miniCardLabel}>BALANCE</Text>
           </View>
         </View>

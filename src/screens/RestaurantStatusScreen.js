@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
-  Alert,
   Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,8 +16,11 @@ import { api } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
+import restaurantService from '../services/restaurantService';
 
 import { scale, moderateScale } from '../utils/responsive';
+import { isStale, markFetched } from '../utils/focusCache';
+import AppAlert from '../utils/AppAlert';
 const { width } = Dimensions.get('window');
 
 const C = {
@@ -72,6 +74,15 @@ const STATUS_CONFIG = {
     label: 'Suspended',
     description: 'Your restaurant has been temporarily suspended. Please contact support for more details.',
     progressPercent: 0,
+  },
+  DELETION_REQUESTED: {
+    color: '#B45309',
+    bg: '#FFFBEB',
+    gradient: ['#FBBF24', '#D97706'],
+    icon: 'trash',
+    label: 'Deletion Requested',
+    description: 'You requested deletion of this restaurant. It stays live until an admin approves the request.',
+    progressPercent: 100,
   },
 };
 
@@ -150,16 +161,21 @@ export default function RestaurantStatusScreen({ navigation, route }) {
   const [refreshing, setRefreshing] = useState(false);
   const [restaurant, setRestaurant] = useState(null);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [cancellingDeletion, setCancellingDeletion] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
-      if (restaurantId) {
-        loadRestaurant();
-      } else {
-        loadFirstRestaurant();
+      const key = `RestaurantStatus-${restaurantId}`;
+      if (isStale(key) || !restaurant) {
+        if (restaurantId) {
+          loadRestaurant();
+        } else {
+          loadFirstRestaurant();
+        }
+        markFetched(key);
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [restaurantId])
+    }, [restaurantId, restaurant])
   );
 
   const loadFirstRestaurant = async () => {
@@ -171,7 +187,7 @@ export default function RestaurantStatusScreen({ navigation, route }) {
       }
     } catch (error) {
       console.log('Error loading restaurant:', error);
-      Alert.alert('Error', 'Failed to load restaurant');
+      AppAlert.alert('Error', 'Failed to load restaurant');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -187,7 +203,7 @@ export default function RestaurantStatusScreen({ navigation, route }) {
       }
     } catch (error) {
       console.log('Error loading restaurant:', error);
-      Alert.alert('Error', 'Failed to load restaurant');
+      AppAlert.alert('Error', 'Failed to load restaurant');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -201,6 +217,7 @@ export default function RestaurantStatusScreen({ navigation, route }) {
     } else {
       loadFirstRestaurant();
     }
+    markFetched(`RestaurantStatus-${restaurantId}`);
   };
 
   const getStatusTimeline = () => {
@@ -264,7 +281,44 @@ export default function RestaurantStatusScreen({ navigation, route }) {
       });
     }
 
+    if (restaurant.pendingDeletionRequest) {
+      steps.push({
+        title: 'Deletion Requested',
+        description: restaurant.pendingDeletionRequest.reason,
+        date: restaurant.pendingDeletionRequest.createdAt,
+        isCompleted: false,
+        isCurrent: true,
+        stepNumber: 5,
+      });
+    }
+
     return steps;
+  };
+
+  const handleCancelDeletionRequest = () => {
+    AppAlert.alert(
+      'Cancel Deletion Request',
+      'Are you sure you want to cancel this deletion request? The restaurant will remain active as normal.',
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Yes, Cancel Request',
+          style: 'destructive',
+          onPress: async () => {
+            setCancellingDeletion(true);
+            try {
+              await restaurantService.cancelDeletionRequest(restaurant.id);
+              AppAlert.alert('Cancelled', 'Your deletion request has been cancelled.');
+              if (restaurantId) { loadRestaurant(); } else { loadFirstRestaurant(); }
+            } catch (error) {
+              AppAlert.alert('Error', error.message || 'Failed to cancel deletion request');
+            } finally {
+              setCancellingDeletion(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   if (loading) {
@@ -327,7 +381,8 @@ export default function RestaurantStatusScreen({ navigation, route }) {
     );
   }
 
-  const statusConfig = STATUS_CONFIG[restaurant.status] || STATUS_CONFIG.PENDING;
+  const effectiveStatusKey = restaurant.pendingDeletionRequest ? 'DELETION_REQUESTED' : restaurant.status;
+  const statusConfig = STATUS_CONFIG[effectiveStatusKey] || STATUS_CONFIG.PENDING;
   const timeline = getStatusTimeline();
 
   return (
@@ -475,11 +530,46 @@ export default function RestaurantStatusScreen({ navigation, route }) {
               </View>
               <TouchableOpacity
                 style={styles.resubmitBtn}
-                onPress={() => navigation.navigate('RestaurantOnboarding', { restaurantId: restaurant.id })}
+                onPress={() => navigation.navigate('RestaurantEdit', { restaurantId: restaurant.id })}
                 activeOpacity={0.7}
               >
                 <Icon name="refresh-circle" size={scale(18)} color="#fff" />
                 <Text style={styles.resubmitBtnText}>Edit & Resubmit</Text>
+              </TouchableOpacity>
+            </LinearGradient>
+          </View>
+        )}
+
+        {/* Deletion Requested Card */}
+        {restaurant.pendingDeletionRequest && (
+          <View style={styles.rejectionCard}>
+            <LinearGradient colors={['#FFFBEB', '#FEF3C7']} style={[styles.rejectionGradient, { borderColor: '#FDE68A' }]}>
+              <View style={styles.rejectionHeader}>
+                <View style={[styles.rejectionIconBox, { backgroundColor: '#FEF3C7' }]}>
+                  <Icon name="trash" size={scale(22)} color="#B45309" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.rejectionTitle, { color: '#B45309' }]}>Deletion Requested</Text>
+                  <Text style={styles.rejectionReason}>
+                    An admin needs to approve this before the restaurant is permanently deleted.{'\n'}
+                    Reason: {restaurant.pendingDeletionRequest.reason}
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                style={[styles.resubmitBtn, { backgroundColor: '#B45309' }]}
+                onPress={handleCancelDeletionRequest}
+                activeOpacity={0.7}
+                disabled={cancellingDeletion}
+              >
+                {cancellingDeletion ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Icon name="close-circle" size={scale(18)} color="#fff" />
+                    <Text style={styles.resubmitBtnText}>Cancel Request</Text>
+                  </>
+                )}
               </TouchableOpacity>
             </LinearGradient>
           </View>

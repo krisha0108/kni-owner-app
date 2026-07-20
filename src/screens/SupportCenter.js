@@ -1,17 +1,19 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl,
-  ActivityIndicator, Modal, ScrollView, TextInput, Image, Alert, Linking, Dimensions,
+  ActivityIndicator, Modal, ScrollView, TextInput, Image, Linking, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import { launchImageLibrary } from 'react-native-image-picker';
-import { api, IMAGE_BASE_URL } from '../api/client';
+import { api, IMAGE_BASE_URL, uploadFile } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
 
 import { scale, moderateScale } from '../utils/responsive';
 import { usePermissions } from '../utils/usePermissions';
+import { isStale, markFetched } from '../utils/focusCache';
+import AppAlert from '../utils/AppAlert';
 const { width: W, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const C = {
@@ -191,7 +193,13 @@ export default function SupportCenter({ navigation }) {
     }
   }, [loadTickets]);
 
-  useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
+  useFocusEffect(useCallback(() => {
+    const key = `SupportCenter-${currentRestaurant?.id}`;
+    if (isStale(key) || tickets.length === 0) {
+      loadData();
+      markFetched(key);
+    }
+  }, [loadData, currentRestaurant, tickets.length]));
 
   const selectRestaurant = (r) => {
     setRestaurantPickerVisible(false);
@@ -201,6 +209,7 @@ export default function SupportCenter({ navigation }) {
       setPage(1);
       setHasMore(true);
       loadData(r.id);
+      markFetched(`SupportCenter-${r.id}`);
     }
   };
 
@@ -209,6 +218,7 @@ export default function SupportCenter({ navigation }) {
     setPage(1);
     setHasMore(true);
     loadData(currentRestaurant?.id);
+    markFetched(`SupportCenter-${currentRestaurant?.id}`);
   };
 
   const handleStatusTabChange = (statusKey) => {
@@ -268,34 +278,35 @@ export default function SupportCenter({ navigation }) {
   };
 
   const handleCreate = async () => {
-    if (!formData.title || !formData.description) { Alert.alert('Error', 'Please fill in title and description'); return; }
+    if (!formData.title || !formData.description) { AppAlert.alert('Error', 'Please fill in title and description'); return; }
     setIsCreating(true);
     try {
+      // The ticket endpoint only accepts a JSON body with a photoUrl string,
+      // not a raw file - upload the picked image first (same pattern as
+      // MyEquipmentScreen.js), then send its URL along with the ticket.
+      let photoUrl;
       if (ticketImageUri) {
-        const form = new FormData();
-        form.append('restaurantId', currentRestaurant?.id);
-        form.append('title', formData.title);
-        if (formData.equipmentName) form.append('equipmentName', formData.equipmentName);
-        form.append('category', formData.category);
-        form.append('description', formData.description);
-        form.append('photo', { uri: ticketImageUri, type: 'image/jpeg', name: `ticket_${Date.now()}.jpg` });
-        await api.post('/owner/support', form, { headers: { 'Content-Type': 'multipart/form-data' } });
-      } else {
-        await api.post('/owner/support', {
-          restaurantId: currentRestaurant?.id,
-          title: formData.title,
-          equipmentName: formData.equipmentName || undefined,
-          category: formData.category,
-          description: formData.description,
-        });
+        const uploadForm = new FormData();
+        uploadForm.append('file', { uri: ticketImageUri, type: 'image/jpeg', name: `ticket_${Date.now()}.jpg` });
+        uploadForm.append('folder', 'support-tickets');
+        const { data } = await uploadFile(uploadForm);
+        if (data.ok && data.url) photoUrl = data.url;
       }
-      Alert.alert('Success', 'Support ticket created successfully');
+      await api.post('/owner/support', {
+        restaurantId: currentRestaurant?.id,
+        title: formData.title,
+        equipmentName: formData.equipmentName || undefined,
+        category: formData.category,
+        description: formData.description,
+        photoUrl,
+      });
+      AppAlert.alert('Success', 'Support ticket created successfully');
       setCreateModalVisible(false);
       resetForm();
       loadData(currentRestaurant?.id);
     } catch (e) {
       console.error('Create ticket error:', e);
-      Alert.alert('Error', e?.response?.data?.error || 'Failed to create ticket');
+      AppAlert.alert('Error', e?.response?.data?.error || 'Failed to create ticket');
     } finally { setIsCreating(false); }
   };
 
@@ -324,33 +335,38 @@ export default function SupportCenter({ navigation }) {
     if (!selectedTicket || (!newMessage.trim() && !replyImageUri)) return;
     setIsSending(true);
     try {
+      // The thread endpoint only accepts a JSON body with an imageUrl string,
+      // not a raw file - upload the picked image first, then send its URL.
+      let imageUrl;
       if (replyImageUri) {
-        const form = new FormData();
-        form.append('message', newMessage || 'Image attached');
-        form.append('photo', { uri: replyImageUri, type: 'image/jpeg', name: `reply_${Date.now()}.jpg` });
-        const res = await api.post(`/owner/support/${selectedTicket.id}/threads`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
-        if (res.data.ok) { setThreads([...threads, res.data.data]); setNewMessage(''); setReplyImageUri(''); }
-      } else {
-        const res = await api.post(`/owner/support/${selectedTicket.id}/threads`, { message: newMessage });
-        if (res.data.ok) { setThreads([...threads, res.data.data]); setNewMessage(''); }
+        const uploadForm = new FormData();
+        uploadForm.append('file', { uri: replyImageUri, type: 'image/jpeg', name: `reply_${Date.now()}.jpg` });
+        uploadForm.append('folder', 'support-tickets');
+        const { data } = await uploadFile(uploadForm);
+        if (data.ok && data.url) imageUrl = data.url;
       }
+      const res = await api.post(`/owner/support/${selectedTicket.id}/threads`, {
+        message: newMessage || 'Image attached',
+        imageUrl,
+      });
+      if (res.data.ok) { setThreads([...threads, res.data.data]); setNewMessage(''); setReplyImageUri(''); }
     } catch (e) {
       console.error('Send message error:', e);
-      Alert.alert('Error', 'Failed to send message');
+      AppAlert.alert('Error', 'Failed to send message');
     } finally { setIsSending(false); }
   };
 
   const handleDeleteTicket = (ticketId) => {
-    Alert.alert('Delete Ticket', 'Are you sure you want to delete this ticket?', [
+    AppAlert.alert('Delete Ticket', 'Are you sure you want to delete this ticket?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete', style: 'destructive',
         onPress: async () => {
           try {
             await api.delete(`/owner/support/${ticketId}`);
-            Alert.alert('Success', 'Ticket deleted successfully');
+            AppAlert.alert('Success', 'Ticket deleted successfully');
             loadData(currentRestaurant?.id);
-          } catch (e) { Alert.alert('Error', e?.response?.data?.error || 'Failed to delete ticket'); }
+          } catch (e) { AppAlert.alert('Error', e?.response?.data?.error || 'Failed to delete ticket'); }
         },
       },
     ]);
@@ -419,7 +435,11 @@ export default function SupportCenter({ navigation }) {
               <Icon name="chevron-forward" size={scale(14)} color={C.info} />
             </TouchableOpacity>
             {(item.status === 'PENDING' || item.status === 'pending') && (
-              <TouchableOpacity style={st.deleteButton} onPress={() => handleDeleteTicket(item.id)}>
+              <TouchableOpacity
+                style={st.deleteButton}
+                onPress={() => handleDeleteTicket(item.id)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
                 <Icon name="trash-outline" size={scale(16)} color={C.danger} />
               </TouchableOpacity>
             )}

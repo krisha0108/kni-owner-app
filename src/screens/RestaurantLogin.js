@@ -8,7 +8,6 @@ import {
   Image,
   ScrollView,
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Modal,
@@ -20,6 +19,7 @@ import auth from '@react-native-firebase/auth';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import notificationService from '../services/notificationService';
+import AppAlert from '../utils/AppAlert';
 
 import { scale, moderateScale } from '../utils/responsive';
 export default function RestaurantLogin({ navigation }) {
@@ -60,11 +60,11 @@ export default function RestaurantLogin({ navigation }) {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      return Alert.alert('Missing Fields', 'Please enter both email and password.');
+      return AppAlert.alert('Missing Fields', 'Please enter both email and password.');
     }
 
     if (!email.includes('@')) {
-      return Alert.alert('Invalid Email', 'Please enter a valid email address.');
+      return AppAlert.alert('Invalid Email', 'Please enter a valid email address.');
     }
 
     setLoading(true);
@@ -77,7 +77,7 @@ export default function RestaurantLogin({ navigation }) {
       console.log('✅ Login successful:', response.data);
 
       if (response.data?.ok && response.data?.data) {
-        const { user, restaurants, hasApprovedRestaurant, token } = response.data.data;
+        const { user, restaurants, hasApprovedRestaurant, hasAnyRestaurant, token } = response.data.data;
 
         // Save auth token for mobile API requests
         if (token) {
@@ -94,21 +94,25 @@ export default function RestaurantLogin({ navigation }) {
           await AsyncStorage.setItem('selectedRestaurant', JSON.stringify(restaurants[0]));
         }
 
-        // Navigate based on restaurant approval status
+        // Navigate based on restaurant status: approved restaurant -> Home,
+        // has a restaurant awaiting approval -> PendingApproval,
+        // never added one yet (e.g. first login right after account approval) -> add restaurant
         if (hasApprovedRestaurant) {
           navigation.replace('Home');
-        } else {
+        } else if (hasAnyRestaurant) {
           navigation.replace('PendingApproval');
+        } else {
+          navigation.replace('RestaurantOnboarding');
         }
       } else {
-        Alert.alert('Login Failed', response.data?.error || 'Unknown error occurred');
+        AppAlert.alert('Login Failed', response.data?.error || 'Unknown error occurred');
       }
     } catch (error) {
       console.log('❌ Login error:', error);
 
       // Handle email not verified
       if (error.response?.data?.code === 'EMAIL_NOT_VERIFIED') {
-        Alert.alert(
+        AppAlert.alert(
           'Email Not Verified',
           'A verification code has been sent to your email.',
           [
@@ -124,8 +128,15 @@ export default function RestaurantLogin({ navigation }) {
         return;
       }
 
+      // Owner registration is pending/rejected admin approval
+      const code = error.response?.data?.code;
+      if (code === 'OWNER_PENDING_APPROVAL' || code === 'OWNER_REJECTED') {
+        navigation.replace('OwnerApprovalPending', { rejected: code === 'OWNER_REJECTED' });
+        return;
+      }
+
       const errorMessage = error.response?.data?.error || error.message || 'Login failed';
-      Alert.alert('Login Error', errorMessage);
+      AppAlert.alert('Login Error', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -162,7 +173,7 @@ export default function RestaurantLogin({ navigation }) {
       console.log('✅ Google Sign-In successful:', response.data);
 
       if (response.data?.ok && response.data?.data) {
-        const { user, restaurants, hasApprovedRestaurant, token } = response.data.data;
+        const { user, restaurants, hasApprovedRestaurant, hasAnyRestaurant, token } = response.data.data;
 
         // Save auth token for mobile API requests
         if (token) {
@@ -180,7 +191,7 @@ export default function RestaurantLogin({ navigation }) {
         // Decide where this user should land after login
         const destination = hasApprovedRestaurant
           ? 'Home'
-          : (restaurants && restaurants.length > 0 ? 'PendingApproval' : 'RestaurantOnboarding');
+          : (hasAnyRestaurant ? 'PendingApproval' : 'RestaurantOnboarding');
 
         // Google-registered users usually have no mobile number yet.
         // Show the add-phone modal first (needed for OTP login, SMS alerts, bookings),
@@ -197,20 +208,30 @@ export default function RestaurantLogin({ navigation }) {
           });
         }
       } else {
-        Alert.alert('Login Failed', response.data?.error || 'Google sign-in failed');
+        AppAlert.alert('Login Failed', response.data?.error || 'Google sign-in failed');
       }
     } catch (error) {
-      console.log('❌ Google Sign-In Full Error:', error);
+      const backendCode = error.response?.data?.code;
+
+      // Known, app-handled outcomes (pending/rejected approval) aren't failures —
+      // only log the alarming ❌ for genuinely unexpected errors.
+      if (backendCode === 'OWNER_PENDING_APPROVAL' || backendCode === 'OWNER_REJECTED') {
+        console.log('ℹ️ Google Sign-In: owner approval', backendCode);
+      } else {
+        console.log('❌ Google Sign-In Full Error:', error);
+      }
 
       if (error.code === 'SIGN_IN_CANCELLED') {
         console.log('User cancelled sign-in');
       } else if (error.code === 'IN_PROGRESS') {
-        Alert.alert('Sign-In In Progress', 'Please wait for the current sign-in to complete');
+        AppAlert.alert('Sign-In In Progress', 'Please wait for the current sign-in to complete');
       } else if (error.code === 'PLAY_SERVICES_NOT_AVAILABLE') {
-        Alert.alert('Google Play Services', 'Please update Google Play Services to continue');
+        AppAlert.alert('Google Play Services', 'Please update Google Play Services to continue');
+      } else if (backendCode === 'OWNER_PENDING_APPROVAL' || backendCode === 'OWNER_REJECTED') {
+        navigation.replace('OwnerApprovalPending', { rejected: backendCode === 'OWNER_REJECTED' });
       } else {
         const errorMessage = error.response?.data?.error || error.message || 'Google sign-in failed';
-        Alert.alert('Google Sign-In Error', errorMessage);
+        AppAlert.alert('Google Sign-In Error', errorMessage);
       }
     } finally {
       setGoogleLoading(false);

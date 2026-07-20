@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, ScrollView, Platform, Alert,
+  StyleSheet, ScrollView, Platform,
   ActivityIndicator, Image, Modal, Dimensions
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { api, getImageUrl, uploadFile } from '../api/client';
+import { useRestaurant } from '../context/RestaurantContext';
+import { invalidate } from '../utils/focusCache';
 
 import { scale, moderateScale } from '../utils/responsive';
+import AppAlert from '../utils/AppAlert';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const C = {
   primary: '#EF3A3A',
@@ -38,6 +41,7 @@ const OUTLET_TYPES = [
 
 export default function RestaurantEditScreen({ navigation, route }) {
   const { restaurantId } = route.params;
+  const { loadRestaurants } = useRestaurant();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
@@ -84,12 +88,12 @@ export default function RestaurantEditScreen({ navigation, route }) {
         setRestaurantImageUrl(restaurant.restaurantImageUrl);
         setFssaiCertificateUrl(restaurant.fssaiCertificateUrl);
       } else {
-        Alert.alert('Error', response.data.error || 'Failed to load restaurant');
+        AppAlert.alert('Error', response.data.error || 'Failed to load restaurant');
         (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'));
       }
     } catch (error) {
       console.error('Error loading restaurant:', error);
-      Alert.alert('Error', 'Failed to load restaurant details');
+      AppAlert.alert('Error', 'Failed to load restaurant details');
       (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'));
     } finally {
       setLoading(false);
@@ -146,7 +150,7 @@ export default function RestaurantEditScreen({ navigation, route }) {
       (response) => {
         if (response.didCancel) return;
         if (response.errorCode) {
-          Alert.alert('Error', 'Failed to pick image');
+          AppAlert.alert('Error', 'Failed to pick image');
           return;
         }
         if (response.assets && response.assets[0]) {
@@ -172,7 +176,7 @@ export default function RestaurantEditScreen({ navigation, route }) {
       (response) => {
         if (response.didCancel) return;
         if (response.errorCode) {
-          Alert.alert('Error', 'Failed to pick image');
+          AppAlert.alert('Error', 'Failed to pick image');
           return;
         }
         if (response.assets && response.assets[0]) {
@@ -192,27 +196,27 @@ export default function RestaurantEditScreen({ navigation, route }) {
 
     // Validation
     if (!name || name.trim().length < 2) {
-      Alert.alert('Required', 'Restaurant name must be at least 2 characters');
+      AppAlert.alert('Required', 'Restaurant name must be at least 2 characters');
       return;
     }
 
     if (!address || address.trim().length < 5) {
-      Alert.alert('Required', 'Address must be at least 5 characters');
+      AppAlert.alert('Required', 'Address must be at least 5 characters');
       return;
     }
 
     if (!city || city.trim().length < 2) {
-      Alert.alert('Required', 'City must be at least 2 characters');
+      AppAlert.alert('Required', 'City must be at least 2 characters');
       return;
     }
 
     if (fssaiNumber && fssaiNumber.length !== 14) {
-      Alert.alert('Invalid', 'FSSAI Number must be exactly 14 digits');
+      AppAlert.alert('Invalid', 'FSSAI Number must be exactly 14 digits');
       return;
     }
 
     if (pincode && pincode.length !== 6) {
-      Alert.alert('Invalid', 'Pincode must be exactly 6 digits');
+      AppAlert.alert('Invalid', 'Pincode must be exactly 6 digits');
       return;
     }
 
@@ -268,15 +272,20 @@ export default function RestaurantEditScreen({ navigation, route }) {
       });
 
       if (response.data?.ok) {
-        Alert.alert('Success', 'Restaurant updated successfully', [
+        loadRestaurants({ force: true });
+        // MyRestaurantsScreen keeps its own staleness cache, separate from
+        // the RestaurantContext one above — invalidate it too so the edit
+        // shows up immediately on goBack(), not after ~60s.
+        invalidate('MyRestaurants-list');
+        AppAlert.alert('Success', 'Restaurant updated successfully', [
           { text: 'OK', onPress: () => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home')) }
         ]);
       } else {
-        Alert.alert('Error', response.data?.error || 'Failed to update restaurant');
+        AppAlert.alert('Error', response.data?.error || 'Failed to update restaurant');
       }
     } catch (error) {
       console.error('Error updating restaurant:', error);
-      Alert.alert('Error', error?.response?.data?.error || 'Failed to update restaurant');
+      AppAlert.alert('Error', error?.response?.data?.error || 'Failed to update restaurant');
     } finally {
       setSaving(false);
     }
@@ -384,7 +393,7 @@ export default function RestaurantEditScreen({ navigation, route }) {
           style={styles.pickerBtn}
           onPress={() => {
             if (!selectedStateId) {
-              Alert.alert('', 'Please select state first');
+              AppAlert.alert('', 'Please select state first');
               return;
             }
             setShowCityPicker(true);

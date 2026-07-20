@@ -16,7 +16,6 @@ import {
   Image,
   TextInput,
   ScrollView,
-  Alert,
   Animated,
   Dimensions,
   StatusBar,
@@ -25,6 +24,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { api, getImageUrl } from '../api/client';
+import AppAlert from '../utils/AppAlert';
 import cartService from '../services/marketplaceCartService';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRestaurant } from '../context/RestaurantContext';
@@ -34,6 +34,7 @@ import PriceRequestModal from '../components/PriceRequestModal';
 
 import { scale, moderateScale } from '../utils/responsive';
 import { usePermissions } from '../utils/usePermissions';
+import { isStale, markFetched } from '../utils/focusCache';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = (SCREEN_WIDTH - 48) / 2;
 
@@ -126,7 +127,7 @@ export default function MarketplaceScreen({ navigation }) {
   }, [loadCart]);
 
   const loadData = useCallback(async (showLoader = true, pageNum = 1, append = false) => {
-    if (!selectedRestaurantId) return;
+    if (!selectedRestaurantId) { setLoading(false); return; }
 
     try {
       if (pageNum === 1 && showLoader) setLoading(true);
@@ -182,31 +183,41 @@ export default function MarketplaceScreen({ navigation }) {
   }, [selectedRestaurantId, selectedCategory]);
 
   useEffect(() => {
-    if (selectedRestaurantId) {
-      setPage(1);
-      setHasMore(true);
-      loadData(true, 1, false);
-    }
+    setPage(1);
+    setHasMore(true);
+    loadData(true, 1, false);
   }, [selectedRestaurantId, selectedCategory, loadData]);
 
   useFocusEffect(
     useCallback(() => {
       if (!selectedRestaurantId) return;
 
-      // Background refresh products - no loading spinner
-      loadData(false);
+      const productsKey = `Marketplace-products-${selectedRestaurantId}-${selectedCategory}`;
+      if (isStale(productsKey)) {
+        // Background refresh products - no loading spinner
+        loadData(false);
+        markFetched(productsKey);
+      }
 
-      // Reload cart from server
-      loadCart();
-    }, [selectedRestaurantId, loadData, loadCart])
+      // Cart contents change from other screens (add/remove items), so use a
+      // short TTL here — just enough to dedupe back-to-back focus events,
+      // not long enough to show stale cart contents.
+      const cartKey = `Marketplace-cart-${selectedRestaurantId}`;
+      if (isStale(cartKey, 5000)) {
+        loadCart();
+        markFetched(cartKey);
+      }
+    }, [selectedRestaurantId, selectedCategory, loadData, loadCart])
   );
 
   const onRefresh = async () => {
     setRefreshing(true);
     setPage(1);
     setHasMore(true);
-    await loadRestaurants();
+    await loadRestaurants({ force: true });
     await loadData(true, 1, false);
+    markFetched(`Marketplace-products-${selectedRestaurantId}-${selectedCategory}`);
+    markFetched(`Marketplace-cart-${selectedRestaurantId}`);
     await loadCart();
   };
 
@@ -238,7 +249,7 @@ export default function MarketplaceScreen({ navigation }) {
       const items = await cartService.addItem(selectedRestaurantId, product.id, newQuantity);
       setCart(items || []);
     } catch (error) {
-      Alert.alert('Error', error.message || 'Failed to add to cart');
+      AppAlert.alert('Error', error.message || 'Failed to add to cart');
       console.error('Add to cart error:', error);
     }
   };
@@ -252,14 +263,14 @@ export default function MarketplaceScreen({ navigation }) {
 
     try {
       if (newQty <= 0) {
-        await cartService.removeItem(item.id);
+        await cartService.removeItem(item.id, selectedRestaurantId);
       } else {
         const clamped = Math.min(newQty, item.product.stockQuantity || 999);
-        await cartService.updateItemQuantity(item.id, clamped);
+        await cartService.updateItemQuantity(item.id, clamped, selectedRestaurantId);
       }
       await loadCart();
     } catch (error) {
-      Alert.alert('Error', error.message || 'Failed to update cart');
+      AppAlert.alert('Error', error.message || 'Failed to update cart');
       console.error('Update cart error:', error);
     }
   };
@@ -267,7 +278,7 @@ export default function MarketplaceScreen({ navigation }) {
   // Request Price for "Price on Request" products
   const handleRequestPrice = (product) => {
     if (!selectedRestaurantId) {
-      Alert.alert('Error', 'Please select a restaurant first');
+      AppAlert.alert('Error', 'Please select a restaurant first');
       return;
     }
     setPriceRequestProduct(product);
@@ -411,12 +422,28 @@ export default function MarketplaceScreen({ navigation }) {
         {/* Add to Cart / Request Price Button - Fixed at bottom */}
         {can('marketplace:create') && (
         <View style={st.cardFooter}>
-          {item.priceOnRequest && !item.canPurchase ? (
+          {item.priceUnlock?.status === 'UNLOCKED' && !item.priceUnlock.isExpired && item.priceUnlock.unlockedPrice ? (
+            // Negotiated price is unlocked — purchasing must go through the
+            // advance+delivery split-payment flow on the product screen, not
+            // a direct Add to Cart here.
+            <TouchableOpacity
+              style={st.addToCartBtn}
+              onPress={() => navigation.navigate('MarketplaceProduct', { product: item, restaurantId: selectedRestaurantId })}
+            >
+              <Icon name="checkmark-circle-outline" size={scale(16)} color="#fff" />
+              <Text style={st.addToCartText}>Confirm Quote</Text>
+            </TouchableOpacity>
+          ) : item.priceOnRequest && !item.canPurchase ? (
             // Price on Request — show Request Price or status
             item.priceUnlock?.status === 'PENDING' ? (
               <View style={st.requestedContainer}>
                 <Icon name="time-outline" size={scale(14)} color={C.warning} />
                 <Text style={st.requestedText}>Price Requested</Text>
+              </View>
+            ) : item.priceUnlock?.status === 'COUNTERED' ? (
+              <View style={st.requestedContainer}>
+                <Icon name="swap-horizontal-outline" size={scale(14)} color={C.warning} />
+                <Text style={st.requestedText}>Counter Sent</Text>
               </View>
             ) : (
               <TouchableOpacity
@@ -459,6 +486,31 @@ export default function MarketplaceScreen({ navigation }) {
             </TouchableOpacity>
           )}
         </View>
+        )}
+        {/* Negotiate entry point — KNI Official Store, regular-priced items
+            with no active negotiation. Shown on the card so it's discoverable
+            while browsing, not just inside the product detail screen. */}
+        {can('marketplace:create') && item.isAdminStore && !item.priceOnRequest &&
+          (!item.priceUnlock || item.priceUnlock.status === 'DECLINED' || item.priceUnlock.isExpired) && (
+          <TouchableOpacity
+            style={st.negotiateLink}
+            onPress={() => handleRequestPrice(item)}
+          >
+            <Icon name="pricetag-outline" size={scale(12)} color="#2563EB" />
+            <Text style={st.negotiateLinkText}>Found it cheaper? Negotiate</Text>
+          </TouchableOpacity>
+        )}
+        {can('marketplace:create') && item.isAdminStore && !item.priceOnRequest && item.priceUnlock?.status === 'PENDING' && (
+          <View style={st.negotiateLink}>
+            <Icon name="time-outline" size={scale(12)} color="#2563EB" />
+            <Text style={st.negotiateLinkText}>Price negotiation requested</Text>
+          </View>
+        )}
+        {can('marketplace:create') && item.isAdminStore && !item.priceOnRequest && item.priceUnlock?.status === 'COUNTERED' && (
+          <View style={st.negotiateLink}>
+            <Icon name="swap-horizontal-outline" size={scale(12)} color="#2563EB" />
+            <Text style={st.negotiateLinkText}>Counter-offer sent</Text>
+          </View>
         )}
       </View>
     );
@@ -1114,6 +1166,19 @@ const st = StyleSheet.create({
   },
   addToCartTextDisabled: {
     color: C.muted,
+  },
+  negotiateLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(4),
+    paddingHorizontal: scale(10),
+    paddingTop: scale(6),
+    paddingBottom: scale(2),
+  },
+  negotiateLinkText: {
+    fontSize: moderateScale(10.5),
+    fontWeight: '600',
+    color: '#2563EB',
   },
 
   // Empty State

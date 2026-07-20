@@ -7,7 +7,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList,
-  TextInput, ActivityIndicator, Alert, Modal, StatusBar,
+  TextInput, ActivityIndicator, Modal, StatusBar,
   useWindowDimensions, Dimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,10 +15,12 @@ import Icon from 'react-native-vector-icons/Ionicons';
 // Custom date picker - no external dependency needed
 import { api } from '../api/client';
 import { useRestaurant } from '../context/RestaurantContext';
+import { invalidate } from '../utils/focusCache';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 import { scale, moderateScale } from '../utils/responsive';
 import useKeyboardHeight from '../utils/useKeyboardHeight';
+import AppAlert from '../utils/AppAlert';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const C = {
@@ -187,14 +189,15 @@ export default function AMCRequestScreen({ navigation }) {
       };
       const response = await api.post('/owner/amc-requests', payload);
       if (response.data?.ok) {
-        Alert.alert('Success', 'AMC request submitted successfully!', [
+        invalidate(`AMCRequestsList-${restaurantId}`);
+        AppAlert.alert('Success', 'AMC request submitted successfully!', [
           { text: 'OK', onPress: () => navigation.navigate('AMCRequestsList') },
         ]);
       } else {
         throw new Error(response.data?.error || 'Failed to submit request');
       }
     } catch (error) {
-      Alert.alert('Error', error.response?.data?.error || error.message || 'Failed to submit request');
+      AppAlert.alert('Error', error.response?.data?.error || error.message || 'Failed to submit request');
     } finally {
       setSubmitting(false);
     }

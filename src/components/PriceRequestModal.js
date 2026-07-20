@@ -9,11 +9,13 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { api } from '../api/client';
 import { scale, moderateScale } from '../utils/responsive';
+import AppAlert from '../utils/AppAlert';
+
+const formatPrice = (amount) => `₹${(amount || 0).toLocaleString('en-IN')}`;
 
 const C = {
   primary: '#EF3A3A',
@@ -37,16 +39,27 @@ const C = {
 export default function PriceRequestModal({ visible, product, restaurantId, onClose, onSuccess }) {
   const [quantity, setQuantity] = useState('');
   const [message, setMessage] = useState('');
+  const [proposedPrice, setProposedPrice] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // The list price is already visible for regular products - let the owner
+  // propose their own price directly instead of sending a blank "request"
+  // for a price they can already see.
+  const priceIsKnown = !!product && !product.priceOnRequest;
 
   const resetAndClose = () => {
     setQuantity('');
     setMessage('');
+    setProposedPrice('');
     onClose();
   };
 
   const handleSubmit = async () => {
     if (!product || !restaurantId) return;
+    if (priceIsKnown && !proposedPrice) {
+      AppAlert.alert('Error', "Enter the price you'd like to offer");
+      return;
+    }
 
     try {
       setSubmitting(true);
@@ -55,19 +68,26 @@ export default function PriceRequestModal({ visible, product, restaurantId, onCl
         vendorProductId: product.id,
         quantity: quantity ? parseInt(quantity, 10) : undefined,
         message: message.trim() || undefined,
+        proposedPrice: priceIsKnown ? parseInt(proposedPrice, 10) : undefined,
       });
 
       if (res.data.ok) {
-        Alert.alert('Request Sent', "Your price request has been submitted. You'll be notified when the admin responds.");
+        AppAlert.alert(
+          priceIsKnown ? 'Offer Sent' : 'Request Sent',
+          priceIsKnown
+            ? "Your offer has been sent. You'll be notified when the admin responds."
+            : "Your price request has been submitted. You'll be notified when the admin responds."
+        );
         setQuantity('');
         setMessage('');
+        setProposedPrice('');
         onClose();
         onSuccess?.();
       } else {
-        Alert.alert('Error', res.data.error || 'Failed to submit price request');
+        AppAlert.alert('Error', res.data.error || 'Failed to submit price request');
       }
     } catch {
-      Alert.alert('Error', 'Failed to submit price request');
+      AppAlert.alert('Error', 'Failed to submit price request');
     } finally {
       setSubmitting(false);
     }
@@ -90,9 +110,11 @@ export default function PriceRequestModal({ visible, product, restaurantId, onCl
           {/* Header */}
           <View style={st.header}>
             <View style={{ flex: 1 }}>
-              <Text style={st.title}>Request Price</Text>
+              <Text style={st.title}>{priceIsKnown ? 'Negotiate Price' : 'Request Price'}</Text>
               <Text style={st.subtitle} numberOfLines={2}>
-                Request a custom price quote for "{product.name}"
+                {priceIsKnown
+                  ? `List price for "${product.name}" is ${formatPrice(product.price)}. Offer your price below.`
+                  : `Request a custom price quote for "${product.name}"`}
               </Text>
             </View>
             <TouchableOpacity onPress={resetAndClose} style={st.closeBtn}>
@@ -102,6 +124,19 @@ export default function PriceRequestModal({ visible, product, restaurantId, onCl
 
           {/* Form */}
           <View style={st.form}>
+            {priceIsKnown && (
+              <View style={st.field}>
+                <Text style={st.label}>Your Offer Price *</Text>
+                <TextInput
+                  style={st.input}
+                  value={proposedPrice}
+                  onChangeText={setProposedPrice}
+                  placeholder={`e.g. ${Math.round((product.price || 0) * 0.9)}`}
+                  placeholderTextColor={C.muted}
+                  keyboardType="number-pad"
+                />
+              </View>
+            )}
             <View style={st.field}>
               <Text style={st.label}>Quantity (optional)</Text>
               <TextInput
@@ -146,7 +181,7 @@ export default function PriceRequestModal({ visible, product, restaurantId, onCl
               ) : (
                 <>
                   <Icon name="pricetag-outline" size={scale(16)} color="#fff" />
-                  <Text style={st.submitText}>Submit Request</Text>
+                  <Text style={st.submitText}>{priceIsKnown ? 'Send Offer' : 'Submit Request'}</Text>
                 </>
               )}
             </TouchableOpacity>

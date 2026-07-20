@@ -5,7 +5,6 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,6 +12,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { api } from '../api/client';
+import AppAlert from '../utils/AppAlert';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
@@ -82,7 +82,7 @@ export default function CartScreen({ navigation }) {
       }
     } catch (error) {
       console.error('Update quantity error:', error);
-      Alert.alert('Error', 'Could not update item quantity');
+      AppAlert.alert('Error', 'Could not update item quantity');
     } finally {
       setUpdating(null);
     }
@@ -108,7 +108,7 @@ export default function CartScreen({ navigation }) {
   };
 
   const handleRemove = async (itemId) => {
-    Alert.alert(
+    AppAlert.alert(
       'Remove Item',
       'Are you sure you want to remove this item from cart?',
       [
@@ -133,7 +133,7 @@ export default function CartScreen({ navigation }) {
               }
             } catch (error) {
               console.error('Remove item error:', error);
-              Alert.alert('Error', 'Could not remove item');
+              AppAlert.alert('Error', 'Could not remove item');
             }
           },
         },
@@ -143,7 +143,7 @@ export default function CartScreen({ navigation }) {
 
   const handleProceedToBooking = () => {
     if (cart.length === 0) {
-      return Alert.alert('Empty Cart', 'Please add items to cart before proceeding');
+      return AppAlert.alert('Empty Cart', 'Please add items to cart before proceeding');
     }
 
     navigation.navigate('SlotBooking', { cartItems: cart });
@@ -335,7 +335,7 @@ export default function CartScreen({ navigation }) {
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <TouchableOpacity
             onPress={() => {
-              Alert.alert('Clear Cart', 'Remove all items from cart?', [
+              AppAlert.alert('Clear Cart', 'Remove all items from cart?', [
                 { text: 'Cancel', style: 'cancel' },
                 {
                   text: 'Clear',
@@ -349,7 +349,7 @@ export default function CartScreen({ navigation }) {
                       loadCart();
                     } catch (error) {
                       console.error('Clear cart error:', error);
-                      Alert.alert('Error', 'Could not clear cart');
+                      AppAlert.alert('Error', 'Could not clear cart');
                     }
                   },
                 },

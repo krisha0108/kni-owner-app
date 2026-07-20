@@ -1,7 +1,8 @@
 import { api } from '../api/client';
 import RNFS from 'react-native-fs';
-import { Platform, Alert, Share } from 'react-native';
+import { Platform, Share } from 'react-native';
 import FileViewer from 'react-native-file-viewer';
+import AppAlert from '../utils/AppAlert';
 
 /**
  * Generate HTML content for analytics PDF
@@ -281,7 +282,7 @@ export const openPDF = async (filePath) => {
     });
   } catch (error) {
     console.error('Open file error:', error);
-    Alert.alert(
+    AppAlert.alert(
       'Cannot Open File',
       'Please install a PDF or HTML viewer app to open this file.',
       [{ text: 'OK' }]

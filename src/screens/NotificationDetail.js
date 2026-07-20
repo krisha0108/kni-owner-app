@@ -8,6 +8,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 
 import { scale, moderateScale } from '../utils/responsive';
+import { resolveNotificationLink } from '../utils/notificationLink';
 const { width: W } = Dimensions.get('window');
 
 const C = {
@@ -21,23 +22,16 @@ const C = {
   border: '#E5E7EB',
 };
 
+// Keyed on the real Prisma NotificationType enum - see Notifications.js for
+// the same TYPE_CONFIG (kept in sync manually since these are separate screens).
 const TMAP = {
-  ticket_seen:         { ic: 'eye',              gradient: ['#0EA5E9', '#0369A1'], label: 'Ticket Update' },
-  ticket_onwork:       { ic: 'construct',         gradient: ['#818CF8', '#4F46E5'], label: 'Ticket In Progress' },
-  restaurant_approved: { ic: 'checkmark-circle',  gradient: ['#34D399', '#10B981'], label: 'Restaurant Approved' },
-  restaurant_rejected: { ic: 'close-circle',      gradient: ['#F87171', '#EF4444'], label: 'Restaurant Rejected' },
-  eq_request_approved: { ic: 'cube-outline',      gradient: ['#2DD4BF', '#14B8A6'], label: 'Request Approved' },
-  engineer_assigned:   { ic: 'people-outline',    gradient: ['#FBBF24', '#F59E0B'], label: 'Engineer Assigned' },
-  feature:             { ic: 'sparkles-outline',  gradient: ['#A78BFA', '#7C3AED'], label: 'New Feature' },
-  update:              { ic: 'download-outline',  gradient: ['#60A5FA', '#3B82F6'], label: 'App Update' },
-  order_accepted:      { ic: 'checkmark-circle',  gradient: ['#34D399', '#10B981'], label: 'Order Accepted' },
-  order_in_progress:   { ic: 'construct',         gradient: ['#818CF8', '#4F46E5'], label: 'Order In Progress' },
-  order_completed:     { ic: 'checkmark-done',    gradient: ['#34D399', '#059669'], label: 'Order Completed' },
-  order_update:        { ic: 'cube-outline',      gradient: ['#2DD4BF', '#14B8A6'], label: 'Order Update' },
-  completion_approval_required: { ic: 'alert-circle', gradient: ['#FBBF24', '#D97706'], label: 'Approval Required' },
-  pending_approval:    { ic: 'hourglass-outline', gradient: ['#FBBF24', '#D97706'], label: 'Pending Approval' },
-  approval_required:   { ic: 'alert-circle',      gradient: ['#FBBF24', '#D97706'], label: 'Approval Required' },
-  work_completed:      { ic: 'checkmark-done',    gradient: ['#FBBF24', '#D97706'], label: 'Work Completed' },
+  BOOKING:      { ic: 'calendar',         gradient: ['#60A5FA', '#3B82F6'], label: 'Booking' },
+  PAYMENT:      { ic: 'card',             gradient: ['#34D399', '#059669'], label: 'Payment' },
+  ORDER:        { ic: 'cube',             gradient: ['#2DD4BF', '#14B8A6'], label: 'Order' },
+  AMC:          { ic: 'shield-checkmark', gradient: ['#818CF8', '#4F46E5'], label: 'AMC' },
+  EQUIPMENT:    { ic: 'construct',        gradient: ['#FBBF24', '#D97706'], label: 'Equipment' },
+  SYSTEM:       { ic: 'notifications',    gradient: ['#94A3B8', '#64748B'], label: 'System' },
+  ANNOUNCEMENT: { ic: 'megaphone',        gradient: ['#A78BFA', '#7C3AED'], label: 'Announcement' },
 };
 
 const DEFAULT_TYPE = { ic: 'notifications-outline', gradient: ['#94A3B8', '#64748B'], label: 'Notification' };
@@ -69,14 +63,19 @@ export default function NotificationDetail({ navigation, route }) {
 
   const typeConfig = TMAP[notification.type] || DEFAULT_TYPE;
 
+  const ACTION_LABELS = {
+    BookingDetail: { label: 'View Booking', icon: 'calendar' },
+    RestaurantStatus: { label: 'View Restaurant Status', icon: 'storefront' },
+    MyRestaurants: { label: 'View Restaurants', icon: 'storefront' },
+    SupportCenter: { label: 'View Support', icon: 'chatbubbles' },
+    TeamManagement: { label: 'View Team', icon: 'people' },
+  };
+
   const getActionButton = () => {
-    if (notification.type?.startsWith('ticket')) {
-      return { label: 'View Ticket', icon: 'chatbubbles', screen: 'SupportCenter', params: { id: notification.meta?.ticketId } };
-    }
-    if (notification.type?.startsWith('restaurant')) {
-      return { label: 'View Restaurants', icon: 'storefront', screen: 'Restaurants', params: {} };
-    }
-    return null;
+    const link = resolveNotificationLink(notification.linkUrl);
+    if (!link) return null;
+    const meta = ACTION_LABELS[link.screen] || { label: 'View Details', icon: 'arrow-forward-circle' };
+    return { ...meta, screen: link.screen, params: link.params };
   };
 
   const actionButton = getActionButton();

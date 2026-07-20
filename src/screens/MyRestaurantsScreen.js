@@ -7,7 +7,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl,
-  ActivityIndicator, Alert, Image, StatusBar, useWindowDimensions, Platform,
+  ActivityIndicator, Image, StatusBar, useWindowDimensions, Platform, Modal, TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
@@ -16,9 +16,13 @@ import { api, getImageUrl } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
+import { useRestaurant } from '../context/RestaurantContext';
+import restaurantService from '../services/restaurantService';
 
 import { scale, moderateScale } from '../utils/responsive';
 import { usePermissions } from '../utils/usePermissions';
+import { isStale, markFetched } from '../utils/focusCache';
+import AppAlert from '../utils/AppAlert';
 // Premium Color Palette (Consistent with other screens)
 const C = {
   primary: '#EF3A3A',
@@ -50,8 +54,11 @@ const statusFilters = [
   { key: 'REJECTED', label: 'Rejected', icon: 'close-circle', color: C.danger },
 ];
 
-const getStatusStyle = (status) => {
-  switch (status) {
+const getStatusStyle = (item) => {
+  if (item.pendingDeletionRequest) {
+    return { bg: C.dangerLight, text: C.danger, icon: 'trash', label: 'Deletion Requested' };
+  }
+  switch (item.status) {
     case 'APPROVED':
       return { bg: C.successLight, text: C.success, icon: 'checkmark-circle', label: 'Approved' };
     case 'PENDING':
@@ -60,7 +67,7 @@ const getStatusStyle = (status) => {
     case 'REJECTED':
       return { bg: C.dangerLight, text: C.danger, icon: 'close-circle', label: 'Rejected' };
     default:
-      return { bg: '#F1F5F9', text: C.muted, icon: 'help-circle', label: status };
+      return { bg: '#F1F5F9', text: C.muted, icon: 'help-circle', label: item.status };
   }
 };
 
@@ -68,6 +75,7 @@ export default function MyRestaurantsScreen({ navigation }) {
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
   const { can } = usePermissions();
+  const { loadRestaurants: refreshContextRestaurants } = useRestaurant();
   const gridColumns = isTablet ? 2 : 1;
 
   const [loading, setLoading] = useState(true);
@@ -76,6 +84,9 @@ export default function MyRestaurantsScreen({ navigation }) {
   const [menuVisible, setMenuVisible] = useState(false);
   const [deleting, setDeleting] = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
+  const [deletionRequestTarget, setDeletionRequestTarget] = useState(null);
+  const [deletionReason, setDeletionReason] = useState('');
+  const [submittingDeletionRequest, setSubmittingDeletionRequest] = useState(false);
 
   // Status counts
   const statusCounts = useMemo(() => {
@@ -96,7 +107,9 @@ export default function MyRestaurantsScreen({ navigation }) {
     });
   }, [restaurants, statusFilter]);
 
-  useFocusEffect(useCallback(() => { loadRestaurants(); }, []));
+  useFocusEffect(useCallback(() => {
+    if (isStale('MyRestaurants-list') || restaurants.length === 0) { loadRestaurants(); markFetched('MyRestaurants-list'); }
+  }, [restaurants.length]));
 
   const loadRestaurants = async () => {
     try {
@@ -111,7 +124,7 @@ export default function MyRestaurantsScreen({ navigation }) {
     }
   };
 
-  const onRefresh = () => { setRefreshing(true); loadRestaurants(); };
+  const onRefresh = () => { setRefreshing(true); loadRestaurants(); markFetched('MyRestaurants-list'); };
 
   const handleEdit = (restaurant) => {
     navigation.navigate('RestaurantEdit', { restaurantId: restaurant.id });
@@ -119,13 +132,35 @@ export default function MyRestaurantsScreen({ navigation }) {
 
   const handleDelete = (restaurant) => {
     if (restaurant.status === 'APPROVED') {
-      Alert.alert('Cannot Delete', 'Approved restaurants cannot be deleted. Contact support for assistance.', [{ text: 'OK' }]);
+      if (restaurant.pendingDeletionRequest) {
+        AppAlert.alert('Deletion Requested', 'A deletion request for this restaurant is already pending admin review.', [{ text: 'OK' }]);
+        return;
+      }
+      setDeletionReason('');
+      setDeletionRequestTarget(restaurant);
       return;
     }
-    Alert.alert('Delete Restaurant', `Are you sure you want to delete "${restaurant.name}"?`, [
+    AppAlert.alert('Delete Restaurant', `Are you sure you want to delete "${restaurant.name}"?`, [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: () => confirmDelete(restaurant) },
     ]);
+  };
+
+  const submitDeletionRequest = async () => {
+    if (!deletionRequestTarget || deletionReason.trim().length < 10) return;
+    setSubmittingDeletionRequest(true);
+    try {
+      await restaurantService.requestDeletion(deletionRequestTarget.id, deletionReason.trim());
+      setDeletionRequestTarget(null);
+      setDeletionReason('');
+      AppAlert.alert('Request Submitted', 'An admin will review your deletion request.');
+      loadRestaurants();
+      refreshContextRestaurants({ force: true });
+    } catch (error) {
+      AppAlert.alert('Error', error.message || 'Failed to submit deletion request');
+    } finally {
+      setSubmittingDeletionRequest(false);
+    }
   };
 
   const confirmDelete = async (restaurant) => {
@@ -133,23 +168,29 @@ export default function MyRestaurantsScreen({ navigation }) {
     try {
       const response = await api.delete(`/owner/restaurants/${restaurant.id}`);
       if (response.data.ok) {
-        Alert.alert('Success', 'Restaurant deleted successfully');
+        AppAlert.alert('Success', 'Restaurant deleted successfully');
         loadRestaurants();
+        // Keep the RestaurantContext (Home screen / restaurant selector) in
+        // sync too — it has its own separate cache from this screen's.
+        refreshContextRestaurants({ force: true });
       } else {
-        Alert.alert('Error', response.data.error || 'Failed to delete');
+        AppAlert.alert('Error', response.data.error || 'Failed to delete');
       }
     } catch (error) {
-      Alert.alert('Error', error?.response?.data?.error || 'Failed to delete');
+      AppAlert.alert('Error', error?.response?.data?.error || 'Failed to delete');
     } finally {
       setDeleting(null);
     }
   };
 
+  // Instant self-delete (no real data yet)
   const canDelete = (restaurant) => restaurant.status === 'PENDING' || restaurant.status === 'REJECTED' || restaurant.status === 'PENDING_APPROVAL';
+  // Approved restaurants can only be removed via an admin-approved deletion request
+  const canRequestDeletion = (restaurant) => restaurant.status === 'APPROVED' && !restaurant.pendingDeletionRequest;
 
   // ==================== RENDER RESTAURANT CARD ====================
   const renderRestaurantCard = ({ item, index }) => {
-    const statusStyle = getStatusStyle(item.status);
+    const statusStyle = getStatusStyle(item);
     const isDeleting = deleting === item.id;
 
     return (
@@ -229,7 +270,7 @@ export default function MyRestaurantsScreen({ navigation }) {
           </TouchableOpacity>
           )}
 
-          {can('restaurant:delete') && canDelete(item) && (
+          {can('restaurant:delete') && (canDelete(item) || canRequestDeletion(item)) && (
             <TouchableOpacity
               style={[st.iconBtn, { backgroundColor: C.dangerLight }]}
               onPress={() => handleDelete(item)}
@@ -395,6 +436,60 @@ export default function MyRestaurantsScreen({ navigation }) {
 
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
       <KniBottomNav navigation={navigation} />
+
+      {/* Request Deletion Modal - approved restaurants require admin approval */}
+      <Modal
+        visible={!!deletionRequestTarget}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setDeletionRequestTarget(null)}
+      >
+        <View style={st.modalOverlay}>
+          <View style={st.modalCard}>
+            <View style={st.modalHeader}>
+              <Text style={st.modalTitle}>Request Deletion</Text>
+              <TouchableOpacity onPress={() => setDeletionRequestTarget(null)}>
+                <Icon name="close" size={scale(22)} color={C.ink} />
+              </TouchableOpacity>
+            </View>
+            <Text style={st.modalSubtitle}>
+              "{deletionRequestTarget?.name}" is a live, approved restaurant. Deleting it requires
+              admin approval - it will only be removed once an admin reviews and approves your request.
+            </Text>
+            <TextInput
+              style={st.modalTextArea}
+              placeholder="Reason for deletion (min 10 characters)..."
+              placeholderTextColor={C.muted}
+              value={deletionReason}
+              onChangeText={setDeletionReason}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+              autoFocus
+            />
+            <View style={st.modalActions}>
+              <TouchableOpacity
+                style={st.modalCancelBtn}
+                onPress={() => setDeletionRequestTarget(null)}
+                disabled={submittingDeletionRequest}
+              >
+                <Text style={st.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[st.modalSubmitBtn, (deletionReason.trim().length < 10 || submittingDeletionRequest) && st.modalSubmitBtnDisabled]}
+                onPress={submitDeletionRequest}
+                disabled={deletionReason.trim().length < 10 || submittingDeletionRequest}
+              >
+                {submittingDeletionRequest ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={st.modalSubmitText}>Submit Request</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -466,4 +561,18 @@ const st = StyleSheet.create({
   // Add More Button
   addMoreBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: scale(10), marginTop: scale(8), marginBottom: scale(20), paddingVertical: scale(16), backgroundColor: C.card, borderRadius: scale(14), borderWidth: 2, borderColor: C.primary, borderStyle: 'dashed' },
   addMoreText: { fontSize: moderateScale(15), fontWeight: '700', color: C.primary },
+
+  // Request Deletion Modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalCard: { backgroundColor: C.card, borderTopLeftRadius: scale(20), borderTopRightRadius: scale(20), padding: scale(20) },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: scale(8) },
+  modalTitle: { fontSize: moderateScale(18), fontWeight: '800', color: C.ink },
+  modalSubtitle: { fontSize: moderateScale(13), color: C.text, marginBottom: scale(14), lineHeight: moderateScale(19) },
+  modalTextArea: { backgroundColor: C.bg, borderRadius: scale(12), borderWidth: 1, borderColor: C.border, padding: scale(14), fontSize: moderateScale(14), color: C.text, minHeight: scale(100) },
+  modalActions: { flexDirection: 'row', gap: scale(10), marginTop: scale(16) },
+  modalCancelBtn: { flex: 1, paddingVertical: scale(14), borderRadius: scale(12), borderWidth: 1.5, borderColor: C.border, alignItems: 'center' },
+  modalCancelText: { fontSize: moderateScale(14), fontWeight: '700', color: C.text },
+  modalSubmitBtn: { flex: 1, paddingVertical: scale(14), borderRadius: scale(12), backgroundColor: C.danger, alignItems: 'center' },
+  modalSubmitBtnDisabled: { backgroundColor: '#FCA5A5' },
+  modalSubmitText: { fontSize: moderateScale(14), fontWeight: '700', color: '#fff' },
 });

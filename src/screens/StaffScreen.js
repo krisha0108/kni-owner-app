@@ -16,7 +16,6 @@ import {
   Modal,
   TextInput,
   ScrollView,
-  Alert,
   Platform,
   useWindowDimensions,
 } from 'react-native';
@@ -29,9 +28,11 @@ import { useRestaurant } from '../context/RestaurantContext';
 import { RestaurantSelectorBar } from '../components/RestaurantSelector';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
+import AppAlert from '../utils/AppAlert';
 
 import { scale, moderateScale } from '../utils/responsive';
 import { usePermissions } from '../utils/usePermissions';
+import { isStale, markFetched } from '../utils/focusCache';
 // Premium Color Palette
 const C = {
   primary: '#EF3A3A',
@@ -143,7 +144,10 @@ export default function StaffScreen({ navigation }) {
 
   const isEditMode = form.id !== null;
 
-  useFocusEffect(useCallback(() => { loadData(); }, [selectedRestaurant]));
+  useFocusEffect(useCallback(() => {
+    const key = `Staff-${selectedRestaurant}`;
+    if (isStale(key) || staff.length === 0) { loadData(); markFetched(key); }
+  }, [selectedRestaurant, staff.length]));
 
   const loadData = async (pageNum = 1, append = false) => {
     if (!selectedRestaurant) { setLoading(false); return; }
@@ -177,7 +181,7 @@ export default function StaffScreen({ navigation }) {
       }
     } catch (error) {
       console.error('Error loading staff:', error);
-      Alert.alert('Error', 'Failed to load staff data');
+      AppAlert.alert('Error', 'Failed to load staff data');
     } finally {
       setLoading(false);
       setLoadingMore(false);
@@ -206,8 +210,9 @@ export default function StaffScreen({ navigation }) {
     setRefreshing(true);
     setPage(1);
     setHasMore(true);
-    await loadRestaurants();
+    await loadRestaurants({ force: true });
     await loadData(1, false);
+    markFetched(`Staff-${selectedRestaurant}`);
   };
 
   const onDateChange = (event, selectedDate) => {
@@ -244,10 +249,10 @@ export default function StaffScreen({ navigation }) {
   };
 
   const saveStaff = async () => {
-    if (!form.name.trim()) { Alert.alert('Error', 'Please enter staff name'); return; }
-    if (!form.phone || form.phone.length < 10) { Alert.alert('Error', 'Please enter valid phone (min 10 digits)'); return; }
-    if (!form.role) { Alert.alert('Error', 'Please select a role'); return; }
-    if (!form.salary) { Alert.alert('Error', 'Please enter salary/wage'); return; }
+    if (!form.name.trim()) { AppAlert.alert('Error', 'Please enter staff name'); return; }
+    if (!form.phone || form.phone.length < 10) { AppAlert.alert('Error', 'Please enter valid phone (min 10 digits)'); return; }
+    if (!form.role) { AppAlert.alert('Error', 'Please select a role'); return; }
+    if (!form.salary) { AppAlert.alert('Error', 'Please enter salary/wage'); return; }
 
     setSaving(true);
     try {
@@ -261,15 +266,15 @@ export default function StaffScreen({ navigation }) {
 
       if (isEditMode) {
         await api.patch(`/owner/staff/${form.id}`, payload);
-        Alert.alert('Success', 'Staff updated successfully');
+        AppAlert.alert('Success', 'Staff updated successfully');
       } else {
         await api.post('/owner/staff', payload);
-        Alert.alert('Success', 'Staff added successfully');
+        AppAlert.alert('Success', 'Staff added successfully');
       }
       setModalVisible(false);
       loadData();
     } catch (error) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to save staff');
+      AppAlert.alert('Error', error.response?.data?.error || 'Failed to save staff');
     } finally {
       setSaving(false);
     }
@@ -279,12 +284,12 @@ export default function StaffScreen({ navigation }) {
     if (!selectedStaff) return;
     try {
       await api.patch(`/owner/staff/${selectedStaff.id}`, { status: newStatus });
-      Alert.alert('Success', `Status updated to ${getStatusConfig(newStatus).label}`);
+      AppAlert.alert('Success', `Status updated to ${getStatusConfig(newStatus).label}`);
       setActionModalVisible(false);
       setSelectedStaff(null);
       loadData();
     } catch (error) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to update status');
+      AppAlert.alert('Error', error.response?.data?.error || 'Failed to update status');
     }
   };
 
@@ -296,7 +301,7 @@ export default function StaffScreen({ navigation }) {
 
   const handleDelete = () => {
     if (!selectedStaff || selectedStaff.status === 'TERMINATED') return;
-    Alert.alert('Terminate Staff', `Are you sure you want to terminate ${selectedStaff.name}?`, [
+    AppAlert.alert('Terminate Staff', `Are you sure you want to terminate ${selectedStaff.name}?`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Terminate', style: 'destructive',
@@ -304,12 +309,12 @@ export default function StaffScreen({ navigation }) {
           setDeleting(true);
           try {
             await api.delete(`/owner/staff/${selectedStaff.id}`);
-            Alert.alert('Success', 'Staff terminated');
+            AppAlert.alert('Success', 'Staff terminated');
             setActionModalVisible(false);
             setSelectedStaff(null);
             loadData();
           } catch (error) {
-            Alert.alert('Error', 'Failed to terminate staff');
+            AppAlert.alert('Error', 'Failed to terminate staff');
           } finally {
             setDeleting(false);
           }

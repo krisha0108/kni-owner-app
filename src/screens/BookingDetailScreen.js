@@ -15,19 +15,23 @@ import {
   Image,
   RefreshControl,
   Linking,
-  Alert,
   useWindowDimensions,
   StatusBar,
   AppState,
+  Modal,
+  TextInput,
+  Share,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import RazorpayCheckout from 'react-native-razorpay';
-import { api, getImageUrl } from '../api/client';
+import { api, getImageUrl, downloadAuthenticatedFile } from '../api/client';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 import { scale, verticalScale, moderateScale, isTablet } from '../utils/responsive';
+import AppAlert from '../utils/AppAlert';
 
 const C = {
   primary: '#EF3A3A',
@@ -109,6 +113,11 @@ export default function BookingDetailScreen({ navigation, route }) {
   const [menuVisible, setMenuVisible] = useState(false);
   const [isPayingRazorpay, setIsPayingRazorpay] = useState(false);
   const isPayingRef = useRef(false);
+  const [rateModalVisible, setRateModalVisible] = useState(false);
+  const [rateValue, setRateValue] = useState(5);
+  const [rateReview, setRateReview] = useState('');
+  const [submittingRating, setSubmittingRating] = useState(false);
+  const [downloadingInvoice, setDownloadingInvoice] = useState(false);
 
   const loadBooking = useCallback(async () => {
     try {
@@ -177,6 +186,46 @@ export default function BookingDetailScreen({ navigation, route }) {
     }
   };
 
+  // ==================== RATE ENGINEER ====================
+  const handleSubmitRating = async () => {
+    const assignment = booking?.engineerAssignments?.[0];
+    if (!assignment) return;
+    setSubmittingRating(true);
+    try {
+      const response = await api.post(`/owner/bookings/${bookingId}/rate`, {
+        assignmentId: assignment.id,
+        overallRating: rateValue,
+        review: rateReview || undefined,
+      });
+      if (response.data.ok) {
+        AppAlert.alert('Thank You', 'Your rating has been submitted.');
+        setRateModalVisible(false);
+        loadBooking();
+      } else {
+        AppAlert.alert('Error', response.data.error || 'Failed to submit rating');
+      }
+    } catch (error) {
+      AppAlert.alert('Error', error?.response?.data?.error || 'Failed to submit rating');
+    } finally {
+      setSubmittingRating(false);
+    }
+  };
+
+  // ==================== DOWNLOAD INVOICE ====================
+  const handleDownloadInvoice = async () => {
+    if (downloadingInvoice) return;
+    setDownloadingInvoice(true);
+    try {
+      const path = await downloadAuthenticatedFile(`/owner/bookings/${bookingId}/invoice`, `invoice-${bookingId}.pdf`);
+      await Share.share({ url: Platform.OS === 'ios' ? path : `file://${path}`, title: 'Booking Invoice' });
+    } catch (error) {
+      console.error('Download invoice error:', error);
+      AppAlert.alert('Error', 'Failed to download invoice');
+    } finally {
+      setDownloadingInvoice(false);
+    }
+  };
+
   // ==================== RAZORPAY PAYMENT FOR BOOKING ====================
   const handleBookingRazorpayPayment = async () => {
     if (isPayingRef.current || !booking) return;
@@ -195,7 +244,7 @@ export default function BookingDetailScreen({ navigation, route }) {
       });
 
       if (!orderRes.data.ok) {
-        Alert.alert('Error', orderRes.data.error || 'Failed to create payment order');
+        AppAlert.alert('Error', orderRes.data.error || 'Failed to create payment order');
         return;
       }
 
@@ -217,9 +266,9 @@ export default function BookingDetailScreen({ navigation, route }) {
       } catch (checkoutError) {
         const dismissed = checkoutError.code === 0 || checkoutError.code === 2 || checkoutError.code === 'PAYMENT_CANCELLED';
         if (dismissed) {
-          Alert.alert('Payment Cancelled', 'You cancelled the payment. You can try again anytime.');
+          AppAlert.alert('Payment Cancelled', 'You cancelled the payment. You can try again anytime.');
         } else {
-          Alert.alert('Payment Failed', checkoutError.description || 'Payment was not completed.', [
+          AppAlert.alert('Payment Failed', checkoutError.description || 'Payment was not completed.', [
             { text: 'Retry', onPress: handleBookingRazorpayPayment },
             { text: 'Cancel', style: 'cancel' },
           ]);
@@ -240,7 +289,7 @@ export default function BookingDetailScreen({ navigation, route }) {
           });
 
           if (verifyRes.data.ok) {
-            Alert.alert('Payment Successful!', 'Your booking payment has been verified. An engineer will be assigned shortly.', [
+            AppAlert.alert('Payment Successful!', 'Your booking payment has been verified. An engineer will be assigned shortly.', [
               { text: 'OK', onPress: () => loadBooking() },
             ]);
             return;
@@ -252,7 +301,7 @@ export default function BookingDetailScreen({ navigation, route }) {
             await new Promise(r => setTimeout(r, RETRY_DELAYS[attempt]));
             continue;
           }
-          Alert.alert(
+          AppAlert.alert(
             'Payment Verification Pending',
             `Your payment of ${formatPrice(booking.totalAmount || 0)} was charged but verification could not be completed. It will be processed automatically. Contact support if not reflected within 15 minutes.`,
             [{ text: 'OK', onPress: () => loadBooking() }]
@@ -261,7 +310,7 @@ export default function BookingDetailScreen({ navigation, route }) {
       }
     } catch (error) {
       console.error('Booking payment error:', error);
-      Alert.alert('Error', 'Something went wrong. Please try again or contact support.');
+      AppAlert.alert('Error', 'Something went wrong. Please try again or contact support.');
     } finally {
       isPayingRef.current = false;
       setIsPayingRazorpay(false);
@@ -346,10 +395,12 @@ export default function BookingDetailScreen({ navigation, route }) {
   const itemSubtotal = (booking.items || []).reduce(
     (sum, item) => sum + item.priceSnapshot * item.qty, 0
   );
-  const gstAmount = booking.gstAmount || Math.round(itemSubtotal * GST_RATE);
+  const discountAmount = Math.max(0, booking.discountAmount || 0);
+  const discountedSubtotal = itemSubtotal - discountAmount;
+  const gstAmount = booking.gstAmount || Math.round(discountedSubtotal * GST_RATE);
   const tipAmount = booking.tipAmount != null
     ? Math.max(0, booking.tipAmount)
-    : Math.max(0, (booking.totalAmount || 0) - itemSubtotal - gstAmount);
+    : Math.max(0, (booking.totalAmount || 0) - discountedSubtotal - gstAmount);
 
   const engineer = booking.engineerAssignments?.[0];
 
@@ -676,6 +727,14 @@ export default function BookingDetailScreen({ navigation, route }) {
               <Text style={styles.breakdownLabel}>Subtotal</Text>
               <Text style={styles.breakdownValue}>{formatPrice(itemSubtotal)}</Text>
             </View>
+            {discountAmount > 0 && (
+              <View style={styles.breakdownRow}>
+                <Text style={[styles.breakdownLabel, { color: C.ok }]}>
+                  Discount{booking.discountSource ? ` (${booking.discountSource})` : ''}
+                </Text>
+                <Text style={[styles.breakdownValue, { color: C.ok }]}>-{formatPrice(discountAmount)}</Text>
+              </View>
+            )}
             <View style={styles.breakdownRow}>
               <Text style={styles.breakdownLabel}>GST (18%)</Text>
               <Text style={styles.breakdownValue}>{formatPrice(gstAmount)}</Text>
@@ -726,6 +785,13 @@ export default function BookingDetailScreen({ navigation, route }) {
                 style={styles.paymentImage}
                 resizeMode="contain"
               />
+            )}
+            {booking.paymentProof.status === 'REJECTED' && booking.paymentProof.rejectionReason && (
+              <View style={[styles.proofStatusBadge, { backgroundColor: C.dangerLight, alignSelf: 'stretch', marginTop: scale(8) }]}>
+                <Text style={{ color: C.danger, fontSize: moderateScale(13) }}>
+                  Reason: {booking.paymentProof.rejectionReason}
+                </Text>
+              </View>
             )}
             {booking.paymentProof.status === 'REJECTED' && (
               <TouchableOpacity
@@ -779,6 +845,43 @@ export default function BookingDetailScreen({ navigation, route }) {
           </View>
         )}
 
+        {/* Completed Booking Actions - Rate Engineer & Download Invoice */}
+        {booking.status === 'COMPLETED' && (
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <View style={[styles.cardIconBox, { backgroundColor: C.ok + '15' }]}>
+                <Icon name="checkmark-done-circle" size={20} color={C.ok} />
+              </View>
+              <Text style={styles.cardTitle}>Booking Completed</Text>
+            </View>
+            <View style={{ flexDirection: 'row', gap: scale(10) }}>
+              {booking.engineerAssignments?.[0] && (
+                <TouchableOpacity
+                  style={[styles.payNowBtn, { flex: 1, backgroundColor: C.primary }]}
+                  onPress={() => { setRateValue(5); setRateReview(''); setRateModalVisible(true); }}
+                >
+                  <Icon name="star" size={scale(18)} color="#fff" />
+                  <Text style={styles.payNowBtnText}>Rate Engineer</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={[styles.payNowBtn, { flex: 1, backgroundColor: C.info }]}
+                onPress={handleDownloadInvoice}
+                disabled={downloadingInvoice}
+              >
+                {downloadingInvoice ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Icon name="download" size={scale(18)} color="#fff" />
+                    <Text style={styles.payNowBtnText}>Invoice</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
         {/* Problem Description */}
         {booking.problemDescription && (
           <View style={styles.card}>
@@ -800,6 +903,53 @@ export default function BookingDetailScreen({ navigation, route }) {
 
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
       <KniBottomNav navigation={navigation} />
+
+      {/* Rate Engineer Modal */}
+      <Modal visible={rateModalVisible} animationType="slide" transparent onRequestClose={() => setRateModalVisible(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: '#fff', borderTopLeftRadius: scale(20), borderTopRightRadius: scale(20), padding: scale(20) }}>
+            <Text style={{ fontSize: moderateScale(18), fontWeight: '800', color: C.ink, marginBottom: scale(4) }}>Rate Engineer</Text>
+            <Text style={{ fontSize: moderateScale(13), color: C.muted, marginBottom: scale(16) }}>
+              How was the service for {booking.engineerAssignments?.[0]?.engineer?.name || 'the engineer'}?
+            </Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'center', gap: scale(8), marginBottom: scale(16) }}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <TouchableOpacity key={star} onPress={() => setRateValue(star)}>
+                  <Icon name={star <= rateValue ? 'star' : 'star-outline'} size={scale(36)} color="#F59E0B" />
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TextInput
+              style={{ backgroundColor: C.bg, borderRadius: scale(12), borderWidth: 1, borderColor: C.border, padding: scale(14), fontSize: moderateScale(14), color: C.text, minHeight: scale(80) }}
+              placeholder="Write a review (optional)..."
+              placeholderTextColor={C.muted}
+              value={rateReview}
+              onChangeText={setRateReview}
+              multiline
+            />
+            <View style={{ flexDirection: 'row', gap: scale(10), marginTop: scale(16) }}>
+              <TouchableOpacity
+                style={{ flex: 1, paddingVertical: scale(14), borderRadius: scale(12), borderWidth: 1.5, borderColor: C.border, alignItems: 'center' }}
+                onPress={() => setRateModalVisible(false)}
+                disabled={submittingRating}
+              >
+                <Text style={{ fontSize: moderateScale(14), fontWeight: '700', color: C.text }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{ flex: 1, paddingVertical: scale(14), borderRadius: scale(12), backgroundColor: C.primary, alignItems: 'center' }}
+                onPress={handleSubmitRating}
+                disabled={submittingRating}
+              >
+                {submittingRating ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={{ fontSize: moderateScale(14), fontWeight: '700', color: '#fff' }}>Submit</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }

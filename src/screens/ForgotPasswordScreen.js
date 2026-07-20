@@ -6,13 +6,13 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { api } from '../api/client';
+import AppAlert from '../utils/AppAlert';
 
 import { scale, moderateScale } from '../utils/responsive';
 const C = {
@@ -49,7 +49,7 @@ export default function ForgotPasswordScreen({ navigation }) {
   // Step 1: Send reset code
   const handleSendCode = async () => {
     if (!email || !email.includes('@')) {
-      return Alert.alert('Invalid Email', 'Please enter a valid email address.');
+      return AppAlert.alert('Invalid Email', 'Please enter a valid email address.');
     }
 
     setLoading(true);
@@ -57,15 +57,15 @@ export default function ForgotPasswordScreen({ navigation }) {
       const response = await api.post('/auth/forgot-password', { email: email.trim() });
 
       if (response.data?.ok) {
-        Alert.alert('Code Sent', 'If an account exists with this email, a reset code has been sent.');
+        AppAlert.alert('Code Sent', 'If an account exists with this email, a reset code has been sent.');
         setStep('code');
         setCooldown(60);
         setTimeout(() => inputRefs.current[0]?.focus(), 300);
       } else {
-        Alert.alert('Error', response.data?.error || 'Failed to send code.');
+        AppAlert.alert('Error', response.data?.error || 'Failed to send code.');
       }
     } catch (error) {
-      Alert.alert('Error', error.response?.data?.error || 'Something went wrong.');
+      AppAlert.alert('Error', error.response?.data?.error || 'Something went wrong.');
     } finally {
       setLoading(false);
     }
@@ -92,7 +92,7 @@ export default function ForgotPasswordScreen({ navigation }) {
   const handleVerifyCode = () => {
     const fullCode = code.join('');
     if (fullCode.length !== 6) {
-      return Alert.alert('Invalid Code', 'Please enter the complete 6-digit code.');
+      return AppAlert.alert('Invalid Code', 'Please enter the complete 6-digit code.');
     }
     setStep('password');
   };
@@ -104,15 +104,15 @@ export default function ForgotPasswordScreen({ navigation }) {
     try {
       const response = await api.post('/auth/forgot-password', { email });
       if (response.data?.ok) {
-        Alert.alert('Code Resent', 'A new reset code has been sent.');
+        AppAlert.alert('Code Resent', 'A new reset code has been sent.');
         setCooldown(60);
         setCode(['', '', '', '', '', '']);
         inputRefs.current[0]?.focus();
       } else {
-        Alert.alert('Error', response.data?.error || 'Failed to resend.');
+        AppAlert.alert('Error', response.data?.error || 'Failed to resend.');
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to resend code.');
+      AppAlert.alert('Error', 'Failed to resend code.');
     } finally {
       setLoading(false);
     }
@@ -121,10 +121,10 @@ export default function ForgotPasswordScreen({ navigation }) {
   // Step 3: Reset password
   const handleResetPassword = async () => {
     if (newPassword.length < 8) {
-      return Alert.alert('Weak Password', 'Password must be at least 8 characters.');
+      return AppAlert.alert('Weak Password', 'Password must be at least 8 characters.');
     }
     if (newPassword !== confirmPassword) {
-      return Alert.alert('Mismatch', 'Passwords do not match.');
+      return AppAlert.alert('Mismatch', 'Passwords do not match.');
     }
 
     setLoading(true);
@@ -136,12 +136,12 @@ export default function ForgotPasswordScreen({ navigation }) {
       });
 
       if (response.data?.ok) {
-        Alert.alert('Password Reset', 'Your password has been reset successfully.', [
+        AppAlert.alert('Password Reset', 'Your password has been reset successfully.', [
           { text: 'Login', onPress: () => navigation.replace('RestaurantLogin') },
         ]);
       } else {
         const errorMsg = response.data?.error || 'Failed to reset password.';
-        Alert.alert('Error', errorMsg);
+        AppAlert.alert('Error', errorMsg);
         // If code is invalid, go back to code step
         if (errorMsg.toLowerCase().includes('code')) {
           setStep('code');
@@ -149,7 +149,7 @@ export default function ForgotPasswordScreen({ navigation }) {
         }
       }
     } catch (error) {
-      Alert.alert('Error', error.response?.data?.error || 'Something went wrong.');
+      AppAlert.alert('Error', error.response?.data?.error || 'Something went wrong.');
     } finally {
       setLoading(false);
     }

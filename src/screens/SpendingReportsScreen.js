@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  RefreshControl, ActivityIndicator, Alert, useWindowDimensions
+  RefreshControl, ActivityIndicator, useWindowDimensions
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -14,6 +14,7 @@ import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
 import { scale, moderateScale } from '../utils/responsive';
+import AppAlert from '../utils/AppAlert';
 const C = {
   primary: '#EF3A3A',
   ink: '#1D2254',
@@ -96,7 +97,7 @@ export default function SpendingReportsScreen({ navigation }) {
 
   const handleExportPDF = async () => {
     if (!selectedRestaurantId) {
-      Alert.alert('Error', 'Please select a restaurant first');
+      AppAlert.alert('Error', 'Please select a restaurant first');
       return;
     }
 
@@ -106,7 +107,7 @@ export default function SpendingReportsScreen({ navigation }) {
       if (selectedMonth) filters.month = selectedMonth;
 
       const filePath = await exportSpendingReportPDF(selectedRestaurantId, filters);
-      Alert.alert(
+      AppAlert.alert(
         'Export Successful',
         'Spending report has been exported',
         [
@@ -115,7 +116,7 @@ export default function SpendingReportsScreen({ navigation }) {
         ]
       );
     } catch (error) {
-      Alert.alert('Export Failed', error.message || 'Could not export report');
+      AppAlert.alert('Export Failed', error.message || 'Could not export report');
     } finally {
       setExporting(false);
     }

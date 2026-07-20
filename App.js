@@ -17,9 +17,11 @@ import AppNavigator from './src/navigation/AppNavigator';
 import { RestaurantProvider } from './src/context/RestaurantContext';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import OfflineBanner from './src/components/OfflineBanner';
+import AppAlertHost from './src/components/AppAlertHost';
+import AppAlert from './src/utils/AppAlert';
 import { getMessaging, requestPermission as requestFCMPermission, onNotificationOpenedApp, getInitialNotification, AuthorizationStatus } from '@react-native-firebase/messaging';
 import notifee, { AndroidImportance } from '@notifee/react-native';
-import { Alert, PermissionsAndroid, Platform } from 'react-native';
+import { PermissionsAndroid, Platform } from 'react-native';
 import notificationService from './src/services/notificationService';
 
 export default function App() {
@@ -43,6 +45,7 @@ export default function App() {
             <AppNavigator />
           </NavigationContainer>
         </RestaurantProvider>
+        <AppAlertHost />
       </GestureHandlerRootView>
     </ErrorBoundary>
   );
@@ -83,7 +86,7 @@ function useNotifications() {
 
           if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
             console.log('❌ Android notification permission denied');
-            Alert.alert(
+            AppAlert.alert(
               'Notification Permission Required',
               'Please enable notifications in settings to receive updates about your restaurant.',
             );

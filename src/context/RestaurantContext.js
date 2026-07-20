@@ -7,14 +7,23 @@ const RestaurantContext = createContext(null);
 
 const STORAGE_KEY = 'selectedRestaurantId';
 
+const RESTAURANTS_TTL_MS = 60000;
+
 export function RestaurantProvider({ children }) {
   const [restaurants, setRestaurants] = useState([]);
   const [selectedRestaurantId, setSelectedRestaurantId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const lastFetchedAtRef = React.useRef(0);
 
-  // Load restaurants from API
-  const loadRestaurants = useCallback(async () => {
+  // Load restaurants from API. Skips the network call if fetched within the
+  // last RESTAURANTS_TTL_MS unless { force: true } is passed (e.g. pull-to-refresh).
+  const loadRestaurants = useCallback(async ({ force = false } = {}) => {
+    if (!force && lastFetchedAtRef.current && Date.now() - lastFetchedAtRef.current < RESTAURANTS_TTL_MS) {
+      setLoading(false);
+      return;
+    }
+
     try {
       // Don't fetch if user is not logged in
       const token = await AsyncStorage.getItem('userToken');
@@ -27,6 +36,7 @@ export function RestaurantProvider({ children }) {
       setError(null);
 
       const response = await api.get('/owner/restaurants/accessible');
+      lastFetchedAtRef.current = Date.now();
 
       if (response.data.ok) {
         // Transform accessible response: { restaurantId, role, restaurant } -> flat restaurant with restaurantRole
@@ -56,7 +66,7 @@ export function RestaurantProvider({ children }) {
         setError(response.data.error || 'Failed to load restaurants');
       }
     } catch (err) {
-      console.error('RestaurantContext: Error loading restaurants:', err);
+      if (__DEV__) console.error('RestaurantContext: Error loading restaurants:', err);
       setError(err.message || 'Failed to load restaurants');
     } finally {
       setLoading(false);
@@ -68,7 +78,7 @@ export function RestaurantProvider({ children }) {
     if (restaurantId && restaurants.some(r => r.id === restaurantId)) {
       setSelectedRestaurantId(restaurantId);
       await AsyncStorage.setItem(STORAGE_KEY, restaurantId);
-      console.log('RestaurantContext: Selected restaurant:', restaurantId);
+      if (__DEV__) console.log('RestaurantContext: Selected restaurant:', restaurantId);
     }
   }, [restaurants]);
 

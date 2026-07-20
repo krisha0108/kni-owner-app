@@ -20,6 +20,7 @@ import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 import { scale, moderateScale } from '../utils/responsive';
 import { usePermissions } from '../utils/usePermissions';
+import { isStale, markFetched } from '../utils/focusCache';
 
 const C = {
   primary: '#EF3A3A', primaryDark: '#DC2626', ink: '#1D2254', text: '#334155',
@@ -95,14 +96,19 @@ export default function AMCDashboardScreen({ navigation }) {
 
   useFocusEffect(
     useCallback(() => {
-      loadData();
-    }, [loadData])
+      const key = `AMCDashboard-${selectedRestaurant}`;
+      if (isStale(key) || !data) {
+        loadData();
+        markFetched(key);
+      }
+    }, [loadData, selectedRestaurant, data])
   );
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadRestaurants();
+    await loadRestaurants({ force: true });
     await loadData();
+    markFetched(`AMCDashboard-${selectedRestaurant}`);
   };
 
   // API returns fields directly on data (not nested under stats)

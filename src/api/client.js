@@ -1,5 +1,6 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import RNFS from 'react-native-fs';
 
 // ============================================
 // KNI-Super-App Backend Integration
@@ -7,7 +8,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // NOTE: Update LOCAL_IP with your computer's local IP address
 // To find your IP: Windows (ipconfig) | Mac/Linux (ifconfig)
-const LOCAL_IP = '192.168.29.54';
+// Using 'localhost' here requires `adb reverse tcp:3000 tcp:3000` (USB-tethered device) —
+// avoids the WiFi-adapter flakiness that causes intermittent "Network Error" over LAN.
+
+// const LOCAL_IP = '192.168.29.54';
+
+const LOCAL_IP = 'localhost';
 
 // API URLs
 const DEV_API_BASE_URL = `http://${LOCAL_IP}:3000/api`;
@@ -21,11 +27,13 @@ const IS_DEV = false;
 const API_BASE_URL = IS_DEV ? DEV_API_BASE_URL : PROD_API_BASE_URL;
 const IMAGE_BASE_URL = IS_DEV ? DEV_IMAGE_BASE_URL : PROD_IMAGE_BASE_URL;
 
-console.log('🔧 API Configuration:', {
-  environment: IS_DEV ? 'DEVELOPMENT' : 'PRODUCTION',
-  baseURL: API_BASE_URL,
-  imageBaseURL: IMAGE_BASE_URL,
-});
+if (__DEV__) {
+  console.log('🔧 API Configuration:', {
+    environment: IS_DEV ? 'DEVELOPMENT' : 'PRODUCTION',
+    baseURL: API_BASE_URL,
+    imageBaseURL: IMAGE_BASE_URL,
+  });
+}
 
 // Create axios instance
 const api = axios.create({
@@ -45,12 +53,12 @@ api.interceptors.request.use(
       const token = await AsyncStorage.getItem('userToken');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
-        console.log('📤 Request with token:', config.method.toUpperCase(), config.url);
+        if (__DEV__) console.log('📤 Request with token:', config.method.toUpperCase(), config.url);
       } else {
-        console.log('📤 Request without token:', config.method.toUpperCase(), config.url);
+        if (__DEV__) console.log('📤 Request without token:', config.method.toUpperCase(), config.url);
       }
     } catch (err) {
-      console.error('❌ Error fetching token:', err);
+      if (__DEV__) console.error('❌ Error fetching token:', err);
     }
 
     // For FormData uploads, remove Content-Type so React Native
@@ -62,7 +70,7 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
-    console.error('❌ Request interceptor error:', error);
+    if (__DEV__) console.error('❌ Request interceptor error:', error);
     return Promise.reject(error);
   }
 );
@@ -70,26 +78,36 @@ api.interceptors.request.use(
 // Response interceptor - Handle errors and session expiry
 api.interceptors.response.use(
   (response) => {
-    console.log('✅ Response:', response.config.method.toUpperCase(), response.config.url, response.status);
+    if (__DEV__) console.log('✅ Response:', response.config.method.toUpperCase(), response.config.url, response.status);
     return response;
   },
   async (error) => {
-    const errorDetails = {
-      url: error.config?.url,
-      status: error.response?.status,
-      data: error.response?.data,
-      message: error.response?.data?.error || error.message,
-    };
-    console.error('❌ Response error:', JSON.stringify(errorDetails, null, 2));
+    if (__DEV__) {
+      const errorDetails = {
+        url: error.config?.url,
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.response?.data?.error || error.message,
+      };
+      // Requests the backend rejected with a known, app-handled reason (e.g. pending
+      // approval, unverified email) aren't bugs — log them quietly instead of as a
+      // LogBox red-screen error so real failures stay easy to spot.
+      const isExpectedAppError = !!error.response?.data?.code;
+      if (isExpectedAppError) {
+        console.log('ℹ️ Response error (handled):', JSON.stringify(errorDetails, null, 2));
+      } else {
+        console.error('❌ Response error:', JSON.stringify(errorDetails, null, 2));
+      }
+    }
 
     if (error.response?.status === 401) {
-      console.log('🔒 Unauthorized - Clearing session');
+      if (__DEV__) console.log('🔒 Unauthorized - Clearing session');
       await AsyncStorage.removeItem('userToken');
       await AsyncStorage.removeItem('userData');
     }
 
     if (error.response?.status === 403) {
-      console.log('🚫 Forbidden - Account may be pending approval or rejected');
+      if (__DEV__) console.log('🚫 Forbidden - Account may be pending approval or rejected');
     }
 
     return Promise.reject(error);
@@ -163,4 +181,29 @@ const uploadDocument = async (formData) => {
   return { data };
 };
 
-export { api, API_BASE_URL, IMAGE_BASE_URL, uploadFile, uploadDocument };
+/**
+ * Download an authenticated file (PDF, invoice, etc.) to local storage.
+ * Opening a protected download URL directly via Linking.openURL() carries no
+ * auth header and always 401s - this goes through RNFS with the Bearer token
+ * attached instead, and returns a local file:// path the caller can pass to
+ * Share.share().
+ * `apiPath` is relative to API_BASE_URL, e.g. `/owner/amc-contracts/{id}/document`.
+ */
+const downloadAuthenticatedFile = async (apiPath, filename) => {
+  const token = await AsyncStorage.getItem('userToken');
+  const toFile = `${RNFS.DocumentDirectoryPath}/${filename}`;
+
+  const result = await RNFS.downloadFile({
+    fromUrl: `${API_BASE_URL}${apiPath}`,
+    toFile,
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  }).promise;
+
+  if (result.statusCode && result.statusCode >= 400) {
+    throw new Error(`Download failed (${result.statusCode})`);
+  }
+
+  return toFile;
+};
+
+export { api, API_BASE_URL, IMAGE_BASE_URL, uploadFile, uploadDocument, downloadAuthenticatedFile };

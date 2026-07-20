@@ -6,7 +6,6 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
@@ -16,6 +15,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { api } from '../api/client';
 
 import { scale, moderateScale } from '../utils/responsive';
+import AppAlert from '../utils/AppAlert';
 const C = {
   primary: '#EF3A3A',
   ink: '#1D2254',
@@ -31,12 +31,14 @@ const C = {
 };
 
 export default function TeamAcceptScreen({ navigation, route }) {
+  const [tempPassword, setTempPassword] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isValidating, setIsValidating] = useState(true);
   const [inviteDetails, setInviteDetails] = useState(null);
   const [error, setError] = useState(null);
+  const [showTempPassword, setShowTempPassword] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -71,18 +73,23 @@ export default function TeamAcceptScreen({ navigation, route }) {
 
   const handleSubmit = async () => {
     if (!token) {
-      Alert.alert('Error', 'Invalid invitation token');
+      AppAlert.alert('Error', 'Invalid invitation token');
       return;
     }
 
     if (inviteDetails?.needsPassword) {
+      if (!tempPassword) {
+        AppAlert.alert('Error', 'Please enter the temporary password from your invitation email');
+        return;
+      }
+
       if (password.length < 8) {
-        Alert.alert('Error', 'Password must be at least 8 characters');
+        AppAlert.alert('Error', 'Password must be at least 8 characters');
         return;
       }
 
       if (password !== confirmPassword) {
-        Alert.alert('Error', 'Passwords do not match');
+        AppAlert.alert('Error', 'Passwords do not match');
         return;
       }
     }
@@ -92,15 +99,16 @@ export default function TeamAcceptScreen({ navigation, route }) {
     try {
       const response = await api.post('/owner/team/accept-invite', {
         token,
-        password: inviteDetails?.needsPassword ? password : undefined,
+        tempPassword,
+        newPassword: password,
       });
 
       if (!response.data.ok) {
-        Alert.alert('Error', response.data.error || 'Failed to accept invitation');
+        AppAlert.alert('Error', response.data.error || 'Failed to accept invitation');
         return;
       }
 
-      Alert.alert(
+      AppAlert.alert(
         'Success',
         `You've joined ${response.data.data.restaurant.name}! Please login to continue.`,
         [
@@ -111,7 +119,7 @@ export default function TeamAcceptScreen({ navigation, route }) {
         ]
       );
     } catch (err) {
-      Alert.alert('Error', 'Something went wrong. Please try again.');
+      AppAlert.alert('Error', 'Something went wrong. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -168,13 +176,41 @@ export default function TeamAcceptScreen({ navigation, route }) {
             </View>
             <Text style={styles.title}>Join Restaurant Team</Text>
             <Text style={styles.subtitle}>
-              You've been invited to join a restaurant team. Set your password to accept the invitation.
+              You've been invited to join a restaurant team. Enter the temporary password from your
+              invitation email, then set a new password to accept the invitation.
             </Text>
           </View>
 
           <View style={styles.form}>
             {inviteDetails?.needsPassword && (
               <>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Temporary Password *</Text>
+                  <View style={styles.passwordContainer}>
+                    <TextInput
+                      style={styles.passwordInput}
+                      placeholder="From your invitation email"
+                      placeholderTextColor={C.muted}
+                      value={tempPassword}
+                      onChangeText={setTempPassword}
+                      secureTextEntry={!showTempPassword}
+                      autoCapitalize="none"
+                      editable={!isLoading}
+                    />
+                    <TouchableOpacity
+                      style={styles.eyeBtn}
+                      onPress={() => setShowTempPassword(!showTempPassword)}
+                    >
+                      <Icon
+                        name={showTempPassword ? 'eye-off-outline' : 'eye-outline'}
+                        size={scale(20)}
+                        color={C.muted}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={styles.hint}>Check the invitation email your owner sent you</Text>
+                </View>
+
                 <View style={styles.inputGroup}>
                   <Text style={styles.label}>Create Password *</Text>
                   <View style={styles.passwordContainer}>

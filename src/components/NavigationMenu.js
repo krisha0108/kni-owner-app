@@ -71,6 +71,7 @@ const MENU_SECTIONS = [
     title: 'Bookings',
     items: [
       { icon: 'calendar-outline', label: 'My Bookings', screen: 'MyBookings', permission: 'bookings:read' },
+      { icon: 'gift-outline', label: 'Offers', screen: 'Offers', permission: 'bookings:read' },
       { icon: 'hourglass-outline', label: 'Pending Approvals', screen: 'PendingApproval', permission: 'bookings:update' },
     ],
   },

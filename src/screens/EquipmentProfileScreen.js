@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  RefreshControl, ActivityIndicator, Alert, Modal, TextInput, Image, Switch, Platform, KeyboardAvoidingView
+  RefreshControl, ActivityIndicator, Modal, TextInput, Image, Switch, Platform, KeyboardAvoidingView
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,6 +10,7 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import { api, getImageUrl, uploadDocument } from '../api/client';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
+import AppAlert from '../utils/AppAlert';
 
 import { scale, moderateScale } from '../utils/responsive';
 import { usePermissions } from '../utils/usePermissions';
@@ -109,17 +110,29 @@ const getAmcStatusStyle = (status) => {
 const getServiceStatusStyle = (status) => {
   switch (status) {
     case 'COMPLETED':
-      return { bg: '#ECFDF5', color: C.ok, icon: 'checkmark-circle' };
+      return { bg: '#ECFDF5', color: C.ok, icon: 'checkmark-circle', label: 'Completed' };
     case 'IN_PROGRESS':
-    case 'ACCEPTED':
-      return { bg: '#EFF6FF', color: C.info, icon: 'time' };
-    case 'PENDING':
-      return { bg: '#FFFBEB', color: C.warn, icon: 'hourglass' };
+      return { bg: '#EFF6FF', color: C.info, icon: 'time', label: 'In Progress' };
+    case 'ACCEPTED_BY_ENGINEER':
+      return { bg: '#EFF6FF', color: C.info, icon: 'time', label: 'Accepted' };
+    case 'ENGINEER_ASSIGNED':
+      return { bg: '#EFF6FF', color: C.info, icon: 'person', label: 'Engineer Assigned' };
+    case 'DRAFT':
+      return { bg: '#F3F4F6', color: C.muted, icon: 'document', label: 'Draft' };
+    case 'SLOT_SELECTED':
+      return { bg: '#FFFBEB', color: C.warn, icon: 'hourglass', label: 'Pending Payment' };
+    case 'PAYMENT_UPLOADED':
+      return { bg: '#FFFBEB', color: C.warn, icon: 'hourglass', label: 'Payment Under Review' };
+    case 'PAYMENT_VERIFIED':
+      return { bg: '#EFF6FF', color: C.info, icon: 'checkmark-circle', label: 'Payment Verified' };
+    case 'PAYMENT_REJECTED':
+      return { bg: '#FEF2F2', color: C.danger, icon: 'close-circle', label: 'Payment Rejected' };
+    case 'REJECTED_BY_ENGINEER':
+      return { bg: '#FEF2F2', color: C.danger, icon: 'close-circle', label: 'Rejected by Engineer' };
     case 'CANCELLED':
-    case 'REJECTED':
-      return { bg: '#FEF2F2', color: C.danger, icon: 'close-circle' };
+      return { bg: '#FEF2F2', color: C.danger, icon: 'close-circle', label: 'Cancelled' };
     default:
-      return { bg: '#F3F4F6', color: C.muted, icon: 'ellipse' };
+      return { bg: '#F3F4F6', color: C.muted, icon: 'ellipse', label: status?.replace(/_/g, ' ') || 'Unknown' };
   }
 };
 
@@ -206,7 +219,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
       }
     } catch (error) {
       console.log('Error fetching equipment:', error);
-      Alert.alert('Error', 'Failed to load equipment details');
+      AppAlert.alert('Error', 'Failed to load equipment details');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -273,15 +286,15 @@ export default function EquipmentProfileScreen({ navigation, route }) {
 
   const handleCreateAmc = async () => {
     if (!amcForm.providerName.trim()) {
-      Alert.alert('Error', 'Please enter provider name');
+      AppAlert.alert('Error', 'Please enter provider name');
       return;
     }
     if (!amcForm.planName.trim()) {
-      Alert.alert('Error', 'Please enter plan name');
+      AppAlert.alert('Error', 'Please enter plan name');
       return;
     }
     if (!amcForm.startDate) {
-      Alert.alert('Error', 'Please select start date');
+      AppAlert.alert('Error', 'Please select start date');
       return;
     }
 
@@ -306,15 +319,15 @@ export default function EquipmentProfileScreen({ navigation, route }) {
 
       const { data } = await api.post(`/owner/equipment/${equipmentId}/amc`, payload);
       if (data.ok) {
-        Alert.alert('Success', 'External AMC added successfully');
+        AppAlert.alert('Success', 'External AMC added successfully');
         setShowAmcModal(false);
         resetAmcForm();
         fetchAmcSubscriptions();
       } else {
-        Alert.alert('Error', data.error || 'Failed to add AMC');
+        AppAlert.alert('Error', data.error || 'Failed to add AMC');
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to add external AMC');
+      AppAlert.alert('Error', 'Failed to add external AMC');
     } finally {
       setAmcSaving(false);
     }
@@ -332,12 +345,12 @@ export default function EquipmentProfileScreen({ navigation, route }) {
         const res = await uploadDocument(formData);
         if (res.data?.ok && res.data?.url) {
           setter(res.data.url);
-          Alert.alert('Success', 'Document uploaded');
+          AppAlert.alert('Success', 'Document uploaded');
         } else {
           throw new Error('Upload failed');
         }
       } catch (e) {
-        Alert.alert('Error', 'Failed to upload document');
+        AppAlert.alert('Error', 'Failed to upload document');
       } finally {
         setUploading(false);
       }
@@ -371,15 +384,15 @@ export default function EquipmentProfileScreen({ navigation, route }) {
         featuresJson: editAmcForm.featuresJson,
       });
       if (data.ok) {
-        Alert.alert('Success', 'AMC updated successfully');
+        AppAlert.alert('Success', 'AMC updated successfully');
         setShowEditAmcModal(false);
         setEditingAmc(null);
         fetchAmcSubscriptions();
       } else {
-        Alert.alert('Error', data.error || 'Failed to update');
+        AppAlert.alert('Error', data.error || 'Failed to update');
       }
     } catch (e) {
-      Alert.alert('Error', 'Failed to update AMC');
+      AppAlert.alert('Error', 'Failed to update AMC');
     } finally {
       setEditAmcSaving(false);
     }
@@ -393,7 +406,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
 
   const handleLogService = async () => {
     if (!logServiceForm.serviceType) {
-      Alert.alert('Error', 'Please select service type');
+      AppAlert.alert('Error', 'Please select service type');
       return;
     }
     setLogServiceSaving(true);
@@ -404,21 +417,21 @@ export default function EquipmentProfileScreen({ navigation, route }) {
         notes: logServiceForm.notes || undefined,
       });
       if (data.ok) {
-        Alert.alert('Success', 'Service logged successfully');
+        AppAlert.alert('Success', 'Service logged successfully');
         setShowLogServiceModal(false);
         fetchAmcSubscriptions();
       } else {
-        Alert.alert('Error', data.error || 'Failed to log service');
+        AppAlert.alert('Error', data.error || 'Failed to log service');
       }
     } catch (e) {
-      Alert.alert('Error', 'Failed to log service');
+      AppAlert.alert('Error', 'Failed to log service');
     } finally {
       setLogServiceSaving(false);
     }
   };
 
   const handleCancelAmc = (amcId) => {
-    Alert.alert(
+    AppAlert.alert(
       'Cancel AMC',
       'Are you sure you want to cancel this AMC subscription?',
       [
@@ -429,10 +442,10 @@ export default function EquipmentProfileScreen({ navigation, route }) {
           onPress: async () => {
             try {
               await api.delete(`/owner/equipment/${equipmentId}/amc/${amcId}`);
-              Alert.alert('Success', 'AMC subscription cancelled');
+              AppAlert.alert('Success', 'AMC subscription cancelled');
               fetchAmcSubscriptions();
             } catch (error) {
-              Alert.alert('Error', 'Failed to cancel AMC');
+              AppAlert.alert('Error', 'Failed to cancel AMC');
             }
           },
         },
@@ -446,11 +459,11 @@ export default function EquipmentProfileScreen({ navigation, route }) {
         autoRenew: !currentValue,
       });
       if (data.ok) {
-        Alert.alert('Success', `Auto-renew ${!currentValue ? 'enabled' : 'disabled'}`);
+        AppAlert.alert('Success', `Auto-renew ${!currentValue ? 'enabled' : 'disabled'}`);
         fetchAmcSubscriptions();
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to update auto-renew');
+      AppAlert.alert('Error', 'Failed to update auto-renew');
     }
   };
 
@@ -465,13 +478,13 @@ export default function EquipmentProfileScreen({ navigation, route }) {
 
   const handleServiceBooking = async () => {
     if (!serviceForm.slotDate || !serviceForm.slotTime) {
-      Alert.alert('Error', 'Please provide slot date and time');
+      AppAlert.alert('Error', 'Please provide slot date and time');
       return;
     }
 
     const templates = equipment?.equipmentType?.serviceTemplates || [];
     if (templates.length > 0 && selectedServices.length === 0) {
-      Alert.alert('Error', 'Please select at least one service');
+      AppAlert.alert('Error', 'Please select at least one service');
       return;
     }
 
@@ -488,7 +501,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
       });
 
       if (data.ok) {
-        Alert.alert('Success', 'Service request created successfully');
+        AppAlert.alert('Success', 'Service request created successfully');
         setShowServiceModal(false);
         setSelectedServices([]);
         setServiceForm({
@@ -498,10 +511,10 @@ export default function EquipmentProfileScreen({ navigation, route }) {
         });
         fetchEquipment();
       } else {
-        Alert.alert('Error', data.error || 'Failed to create service request');
+        AppAlert.alert('Error', data.error || 'Failed to create service request');
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to create service request');
+      AppAlert.alert('Error', 'Failed to create service request');
     } finally {
       setServiceSaving(false);
     }
@@ -540,7 +553,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
   const statusStyle = getStatusStyle(equipment.status);
   const activeAmcCount = amcSubscriptions.filter(amc => amc.status === 'ACTIVE').length;
   const photoUrls = Array.isArray(equipment.photoUrls) ? equipment.photoUrls : [];
-  const serviceHistory = equipment.serviceHistory || [];
+  const serviceHistory = equipment.serviceBookings || [];
 
   return (
     <SafeAreaView style={st.container} edges={['top']}>
@@ -777,7 +790,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
                         <View style={[st.historyStatus, { backgroundColor: statusStyle.bg }]}>
                           <Icon name={statusStyle.icon} size={scale(12)} color={statusStyle.color} />
                           <Text style={[st.historyStatusText, { color: statusStyle.color }]}>
-                            {service.status?.replace('_', ' ')}
+                            {statusStyle.label}
                           </Text>
                         </View>
                       </View>

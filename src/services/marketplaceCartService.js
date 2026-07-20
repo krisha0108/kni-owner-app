@@ -4,6 +4,7 @@
  */
 
 import { api } from '../api/client';
+import { invalidate } from '../utils/focusCache';
 
 class MarketplaceCartService {
   /**
@@ -35,8 +36,9 @@ class MarketplaceCartService {
         vendorProductId,
         quantity,
       });
-      
+
       if (response.data.ok) {
+        invalidate(`Home-marketplaceCart-${restaurantId}`);
         return response.data.data.items || [];
       }
       throw new Error(response.data.error || 'Failed to add item');
@@ -47,15 +49,18 @@ class MarketplaceCartService {
   }
 
   /**
-   * Update cart item quantity
+   * Update cart item quantity.
+   * restaurantId is only used to invalidate the Home screen's cached cart
+   * badge count so it refetches instead of showing a stale number.
    */
-  async updateItemQuantity(itemId, quantity) {
+  async updateItemQuantity(itemId, quantity, restaurantId) {
     try {
       const response = await api.patch(`/owner/marketplace/cart/items/${itemId}`, {
         quantity,
       });
-      
+
       if (response.data.ok) {
+        if (restaurantId) invalidate(`Home-marketplaceCart-${restaurantId}`);
         return response.data.data.items || [];
       }
       throw new Error(response.data.error || 'Failed to update item');
@@ -66,15 +71,18 @@ class MarketplaceCartService {
   }
 
   /**
-   * Remove single item from cart
+   * Remove single item from cart.
+   * restaurantId is only used to invalidate the Home screen's cached cart
+   * badge count so it refetches instead of showing a stale number.
    */
-  async removeItem(itemId) {
+  async removeItem(itemId, restaurantId) {
     try {
       const response = await api.delete(`/owner/marketplace/cart/items/${itemId}`);
-      
+
       if (!response.data.ok) {
         throw new Error(response.data.error || 'Failed to remove item');
       }
+      if (restaurantId) invalidate(`Home-marketplaceCart-${restaurantId}`);
     } catch (error) {
       console.error('Remove cart item error:', error);
       throw error;
@@ -91,10 +99,11 @@ class MarketplaceCartService {
       if (options.clearAll) params.clearAll = 'true';
 
       const response = await api.delete('/owner/marketplace/cart', { params });
-      
+
       if (!response.data.ok) {
         throw new Error(response.data.error || 'Failed to clear cart');
       }
+      invalidate(`Home-marketplaceCart-${restaurantId}`);
     } catch (error) {
       console.error('Clear cart error:', error);
       throw error;

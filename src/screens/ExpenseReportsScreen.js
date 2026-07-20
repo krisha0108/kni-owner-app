@@ -85,7 +85,7 @@ export default function ExpenseReportsScreen({ navigation }) {
   const [menuVisible, setMenuVisible] = useState(false);
 
   const fetchReport = useCallback(async () => {
-    if (!selectedRestaurantId) return;
+    if (!selectedRestaurantId) { setLoading(false); return; }
 
     try {
       setLoading(true);
@@ -154,10 +154,8 @@ export default function ExpenseReportsScreen({ navigation }) {
 
   // Load data when restaurant or date changes
   useEffect(() => {
-    if (selectedRestaurantId) {
-      fetchReport();
-      fetchTrendData();
-    }
+    fetchReport();
+    fetchTrendData();
   }, [selectedRestaurantId, selectedYear, selectedMonth, fetchReport, fetchTrendData]);
 
   const onRefresh = async () => {

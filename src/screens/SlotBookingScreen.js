@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, FlatList,
-  ActivityIndicator, Alert, TextInput, useWindowDimensions
+  ActivityIndicator, TextInput, useWindowDimensions
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -11,6 +11,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useRestaurant } from '../context/RestaurantContext';
 import { scale, verticalScale, moderateScale, isTablet, getContainerMaxWidth } from '../utils/responsive';
 import useKeyboardHeight from '../utils/useKeyboardHeight';
+import { invalidate } from '../utils/focusCache';
+import AppAlert from '../utils/AppAlert';
+import OfferSelector from '../components/OfferSelector';
 
 const C = {
   primary: '#EF3A3A',
@@ -30,6 +33,8 @@ const TIME_SLOTS = [
   '09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
   '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM',
 ];
+
+const GST_RATE = 0.18;
 
 const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
 const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
@@ -59,6 +64,8 @@ export default function SlotBookingScreen({ navigation, route }) {
   const [problemDescription, setProblemDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [step, setStep] = useState(1); // 1: Restaurant, 2: Equipment, 3: Date/Time, 4: Confirm
+  const [cartSummary, setCartSummary] = useState(null);
+  const [cartLoading, setCartLoading] = useState(false);
   const keyboardHeight = useKeyboardHeight();
 
   const today = startOfDay(new Date());
@@ -172,6 +179,105 @@ export default function SlotBookingScreen({ navigation, route }) {
     }
   }, [selectedRestaurant, loadEquipment]);
 
+  // Fetch the server-side cart (with discount/GST already computed) once the
+  // owner reaches the confirm step, so this screen isn't the only booking
+  // flow with zero price visibility before submitting - mirrors what
+  // request-now/ServiceRequestScreen already show.
+  useEffect(() => {
+    if (step !== 4 || !selectedRestaurant) return;
+    setCartLoading(true);
+    api.get('/owner/cart', { params: { restaurantId: selectedRestaurant.id } })
+      .then(({ data }) => {
+        if (data.ok) setCartSummary(data.data);
+      })
+      .catch(() => {})
+      .finally(() => setCartLoading(false));
+  }, [step, selectedRestaurant]);
+
+  const cartItemTotal = React.useMemo(() => {
+    if (!cartSummary) return 0;
+    return (cartSummary.items || []).reduce((sum, item) => sum + item.priceSnapshot * item.qty, 0);
+  }, [cartSummary]);
+
+  // Owner's pick from `discountCandidates` - defaults to whichever the
+  // backend auto-picked (candidates[0], sorted best-first) until they choose
+  // a different one themselves. `undefined` = "haven't picked yet", distinct
+  // from `null` ("explicitly chose No discount") - see the identical note in
+  // ServiceRequestScreen.js.
+  const [discountCandidates, setDiscountCandidates] = useState([]);
+  const [selectedOfferId, setSelectedOfferId] = useState(undefined);
+  // Whether `selectedOfferId` reflects an explicit OfferSelector pick rather
+  // than the auto-picked best candidate. Without this, a stale auto-pick
+  // "sticks" as candidates change (e.g. a fresh cartSummary fetch surfacing a
+  // newly-applied promo code or a better auto-apply offer) because it's
+  // still a *valid* candidate, just no longer the *best* one - silently
+  // keeping a worse discount selected.
+  const hasManualOfferSelection = useRef(false);
+  const handleSelectOffer = (offerId) => {
+    hasManualOfferSelection.current = true;
+    setSelectedOfferId(offerId);
+  };
+
+  // The cart's own discount (above) is always auto-best - fetch the full
+  // eligible-candidates list separately so the owner can pick a different
+  // one, same as request-now/ServiceRequestScreen on web and mobile.
+  useEffect(() => {
+    if (!cartSummary || !selectedRestaurant || cartItemTotal <= 0) {
+      setDiscountCandidates([]);
+      return;
+    }
+    const categorySubtotals = {};
+    (cartSummary.items || []).forEach((item) => {
+      const categoryId = item.serviceItem?.category?.id || item.partItem?.category?.id;
+      if (!categoryId) return;
+      categorySubtotals[categoryId] = (categorySubtotals[categoryId] || 0) + item.priceSnapshot * item.qty;
+    });
+    const params = {
+      restaurantId: selectedRestaurant.id,
+      amount: cartItemTotal,
+      categorySubtotals: JSON.stringify(categorySubtotals),
+    };
+    if (cartSummary.promoCode) params.promoCode = cartSummary.promoCode;
+    api.get('/owner/effective-discount', { params })
+      .then(({ data }) => {
+        if (!data.ok) return;
+        const candidates = data.data.candidates || [];
+        setDiscountCandidates(candidates);
+        setSelectedOfferId((prev) => {
+          if (!hasManualOfferSelection.current) return candidates[0]?.offerId ?? null;
+          const stillValid = prev !== undefined && candidates.some((c) => c.offerId === prev);
+          return stillValid ? prev : (candidates[0]?.offerId ?? null);
+        });
+      })
+      .catch(() => {});
+  }, [cartSummary, selectedRestaurant, cartItemTotal]);
+
+  const selectedCandidate = React.useMemo(
+    () => discountCandidates.find((c) => c.offerId === selectedOfferId),
+    [discountCandidates, selectedOfferId]
+  );
+
+  const pricing = React.useMemo(() => {
+    if (!cartSummary) return null;
+    const itemTotal = cartItemTotal;
+    const rawAmount = selectedCandidate ? selectedCandidate.amount : cartSummary.discountAmount || 0;
+    const discountAmount = Math.max(0, Math.min(rawAmount, itemTotal));
+    const discountedBase = itemTotal - discountAmount;
+    const gst = Math.round(discountedBase * GST_RATE);
+    const total = discountedBase + gst;
+    const discountSource = selectedCandidate ? selectedCandidate.source : cartSummary.discountSource || null;
+    const discountPercent = selectedCandidate ? selectedCandidate.percent : cartSummary.discountPercent || 0;
+    return {
+      itemTotal,
+      discountPercent,
+      discountAmount,
+      discountSource,
+      gst,
+      total,
+      itemCount: (cartSummary.items || []).length,
+    };
+  }, [cartSummary, cartItemTotal, selectedCandidate]);
+
   const canProceed = () => {
     switch (step) {
       case 1: return !!selectedRestaurant;
@@ -192,7 +298,7 @@ export default function SlotBookingScreen({ navigation, route }) {
 
   const handleSubmit = async () => {
     if (!selectedRestaurant || !selectedDate || !selectedTime) {
-      Alert.alert('Error', 'Please fill all required fields');
+      AppAlert.alert('Error', 'Please fill all required fields');
       return;
     }
 
@@ -213,11 +319,13 @@ export default function SlotBookingScreen({ navigation, route }) {
         equipmentId: selectedEquipment?.id || null,
         slotStartDateTime: slotDateTime.toISOString(),
         problemDescription: problemDescription || null,
+        offerId: selectedOfferId,
       };
 
       const response = await api.post('/owner/bookings', payload);
 
       if (response.data.ok) {
+        invalidate(`MyBookings-${selectedRestaurant.id}`);
         // Clear all AsyncStorage cart data after successful booking
         try {
           const allKeys = await AsyncStorage.getAllKeys();
@@ -235,7 +343,7 @@ export default function SlotBookingScreen({ navigation, route }) {
           console.log('[SlotBooking] Error clearing cart:', clearError);
         }
 
-        Alert.alert(
+        AppAlert.alert(
           'Booking Created',
           'Your service slot has been booked. Please complete payment to confirm.',
           [
@@ -257,7 +365,7 @@ export default function SlotBookingScreen({ navigation, route }) {
       }
     } catch (error) {
       console.log('Booking error:', error);
-      Alert.alert('Error', error.message || 'Failed to create booking. Please try again.');
+      AppAlert.alert('Error', error.message || 'Failed to create booking. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -504,6 +612,43 @@ export default function SlotBookingScreen({ navigation, route }) {
                 </>
               )}
             </View>
+
+            {/* Payment Summary - items already added to cart before this screen */}
+            {cartLoading ? (
+              <View style={[st.summaryCard, { marginTop: scale(16), alignItems: 'center', paddingVertical: scale(20) }]}>
+                <ActivityIndicator size="small" color={C.primary} />
+              </View>
+            ) : pricing && pricing.itemCount > 0 ? (
+              <View style={[st.summaryCard, { marginTop: scale(16) }]}>
+                <Text style={st.priceCardTitle}>Payment Summary</Text>
+                <View style={st.priceRow}>
+                  <Text style={st.priceLabel}>Item Total ({pricing.itemCount})</Text>
+                  <Text style={st.priceValue}>₹{pricing.itemTotal.toLocaleString('en-IN')}</Text>
+                </View>
+                {pricing.discountAmount > 0 && (
+                  <View style={st.priceRow}>
+                    <Text style={[st.priceLabel, { color: C.ok }]}>
+                      Discount ({pricing.discountPercent}%{pricing.discountSource ? ` — ${pricing.discountSource}` : ''})
+                    </Text>
+                    <Text style={[st.priceValue, { color: C.ok }]}>-₹{pricing.discountAmount.toLocaleString('en-IN')}</Text>
+                  </View>
+                )}
+                <View style={st.priceRow}>
+                  <Text style={st.priceLabel}>GST (18%)</Text>
+                  <Text style={st.priceValue}>₹{pricing.gst.toLocaleString('en-IN')}</Text>
+                </View>
+                <View style={st.summaryDivider} />
+                <View style={st.priceRow}>
+                  <Text style={st.priceTotalLabel}>Total Amount</Text>
+                  <Text style={st.priceTotalValue}>₹{pricing.total.toLocaleString('en-IN')}</Text>
+                </View>
+                <OfferSelector
+                  candidates={discountCandidates}
+                  selectedOfferId={selectedOfferId}
+                  onSelect={handleSelectOffer}
+                />
+              </View>
+            ) : null}
 
             <View style={st.noteBox}>
               <Icon name="information-circle" size={20} color={C.info} />
@@ -802,6 +947,13 @@ const st = StyleSheet.create({
   summaryLabel: { fontSize: moderateScale(12), color: C.muted },
   summaryValue: { fontSize: moderateScale(15), fontWeight: '600', color: C.ink, marginTop: scale(2) },
   summaryDivider: { height: 1, backgroundColor: C.border, marginVertical: scale(12) },
+
+  priceCardTitle: { fontSize: moderateScale(14), fontWeight: '700', color: C.ink, marginBottom: scale(10) },
+  priceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: scale(8) },
+  priceLabel: { fontSize: moderateScale(13), color: C.muted, flexShrink: 1, marginRight: scale(8) },
+  priceValue: { fontSize: moderateScale(13), fontWeight: '600', color: C.ink },
+  priceTotalLabel: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink },
+  priceTotalValue: { fontSize: moderateScale(17), fontWeight: '800', color: C.primary },
 
   noteBox: {
     flexDirection: 'row', alignItems: 'flex-start', gap: scale(10),

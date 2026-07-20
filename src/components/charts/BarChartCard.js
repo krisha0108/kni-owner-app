@@ -28,8 +28,15 @@ export default function BarChartCard({ title, data, labelKey, valueKey }) {
     );
   }
 
+  const formatLabel = (value) => {
+    if (!value) return '';
+    const parsed = new Date(value);
+    if (isNaN(parsed.getTime())) return value;
+    return parsed.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+  };
+
   const chartData = {
-    labels: data.map(d => d[labelKey] || ''),
+    labels: data.map(d => formatLabel(d[labelKey])),
     datasets: [
       {
         data: data.map(d => d[valueKey] || 0)

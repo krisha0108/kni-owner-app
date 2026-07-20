@@ -20,6 +20,7 @@ import { RestaurantSelectorBar } from '../components/RestaurantSelector';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 import { scale, moderateScale, isTablet } from '../utils/responsive';
+import { isStale, markFetched } from '../utils/focusCache';
 
 const C = {
   primary: '#EF3A3A', primaryDark: '#DC2626', ink: '#1D2254', text: '#334155',
@@ -84,8 +85,12 @@ export default function AMCRequestsListScreen({ navigation }) {
 
   useFocusEffect(
     useCallback(() => {
-      loadData();
-    }, [selectedRestaurant])
+      const key = `AMCRequestsList-${selectedRestaurant}`;
+      if (isStale(key) || requests.length === 0) {
+        loadData();
+        markFetched(key);
+      }
+    }, [selectedRestaurant, requests.length])
   );
 
   const loadData = async (pageNum = 1, append = false) => {
@@ -150,8 +155,9 @@ export default function AMCRequestsListScreen({ navigation }) {
     setRefreshing(true);
     setPage(1);
     setHasMore(true);
-    await loadRestaurants();
+    await loadRestaurants({ force: true });
     await loadData(1, false);
+    markFetched(`AMCRequestsList-${selectedRestaurant}`);
   };
 
   const renderStatusTab = (statusKey) => {

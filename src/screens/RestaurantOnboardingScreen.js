@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, ScrollView, Platform, Alert,
+  StyleSheet, ScrollView, Platform,
   ActivityIndicator, Image, Modal, Dimensions, BackHandler, Keyboard
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary } from 'react-native-image-picker';
 import LinearGradient from 'react-native-linear-gradient';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api, uploadFile } from '../api/client';
+import { useRestaurant } from '../context/RestaurantContext';
+import { invalidate } from '../utils/focusCache';
+import AppAlert from '../utils/AppAlert';
 
 import { scale, moderateScale } from '../utils/responsive';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -38,33 +40,26 @@ const OUTLET_TYPES = [
 
 const RestaurantOnboarding = ({ navigation, route }) => {
   const isFirstRestaurant = route?.params?.isFirstRestaurant !== false; // default true for backward compatibility
+  const { loadRestaurants } = useRestaurant();
 
   // Back handling. Existing users (added another restaurant) simply pop back.
-  // First-time Google users arrive here via replace() with no screen behind, so
-  // let them exit setup by signing out and returning to the login screen.
+  // Users arriving here with no screen behind (first login after account
+  // approval, or first-time Google sign-in) can skip for now — they land on
+  // Home, which already shows a "No Restaurant Selected" empty state with its
+  // own "Add Restaurant" entry point, so there's no need to sign them out.
   const handleBack = () => {
     if (navigation.canGoBack()) {
       navigation.goBack();
       return;
     }
-    Alert.alert(
-      'Exit setup?',
-      'You need to add a restaurant to use the app. Do you want to exit for now? You can sign in again anytime.',
+    AppAlert.alert(
+      'Add restaurant later?',
+      'You can explore the app and add your restaurant anytime from the home screen.',
       [
         { text: 'Stay', style: 'cancel' },
         {
-          text: 'Exit',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await AsyncStorage.multiRemove([
-                'userToken', 'user', 'ownerId', 'ownerData', 'ownerToken',
-                'token', 'restaurants', 'selectedRestaurant', 'authProvider',
-              ]);
-              try { delete api.defaults.headers.common.Authorization; } catch (_) {}
-            } catch (_) {}
-            navigation.reset({ index: 0, routes: [{ name: 'RestaurantLogin' }] });
-          },
+          text: 'Skip for now',
+          onPress: () => navigation.replace('Home'),
         },
       ]
     );
@@ -162,7 +157,7 @@ const RestaurantOnboarding = ({ navigation, route }) => {
         }
         if (response.errorCode) {
           console.log('Image picker error:', response.errorMessage);
-          Alert.alert('Error', 'Failed to pick image');
+          AppAlert.alert('Error', 'Failed to pick image');
           return;
         }
         if (response.assets && response.assets[0]) {
@@ -191,7 +186,7 @@ const RestaurantOnboarding = ({ navigation, route }) => {
         }
         if (response.errorCode) {
           console.log('Image picker error:', response.errorMessage);
-          Alert.alert('Error', 'Failed to pick image');
+          AppAlert.alert('Error', 'Failed to pick image');
           return;
         }
         if (response.assets && response.assets[0]) {
@@ -211,32 +206,32 @@ const RestaurantOnboarding = ({ navigation, route }) => {
 
     // Validation
     if (!hotelName || hotelName.trim().length < 2) {
-      Alert.alert('Required', 'Restaurant name must be at least 2 characters');
+      AppAlert.alert('Required', 'Restaurant name must be at least 2 characters');
       return;
     }
 
     if (!address || address.trim().length < 5) {
-      Alert.alert('Required', 'Address must be at least 5 characters');
+      AppAlert.alert('Required', 'Address must be at least 5 characters');
       return;
     }
 
     if (!city || city.trim().length < 2) {
-      Alert.alert('Required', 'City must be at least 2 characters');
+      AppAlert.alert('Required', 'City must be at least 2 characters');
       return;
     }
 
     if (!fssaiNumber || fssaiNumber.length !== 14) {
-      Alert.alert('Required', 'FSSAI Number must be exactly 14 digits');
+      AppAlert.alert('Required', 'FSSAI Number must be exactly 14 digits');
       return;
     }
 
     if (pincode && pincode.length !== 6) {
-      Alert.alert('Invalid', 'Pincode must be exactly 6 digits');
+      AppAlert.alert('Invalid', 'Pincode must be exactly 6 digits');
       return;
     }
 
     if (!fssaiFile) {
-      Alert.alert('Required', 'Please upload FSSAI Certificate');
+      AppAlert.alert('Required', 'Please upload FSSAI Certificate');
       return;
     }
 
@@ -295,11 +290,18 @@ const RestaurantOnboarding = ({ navigation, route }) => {
       if (res.data?.ok) {
         const restaurant = res.data?.data;
 
+        // Force-refresh the shared restaurant list so Home/selectors don't
+        // show stale (pre-creation) data if navigated back within the TTL.
+        loadRestaurants({ force: true });
+        // MyRestaurantsScreen keeps its own staleness cache, separate from
+        // the RestaurantContext one above — invalidate it too.
+        invalidate('MyRestaurants-list');
+
         // Navigate based on restaurant status and user type
         if (isFirstRestaurant) {
           // First-time user after registration
           if (restaurant?.status === 'PENDING') {
-            Alert.alert(
+            AppAlert.alert(
               'Restaurant Submitted',
               'Your restaurant details have been submitted for admin approval. You will be notified once approved.',
               [
@@ -310,7 +312,7 @@ const RestaurantOnboarding = ({ navigation, route }) => {
               ]
             );
           } else {
-            Alert.alert(
+            AppAlert.alert(
               'Success!',
               'Your restaurant has been set up successfully.',
               [
@@ -323,7 +325,7 @@ const RestaurantOnboarding = ({ navigation, route }) => {
           }
         } else {
           // Existing user adding another restaurant - same flow as web
-          Alert.alert(
+          AppAlert.alert(
             'Restaurant Added Successfully',
             restaurant?.status === 'PENDING'
               ? 'Your restaurant is pending admin approval.'
@@ -337,7 +339,7 @@ const RestaurantOnboarding = ({ navigation, route }) => {
           );
         }
       } else {
-        Alert.alert('Error', res.data?.error || 'Failed to create restaurant');
+        AppAlert.alert('Error', res.data?.error || 'Failed to create restaurant');
       }
     } catch (err) {
       console.log('Restaurant creation error:', err?.response?.data || err.message);
@@ -345,7 +347,7 @@ const RestaurantOnboarding = ({ navigation, route }) => {
         err?.response?.data?.error ||
         err?.response?.data?.message ||
         'Could not create restaurant. Please try again.';
-      Alert.alert('Error', errorMessage);
+      AppAlert.alert('Error', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -441,7 +443,7 @@ const RestaurantOnboarding = ({ navigation, route }) => {
             style={styles.inputBox}
             onPress={() => {
               if (!selectedStateId) {
-                Alert.alert('', 'Please select state first');
+                AppAlert.alert('', 'Please select state first');
                 return;
               }
               setShowCityPicker(true);

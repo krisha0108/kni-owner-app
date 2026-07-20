@@ -9,6 +9,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api } from '../api/client';
+import { resolveNotificationLink } from '../utils/notificationLink';
 
 import { scale, moderateScale } from '../utils/responsive';
 const { width: W } = Dimensions.get('window');
@@ -25,51 +26,31 @@ const C = {
   info: '#3B82F6',
 };
 
-const TMAP = {
-  ticket_seen:            { ic: 'eye',              gradient: ['#0EA5E9', '#0369A1'] },
-  ticket_onwork:          { ic: 'construct',         gradient: ['#818CF8', '#4F46E5'] },
-  restaurant_approved:    { ic: 'checkmark-circle',  gradient: ['#34D399', '#10B981'] },
-  restaurant_rejected:    { ic: 'close-circle',      gradient: ['#F87171', '#EF4444'] },
-  eq_request_approved:    { ic: 'cube-outline',      gradient: ['#2DD4BF', '#14B8A6'] },
-  engineer_assigned:      { ic: 'people-outline',    gradient: ['#FBBF24', '#F59E0B'] },
-  feature:                { ic: 'sparkles-outline',  gradient: ['#A78BFA', '#7C3AED'] },
-  update:                 { ic: 'download-outline',  gradient: ['#60A5FA', '#3B82F6'] },
-  order_accepted:         { ic: 'checkmark-circle',  gradient: ['#34D399', '#10B981'] },
-  order_in_progress:      { ic: 'construct',         gradient: ['#818CF8', '#4F46E5'] },
-  order_completed:        { ic: 'checkmark-done',    gradient: ['#34D399', '#059669'] },
-  order_update:           { ic: 'cube-outline',      gradient: ['#2DD4BF', '#14B8A6'] },
-  completion_approval_required: { ic: 'alert-circle', gradient: ['#FBBF24', '#D97706'] },
-  pending_approval:       { ic: 'hourglass-outline', gradient: ['#FBBF24', '#D97706'] },
-  approval_required:      { ic: 'alert-circle',      gradient: ['#FBBF24', '#D97706'] },
-  work_completed:         { ic: 'checkmark-done',    gradient: ['#FBBF24', '#D97706'] },
+// Keyed on the real Prisma NotificationType enum (BOOKING, PAYMENT, ORDER,
+// AMC, EQUIPMENT, SYSTEM, ANNOUNCEMENT) - see prisma/schema.prisma. TMAP/
+// CAT_CONFIG/FILTER_TABS are all derived from this single source so a
+// notification's icon, category bucket, and filter tab always agree.
+const TYPE_CONFIG = {
+  BOOKING:      { ic: 'calendar',           gradient: ['#60A5FA', '#3B82F6'], label: 'Booking',      color: '#2563EB', lightBg: '#DBEAFE' },
+  PAYMENT:      { ic: 'card',               gradient: ['#34D399', '#059669'], label: 'Payment',      color: '#059669', lightBg: '#D1FAE5' },
+  ORDER:        { ic: 'cube',               gradient: ['#2DD4BF', '#14B8A6'], label: 'Order',        color: '#0D9488', lightBg: '#CCFBF1' },
+  AMC:          { ic: 'shield-checkmark',   gradient: ['#818CF8', '#4F46E5'], label: 'AMC',          color: '#4F46E5', lightBg: '#E0E7FF' },
+  EQUIPMENT:    { ic: 'construct',          gradient: ['#FBBF24', '#D97706'], label: 'Equipment',    color: '#D97706', lightBg: '#FEF3C7' },
+  SYSTEM:       { ic: 'notifications',      gradient: ['#94A3B8', '#64748B'], label: 'System',       color: '#475569', lightBg: '#F1F5F9' },
+  ANNOUNCEMENT: { ic: 'megaphone',          gradient: ['#A78BFA', '#7C3AED'], label: 'Announcement', color: '#7C3AED', lightBg: '#EDE9FE' },
 };
 
-const DEFAULT_TYPE = { ic: 'notifications-outline', gradient: ['#94A3B8', '#64748B'] };
+const DEFAULT_TYPE = { ic: 'notifications-outline', gradient: ['#94A3B8', '#64748B'], label: 'Notification', color: '#64748B', lightBg: '#F1F5F9' };
 
-const CAT_CONFIG = {
-  orders:      { label: 'Order',      gradient: ['#60A5FA', '#3B82F6'], color: '#2563EB', lightBg: '#DBEAFE', icon: 'cube' },
-  tickets:     { label: 'Ticket',     gradient: ['#FBBF24', '#D97706'], color: '#D97706', lightBg: '#FEF3C7', icon: 'construct' },
-  restaurants: { label: 'Restaurant', gradient: ['#34D399', '#10B981'], color: '#059669', lightBg: '#D1FAE5', icon: 'storefront' },
-  product:     { label: 'Product',    gradient: ['#A78BFA', '#7C3AED'], color: '#7C3AED', lightBg: '#EDE9FE', icon: 'sparkles' },
-};
+const TMAP = TYPE_CONFIG;
+const CAT_CONFIG = TYPE_CONFIG;
 
 const FILTER_TABS = [
   { key: 'all', label: 'All', icon: 'apps' },
-  { key: 'orders', label: 'Orders', icon: 'cube' },
-  { key: 'tickets', label: 'Tickets', icon: 'construct' },
-  { key: 'restaurants', label: 'Restaurants', icon: 'storefront' },
-  { key: 'product', label: 'Product', icon: 'sparkles' },
+  ...Object.entries(TYPE_CONFIG).map(([key, cfg]) => ({ key, label: cfg.label, icon: cfg.ic })),
 ];
 
-const ORDER_TYPES = ['engineer_assigned', 'eq_request_approved', 'completion_approval_required', 'pending_approval', 'approval_required', 'work_completed'];
-
-const getCatKey = (type) => {
-  if (type?.startsWith('ticket')) return 'tickets';
-  if (type?.startsWith('order_') || ORDER_TYPES.includes(type)) return 'orders';
-  if (type?.startsWith('restaurant')) return 'restaurants';
-  if (['feature', 'update'].includes(type)) return 'product';
-  return 'orders';
-};
+const getCatKey = (type) => (TYPE_CONFIG[type] ? type : 'SYSTEM');
 
 const relDay = (isoStr) => {
   const d = new Date(isoStr); const t = new Date();
@@ -136,17 +117,14 @@ export default function Notifications({ navigation }) {
 
   const mapNotification = (n) => ({
     id: n.id,
-    type: n.type || 'restaurant_approved',
+    type: n.type || 'SYSTEM',
     title: n.title,
     body: n.message,
     ts: n.createdAt || n.created_at,
     unread: !n.isRead && !n.is_read,
+    linkUrl: n.linkUrl,
     meta: {
-      restaurantId: n.restaurant_id,
       notificationId: n.id,
-      orderId: n.equipment_request_id || n.order_id,
-      equipment_request_id: n.equipment_request_id,
-      ticketId: n.ticket_id,
     }
   });
 
@@ -221,7 +199,8 @@ export default function Notifications({ navigation }) {
   }, [pulse, initializeUserData]);
 
   const filterCounts = useMemo(() => {
-    const c = { all: totalNotifCount || items.length, orders: 0, tickets: 0, restaurants: 0, product: 0 };
+    const c = { all: totalNotifCount || items.length };
+    Object.keys(TYPE_CONFIG).forEach(key => { c[key] = 0; });
     items.forEach(x => { c[getCatKey(x.type)]++; });
     return c;
   }, [items]);
@@ -263,13 +242,10 @@ export default function Notifications({ navigation }) {
   };
 
 
-  const APPROVAL_NOTIFICATION_TYPES = ['completion_approval_required', 'pending_approval', 'approval_required', 'work_completed'];
-
   const openItem = (n) => {
-    if (n.type === 'eq_request_approved' || n.type === 'engineer_assigned' || n.type.startsWith('order_') || APPROVAL_NOTIFICATION_TYPES.includes(n.type)) {
-      if (n.meta?.orderId || n.meta?.equipment_request_id) {
-        navigation.navigate?.('OrderTracking', { orderId: n.meta?.orderId || n.meta?.equipment_request_id });
-      } else { navigation.navigate?.('Marketplace'); }
+    const link = resolveNotificationLink(n.linkUrl);
+    if (link) {
+      navigation.navigate?.(link.screen, link.params);
     } else {
       navigation.navigate?.('NotificationDetail', { notification: n });
     }
@@ -382,36 +358,36 @@ export default function Notifications({ navigation }) {
       <View style={st.summarySection}>
         <View style={st.summaryGrid}>
           <TouchableOpacity
-            style={[st.summaryCard, filter === 'orders' && st.summaryCardActive]}
-            onPress={() => setFilter(filter === 'orders' ? 'all' : 'orders')}
+            style={[st.summaryCard, filter === 'ORDER' && st.summaryCardActive]}
+            onPress={() => setFilter(filter === 'ORDER' ? 'all' : 'ORDER')}
           >
             <LinearGradient colors={['#DBEAFE', '#BFDBFE']} style={st.summaryIconCircle}>
               <Icon name="cube" size={scale(18)} color="#2563EB" />
             </LinearGradient>
-            <Text style={st.summaryCount}>{filterCounts.orders}</Text>
+            <Text style={st.summaryCount}>{filterCounts.ORDER}</Text>
             <Text style={st.summaryLabel}>Orders</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[st.summaryCard, filter === 'tickets' && st.summaryCardActive]}
-            onPress={() => setFilter(filter === 'tickets' ? 'all' : 'tickets')}
+            style={[st.summaryCard, filter === 'EQUIPMENT' && st.summaryCardActive]}
+            onPress={() => setFilter(filter === 'EQUIPMENT' ? 'all' : 'EQUIPMENT')}
           >
             <LinearGradient colors={['#FEF3C7', '#FDE68A']} style={st.summaryIconCircle}>
               <Icon name="construct" size={scale(18)} color="#D97706" />
             </LinearGradient>
-            <Text style={st.summaryCount}>{filterCounts.tickets}</Text>
-            <Text style={st.summaryLabel}>Tickets</Text>
+            <Text style={st.summaryCount}>{filterCounts.EQUIPMENT}</Text>
+            <Text style={st.summaryLabel}>Equipment</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[st.summaryCard, filter === 'restaurants' && st.summaryCardActive]}
-            onPress={() => setFilter(filter === 'restaurants' ? 'all' : 'restaurants')}
+            style={[st.summaryCard, filter === 'BOOKING' && st.summaryCardActive]}
+            onPress={() => setFilter(filter === 'BOOKING' ? 'all' : 'BOOKING')}
           >
             <LinearGradient colors={['#D1FAE5', '#A7F3D0']} style={st.summaryIconCircle}>
-              <Icon name="storefront" size={scale(18)} color="#059669" />
+              <Icon name="calendar" size={scale(18)} color="#059669" />
             </LinearGradient>
-            <Text style={st.summaryCount}>{filterCounts.restaurants}</Text>
-            <Text style={st.summaryLabel}>Restaurants</Text>
+            <Text style={st.summaryCount}>{filterCounts.BOOKING}</Text>
+            <Text style={st.summaryLabel}>Bookings</Text>
           </TouchableOpacity>
 
           <TouchableOpacity

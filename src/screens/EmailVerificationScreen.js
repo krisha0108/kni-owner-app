@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -15,6 +14,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { api } from '../api/client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import notificationService from '../services/notificationService';
+import AppAlert from '../utils/AppAlert';
 
 import { scale, moderateScale } from '../utils/responsive';
 const C = {
@@ -71,7 +71,7 @@ export default function EmailVerificationScreen({ route, navigation }) {
   const handleVerify = async () => {
     const fullCode = code.join('');
     if (fullCode.length !== 6) {
-      return Alert.alert('Invalid Code', 'Please enter the complete 6-digit code.');
+      return AppAlert.alert('Invalid Code', 'Please enter the complete 6-digit code.');
     }
 
     setLoading(true);
@@ -82,7 +82,14 @@ export default function EmailVerificationScreen({ route, navigation }) {
       });
 
       if (response.data?.ok) {
-        const { user, token, restaurants, hasApprovedRestaurant } = response.data.data;
+        const { user, token, restaurants, hasApprovedRestaurant, hasAnyRestaurant, requiresApproval } = response.data.data;
+
+        // Owner registration still pending/rejected admin approval — no session
+        // was created for them, so just route to the status screen.
+        if (requiresApproval) {
+          navigation.replace('OwnerApprovalPending');
+          return;
+        }
 
         // Save session
         if (token) {
@@ -107,13 +114,13 @@ export default function EmailVerificationScreen({ route, navigation }) {
           await AsyncStorage.setItem('selectedRestaurant', JSON.stringify(restaurants[0]));
         }
 
-        Alert.alert('Email Verified!', 'Your email has been verified successfully.', [
+        AppAlert.alert('Email Verified!', 'Your email has been verified successfully.', [
           {
             text: 'Continue',
             onPress: () => {
               if (hasApprovedRestaurant) {
                 navigation.replace('Home');
-              } else if (restaurants && restaurants.length > 0) {
+              } else if (hasAnyRestaurant) {
                 navigation.replace('PendingApproval');
               } else {
                 navigation.replace('RestaurantOnboarding');
@@ -122,13 +129,13 @@ export default function EmailVerificationScreen({ route, navigation }) {
           },
         ]);
       } else {
-        Alert.alert('Verification Failed', response.data?.error || 'Invalid code. Please try again.');
+        AppAlert.alert('Verification Failed', response.data?.error || 'Invalid code. Please try again.');
         setCode(['', '', '', '', '', '']);
         inputRefs.current[0]?.focus();
       }
     } catch (error) {
       const errorMsg = error.response?.data?.error || error.message || 'Verification failed.';
-      Alert.alert('Error', errorMsg);
+      AppAlert.alert('Error', errorMsg);
       setCode(['', '', '', '', '', '']);
       inputRefs.current[0]?.focus();
     } finally {
@@ -146,15 +153,15 @@ export default function EmailVerificationScreen({ route, navigation }) {
       });
 
       if (response.data?.ok) {
-        Alert.alert('Code Sent', 'A new verification code has been sent to your email.');
+        AppAlert.alert('Code Sent', 'A new verification code has been sent to your email.');
         setCooldown(60);
         setCode(['', '', '', '', '', '']);
         inputRefs.current[0]?.focus();
       } else {
-        Alert.alert('Error', response.data?.error || 'Failed to resend code.');
+        AppAlert.alert('Error', response.data?.error || 'Failed to resend code.');
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to resend code. Please try again.');
+      AppAlert.alert('Error', 'Failed to resend code. Please try again.');
     } finally {
       setResending(false);
     }

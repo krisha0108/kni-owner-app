@@ -24,7 +24,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList,
-  TextInput, ActivityIndicator, Alert, Modal, Image,
+  TextInput, ActivityIndicator, Modal, Image,
   useWindowDimensions, Dimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -36,8 +36,11 @@ import { api, uploadFile } from '../api/client';
 import { useRestaurant } from '../context/RestaurantContext';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
+import OfferSelector from '../components/OfferSelector';
 import { scale, moderateScale, isTablet, getContainerMaxWidth } from '../utils/responsive';
 import useKeyboardHeight from '../utils/useKeyboardHeight';
+import { invalidate } from '../utils/focusCache';
+import AppAlert from '../utils/AppAlert';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // Constants - matching owner web
@@ -208,7 +211,7 @@ export default function ServiceRequestScreen({ navigation, route }) {
         }
       } catch (error) {
         console.error('Failed to fetch services/parts:', error);
-        Alert.alert('Error', 'Failed to load services and parts');
+        AppAlert.alert('Error', 'Failed to load services and parts');
       } finally {
         setIsLoading(false);
       }
@@ -270,22 +273,90 @@ export default function ServiceRequestScreen({ navigation, route }) {
     });
   };
 
-  // Calculate totals
+  // Item total, computed early so the discount-preview effect can depend on
+  // it (every item here shares the equipment's category, so a single
+  // categoryId + amount is enough for category-scoped offer matching).
+  const itemTotal = useMemo(() => {
+    let total = 0;
+    selectedItems.forEach(item => { total += item.price * item.qty; });
+    return total;
+  }, [selectedItems]);
+
+  // Discount (custom rate / active offer / promo code) - matches what POST
+  // /api/owner/bookings actually applies at creation time, so this preview
+  // (and the Razorpay amount) isn't missing a discount the owner is entitled
+  // to. Uses `amount` (not `percent`) for the actual math - a category-scoped
+  // offer's % re-derived against the whole booking can drift real rupees on
+  // large bookings.
+  const [discount, setDiscount] = useState(null);
+  const [promoCode, setPromoCode] = useState(null);
+  const [promoCodeInput, setPromoCodeInput] = useState('');
+  // Owner's pick from `discount.candidates` - defaults to whichever the
+  // backend auto-picked (candidates[0], sorted best-first) until they choose
+  // a different one themselves. `undefined` = "haven't picked yet", distinct
+  // from `null` ("explicitly chose No discount") - candidates always include
+  // a null-offerId "No discount" entry, so `null` can't double as the
+  // not-yet-initialized sentinel without the two colliding.
+  const [selectedOfferId, setSelectedOfferId] = useState(undefined);
+  // Whether `selectedOfferId` reflects an explicit OfferSelector pick rather
+  // than the auto-picked best candidate. Without this, a stale auto-pick
+  // "sticks" as candidates change (e.g. after applying a better promo code)
+  // because it's still a *valid* candidate, just no longer the *best* one -
+  // silently keeping a worse discount selected. Reset whenever the applied
+  // promo code changes so applying/removing a code always re-triggers
+  // picking the new best.
+  const hasManualOfferSelection = useRef(false);
+  const handleSelectOffer = (offerId) => {
+    hasManualOfferSelection.current = true;
+    setSelectedOfferId(offerId);
+  };
+  useEffect(() => {
+    if (!selectedRestaurantId || itemTotal <= 0) {
+      setDiscount(null);
+      return;
+    }
+    const params = { restaurantId: selectedRestaurantId, amount: itemTotal };
+    if (categoryId) params.categoryId = categoryId;
+    if (promoCode) params.promoCode = promoCode;
+    api.get('/owner/effective-discount', { params })
+      .then(res => {
+        if (res.data.ok && res.data.data) {
+          setDiscount(res.data.data);
+          const candidates = res.data.data.candidates || [];
+          setSelectedOfferId(prev => {
+            if (!hasManualOfferSelection.current) return candidates[0]?.offerId ?? null;
+            const stillValid = prev !== undefined && candidates.some(c => c.offerId === prev);
+            return stillValid ? prev : (candidates[0]?.offerId ?? null);
+          });
+        }
+      })
+      .catch(() => {});
+  }, [selectedRestaurantId, itemTotal, categoryId, promoCode]);
+
+  const selectedCandidate = useMemo(
+    () => (discount?.candidates || []).find(c => c.offerId === selectedOfferId),
+    [discount, selectedOfferId]
+  );
+
+  // Calculate totals - mirrors the server's computeBookingTotal so this
+  // preview (and the amount charged via Razorpay) matches what actually
+  // gets stored on the booking: discount applied before GST.
   const totals = useMemo(() => {
-    let itemTotal = 0;
-    selectedItems.forEach(item => {
-      itemTotal += item.price * item.qty;
-    });
-    const gst = Math.round(itemTotal * GST_RATE);
-    const total = itemTotal + gst + tip;
-    return { itemTotal, gst, tip, total };
-  }, [selectedItems, tip]);
+    const rawAmount = selectedCandidate ? selectedCandidate.amount : discount?.amount ?? 0;
+    const discountAmount = Math.max(0, Math.min(rawAmount, itemTotal));
+    const discountedBase = itemTotal - discountAmount;
+    const gst = Math.round(discountedBase * GST_RATE);
+    const total = discountedBase + gst + tip;
+    const discountSource = selectedCandidate ? selectedCandidate.source : discount?.source ?? null;
+    const discountPercent = selectedCandidate ? selectedCandidate.percent : discount?.percent ?? 0;
+    return { itemTotal, discountPercent, discountAmount, discountSource, gst, tip, total };
+  }, [itemTotal, tip, discount, selectedCandidate]);
 
   // Copy UPI ID
   const copyUpiId = () => {
     if (paymentSettings?.upiId) {
       Clipboard.setString(paymentSettings.upiId);
-      Alert.alert('Copied!', 'UPI ID copied to clipboard');
+      AppAlert.alert('Copied!', 'UPI ID copied to clipboard');
     }
   };
 
@@ -315,13 +386,13 @@ export default function ServiceRequestScreen({ navigation, route }) {
 
       if (response.data?.ok && response.data?.url) {
         setPaymentScreenshot(response.data.url);
-        Alert.alert('Success', 'Screenshot uploaded');
+        AppAlert.alert('Success', 'Screenshot uploaded');
       } else {
         throw new Error('Upload failed');
       }
     } catch (error) {
       console.error('Upload error:', error);
-      Alert.alert('Error', 'Failed to upload screenshot');
+      AppAlert.alert('Error', 'Failed to upload screenshot');
     } finally {
       setIsUploading(false);
     }
@@ -332,15 +403,15 @@ export default function ServiceRequestScreen({ navigation, route }) {
   const handleRazorpayPayment = async () => {
     if (paymentInProgress.current) return;
     if (!selectedRestaurantId) {
-      Alert.alert('Error', 'Please select a restaurant');
+      AppAlert.alert('Error', 'Please select a restaurant');
       return;
     }
     if (selectedItems.size === 0) {
-      Alert.alert('Error', 'Please select at least one service or part');
+      AppAlert.alert('Error', 'Please select at least one service or part');
       return;
     }
     if (!selectedDate || !selectedSlot) {
-      Alert.alert('Error', 'Please select date and time');
+      AppAlert.alert('Error', 'Please select date and time');
       return;
     }
 
@@ -377,6 +448,8 @@ export default function ServiceRequestScreen({ navigation, route }) {
         problemDescription: problemDescription || `Service request for ${equipmentName || 'Equipment'}`,
         tip,
         items,
+        promoCode: promoCode || undefined,
+        offerId: selectedOfferId,
       });
 
       if (!bookingRes.data?.ok) {
@@ -422,21 +495,23 @@ export default function ServiceRequestScreen({ navigation, route }) {
       });
 
       if (verifyRes.data.ok) {
+        invalidate(`MyBookings-${selectedRestaurantId}`);
+        invalidate(`OrderTracking-${selectedRestaurantId}`);
         setStep('confirm');
       } else {
-        Alert.alert('Verification Failed', verifyRes.data.error || 'Payment verification failed');
+        AppAlert.alert('Verification Failed', verifyRes.data.error || 'Payment verification failed');
       }
     } catch (error) {
       const dismissed = error.code === 0 || error.code === 2 || error.code === 'PAYMENT_CANCELLED';
       if (dismissed) {
-        Alert.alert(
+        AppAlert.alert(
           'Payment Cancelled',
           'Payment cancelled. Your booking has been created — you can pay later from My Bookings.',
           [{ text: 'OK' }]
         );
       } else {
         console.error('Razorpay payment error:', error);
-        Alert.alert('Payment Failed', error.description || error.message || 'Payment failed. Please try again.');
+        AppAlert.alert('Payment Failed', error.description || error.message || 'Payment failed. Please try again.');
       }
     } finally {
       setIsSubmitting(false);
@@ -447,19 +522,19 @@ export default function ServiceRequestScreen({ navigation, route }) {
   // Submit booking (legacy manual flow - kept for reference)
   const handleSubmit = async () => {
     if (!selectedRestaurantId) {
-      Alert.alert('Error', 'Please select a restaurant');
+      AppAlert.alert('Error', 'Please select a restaurant');
       return;
     }
     if (selectedItems.size === 0) {
-      Alert.alert('Error', 'Please select at least one service or part');
+      AppAlert.alert('Error', 'Please select at least one service or part');
       return;
     }
     if (!selectedDate || !selectedSlot) {
-      Alert.alert('Error', 'Please select date and time');
+      AppAlert.alert('Error', 'Please select date and time');
       return;
     }
     if (!paymentScreenshot) {
-      Alert.alert('Error', 'Please upload payment screenshot');
+      AppAlert.alert('Error', 'Please upload payment screenshot');
       return;
     }
 
@@ -496,19 +571,23 @@ export default function ServiceRequestScreen({ navigation, route }) {
         problemDescription: problemDescription || `Service request for ${equipmentName || 'Equipment'}`,
         tip: tip,
         items,
+        promoCode: promoCode || undefined,
+        offerId: selectedOfferId,
         paymentScreenshotUrl: paymentScreenshot,
       };
 
       const response = await api.post('/owner/bookings', payload);
 
       if (response.data?.ok) {
+        invalidate(`MyBookings-${selectedRestaurantId}`);
+        invalidate(`OrderTracking-${selectedRestaurantId}`);
         setStep('confirm');
       } else {
         throw new Error(response.data?.error || 'Failed to create booking');
       }
     } catch (error) {
       console.error('Booking error:', error);
-      Alert.alert('Error', error.message || 'Failed to create booking');
+      AppAlert.alert('Error', error.message || 'Failed to create booking');
     } finally {
       setIsSubmitting(false);
     }
@@ -693,6 +772,14 @@ export default function ServiceRequestScreen({ navigation, route }) {
                   <Text style={st.summaryLabel}>Item Total</Text>
                   <Text style={st.summaryValue}>{formatPrice(totals.itemTotal)}</Text>
                 </View>
+                {totals.discountAmount > 0 && (
+                  <View style={st.summaryRow}>
+                    <Text style={st.summaryLabel}>
+                      Discount ({totals.discountPercent}%{totals.discountSource ? ` — ${totals.discountSource}` : ''})
+                    </Text>
+                    <Text style={[st.summaryValue, { color: C.ok }]}>-{formatPrice(totals.discountAmount)}</Text>
+                  </View>
+                )}
                 <View style={st.summaryRow}>
                   <Text style={st.summaryLabel}>GST (18%)</Text>
                   <Text style={st.summaryValue}>{formatPrice(totals.gst)}</Text>
@@ -705,6 +792,47 @@ export default function ServiceRequestScreen({ navigation, route }) {
                   <Text style={st.totalLabel}>Total Amount</Text>
                   <Text style={st.totalValue}>{formatPrice(totals.total)}</Text>
                 </View>
+
+                {/* Promo code */}
+                {promoCode ? (
+                  <View style={[st.summaryRow, { backgroundColor: C.bg, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 }]}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={st.summaryLabel}>Code <Text style={{ fontWeight: '700' }}>{promoCode}</Text> applied</Text>
+                      {discount?.promoCodeError ? (
+                        <Text style={{ fontSize: 11, color: C.danger, marginTop: 2 }}>{discount.promoCodeError}</Text>
+                      ) : discount?.promoCodeOutbidBy ? (
+                        <Text style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>
+                          Valid, but "{discount.promoCodeOutbidBy}" already gives a bigger discount — that one's being used
+                        </Text>
+                      ) : null}
+                    </View>
+                    <TouchableOpacity onPress={() => { hasManualOfferSelection.current = false; setPromoCode(null); setPromoCodeInput(''); }}>
+                      <Text style={{ color: C.primary, fontWeight: '600' }}>Remove</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
+                    <TextInput
+                      style={[st.textInput, { flex: 1 }]}
+                      placeholder="Promo code"
+                      value={promoCodeInput}
+                      onChangeText={(t) => setPromoCodeInput(t.toUpperCase())}
+                      autoCapitalize="characters"
+                    />
+                    <TouchableOpacity
+                      style={[st.applyBtn, !promoCodeInput.trim() && { opacity: 0.5 }]}
+                      disabled={!promoCodeInput.trim()}
+                      onPress={() => { hasManualOfferSelection.current = false; setPromoCode(promoCodeInput.trim().toUpperCase()); }}
+                    >
+                      <Text style={st.applyBtnText}>Apply</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+                <OfferSelector
+                  candidates={discount?.candidates}
+                  selectedOfferId={selectedOfferId}
+                  onSelect={handleSelectOffer}
+                />
               </View>
             </View>
 
@@ -1152,6 +1280,15 @@ const st = StyleSheet.create({
   summaryTotal: { borderTopWidth: 1, borderTopColor: C.border, paddingTop: scale(12), marginTop: scale(8) },
   totalLabel: { fontSize: moderateScale(16), fontWeight: '800', color: C.ink },
   totalValue: { fontSize: moderateScale(18), fontWeight: '800', color: C.primary },
+  textInput: {
+    backgroundColor: C.bg, borderRadius: scale(10), borderWidth: 1, borderColor: C.border,
+    paddingHorizontal: scale(12), paddingVertical: scale(10), fontSize: moderateScale(14), color: C.text,
+  },
+  applyBtn: {
+    backgroundColor: C.primary, borderRadius: scale(10), paddingHorizontal: scale(16),
+    alignItems: 'center', justifyContent: 'center',
+  },
+  applyBtnText: { color: '#fff', fontWeight: '700', fontSize: moderateScale(13) },
 
   // Tip
   tipRow: { flexDirection: 'row', gap: scale(12) },

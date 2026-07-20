@@ -13,17 +13,17 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
-  Alert,
   Modal,
   TextInput,
   useWindowDimensions,
   StatusBar,
   Dimensions,
-  Linking,
+  Share,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { api, API_BASE_URL } from '../api/client';
+import { api, downloadAuthenticatedFile } from '../api/client';
 import { useRestaurant } from '../context/RestaurantContext';
 import { RestaurantSelectorBar } from '../components/RestaurantSelector';
 import KniBottomNav from '../components/KniBottomNav';
@@ -31,6 +31,7 @@ import NavigationMenu from '../components/NavigationMenu';
 
 import { scale, moderateScale } from '../utils/responsive';
 import useKeyboardHeight from '../utils/useKeyboardHeight';
+import AppAlert from '../utils/AppAlert';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 // Premium Color Palette
 const C = {
@@ -91,6 +92,7 @@ export default function StaffSalaryScreen({ navigation }) {
   const [detailModal, setDetailModal] = useState(null);
   const [generating, setGenerating] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [downloadingSlipId, setDownloadingSlipId] = useState(null);
 
   // Payment dialog state
   const [paymentModal, setPaymentModal] = useState(null);
@@ -98,7 +100,7 @@ export default function StaffSalaryScreen({ navigation }) {
   const [isRecordingPayment, setIsRecordingPayment] = useState(false);
 
   const loadData = useCallback(async () => {
-    if (!selectedRestaurantId) return;
+    if (!selectedRestaurantId) { setLoading(false); return; }
 
     try {
       setLoading(true);
@@ -111,7 +113,7 @@ export default function StaffSalaryScreen({ navigation }) {
       }
     } catch (error) {
       console.error('Error loading salaries:', error);
-      Alert.alert('Error', 'Failed to load salary data');
+      AppAlert.alert('Error', 'Failed to load salary data');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -119,9 +121,7 @@ export default function StaffSalaryScreen({ navigation }) {
   }, [selectedRestaurantId, selectedMonth, selectedYear]);
 
   useEffect(() => {
-    if (selectedRestaurantId) {
-      loadData();
-    }
+    loadData();
   }, [selectedRestaurantId, selectedMonth, selectedYear, loadData]);
 
   const onRefresh = async () => {
@@ -132,7 +132,7 @@ export default function StaffSalaryScreen({ navigation }) {
 
   const generateSalaries = async () => {
     const monthName = monthNames[selectedMonth - 1];
-    Alert.alert(
+    AppAlert.alert(
       'Generate Salary',
       `Generate salary for all active staff for ${monthName} ${selectedYear}?`,
       [
@@ -149,13 +149,13 @@ export default function StaffSalaryScreen({ navigation }) {
               });
 
               if (response.data.ok) {
-                Alert.alert('Success', response.data.message || 'Salaries generated successfully');
+                AppAlert.alert('Success', response.data.message || 'Salaries generated successfully');
                 loadData();
               } else {
-                Alert.alert('Error', response.data.error || 'Failed to generate salaries');
+                AppAlert.alert('Error', response.data.error || 'Failed to generate salaries');
               }
             } catch (error) {
-              Alert.alert('Error', error.response?.data?.error || 'Failed to generate salaries');
+              AppAlert.alert('Error', error.response?.data?.error || 'Failed to generate salaries');
             } finally {
               setGenerating(false);
             }
@@ -163,6 +163,23 @@ export default function StaffSalaryScreen({ navigation }) {
         }
       ]
     );
+  };
+
+  const handleDownloadSlip = async (item) => {
+    if (downloadingSlipId) return;
+    setDownloadingSlipId(item.id);
+    try {
+      const path = await downloadAuthenticatedFile(
+        `/owner/staff-salary/${item.id}/slip`,
+        `salary-slip-${item.id}.pdf`
+      );
+      await Share.share({ url: Platform.OS === 'ios' ? path : `file://${path}`, title: 'Salary Slip' });
+    } catch (error) {
+      console.error('Download salary slip error:', error);
+      AppAlert.alert('Error', 'Failed to download the salary slip');
+    } finally {
+      setDownloadingSlipId(null);
+    }
   };
 
   const openPaymentDialog = (record) => {
@@ -176,13 +193,13 @@ export default function StaffSalaryScreen({ navigation }) {
 
     const amount = parseFloat(paymentAmount);
     if (isNaN(amount) || amount <= 0) {
-      Alert.alert('Error', 'Please enter a valid payment amount');
+      AppAlert.alert('Error', 'Please enter a valid payment amount');
       return;
     }
 
     const remainingAmount = paymentModal.totalPayable - paymentModal.totalPaid;
     if (amount > remainingAmount) {
-      Alert.alert('Error', `Payment cannot exceed remaining amount (${formatPrice(remainingAmount)})`);
+      AppAlert.alert('Error', `Payment cannot exceed remaining amount (${formatPrice(remainingAmount)})`);
       return;
     }
 
@@ -193,15 +210,15 @@ export default function StaffSalaryScreen({ navigation }) {
       });
 
       if (response.data.ok) {
-        Alert.alert('Success', response.data.message || 'Payment recorded successfully');
+        AppAlert.alert('Success', response.data.message || 'Payment recorded successfully');
         setPaymentModal(null);
         setPaymentAmount('');
         loadData();
       } else {
-        Alert.alert('Error', response.data.error || 'Failed to record payment');
+        AppAlert.alert('Error', response.data.error || 'Failed to record payment');
       }
     } catch (error) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to record payment');
+      AppAlert.alert('Error', error.response?.data?.error || 'Failed to record payment');
     } finally {
       setIsRecordingPayment(false);
     }
@@ -209,11 +226,11 @@ export default function StaffSalaryScreen({ navigation }) {
 
   const handleDeleteRecord = (record) => {
     if (record.totalPaid > 0) {
-      Alert.alert('Cannot Delete', 'Cannot delete salary record with payments made');
+      AppAlert.alert('Cannot Delete', 'Cannot delete salary record with payments made');
       return;
     }
 
-    Alert.alert(
+    AppAlert.alert(
       'Delete Salary Record',
       `Delete salary record for ${record.staff?.name}?`,
       [
@@ -225,13 +242,13 @@ export default function StaffSalaryScreen({ navigation }) {
             try {
               const response = await api.delete(`/owner/staff-salary/${record.id}`);
               if (response.data.ok) {
-                Alert.alert('Success', 'Salary record deleted');
+                AppAlert.alert('Success', 'Salary record deleted');
                 loadData();
               } else {
-                Alert.alert('Error', response.data.error || 'Failed to delete');
+                AppAlert.alert('Error', response.data.error || 'Failed to delete');
               }
             } catch (error) {
-              Alert.alert('Error', error.response?.data?.error || 'Failed to delete');
+              AppAlert.alert('Error', error.response?.data?.error || 'Failed to delete');
             }
           }
         }
@@ -361,9 +378,14 @@ export default function StaffSalaryScreen({ navigation }) {
         <View style={st.cardActions}>
           <TouchableOpacity
             style={st.slipBtn}
-            onPress={() => Linking.openURL(`${API_BASE_URL}/owner/staff-salary/${item.id}/slip`)}
+            onPress={() => handleDownloadSlip(item)}
+            disabled={downloadingSlipId === item.id}
           >
-            <Icon name="document-text-outline" size={scale(16)} color={C.warning} />
+            {downloadingSlipId === item.id ? (
+              <ActivityIndicator size="small" color={C.warning} />
+            ) : (
+              <Icon name="document-text-outline" size={scale(16)} color={C.warning} />
+            )}
           </TouchableOpacity>
           <TouchableOpacity style={st.detailBtn} onPress={() => setDetailModal(item)}>
             <Icon name="eye-outline" size={scale(16)} color={C.info} />

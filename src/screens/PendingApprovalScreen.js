@@ -18,6 +18,7 @@ import { api } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
 
 import { scale, moderateScale } from '../utils/responsive';
+import { isStale, markFetched } from '../utils/focusCache';
 const { width, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const C = {
@@ -67,6 +68,14 @@ const TYPE_CONFIG = {
     bg: '#FFF7ED',
     color: '#EA580C',
     lightBg: '#FFEDD5',
+  },
+  RESTAURANT_DELETION: {
+    icon: 'trash',
+    label: 'Deletion Request',
+    gradient: ['#F59E0B', '#B45309'],
+    bg: '#FFFBEB',
+    color: '#B45309',
+    lightBg: '#FEF3C7',
   },
 };
 
@@ -173,8 +182,12 @@ export default function PendingApprovalScreen({ navigation }) {
 
   useFocusEffect(
     useCallback(() => {
-      loadData();
-    }, [loadData])
+      const key = `PendingApproval-${currentRestaurant?.id}`;
+      if (isStale(key) || items.length === 0) {
+        loadData(currentRestaurant?.id);
+        markFetched(key);
+      }
+    }, [loadData, currentRestaurant, items.length])
   );
 
   const selectRestaurant = (restaurant) => {
@@ -183,12 +196,14 @@ export default function PendingApprovalScreen({ navigation }) {
       setCurrentRestaurant(restaurant);
       setItems([]);
       loadData(restaurant.id);
+      markFetched(`PendingApproval-${restaurant.id}`);
     }
   };
 
   const onRefresh = () => {
     setRefreshing(true);
     loadData(currentRestaurant?.id);
+    markFetched(`PendingApproval-${currentRestaurant?.id}`);
   };
 
   const filteredItems = items.filter((item) => {

@@ -20,6 +20,7 @@ import { RestaurantSelectorBar } from '../components/RestaurantSelector';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 import { scale, moderateScale, isTablet } from '../utils/responsive';
+import { isStale, markFetched } from '../utils/focusCache';
 
 const C = {
   primary: '#EF3A3A', primaryDark: '#DC2626', ink: '#1D2254', text: '#334155',
@@ -66,8 +67,12 @@ export default function AMCContractsScreen({ navigation }) {
 
   useFocusEffect(
     useCallback(() => {
-      loadData();
-    }, [selectedRestaurant])
+      const key = `AMCContracts-${selectedRestaurant}`;
+      if (isStale(key) || contracts.length === 0) {
+        loadData();
+        markFetched(key);
+      }
+    }, [selectedRestaurant, contracts.length])
   );
 
   const loadData = async (pageNum = 1, append = false) => {
@@ -132,8 +137,9 @@ export default function AMCContractsScreen({ navigation }) {
     setRefreshing(true);
     setPage(1);
     setHasMore(true);
-    await loadRestaurants();
+    await loadRestaurants({ force: true });
     await loadData(1, false);
+    markFetched(`AMCContracts-${selectedRestaurant}`);
   };
 
   const renderStatusTab = (statusKey) => {
@@ -160,7 +166,7 @@ export default function AMCContractsScreen({ navigation }) {
     const config = CONTRACT_STATUS[item.status] || CONTRACT_STATUS.ACTIVE;
     // Calculate from scheduledVisits array (API doesn't return pre-computed counts)
     const completedVisits = item.scheduledVisits?.filter(v => v.status === 'COMPLETED').length || 0;
-    const totalVisits = item.preventiveVisits || item.scheduledVisits?.length || 0;
+    const totalVisits = item.scheduledVisits?.filter(v => v.visitType === 'PREVENTIVE').length || 0;
     const progress = totalVisits ? completedVisits / totalVisits : 0;
     const daysRemaining = item.endDate ? Math.max(0, Math.ceil((new Date(item.endDate) - new Date()) / (1000 * 60 * 60 * 24))) : 0;
     const contractNum = item.contractNumber || `AMC-${item.id.slice(0, 6).toUpperCase()}`;

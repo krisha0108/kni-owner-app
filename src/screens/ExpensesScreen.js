@@ -7,7 +7,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl,
-  ActivityIndicator, Modal, TextInput, ScrollView, Alert, Image,
+  ActivityIndicator, Modal, TextInput, ScrollView, Image,
   StatusBar, useWindowDimensions, Platform, KeyboardAvoidingView, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -25,6 +25,8 @@ import NavigationMenu from '../components/NavigationMenu';
 
 import { scale, moderateScale } from '../utils/responsive';
 import { usePermissions } from '../utils/usePermissions';
+import { isStale, markFetched } from '../utils/focusCache';
+import AppAlert from '../utils/AppAlert';
 // Premium Color Palette
 const C = {
   primary: '#EF3A3A',
@@ -126,7 +128,15 @@ export default function ExpensesScreen({ navigation }) {
     return expenses.filter(exp => exp.category === selectedCategory);
   }, [expenses, selectedCategory]);
 
-  useFocusEffect(useCallback(() => { loadData(); }, [selectedRestaurant]));
+  useFocusEffect(useCallback(() => {
+    const key = `Expenses-${selectedRestaurant}`;
+    // A stale-cache "hit" only means "don't bother refetching" - it says nothing
+    // about whether THIS component instance actually has data to show. A fresh
+    // mount within the cache TTL (e.g. after a JS reload, or quick nav away/back)
+    // starts with an empty expenses array and would otherwise be stuck showing
+    // the loading spinner forever since loadData() (which clears it) never runs.
+    if (isStale(key) || expenses.length === 0) { loadData(); markFetched(key); }
+  }, [selectedRestaurant, expenses.length]));
 
   const loadData = async (pageNum = 1, append = false) => {
     if (!selectedRestaurant) { setLoading(false); return; }
@@ -169,7 +179,7 @@ export default function ExpensesScreen({ navigation }) {
     return <View style={{ padding: 16, alignItems: 'center' }}><ActivityIndicator size="small" color="#EF3A3A" /></View>;
   };
 
-  const onRefresh = async () => { setRefreshing(true); setPage(1); setHasMore(true); await loadRestaurants(); await loadData(1, false); };
+  const onRefresh = async () => { setRefreshing(true); setPage(1); setHasMore(true); await loadRestaurants({ force: true }); await loadData(1, false); markFetched(`Expenses-${selectedRestaurant}`); };
 
   const onDateChange = (event, selectedDate) => {
     setShowDatePicker(Platform.OS === 'ios');
@@ -224,7 +234,7 @@ export default function ExpensesScreen({ navigation }) {
 
   const saveExpense = async () => {
     if (!form.category || !form.amount) {
-      Alert.alert('Error', 'Please fill in category and amount');
+      AppAlert.alert('Error', 'Please fill in category and amount');
       return;
     }
     setSaving(true);
@@ -242,33 +252,33 @@ export default function ExpensesScreen({ navigation }) {
 
       if (form.id) {
         await api.put(`/owner/expenses/${form.id}`, payload);
-        Alert.alert('Success', 'Expense updated successfully');
+        AppAlert.alert('Success', 'Expense updated successfully');
       } else {
         await api.post('/owner/expenses', payload);
-        Alert.alert('Success', 'Expense added successfully');
+        AppAlert.alert('Success', 'Expense added successfully');
       }
       setModalVisible(false);
       setReceiptImage(null);
       loadData();
     } catch (error) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to save expense');
+      AppAlert.alert('Error', error.response?.data?.error || 'Failed to save expense');
     } finally {
       setSaving(false);
     }
   };
 
   const deleteExpense = (item) => {
-    Alert.alert('Delete Expense', 'Are you sure you want to delete this expense?', [
+    AppAlert.alert('Delete Expense', 'Are you sure you want to delete this expense?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete', style: 'destructive',
         onPress: async () => {
           try {
             await api.delete(`/owner/expenses/${item.id}`);
-            Alert.alert('Success', 'Expense deleted');
+            AppAlert.alert('Success', 'Expense deleted');
             loadData();
           } catch (error) {
-            Alert.alert('Error', 'Failed to delete expense');
+            AppAlert.alert('Error', 'Failed to delete expense');
           }
         }
       }

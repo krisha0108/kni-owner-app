@@ -20,6 +20,7 @@ import { RestaurantSelectorBar } from '../components/RestaurantSelector';
 import KniBottomNav from '../components/KniBottomNav';
 
 import { scale, moderateScale } from '../utils/responsive';
+import { isStale, markFetched } from '../utils/focusCache';
 const C = {
   primary: '#EF3A3A',
   ink: '#1D2254',
@@ -84,14 +85,19 @@ export default function DashboardScreen({ navigation }) {
 
   useFocusEffect(
     useCallback(() => {
-      loadData();
-    }, [loadData])
+      const key = `Dashboard-${restaurantId}-${selectedPeriod}`;
+      if (isStale(key) || !data) {
+        loadData();
+        markFetched(key);
+      }
+    }, [loadData, restaurantId, selectedPeriod, data])
   );
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadRestaurants();
+    await loadRestaurants({ force: true });
     await loadData();
+    markFetched(`Dashboard-${restaurantId}-${selectedPeriod}`);
   };
 
   const PERIOD_OPTIONS = [
@@ -309,12 +315,12 @@ export default function DashboardScreen({ navigation }) {
         )}
 
         {/* Top Spending Categories */}
-        {revenueData?.topCategories && revenueData.topCategories.length > 0 && (
+        {revenueData?.topSpendingCategories && revenueData.topSpendingCategories.length > 0 && (
           <View style={styles.analyticsCard}>
             <Text style={styles.analyticsCardTitle}>Top Spending</Text>
             {(() => {
-              const maxAmount = Math.max(...revenueData.topCategories.map(c => c.amount || 0), 1);
-              return revenueData.topCategories.map((cat, index) => {
+              const maxAmount = Math.max(...revenueData.topSpendingCategories.map(c => c.amount || 0), 1);
+              return revenueData.topSpendingCategories.map((cat, index) => {
                 const pct = ((cat.amount || 0) / maxAmount) * 100;
                 return (
                   <View key={index} style={styles.barRow}>
@@ -334,38 +340,38 @@ export default function DashboardScreen({ navigation }) {
         )}
 
         {/* Equipment Maintenance Cost */}
-        {revenueData?.equipmentCosts && revenueData.equipmentCosts.length > 0 && (
+        {revenueData?.equipmentMaintenanceCost && revenueData.equipmentMaintenanceCost.length > 0 && (
           <View style={styles.analyticsCard}>
             <Text style={styles.analyticsCardTitle}>Equipment Costs</Text>
-            {revenueData.equipmentCosts.map((equip, index) => (
+            {revenueData.equipmentMaintenanceCost.map((equip, index) => (
               <View key={index} style={styles.listRow}>
                 <View style={styles.listRowLeft}>
                   <Icon name="construct-outline" size={scale(18)} color={C.warn} />
                   <View style={styles.listRowText}>
-                    <Text style={styles.listRowTitle} numberOfLines={1}>{equip.name || equip.equipment}</Text>
-                    <Text style={styles.listRowSub}>{equip.serviceCount || equip.count || 0} services</Text>
+                    <Text style={styles.listRowTitle} numberOfLines={1}>{equip.equipmentName}</Text>
+                    <Text style={styles.listRowSub}>{equip.serviceCount || 0} services</Text>
                   </View>
                 </View>
-                <Text style={styles.listRowAmount}>{`\u20B9${(equip.totalCost || equip.amount || 0).toLocaleString('en-IN')}`}</Text>
+                <Text style={styles.listRowAmount}>{`\u20B9${(equip.totalCost || 0).toLocaleString('en-IN')}`}</Text>
               </View>
             ))}
           </View>
         )}
 
         {/* Vendor Spending */}
-        {revenueData?.vendorSpending && revenueData.vendorSpending.length > 0 && (
+        {revenueData?.vendorSpendingComparison && revenueData.vendorSpendingComparison.length > 0 && (
           <View style={styles.analyticsCard}>
             <Text style={styles.analyticsCardTitle}>Top Vendors</Text>
-            {revenueData.vendorSpending.map((vendor, index) => (
+            {revenueData.vendorSpendingComparison.map((vendor, index) => (
               <View key={index} style={styles.listRow}>
                 <View style={styles.listRowLeft}>
                   <Icon name="storefront-outline" size={scale(18)} color={C.primary} />
                   <View style={styles.listRowText}>
-                    <Text style={styles.listRowTitle} numberOfLines={1}>{vendor.name || vendor.vendor}</Text>
-                    <Text style={styles.listRowSub}>{vendor.orderCount || vendor.count || 0} orders</Text>
+                    <Text style={styles.listRowTitle} numberOfLines={1}>{vendor.vendorName}</Text>
+                    <Text style={styles.listRowSub}>{vendor.orderCount || 0} orders</Text>
                   </View>
                 </View>
-                <Text style={styles.listRowAmount}>{`\u20B9${(vendor.totalSpent || vendor.amount || 0).toLocaleString('en-IN')}`}</Text>
+                <Text style={styles.listRowAmount}>{`\u20B9${(vendor.totalSpent || 0).toLocaleString('en-IN')}`}</Text>
               </View>
             ))}
           </View>
@@ -592,14 +598,39 @@ const styles = StyleSheet.create({
     marginTop: scale(4),
     textAlign: 'right',
   },
-  statusPENDING_PAYMENT: {
+  // Keyed on the real ServiceBookingStatus enum (prisma/schema.prisma).
+  statusDRAFT: {
+    color: C.muted,
+  },
+  statusSLOT_SELECTED: {
     color: C.warn,
   },
-  statusSCHEDULED: {
+  statusPAYMENT_UPLOADED: {
     color: '#3B82F6',
+  },
+  statusPAYMENT_VERIFIED: {
+    color: C.ok,
+  },
+  statusPAYMENT_REJECTED: {
+    color: C.danger,
+  },
+  statusENGINEER_ASSIGNED: {
+    color: '#6366F1',
+  },
+  statusACCEPTED_BY_ENGINEER: {
+    color: '#6366F1',
+  },
+  statusIN_PROGRESS: {
+    color: C.warn,
+  },
+  statusREJECTED_BY_ENGINEER: {
+    color: C.danger,
   },
   statusCOMPLETED: {
     color: C.ok,
+  },
+  statusCANCELLED: {
+    color: C.danger,
   },
   // Revenue Analytics Styles
   revenueLoadingContainer: {

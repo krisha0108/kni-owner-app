@@ -12,17 +12,18 @@ import {
   ScrollView,
   TextInput,
   Dimensions,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import { api } from '../api/client';
+import AppAlert from '../utils/AppAlert';
 import { useFocusEffect } from '@react-navigation/native';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
 import { scale, moderateScale } from '../utils/responsive';
+import { isStale, markFetched } from '../utils/focusCache';
 const { width, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const C = {
@@ -281,7 +282,7 @@ export default function OrderTrackingScreen({ navigation }) {
       }
     } catch (error) {
       console.error('Error loading tracking data:', error);
-      Alert.alert('Error', 'Failed to load tracking data');
+      AppAlert.alert('Error', 'Failed to load tracking data');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -290,8 +291,12 @@ export default function OrderTrackingScreen({ navigation }) {
 
   useFocusEffect(
     useCallback(() => {
-      loadData();
-    }, [loadData])
+      const key = `OrderTracking-${currentRestaurant?.id}`;
+      if (isStale(key) || trackingItems.length === 0) {
+        loadData(currentRestaurant?.id);
+        markFetched(key);
+      }
+    }, [loadData, currentRestaurant, trackingItems.length])
   );
 
   const selectRestaurant = (restaurant) => {
@@ -301,12 +306,14 @@ export default function OrderTrackingScreen({ navigation }) {
       setServiceBookings([]);
       setTrackingItems([]);
       loadData(restaurant.id);
+      markFetched(`OrderTracking-${restaurant.id}`);
     }
   };
 
   const onRefresh = () => {
     setRefreshing(true);
     loadData(currentRestaurant?.id);
+    markFetched(`OrderTracking-${currentRestaurant?.id}`);
   };
 
   const filteredServices = serviceBookings.filter((b) => {

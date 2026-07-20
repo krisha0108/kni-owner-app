@@ -8,16 +8,18 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   ActivityIndicator, RefreshControl, Modal, TextInput,
-  Alert, StatusBar, Linking,
+  StatusBar, Share, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { api, API_BASE_URL } from '../api/client';
+import { api, downloadAuthenticatedFile } from '../api/client';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 import { scale, moderateScale } from '../utils/responsive';
 import useKeyboardHeight from '../utils/useKeyboardHeight';
+import { invalidate } from '../utils/focusCache';
+import AppAlert from '../utils/AppAlert';
 
 const C = {
   primary: '#EF3A3A', primaryDark: '#DC2626', ink: '#1D2254', text: '#334155',
@@ -69,6 +71,7 @@ export default function AMCContractDetailScreen({ navigation, route }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [downloadingDoc, setDownloadingDoc] = useState(false);
 
   // Visit schedule expand toggle
   const [showAllVisits, setShowAllVisits] = useState(false);
@@ -103,11 +106,11 @@ export default function AMCContractDetailScreen({ navigation, route }) {
 
   const handleSubmitBreakdown = async () => {
     if (!breakdownEquipment.trim()) {
-      Alert.alert('Error', 'Please enter equipment name');
+      AppAlert.alert('Error', 'Please enter equipment name');
       return;
     }
     if (!breakdownDescription.trim()) {
-      Alert.alert('Error', 'Please describe the problem');
+      AppAlert.alert('Error', 'Please describe the problem');
       return;
     }
 
@@ -122,35 +125,53 @@ export default function AMCContractDetailScreen({ navigation, route }) {
       const msg = res.data?.data?.isCoveredByAMC
         ? 'Breakdown reported - covered by AMC!'
         : 'Breakdown reported - this may be chargeable (free visits exhausted)';
-      Alert.alert('Success', msg);
+      AppAlert.alert('Success', msg);
       setBreakdownModal(false);
       setBreakdownEquipment('');
       setBreakdownDescription('');
       setBreakdownUrgency('MEDIUM');
       loadContract();
     } catch (e) {
-      Alert.alert('Error', e.response?.data?.error || 'Failed to submit breakdown request');
+      AppAlert.alert('Error', e.response?.data?.error || 'Failed to submit breakdown request');
     } finally {
       setBreakdownSubmitting(false);
     }
   };
 
+  const handleDownloadDocument = async () => {
+    if (downloadingDoc) return;
+    setDownloadingDoc(true);
+    try {
+      const path = await downloadAuthenticatedFile(
+        `/owner/amc-contracts/${contractId}/document`,
+        `amc-contract-${contractId}.pdf`
+      );
+      await Share.share({ url: Platform.OS === 'ios' ? path : `file://${path}`, title: 'AMC Contract Document' });
+    } catch (error) {
+      console.error('Download AMC document error:', error);
+      AppAlert.alert('Error', 'Failed to download the contract document');
+    } finally {
+      setDownloadingDoc(false);
+    }
+  };
+
   const handleRenew = () => {
-    Alert.alert('Renew Contract', 'This will create a renewal request. Admin will schedule a re-survey. Continue?', [
+    AppAlert.alert('Renew Contract', 'This will create a renewal request. Admin will schedule a re-survey. Continue?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Renew', onPress: async () => {
           try {
             const res = await api.post(`/owner/amc-contracts/${contractId}/renew`);
+            invalidate(`AMCRequestsList-${contract.restaurant?.id}`);
             if (res.data?.ok && res.data?.data?.id) {
-              Alert.alert('Success', 'Renewal request submitted! You can track it in AMC Requests.');
+              AppAlert.alert('Success', 'Renewal request submitted! You can track it in AMC Requests.');
               navigation.navigate('AMCRequestDetail', { requestId: res.data.data.id });
             } else {
-              Alert.alert('Success', 'Contract renewal request submitted!');
+              AppAlert.alert('Success', 'Contract renewal request submitted!');
               loadContract();
             }
           } catch (e) {
-            Alert.alert('Error', e.response?.data?.error || 'Failed to renew contract');
+            AppAlert.alert('Error', e.response?.data?.error || 'Failed to renew contract');
           }
         },
       },
@@ -278,8 +299,8 @@ export default function AMCContractDetailScreen({ navigation, route }) {
                 <Icon name="card" size={18} color={C.purple} />
               </View>
               <View style={styles.statTextWrap}>
-                <Text style={[styles.statValue, { color: C.purple }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{formatPrice(contract.amountPerCycle)}</Text>
-                <Text style={styles.statLabel}>Per {(contract.billingCycle || 'cycle').toLowerCase()}</Text>
+                <Text style={[styles.statValue, { color: C.purple }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{formatPrice(contract.amount)}</Text>
+                <Text style={styles.statLabel}>Contract Price</Text>
               </View>
             </View>
             <View style={styles.statCard}>
@@ -298,9 +319,14 @@ export default function AMCContractDetailScreen({ navigation, route }) {
         <View style={styles.actionsRow}>
           <TouchableOpacity
             style={[styles.actionBtn, { backgroundColor: C.info, flex: 0, paddingHorizontal: scale(14) }]}
-            onPress={() => Linking.openURL(`${API_BASE_URL}/owner/amc-contracts/${contractId}/document`)}
+            onPress={handleDownloadDocument}
+            disabled={downloadingDoc}
           >
-            <Icon name="download-outline" size={18} color="#fff" />
+            {downloadingDoc ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Icon name="download-outline" size={18} color="#fff" />
+            )}
           </TouchableOpacity>
           {contract.status === 'ACTIVE' && (
             <TouchableOpacity style={styles.actionBtn} onPress={() => setBreakdownModal(true)}>

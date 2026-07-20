@@ -15,7 +15,6 @@ import {
   TouchableOpacity,
   Image,
   TextInput,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -23,6 +22,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 import { getImageUrl } from '../api/client';
+import AppAlert from '../utils/AppAlert';
 import cartService from '../services/marketplaceCartService';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
@@ -85,20 +85,20 @@ export default function MarketplaceCartScreen({ navigation, route }) {
 
     try {
       if (newQty <= 0) {
-        await cartService.removeItem(item.id);
+        await cartService.removeItem(item.id, restaurantId);
       } else {
         const clamped = Math.min(newQty, item.product.stockQuantity || 999);
-        await cartService.updateItemQuantity(item.id, clamped);
+        await cartService.updateItemQuantity(item.id, clamped, restaurantId);
       }
       await loadCart();
     } catch (error) {
-      Alert.alert('Error', error.message || 'Failed to update cart');
+      AppAlert.alert('Error', error.message || 'Failed to update cart');
       console.error('Update cart error:', error);
     }
   };
 
   const handleClearCart = () => {
-    Alert.alert('Clear Cart', 'Remove all items from cart?', [
+    AppAlert.alert('Clear Cart', 'Remove all items from cart?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Clear',
@@ -108,7 +108,7 @@ export default function MarketplaceCartScreen({ navigation, route }) {
             await cartService.clearCart(restaurantId, { clearAll: true });
             setCart([]);
           } catch (error) {
-            Alert.alert('Error', error.message || 'Failed to clear cart');
+            AppAlert.alert('Error', error.message || 'Failed to clear cart');
             console.error('Clear cart error:', error);
           }
         },
@@ -142,14 +142,14 @@ export default function MarketplaceCartScreen({ navigation, route }) {
   };
 
   const handlePayAndOrder = async (vendorGroup) => {
-    if (!restaurantId) return Alert.alert('Error', 'Please select a restaurant');
-    if (!deliveryAddress.trim()) return Alert.alert('Error', 'Please enter delivery address');
+    if (!restaurantId) return AppAlert.alert('Error', 'Please select a restaurant');
+    if (!deliveryAddress.trim()) return AppAlert.alert('Error', 'Please enter delivery address');
 
     // Re-fetch cart to ensure items are still valid before proceeding to payment
     try {
       const freshCart = await cartService.getCart(restaurantId);
       if (!freshCart || freshCart.length === 0) {
-        Alert.alert('Cart Empty', 'Your cart appears to be empty. Items may have been removed.');
+        AppAlert.alert('Cart Empty', 'Your cart appears to be empty. Items may have been removed.');
         loadCart();
         return;
       }

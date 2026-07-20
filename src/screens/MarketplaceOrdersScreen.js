@@ -16,16 +16,18 @@ import {
   Modal,
   ScrollView,
   TextInput,
-  Alert,
   StatusBar,
   Dimensions,
   Image,
-  Linking,
+  Share,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { api, getImageUrl, API_BASE_URL } from '../api/client';
+import RazorpayCheckout from 'react-native-razorpay';
+import { api, getImageUrl, downloadAuthenticatedFile } from '../api/client';
+import AppAlert from '../utils/AppAlert';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRestaurant } from '../context/RestaurantContext';
 import { RestaurantSelectorBar } from '../components/RestaurantSelector';
@@ -123,6 +125,8 @@ export default function MarketplaceOrdersScreen({ navigation }) {
   // Order Detail Modal
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [isPayingFinal, setIsPayingFinal] = useState(false);
+  const payFinalInProgress = React.useRef(false);
 
   // Rating Modal
   const keyboardHeight = useKeyboardHeight();
@@ -168,7 +172,7 @@ export default function MarketplaceOrdersScreen({ navigation }) {
   }, [orders, activeStatusTab]);
 
   const loadData = useCallback(async (pageNum = 1, append = false) => {
-    if (!selectedRestaurantId) return;
+    if (!selectedRestaurantId) { setLoading(false); return; }
 
     if (pageNum === 1) setLoading(true);
     else setLoadingMore(true);
@@ -224,7 +228,7 @@ export default function MarketplaceOrdersScreen({ navigation }) {
   };
 
   const loadPayments = useCallback(async () => {
-    if (!selectedRestaurantId) return;
+    if (!selectedRestaurantId) { setLoadingPayments(false); return; }
 
     try {
       setLoadingPayments(true);
@@ -246,12 +250,10 @@ export default function MarketplaceOrdersScreen({ navigation }) {
 
   // Load data when restaurant changes
   useEffect(() => {
-    if (selectedRestaurantId) {
-      setPage(1);
-      setHasMore(true);
-      loadData();
-      loadPayments();
-    }
+    setPage(1);
+    setHasMore(true);
+    loadData();
+    loadPayments();
   }, [selectedRestaurantId, loadData, loadPayments]);
 
   // Auto-refresh every 60 seconds when screen is focused
@@ -306,16 +308,100 @@ export default function MarketplaceOrdersScreen({ navigation }) {
     setDetailModalVisible(true);
   };
 
+  const handlePayFinal = async (order) => {
+    if (!order?.pendingFinalPayment || payFinalInProgress.current) return;
+    payFinalInProgress.current = true;
+    setIsPayingFinal(true);
+
+    try {
+      const orderRes = await api.post('/razorpay/create-order', {
+        type: 'MARKETPLACE_INSTALLMENT',
+        installmentType: 'FINAL',
+        referenceId: order.pendingFinalPayment.id,
+      });
+      if (!orderRes.data.ok) {
+        AppAlert.alert('Error', orderRes.data.error || 'Failed to start payment');
+        return;
+      }
+
+      const { orderId, amount, currency, keyId, prefill } = orderRes.data.data;
+
+      let paymentData;
+      try {
+        paymentData = await RazorpayCheckout.open({
+          key: keyId,
+          amount,
+          currency,
+          name: 'KNI Official Store',
+          description: `Final payment - Order #${order.id.substring(0, 8)}`,
+          order_id: orderId,
+          prefill: prefill || {},
+          theme: { color: C.primary },
+        });
+      } catch (checkoutError) {
+        const dismissed = checkoutError.code === 0 || checkoutError.code === 2 || checkoutError.code === 'PAYMENT_CANCELLED';
+        if (dismissed) {
+          AppAlert.alert('Payment Cancelled', "You cancelled the payment. You can try again whenever you're ready.");
+        } else {
+          AppAlert.alert('Payment Failed', checkoutError.description || checkoutError.message || 'Payment was not completed.');
+        }
+        return;
+      }
+
+      const RETRY_DELAYS = [2000, 4000, 8000];
+      for (let attempt = 0; attempt <= 3; attempt++) {
+        try {
+          const verifyRes = await api.post('/razorpay/verify', {
+            type: 'MARKETPLACE_INSTALLMENT',
+            installmentType: 'FINAL',
+            razorpay_order_id: paymentData.razorpay_order_id,
+            razorpay_payment_id: paymentData.razorpay_payment_id,
+            razorpay_signature: paymentData.razorpay_signature,
+            marketplacePaymentId: order.pendingFinalPayment.id,
+          });
+
+          if (verifyRes.data.ok) {
+            AppAlert.alert('Success', 'Final payment successful! Order fully paid.', [
+              { text: 'OK', onPress: () => { setDetailModalVisible(false); loadData(1, false); } },
+            ]);
+            return;
+          } else {
+            throw new Error(verifyRes.data.error || 'Verification failed');
+          }
+        } catch (err) {
+          if (attempt < 3) {
+            await new Promise(r => setTimeout(r, RETRY_DELAYS[attempt]));
+            continue;
+          }
+          AppAlert.alert(
+            'Payment Verification Pending',
+            `Your payment of ₹${order.pendingFinalPayment.totalAmount.toLocaleString('en-IN')} was charged but verification could not be completed. It will be processed automatically. Contact support if not reflected within 15 minutes.`,
+            [{ text: 'OK', onPress: () => { setDetailModalVisible(false); loadData(1, false); } }]
+          );
+        }
+      }
+    } catch (error) {
+      AppAlert.alert('Error', 'Something went wrong. Please try again or contact support.');
+    } finally {
+      payFinalInProgress.current = false;
+      setIsPayingFinal(false);
+    }
+  };
+
   const INVOICE_STATUSES = ['CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED'];
 
   const handleDownloadInvoice = async (order) => {
     try {
-      const token = await require('@react-native-async-storage/async-storage').default.getItem('userToken');
-      const invoiceUrl = `${API_BASE_URL}/owner/marketplace/orders/${order.id}/invoice`;
-      // Open in browser — the API returns a PDF with attachment header
-      await Linking.openURL(invoiceUrl);
+      // Opening the invoice URL directly (Linking.openURL) carries no auth
+      // header and always 401s — download it via RNFS with the Bearer token
+      // attached instead, then share/open the local file.
+      const path = await downloadAuthenticatedFile(
+        `/owner/marketplace/orders/${order.id}/invoice`,
+        `invoice-${order.id}.pdf`
+      );
+      await Share.share({ url: Platform.OS === 'ios' ? path : `file://${path}`, title: 'Order Invoice' });
     } catch (error) {
-      Alert.alert('Error', 'Failed to open invoice. Please try again.');
+      AppAlert.alert('Error', 'Failed to download invoice. Please try again.');
       console.error('Invoice download error:', error);
     }
   };
@@ -338,15 +424,15 @@ export default function MarketplaceOrdersScreen({ navigation }) {
       });
 
       if (response.data.ok) {
-        Alert.alert('Success', 'Thank you for your rating!');
+        AppAlert.alert('Success', 'Thank you for your rating!');
         setRatingModalVisible(false);
         setOrderToRate(null);
         loadData();
       } else {
-        Alert.alert('Error', response.data.error || 'Failed to submit rating');
+        AppAlert.alert('Error', response.data.error || 'Failed to submit rating');
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to submit rating');
+      AppAlert.alert('Error', 'Failed to submit rating');
     } finally {
       setIsSubmittingRating(false);
     }
@@ -539,6 +625,15 @@ export default function MarketplaceOrdersScreen({ navigation }) {
               <Text style={styles.moreItemsText}>+{item.items.length - 2} more items</Text>
             )}
           </View>
+
+          {item.pendingFinalPayment && (
+            <View style={styles.finalPaymentDueBadge}>
+              <Icon name="alert-circle-outline" size={scale(14)} color="#9A3412" />
+              <Text style={styles.finalPaymentDueBadgeText}>
+                Final payment due: {formatPrice(item.pendingFinalPayment.totalAmount)}
+              </Text>
+            </View>
+          )}
 
           {/* Order Footer */}
           <View style={styles.orderFooter}>
@@ -1100,6 +1195,31 @@ export default function MarketplaceOrdersScreen({ navigation }) {
                     <Text style={styles.detailGrandTotalValue}>{formatPrice(selectedOrder.totalAmount)}</Text>
                   </View>
                 </View>
+
+                {/* Final Payment Due (negotiated/split-payment orders) */}
+                {selectedOrder.pendingFinalPayment && (
+                  <View style={styles.finalPaymentCard}>
+                    <View style={styles.detailTotalRow}>
+                      <Text style={styles.finalPaymentLabel}>Final Payment Due</Text>
+                      <Text style={styles.finalPaymentValue}>
+                        {formatPrice(selectedOrder.pendingFinalPayment.totalAmount)}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      style={[styles.finalPaymentBtn, isPayingFinal && { opacity: 0.6 }]}
+                      onPress={() => handlePayFinal(selectedOrder)}
+                      disabled={isPayingFinal}
+                    >
+                      {isPayingFinal ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <Text style={styles.finalPaymentBtnText}>
+                          Pay {formatPrice(selectedOrder.pendingFinalPayment.totalAmount)} with Razorpay
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                )}
 
                 {/* Status History Timeline */}
                 {selectedOrder.statusHistory && selectedOrder.statusHistory.length > 0 && (
@@ -1779,6 +1899,22 @@ const styles = StyleSheet.create({
     marginLeft: scale(16),
   },
 
+  finalPaymentDueBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(6),
+    backgroundColor: '#FFF7ED',
+    borderRadius: scale(8),
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(6),
+    marginBottom: scale(10),
+  },
+  finalPaymentDueBadgeText: {
+    fontSize: moderateScale(12),
+    fontWeight: '600',
+    color: '#9A3412',
+  },
+
   // Order Footer
   orderFooter: {
     flexDirection: 'row',
@@ -2066,6 +2202,38 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(20),
     fontWeight: '800',
     color: C.primary,
+  },
+
+  finalPaymentCard: {
+    backgroundColor: '#FFF7ED',
+    borderWidth: 1,
+    borderColor: '#FED7AA',
+    borderRadius: scale(12),
+    padding: scale(16),
+    marginTop: scale(12),
+  },
+  finalPaymentLabel: {
+    fontSize: moderateScale(14),
+    fontWeight: '600',
+    color: '#9A3412',
+  },
+  finalPaymentValue: {
+    fontSize: moderateScale(18),
+    fontWeight: '800',
+    color: '#9A3412',
+  },
+  finalPaymentBtn: {
+    backgroundColor: C.primary,
+    borderRadius: scale(10),
+    paddingVertical: scale(12),
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: scale(8),
+  },
+  finalPaymentBtnText: {
+    fontSize: moderateScale(14),
+    fontWeight: '700',
+    color: '#fff',
   },
 
   // Order Timeline Stepper (like service booking)

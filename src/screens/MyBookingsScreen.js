@@ -28,6 +28,7 @@ import { RestaurantSelectorBar } from '../components/RestaurantSelector';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 import { scale, moderateScale, isTablet, getContainerMaxWidth } from '../utils/responsive';
+import { isStale, markFetched } from '../utils/focusCache';
 
 const C = {
   primary: '#EF3A3A',
@@ -45,14 +46,18 @@ const C = {
   purple: '#8B5CF6',
 };
 
+// Keys match the real ServiceBookingStatus enum in prisma/schema.prisma.
 const STATUS_CONFIG = {
   all: { bg: '#F1F5F9', color: C.ink, icon: 'apps', label: 'All' },
-  PENDING_PAYMENT: { bg: '#FEF3C7', color: '#D97706', icon: 'time', label: 'Pending' },
+  DRAFT: { bg: '#F1F5F9', color: '#64748B', icon: 'document-outline', label: 'Draft' },
+  SLOT_SELECTED: { bg: '#FEF3C7', color: '#D97706', icon: 'time', label: 'Pending' },
   PAYMENT_UPLOADED: { bg: '#DBEAFE', color: '#2563EB', icon: 'cloud-upload', label: 'Uploaded' },
   PAYMENT_VERIFIED: { bg: '#D1FAE5', color: '#059669', icon: 'checkmark-circle', label: 'Verified' },
+  PAYMENT_REJECTED: { bg: '#FEE2E2', color: '#DC2626', icon: 'close-circle', label: 'Payment Rejected' },
   ENGINEER_ASSIGNED: { bg: '#E0E7FF', color: '#4F46E5', icon: 'person', label: 'Assigned' },
-  SCHEDULED: { bg: '#E0E7FF', color: '#4F46E5', icon: 'calendar', label: 'Scheduled' },
+  ACCEPTED_BY_ENGINEER: { bg: '#E0E7FF', color: '#4F46E5', icon: 'checkmark-done', label: 'Accepted' },
   IN_PROGRESS: { bg: '#FEF3C7', color: '#D97706', icon: 'construct', label: 'In Progress' },
+  REJECTED_BY_ENGINEER: { bg: '#FEE2E2', color: '#DC2626', icon: 'alert-circle', label: 'Engineer Rejected' },
   COMPLETED: { bg: '#D1FAE5', color: '#059669', icon: 'checkmark-done-circle', label: 'Completed' },
   CANCELLED: { bg: '#FEE2E2', color: '#DC2626', icon: 'close-circle', label: 'Cancelled' },
 };
@@ -90,7 +95,7 @@ export default function MyBookingsScreen({ navigation }) {
   const statusCounts = useMemo(() => {
     const counts = { all: bookings.length };
     bookings.forEach((b) => {
-      const status = b.status || 'PENDING_PAYMENT';
+      const status = b.status || 'SLOT_SELECTED';
       counts[status] = (counts[status] || 0) + 1;
     });
     return counts;
@@ -98,8 +103,12 @@ export default function MyBookingsScreen({ navigation }) {
 
   useFocusEffect(
     useCallback(() => {
-      loadData();
-    }, [selectedRestaurant])
+      const key = `MyBookings-${selectedRestaurant}`;
+      if (isStale(key) || bookings.length === 0) {
+        loadData();
+        markFetched(key);
+      }
+    }, [selectedRestaurant, bookings.length])
   );
 
   const loadData = async (pageNum = 1, append = false) => {
@@ -146,7 +155,7 @@ export default function MyBookingsScreen({ navigation }) {
 
   const filteredBookings = useMemo(() => {
     if (activeStatusTab === 'all') return bookings;
-    return bookings.filter(b => (b.status || 'PENDING_PAYMENT') === activeStatusTab);
+    return bookings.filter(b => (b.status || 'SLOT_SELECTED') === activeStatusTab);
   }, [bookings, activeStatusTab]);
 
   const handleLoadMore = () => {
@@ -168,8 +177,9 @@ export default function MyBookingsScreen({ navigation }) {
     setRefreshing(true);
     setPage(1);
     setHasMore(true);
-    await loadRestaurants();
+    await loadRestaurants({ force: true });
     await loadData(1, false);
+    markFetched(`MyBookings-${selectedRestaurant}`);
   };
 
   // Render status tab
@@ -204,7 +214,7 @@ export default function MyBookingsScreen({ navigation }) {
 
   // Render booking card
   const renderBookingCard = ({ item, index }) => {
-    const config = STATUS_CONFIG[item.status] || STATUS_CONFIG.PENDING_PAYMENT;
+    const config = STATUS_CONFIG[item.status] || STATUS_CONFIG.SLOT_SELECTED;
     const itemCount = (item.items || []).length;
 
     return (
@@ -268,7 +278,14 @@ export default function MyBookingsScreen({ navigation }) {
         <View style={styles.cardFooter}>
           <View>
             <Text style={styles.amountLabel}>Total</Text>
-            <Text style={styles.amountValue}>{formatPrice(item.totalAmount)}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={styles.amountValue}>{formatPrice(item.totalAmount)}</Text>
+              {!!item.discountAmount && item.discountAmount > 0 && (
+                <View style={{ backgroundColor: C.ok + '15', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, marginLeft: 6 }}>
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: C.ok }}>{item.discountPercent}% off</Text>
+                </View>
+              )}
+            </View>
           </View>
           <View style={styles.viewDetailsBtn}>
             <Text style={styles.viewDetailsText}>View</Text>

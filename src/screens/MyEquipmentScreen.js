@@ -7,7 +7,7 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput,
-  RefreshControl, Modal, ScrollView, Alert, ActivityIndicator, Image,
+  RefreshControl, Modal, ScrollView, ActivityIndicator, Image,
   useWindowDimensions, Platform, StatusBar, Animated, Dimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,6 +20,7 @@ import { useRestaurant } from '../context/RestaurantContext';
 import { RestaurantSelectorBar } from '../components/RestaurantSelector';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
+import AppAlert from '../utils/AppAlert';
 
 import { scale, moderateScale } from '../utils/responsive';
 import { usePermissions } from '../utils/usePermissions';
@@ -165,7 +166,7 @@ export default function MyEquipmentScreen({ navigation }) {
 
   // Fetch equipment
   const fetchEquipments = useCallback(async (pageNum = 1, append = false) => {
-    if (!selectedRestaurantId) return;
+    if (!selectedRestaurantId) { setLoading(false); return; }
     try {
       if (pageNum > 1) setLoadingMore(true);
       const { data } = await api.get(`/owner/equipment?restaurantId=${selectedRestaurantId}&page=${pageNum}&pageSize=20`);
@@ -185,7 +186,7 @@ export default function MyEquipmentScreen({ navigation }) {
       }
     } catch (error) {
       console.log('Error fetching equipment:', error);
-      Alert.alert('Error', 'Failed to load equipment');
+      AppAlert.alert('Error', 'Failed to load equipment');
     } finally {
       setLoading(false);
       setLoadingMore(false);
@@ -195,10 +196,8 @@ export default function MyEquipmentScreen({ navigation }) {
 
   useEffect(() => { fetchCategories(); }, [fetchCategories]);
   useEffect(() => {
-    if (selectedRestaurantId) {
-      setLoading(true);
-      fetchEquipments();
-    }
+    setLoading(true);
+    fetchEquipments();
   }, [selectedRestaurantId, fetchEquipments]);
 
   const handleLoadMore = () => {
@@ -282,11 +281,11 @@ export default function MyEquipmentScreen({ navigation }) {
         else if (type === 'warranty-cards') setForm(f => ({ ...f, warrantyCardUrl: data.url }));
         else if (type === 'photos') {
           if (form.photoUrls.length < 5) setForm(f => ({ ...f, photoUrls: [...f.photoUrls, data.url] }));
-          else Alert.alert('Limit Reached', 'Maximum 5 photos allowed');
+          else AppAlert.alert('Limit Reached', 'Maximum 5 photos allowed');
         }
-      } else Alert.alert('Error', 'Failed to upload image');
+      } else AppAlert.alert('Error', 'Failed to upload image');
     } catch (error) {
-      Alert.alert('Error', 'Failed to upload image');
+      AppAlert.alert('Error', 'Failed to upload image');
     } finally {
       setUploading(false);
     }
@@ -295,6 +294,14 @@ export default function MyEquipmentScreen({ navigation }) {
   const removePhoto = (index) => setForm(f => ({ ...f, photoUrls: f.photoUrls.filter((_, i) => i !== index) }));
 
   const saveEquipment = async () => {
+    if (!form.categoryId) {
+      AppAlert.alert('Category Required', 'Please select an equipment category.');
+      return;
+    }
+    if (!form.purchaseDate) {
+      AppAlert.alert('Purchase Date Required', 'Please select the equipment\'s purchase date.');
+      return;
+    }
     setSaving(true);
     try {
       const selectedCategory = categories.find(c => c.id === form.categoryId);
@@ -313,22 +320,22 @@ export default function MyEquipmentScreen({ navigation }) {
       };
       if (form.id) {
         await api.patch(`/owner/equipment/${form.id}`, payload);
-        Alert.alert('Success', 'Equipment updated successfully');
+        AppAlert.alert('Success', 'Equipment updated successfully');
       } else {
         await api.post('/owner/equipment', payload);
-        Alert.alert('Success', 'Equipment added successfully');
+        AppAlert.alert('Success', 'Equipment added successfully');
       }
       setModalVisible(false);
       fetchEquipments();
     } catch (error) {
-      Alert.alert('Error', 'Failed to save equipment');
+      AppAlert.alert('Error', 'Failed to save equipment');
     } finally {
       setSaving(false);
     }
   };
 
   const deleteEquipment = (equipment) => {
-    Alert.alert('Delete Equipment', `Are you sure you want to delete "${equipment.name}"?`, [
+    AppAlert.alert('Delete Equipment', `Are you sure you want to delete "${equipment.name}"?`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete', style: 'destructive',
@@ -336,9 +343,9 @@ export default function MyEquipmentScreen({ navigation }) {
           try {
             await api.delete(`/owner/equipment/${equipment.id}`);
             setEquipments(prev => prev.filter(e => e.id !== equipment.id));
-            Alert.alert('Success', 'Equipment deleted');
+            AppAlert.alert('Success', 'Equipment deleted');
           } catch (error) {
-            Alert.alert('Error', 'Failed to delete equipment');
+            AppAlert.alert('Error', 'Failed to delete equipment');
           }
         }
       }
@@ -700,7 +707,7 @@ export default function MyEquipmentScreen({ navigation }) {
                 value={form.installLocation} onChangeText={v => setForm(f => ({ ...f, installLocation: v }))} />
 
               {/* Purchase Date */}
-              <Text style={st.inputLabel}>Purchase Date</Text>
+              <Text style={st.inputLabel}>Purchase Date *</Text>
               <TouchableOpacity style={st.dateBtn} onPress={() => setShowPurchaseDatePicker(true)}>
                 <Icon name="calendar" size={scale(18)} color={C.primary} />
                 <Text style={form.purchaseDate ? st.dateText : st.datePlaceholder}>

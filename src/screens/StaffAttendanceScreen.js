@@ -13,7 +13,6 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
-  Alert,
   Modal,
   TextInput,
   FlatList,
@@ -29,6 +28,7 @@ import NavigationMenu from '../components/NavigationMenu';
 
 import { scale, moderateScale } from '../utils/responsive';
 import useKeyboardHeight from '../utils/useKeyboardHeight';
+import AppAlert from '../utils/AppAlert';
 // Premium Color Palette
 const C = {
   primary: '#EF3A3A',
@@ -97,13 +97,13 @@ export default function StaffAttendanceScreen({ navigation }) {
   const [checkOutTime, setCheckOutTime] = useState('18:00');
 
   const loadData = useCallback(async () => {
-    if (!selectedRestaurantId) return;
+    if (!selectedRestaurantId) { setLoading(false); return; }
 
     try {
       setLoading(true);
 
       // Fetch active staff
-      const staffRes = await api.get(`/owner/staff?restaurantId=${selectedRestaurantId}&status=ACTIVE`);
+      const staffRes = await api.get(`/owner/staff?restaurantId=${selectedRestaurantId}&status=ACTIVE&pageSize=500`);
       if (staffRes.data.ok) {
         setStaff(staffRes.data.data?.items || staffRes.data.data || []);
       }
@@ -142,9 +142,7 @@ export default function StaffAttendanceScreen({ navigation }) {
   }, [selectedRestaurantId, selectedDate]);
 
   useEffect(() => {
-    if (selectedRestaurantId) {
-      loadData();
-    }
+    loadData();
   }, [selectedRestaurantId, selectedDate, loadData]);
 
   const onRefresh = async () => {
@@ -214,13 +212,13 @@ export default function StaffAttendanceScreen({ navigation }) {
       });
 
       if (response.data.ok) {
-        Alert.alert('Success', 'Attendance marked successfully');
+        AppAlert.alert('Success', 'Attendance marked successfully');
         await loadData(); // Reload to get fresh data
       } else {
-        Alert.alert('Error', response.data.error || 'Failed to mark attendance');
+        AppAlert.alert('Error', response.data.error || 'Failed to mark attendance');
       }
     } catch (error) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to mark attendance');
+      AppAlert.alert('Error', error.response?.data?.error || 'Failed to mark attendance');
     } finally {
       setSaving(false);
       setTimeModal(null);
@@ -234,11 +232,11 @@ export default function StaffAttendanceScreen({ navigation }) {
     const unmarkedStaff = staff.filter(s => !attendance[String(s.id)]);
 
     if (unmarkedStaff.length === 0) {
-      Alert.alert('Info', 'All staff members already have attendance marked for today');
+      AppAlert.alert('Info', 'All staff members already have attendance marked for today');
       return;
     }
 
-    Alert.alert(
+    AppAlert.alert(
       `Mark All ${statusConfig.label}`,
       `Mark ${unmarkedStaff.length} unmarked staff member(s) as ${statusConfig.label}?`,
       [
@@ -262,13 +260,13 @@ export default function StaffAttendanceScreen({ navigation }) {
               });
 
               if (response.data.ok) {
-                Alert.alert('Success', response.data.message || `Marked ${records.length} staff as ${statusConfig.label}`);
+                AppAlert.alert('Success', response.data.message || `Marked ${records.length} staff as ${statusConfig.label}`);
                 await loadData(); // Reload data
               } else {
-                Alert.alert('Error', response.data.error || 'Failed to mark attendance');
+                AppAlert.alert('Error', response.data.error || 'Failed to mark attendance');
               }
             } catch (error) {
-              Alert.alert('Error', error.response?.data?.error || 'Failed to mark bulk attendance');
+              AppAlert.alert('Error', error.response?.data?.error || 'Failed to mark bulk attendance');
             } finally {
               setSaving(false);
             }
@@ -377,7 +375,7 @@ export default function StaffAttendanceScreen({ navigation }) {
               <View style={st.timeItem}>
                 <Icon name="time-outline" size={scale(14)} color={C.muted} />
                 <Text style={st.timeLabel}>Hours:</Text>
-                <Text style={st.timeValue}>{(data.workHours / 60).toFixed(1)}h</Text>
+                <Text style={st.timeValue}>{data.workHours.toFixed(1)}h</Text>
               </View>
             )}
           </View>

@@ -7,7 +7,7 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl,
-  ActivityIndicator, Modal, TextInput, ScrollView, Alert, StatusBar,
+  ActivityIndicator, Modal, TextInput, ScrollView, StatusBar,
   useWindowDimensions, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -23,6 +23,7 @@ import NavigationMenu from '../components/NavigationMenu';
 
 import { scale, moderateScale } from '../utils/responsive';
 import { usePermissions } from '../utils/usePermissions';
+import AppAlert from '../utils/AppAlert';
 // Premium Color Palette
 const C = {
   primary: '#EF3A3A',
@@ -157,7 +158,7 @@ export default function CashbookScreen({ navigation }) {
   }, [selectedRestaurantId]);
 
   useEffect(() => {
-    if (selectedRestaurantId) loadData();
+    loadData();
   }, [selectedRestaurantId, loadData]);
 
   const handleLoadMore = () => {
@@ -209,7 +210,7 @@ export default function CashbookScreen({ navigation }) {
 
   const saveEntry = async () => {
     if (!form.amount || !form.description) {
-      Alert.alert('Error', 'Amount and description are required');
+      AppAlert.alert('Error', 'Amount and description are required');
       return;
     }
     setSaving(true);
@@ -225,32 +226,32 @@ export default function CashbookScreen({ navigation }) {
 
       if (form.id) {
         await api.patch(`/owner/cashbook/${form.id}`, payload);
-        Alert.alert('Success', 'Entry updated');
+        AppAlert.alert('Success', 'Entry updated');
       } else {
         await api.post('/owner/cashbook', payload);
-        Alert.alert('Success', 'Entry added');
+        AppAlert.alert('Success', 'Entry added');
       }
       setModalVisible(false);
       loadData();
     } catch (error) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to save');
+      AppAlert.alert('Error', error.response?.data?.error || 'Failed to save');
     } finally {
       setSaving(false);
     }
   };
 
   const deleteEntry = (item) => {
-    Alert.alert('Delete Entry', 'Are you sure you want to delete this entry?', [
+    AppAlert.alert('Delete Entry', 'Are you sure you want to delete this entry?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete', style: 'destructive',
         onPress: async () => {
           try {
             await api.delete(`/owner/cashbook/${item.id}`);
-            Alert.alert('Success', 'Entry deleted');
+            AppAlert.alert('Success', 'Entry deleted');
             loadData();
           } catch (error) {
-            Alert.alert('Error', 'Failed to delete');
+            AppAlert.alert('Error', 'Failed to delete');
           }
         },
       },

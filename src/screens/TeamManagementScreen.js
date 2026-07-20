@@ -10,7 +10,6 @@ import {
   Modal,
   TextInput,
   ScrollView,
-  Alert,
   Dimensions,
   useWindowDimensions,
 } from 'react-native';
@@ -24,6 +23,7 @@ import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
 import { scale, moderateScale } from '../utils/responsive';
+import AppAlert from '../utils/AppAlert';
 import { usePermissions } from '../utils/usePermissions';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const C = {
@@ -150,7 +150,7 @@ export default function TeamManagementScreen({ navigation }) {
   const [menuVisible, setMenuVisible] = useState(false);
 
   const loadData = useCallback(async () => {
-    if (!selectedRestaurantId) return;
+    if (!selectedRestaurantId) { setLoading(false); return; }
 
     try {
       setLoading(true);
@@ -168,9 +168,7 @@ export default function TeamManagementScreen({ navigation }) {
 
   // Load data when restaurant changes
   useEffect(() => {
-    if (selectedRestaurantId) {
-      loadData();
-    }
+    loadData();
   }, [selectedRestaurantId, loadData]);
 
   const onRefresh = async () => {
@@ -187,15 +185,15 @@ export default function TeamManagementScreen({ navigation }) {
 
   const sendInvite = async () => {
     if (!inviteForm.name.trim()) {
-      Alert.alert('Required', 'Please enter full name');
+      AppAlert.alert('Required', 'Please enter full name');
       return;
     }
     if (!inviteForm.email.trim()) {
-      Alert.alert('Required', 'Please enter email address');
+      AppAlert.alert('Required', 'Please enter email address');
       return;
     }
     if (!selectedRestaurantId) {
-      Alert.alert('Error', 'No restaurant selected');
+      AppAlert.alert('Error', 'No restaurant selected');
       return;
     }
 
@@ -210,14 +208,14 @@ export default function TeamManagementScreen({ navigation }) {
       });
 
       if (response.data.ok) {
-        Alert.alert('Success', 'Team member invited successfully');
+        AppAlert.alert('Success', 'Team member invited successfully');
         setInviteModalVisible(false);
         loadData();
       } else {
-        Alert.alert('Error', response.data.error || 'Failed to send invitation');
+        AppAlert.alert('Error', response.data.error || 'Failed to send invitation');
       }
     } catch (error) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to send invitation');
+      AppAlert.alert('Error', error.response?.data?.error || 'Failed to send invitation');
     } finally {
       setInviting(false);
     }
@@ -240,15 +238,15 @@ export default function TeamManagementScreen({ navigation }) {
       });
 
       if (response.data.ok) {
-        Alert.alert('Success', 'Role updated successfully');
+        AppAlert.alert('Success', 'Role updated successfully');
         setEditModalVisible(false);
         setSelectedMember(null);
         loadData();
       } else {
-        Alert.alert('Error', response.data.error || 'Failed to update role');
+        AppAlert.alert('Error', response.data.error || 'Failed to update role');
       }
     } catch (error) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to update role');
+      AppAlert.alert('Error', error.response?.data?.error || 'Failed to update role');
     } finally {
       setUpdating(false);
     }
@@ -256,7 +254,7 @@ export default function TeamManagementScreen({ navigation }) {
 
   // === REMOVE ===
   const removeMember = (member) => {
-    Alert.alert(
+    AppAlert.alert(
       'Remove Team Member',
       `Are you sure you want to remove ${member.user?.name || member.email} from the team? They will lose access to all restaurant data.`,
       [
@@ -268,13 +266,13 @@ export default function TeamManagementScreen({ navigation }) {
             try {
               const response = await api.delete(`/owner/team/${member.id}`);
               if (response.data.ok) {
-                Alert.alert('Success', 'Team member removed');
+                AppAlert.alert('Success', 'Team member removed');
                 loadData();
               } else {
-                Alert.alert('Error', response.data.error || 'Failed to remove member');
+                AppAlert.alert('Error', response.data.error || 'Failed to remove member');
               }
             } catch (error) {
-              Alert.alert('Error', 'Failed to remove team member');
+              AppAlert.alert('Error', 'Failed to remove team member');
             }
           },
         },

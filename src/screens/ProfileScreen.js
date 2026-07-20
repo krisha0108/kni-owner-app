@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Image, TouchableOpacity,
-  RefreshControl, Animated, Share, Linking, Alert, Dimensions, FlatList,
+  RefreshControl, Animated, Share, Linking, Dimensions, FlatList,
   Modal, TextInput, Switch, ActivityIndicator, StatusBar
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,6 +20,7 @@ import { useRestaurant } from '../context/RestaurantContext';
 
 import { scale, moderateScale } from '../utils/responsive';
 import useKeyboardHeight from '../utils/useKeyboardHeight';
+import AppAlert from '../utils/AppAlert';
 const C = {
   primary: '#EF3A3A', primaryDark: '#D42E2E', ink: '#1D2254',
   bg: '#F5F7FA', card: '#FFFFFF', text: '#0F172A',
@@ -43,7 +44,7 @@ const DeleteAccountModal = ({ visible, onClose, user }) => {
     const subject = 'Delete My Account Request';
     const body = `Please delete my account with the following details:\n\n- Registered Name: ${user?.name || 'N/A'}\n- Registered Email: ${user?.email || 'N/A'}\n- Registered Phone: ${user?.phone || 'N/A'}\n- User ID: ${user?.id || 'N/A'}\n\nI confirm that I want to permanently delete my account and all associated data.`;
     Linking.openURL(`mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`).catch(() => {
-      Alert.alert('Error', 'Could not open email client. Please email info@kniservices.com directly.');
+      AppAlert.alert('Error', 'Could not open email client. Please email info@kniservices.com directly.');
     });
     onClose();
   };
@@ -120,16 +121,16 @@ const PasswordChangeModal = ({ visible, onClose }) => {
   };
 
   const handleChangePassword = async () => {
-    if (!currentPassword.trim()) { Alert.alert('Error', 'Please enter your current password'); return; }
-    if (!newPassword.trim()) { Alert.alert('Error', 'Please enter a new password'); return; }
-    if (newPassword.length < 8) { Alert.alert('Error', 'New password must be at least 8 characters'); return; }
-    if (newPassword !== confirmPassword) { Alert.alert('Error', 'Passwords do not match'); return; }
+    if (!currentPassword.trim()) { AppAlert.alert('Error', 'Please enter your current password'); return; }
+    if (!newPassword.trim()) { AppAlert.alert('Error', 'Please enter a new password'); return; }
+    if (newPassword.length < 8) { AppAlert.alert('Error', 'New password must be at least 8 characters'); return; }
+    if (newPassword !== confirmPassword) { AppAlert.alert('Error', 'Passwords do not match'); return; }
     setLoading(true);
     try {
-      const response = await api.post('/owner/profile/password', { currentPassword, newPassword });
-      if (response.data.ok) { Alert.alert('Success', 'Password changed successfully'); resetForm(); onClose(); }
-      else { Alert.alert('Error', response.data.error || 'Failed to change password'); }
-    } catch (error) { Alert.alert('Error', error.response?.data?.error || 'Failed to change password'); }
+      const response = await api.put('/owner/profile/password', { currentPassword, newPassword });
+      if (response.data.ok) { AppAlert.alert('Success', 'Password changed successfully'); resetForm(); onClose(); }
+      else { AppAlert.alert('Error', response.data.error || 'Failed to change password'); }
+    } catch (error) { AppAlert.alert('Error', error.response?.data?.error || 'Failed to change password'); }
     finally { setLoading(false); }
   };
 
@@ -190,24 +191,48 @@ const PasswordChangeModal = ({ visible, onClose }) => {
 };
 
 /* ===== NOTIFICATION SETTINGS MODAL ===== */
+// Keys match the real NotificationPreference model (prisma/schema.prisma) -
+// there's no backend support for SMS or marketing-email toggles, so those
+// were dropped rather than showing switches that silently do nothing.
+const DEFAULT_NOTIFICATION_PREFS = {
+  enablePush: true, enableEmail: true, enableInApp: true,
+  notifyOnBooking: true, notifyOnPayment: true, notifyOnEngineer: true,
+  notifyOnCompletion: true, notifyOnOrder: true,
+};
+
 const NotificationSettingsModal = ({ visible, onClose, settings, onSave }) => {
-  const [ns, setNs] = useState({
-    emailNotifications: true, pushNotifications: true, smsNotifications: false,
-    bookingUpdates: true, marketingEmails: false, ...settings,
-  });
+  const [ns, setNs] = useState({ ...DEFAULT_NOTIFICATION_PREFS, ...settings });
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(false);
 
   useEffect(() => { if (settings) setNs(prev => ({ ...prev, ...settings })); }, [settings]);
+
+  useEffect(() => {
+    if (!visible) return;
+    (async () => {
+      setFetching(true);
+      try {
+        const response = await api.get('/notifications/preferences');
+        if (response.data.ok) {
+          setNs(prev => ({ ...prev, ...response.data.data }));
+        }
+      } catch (error) {
+        console.error('Fetch notification preferences error:', error);
+      } finally {
+        setFetching(false);
+      }
+    })();
+  }, [visible]);
 
   const toggle = (key) => setNs(prev => ({ ...prev, [key]: !prev[key] }));
 
   const handleSave = async () => {
     setLoading(true);
     try {
-      const response = await api.patch('/owner/profile', { notificationPreferences: ns });
-      if (response.data.ok || response.status === 200) { Alert.alert('Success', 'Preferences updated'); onSave(ns); onClose(); }
-      else { Alert.alert('Error', 'Failed to update'); }
-    } catch (error) { Alert.alert('Error', 'Failed to update notification preferences'); }
+      const response = await api.patch('/notifications/preferences', ns);
+      if (response.data.ok) { AppAlert.alert('Success', 'Preferences updated'); onSave(ns); onClose(); }
+      else { AppAlert.alert('Error', response.data.error || 'Failed to update'); }
+    } catch (error) { AppAlert.alert('Error', 'Failed to update notification preferences'); }
     finally { setLoading(false); }
   };
 
@@ -241,13 +266,22 @@ const NotificationSettingsModal = ({ visible, onClose, settings, onSave }) => {
             </TouchableOpacity>
           </View>
           <ScrollView style={{ padding: scale(20) }} showsVerticalScrollIndicator={false}>
-            <Text style={notifS.secTitle}>Channels</Text>
-            <Row label="Push Notifications" k="pushNotifications" icon="notifications" desc="Instant device alerts" />
-            <Row label="Email Notifications" k="emailNotifications" icon="mail" desc="Inbox updates" />
-            <Row label="SMS Notifications" k="smsNotifications" icon="chatbubble-ellipses" desc="Text alerts" />
-            <Text style={notifS.secTitle}>Types</Text>
-            <Row label="Booking Updates" k="bookingUpdates" icon="calendar" desc="Service bookings" />
-            <Row label="Marketing & Offers" k="marketingEmails" icon="pricetag" desc="Promotions" />
+            {fetching ? (
+              <ActivityIndicator size="small" color={C.primary} style={{ marginVertical: scale(20) }} />
+            ) : (
+              <>
+                <Text style={notifS.secTitle}>Channels</Text>
+                <Row label="Push Notifications" k="enablePush" icon="notifications" desc="Instant device alerts" />
+                <Row label="Email Notifications" k="enableEmail" icon="mail" desc="Inbox updates" />
+                <Row label="In-App Notifications" k="enableInApp" icon="phone-portrait" desc="Notification center in the app" />
+                <Text style={notifS.secTitle}>Types</Text>
+                <Row label="Booking Updates" k="notifyOnBooking" icon="calendar" desc="Service bookings" />
+                <Row label="Payment Alerts" k="notifyOnPayment" icon="card" desc="Payment status changes" />
+                <Row label="Engineer Assignment" k="notifyOnEngineer" icon="person" desc="Engineer assigned to your job" />
+                <Row label="Job Completion" k="notifyOnCompletion" icon="checkmark-done" desc="Service marked complete" />
+                <Row label="Order Updates" k="notifyOnOrder" icon="cart" desc="Marketplace order status" />
+              </>
+            )}
           </ScrollView>
           <View style={[modalBase.footer, { flexDirection: 'row', gap: scale(12) }]}>
             <TouchableOpacity style={[modalBase.cancelBtn, { flex: 1 }]} onPress={onClose}>
@@ -315,16 +349,16 @@ export default function ProfileScreen({ navigation }) {
 
   const viewPDF = async () => {
     let pdfUrl = user?.fssaiCertUrl;
-    if (!pdfUrl || pdfUrl.trim() === '') { Alert.alert('Certificate Not Available', 'No FSSAI certificate found.'); return; }
+    if (!pdfUrl || pdfUrl.trim() === '') { AppAlert.alert('Certificate Not Available', 'No FSSAI certificate found.'); return; }
     pdfUrl = pdfUrl.trim().replace(/\s+/g, '');
     if (pdfUrl.includes('localhost')) pdfUrl = pdfUrl.replace('http://localhost/storage', IMAGE_BASE_URL);
-    if (!pdfUrl.startsWith('http')) { Alert.alert('Invalid URL', 'Certificate URL format is incorrect.'); return; }
+    if (!pdfUrl.startsWith('http')) { AppAlert.alert('Invalid URL', 'Certificate URL format is incorrect.'); return; }
     try {
       const canOpen = await Linking.canOpenURL(pdfUrl);
       if (canOpen) await Linking.openURL(pdfUrl);
       else await Linking.openURL(`https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(pdfUrl)}`);
     } catch (e) {
-      Alert.alert('Unable to Open', 'Make sure you have a PDF viewer.', [
+      AppAlert.alert('Unable to Open', 'Make sure you have a PDF viewer.', [
         { text: 'OK', style: 'cancel' },
         { text: 'Try Browser', onPress: () => Linking.openURL(pdfUrl).catch(() => {}) }
       ]);
@@ -354,7 +388,7 @@ export default function ProfileScreen({ navigation }) {
       setReviews((p?.reviews ?? []).map(rv => ({
         id: String(rv.id), from: rv.author_name ?? 'Anonymous', text: rv.text ?? '', stars: rv.stars ?? 0,
       })));
-    } catch (e) { Alert.alert('Error', 'Unable to load your profile.'); }
+    } catch (e) { AppAlert.alert('Error', 'Unable to load your profile.'); }
     finally { setLoading(false); setRefreshing(false); }
   }, []);
 
@@ -429,7 +463,7 @@ export default function ProfileScreen({ navigation }) {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['left', 'right']}>
-      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
 
       <Animated.ScrollView
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
@@ -740,7 +774,7 @@ function SkeletonProfileView({ insetsBottom = 0 }) {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['left', 'right']}>
-      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
       <ScrollView contentContainerStyle={{ paddingBottom: insetsBottom + 120 }} showsVerticalScrollIndicator={false}>
         <Animated.View style={{ height: HERO_H, backgroundColor: '#CBD5E1', opacity: pulse }} />
         <View style={st.stickyContainer}>
