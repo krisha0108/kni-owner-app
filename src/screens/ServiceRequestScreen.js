@@ -124,13 +124,36 @@ export default function ServiceRequestScreen({ navigation, route }) {
   const dayListRef = useRef(null);
   const monthListRef = useRef(null);
 
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const minYear = today.getFullYear();
+  const minMonth = today.getMonth();
+  const minDay = today.getDate();
+
   const getDaysInMonth = (m, y) => new Date(y, m + 1, 0).getDate();
   const daysInPickerMonth = getDaysInMonth(pickerMonth, pickerYear);
-  const handleMonthChange = (m) => { const mx = getDaysInMonth(m, pickerYear); setPickerMonth(m); if (pickerDay > mx) setPickerDay(mx); };
-  const handleYearChange = (y) => { const mx = getDaysInMonth(pickerMonth, y); setPickerYear(y); if (pickerDay > mx) setPickerDay(mx); };
+  const isMonthDisabled = (m) => pickerYear === minYear && m < minMonth;
+  const isDayDisabled = (d) => pickerYear === minYear && pickerMonth === minMonth && d < minDay;
+  const handleMonthChange = (m) => {
+    if (isMonthDisabled(m)) return;
+    const mx = getDaysInMonth(m, pickerYear);
+    setPickerMonth(m);
+    let newDay = pickerDay > mx ? mx : pickerDay;
+    if (pickerYear === minYear && m === minMonth && newDay < minDay) newDay = minDay;
+    setPickerDay(newDay);
+  };
+  const handleYearChange = (y) => {
+    if (y < minYear) return;
+    const mx = getDaysInMonth(pickerMonth, y);
+    setPickerYear(y);
+    let newMonth = pickerMonth;
+    let newDay = pickerDay > mx ? mx : pickerDay;
+    if (y === minYear && newMonth < minMonth) { newMonth = minMonth; newDay = minDay; setPickerMonth(newMonth); }
+    else if (y === minYear && newMonth === minMonth && newDay < minDay) newDay = minDay;
+    setPickerDay(newDay);
+  };
 
   const openDateModal = () => {
-    const d = selectedDate || new Date();
+    const d = selectedDate && selectedDate >= today ? selectedDate : today;
     setPickerDay(d.getDate()); setPickerMonth(d.getMonth()); setPickerYear(d.getFullYear());
     setDateModalVisible(true);
     setTimeout(() => {
@@ -139,7 +162,8 @@ export default function ServiceRequestScreen({ navigation, route }) {
     }, 150);
   };
   const confirmDatePicker = () => {
-    const d = new Date(pickerYear, pickerMonth, pickerDay); d.setHours(0, 0, 0, 0);
+    let d = new Date(pickerYear, pickerMonth, pickerDay); d.setHours(0, 0, 0, 0);
+    if (d < today) d = new Date(today);
     setSelectedDate(d); setDateModalVisible(false);
   };
 
@@ -1089,13 +1113,13 @@ export default function ServiceRequestScreen({ navigation, route }) {
               <View style={st.dpCol}>
                 <Text style={st.dpColLabel}>DAY</Text>
                 <FlatList ref={dayListRef} data={Array.from({ length: daysInPickerMonth }, (_, i) => i + 1)} keyExtractor={i => String(i)} style={st.dpScroll} showsVerticalScrollIndicator={false} getItemLayout={(_, i) => ({ length: scale(42), offset: scale(42) * i, index: i })} onScrollToIndexFailed={() => {}} renderItem={({ item: d }) => (
-                  <TouchableOpacity style={[st.dpItem, pickerDay === d && st.dpItemActive]} onPress={() => setPickerDay(d)}><Text style={[st.dpItemText, pickerDay === d && st.dpItemTextActive]}>{d}</Text></TouchableOpacity>
+                  <TouchableOpacity disabled={isDayDisabled(d)} style={[st.dpItem, pickerDay === d && st.dpItemActive, isDayDisabled(d) && st.dpItemDisabled]} onPress={() => setPickerDay(d)}><Text style={[st.dpItemText, pickerDay === d && st.dpItemTextActive, isDayDisabled(d) && st.dpItemTextDisabled]}>{d}</Text></TouchableOpacity>
                 )} />
               </View>
               <View style={[st.dpCol, { flex: 1.3 }]}>
                 <Text style={st.dpColLabel}>MONTH</Text>
                 <FlatList ref={monthListRef} data={MONTHS_S} keyExtractor={i => i} style={st.dpScroll} showsVerticalScrollIndicator={false} getItemLayout={(_, i) => ({ length: scale(42), offset: scale(42) * i, index: i })} onScrollToIndexFailed={() => {}} renderItem={({ item: m, index: i }) => (
-                  <TouchableOpacity style={[st.dpItem, pickerMonth === i && st.dpItemActive]} onPress={() => handleMonthChange(i)}><Text style={[st.dpItemText, pickerMonth === i && st.dpItemTextActive]}>{m}</Text></TouchableOpacity>
+                  <TouchableOpacity disabled={isMonthDisabled(i)} style={[st.dpItem, pickerMonth === i && st.dpItemActive, isMonthDisabled(i) && st.dpItemDisabled]} onPress={() => handleMonthChange(i)}><Text style={[st.dpItemText, pickerMonth === i && st.dpItemTextActive, isMonthDisabled(i) && st.dpItemTextDisabled]}>{m}</Text></TouchableOpacity>
                 )} />
               </View>
               <View style={st.dpCol}>
@@ -1103,7 +1127,7 @@ export default function ServiceRequestScreen({ navigation, route }) {
                 <View style={st.dpYearStepper}>
                   <TouchableOpacity style={st.dpYearBtn} onPress={() => handleYearChange(pickerYear + 1)}><Icon name="chevron-up" size={scale(24)} color={C.ink} /></TouchableOpacity>
                   <View style={st.dpYearValue}><Text style={st.dpYearText}>{pickerYear}</Text></View>
-                  <TouchableOpacity style={st.dpYearBtn} onPress={() => handleYearChange(pickerYear - 1)}><Icon name="chevron-down" size={scale(24)} color={C.ink} /></TouchableOpacity>
+                  <TouchableOpacity disabled={pickerYear <= minYear} style={st.dpYearBtn} onPress={() => handleYearChange(pickerYear - 1)}><Icon name="chevron-down" size={scale(24)} color={pickerYear <= minYear ? C.muted : C.ink} /></TouchableOpacity>
                 </View>
               </View>
             </View>
@@ -1452,8 +1476,10 @@ const st = StyleSheet.create({
   dpScroll: { maxHeight: scale(200) },
   dpItem: { height: scale(38), paddingHorizontal: scale(6), borderRadius: scale(8), alignItems: 'center', justifyContent: 'center', marginBottom: scale(4) },
   dpItemActive: { backgroundColor: C.primary },
+  dpItemDisabled: { opacity: 0.35 },
   dpItemText: { fontSize: moderateScale(14), fontWeight: '600', color: C.ink },
   dpItemTextActive: { color: '#FFFFFF', fontWeight: '700' },
+  dpItemTextDisabled: { color: C.muted },
   dpYearStepper: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   dpYearBtn: { width: scale(52), height: scale(44), borderRadius: scale(10), backgroundColor: '#F5F7FA', alignItems: 'center', justifyContent: 'center', marginVertical: scale(6) },
   dpYearValue: { backgroundColor: C.primary, borderRadius: scale(12), paddingVertical: scale(16), paddingHorizontal: scale(14), alignItems: 'center' },
