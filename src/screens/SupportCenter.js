@@ -495,7 +495,7 @@ export default function SupportCenter({ navigation }) {
       <SafeAreaView style={st.container}>
         <LinearGradient colors={[C.primary, C.primaryDark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.header}>
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
-            <Icon name="arrow-back" size={scale(22)} color="#fff" />
+            <Icon name="arrow-back" size={scale(18)} color="#fff" />
           </TouchableOpacity>
           <Text style={st.headerTitle}>Support Center</Text>
           <View style={{ width: scale(38) }} />
@@ -518,7 +518,7 @@ export default function SupportCenter({ navigation }) {
       {/* ─── Gradient Header ─── */}
       <LinearGradient colors={[C.primary, C.primaryDark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.header}>
         <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
-          <Icon name="arrow-back" size={scale(22)} color="#fff" />
+          <Icon name="arrow-back" size={scale(18)} color="#fff" />
         </TouchableOpacity>
         <View style={st.headerCenter}>
           <Text style={st.headerTitle}>Support Center</Text>
@@ -529,7 +529,7 @@ export default function SupportCenter({ navigation }) {
           )}
         </View>
         <TouchableOpacity onPress={callSupport} style={st.backBtn}>
-          <Icon name="call" size={scale(18)} color="#fff" />
+          <Icon name="call" size={scale(15)} color="#fff" />
         </TouchableOpacity>
       </LinearGradient>
 
@@ -541,64 +541,43 @@ export default function SupportCenter({ navigation }) {
           activeOpacity={restaurants.length > 1 ? 0.7 : 1}
         >
           <View style={st.restaurantIconBox}>
-            <Icon name="restaurant" size={scale(16)} color={C.primary} />
+            <Icon name="restaurant" size={scale(13)} color={C.primary} />
           </View>
           <Text style={st.restaurantName} numberOfLines={1}>{currentRestaurant.name}</Text>
           {restaurants.length > 1 && (
             <View style={st.switchPill}>
-              <Icon name="swap-horizontal" size={scale(14)} color={C.primary} />
+              <Icon name="swap-horizontal" size={scale(11)} color={C.primary} />
               <Text style={st.switchText}>Switch</Text>
             </View>
           )}
         </TouchableOpacity>
       )}
 
-      {/* ─── Summary Grid ─── */}
+      {/* ─── Summary Strip -- one compact non-scrolling row of 4 tiles
+          instead of 4 separate cards ─── */}
       <View style={st.summarySection}>
-        <View style={st.summaryGrid}>
-          <TouchableOpacity
-            style={[st.summaryCard, activeTab === 'PENDING' && st.summaryCardActive]}
-            onPress={() => handleStatusTabChange(activeTab === 'PENDING' ? 'all' : 'PENDING')}
-          >
-            <LinearGradient colors={['#FEF3C7', '#FDE68A']} style={st.summaryIconCircle}>
-              <Icon name="time" size={scale(18)} color="#D97706" />
-            </LinearGradient>
-            <Text style={st.summaryCount}>{statusCounts['PENDING'] || 0}</Text>
-            <Text style={st.summaryLabel}>Pending</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[st.summaryCard, activeTab === 'ON_WORK' && st.summaryCardActive]}
-            onPress={() => handleStatusTabChange(activeTab === 'ON_WORK' ? 'all' : 'ON_WORK')}
-          >
-            <LinearGradient colors={['#E0E7FF', '#C7D2FE']} style={st.summaryIconCircle}>
-              <Icon name="construct" size={scale(18)} color="#4F46E5" />
-            </LinearGradient>
-            <Text style={st.summaryCount}>{statusCounts['ON_WORK'] || 0}</Text>
-            <Text style={st.summaryLabel}>On Work</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[st.summaryCard, activeTab === 'COMPLETED' && st.summaryCardActive]}
-            onPress={() => handleStatusTabChange(activeTab === 'COMPLETED' ? 'all' : 'COMPLETED')}
-          >
-            <LinearGradient colors={['#D1FAE5', '#A7F3D0']} style={st.summaryIconCircle}>
-              <Icon name="checkmark-circle" size={scale(18)} color="#059669" />
-            </LinearGradient>
-            <Text style={st.summaryCount}>{statusCounts['COMPLETED'] || 0}</Text>
-            <Text style={st.summaryLabel}>Done</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[st.summaryCard, activeTab === 'all' && st.summaryCardActive]}
-            onPress={() => handleStatusTabChange('all')}
-          >
-            <LinearGradient colors={['#FEE2E2', '#FECACA']} style={st.summaryIconCircle}>
-              <Icon name="documents" size={scale(18)} color={C.primary} />
-            </LinearGradient>
-            <Text style={st.summaryCount}>{totalCount || tickets.length}</Text>
-            <Text style={st.summaryLabel}>Total</Text>
-          </TouchableOpacity>
+        <View style={st.summaryStrip}>
+          {[
+            { key: 'PENDING', icon: 'time', color: '#D97706', label: 'Pending', value: statusCounts['PENDING'] || 0, tab: 'PENDING' },
+            { key: 'ON_WORK', icon: 'construct', color: '#4F46E5', label: 'On Work', value: statusCounts['ON_WORK'] || 0, tab: 'ON_WORK' },
+            { key: 'COMPLETED', icon: 'checkmark-circle', color: '#059669', label: 'Done', value: statusCounts['COMPLETED'] || 0, tab: 'COMPLETED' },
+            { key: 'TOTAL', icon: 'documents', color: C.primary, label: 'Total', value: totalCount || tickets.length, tab: 'all' },
+          ].map((s, i) => (
+            <React.Fragment key={s.key}>
+              {i > 0 && <View style={st.summaryDivider} />}
+              <TouchableOpacity
+                style={st.summaryTile}
+                onPress={() => handleStatusTabChange(activeTab === s.tab && s.tab !== 'all' ? 'all' : s.tab)}
+                activeOpacity={0.7}
+              >
+                <View style={[st.summaryTileIcon, { backgroundColor: s.color + '20' }, activeTab === s.tab && { borderWidth: 1.5, borderColor: s.color }]}>
+                  <Icon name={s.icon} size={scale(14)} color={s.color} />
+                </View>
+                <Text style={st.summaryTileValue} numberOfLines={1}>{s.value}</Text>
+                <Text style={st.summaryTileLabel} numberOfLines={1}>{s.label}</Text>
+              </TouchableOpacity>
+            </React.Fragment>
+          ))}
         </View>
       </View>
 
@@ -606,7 +585,7 @@ export default function SupportCenter({ navigation }) {
       <View style={st.searchSection}>
         <View style={st.searchBox}>
           <View style={st.searchIconBox}>
-            <Icon name="search" size={scale(16)} color={C.primary} />
+            <Icon name="search" size={scale(13)} color={C.primary} />
           </View>
           <TextInput
             style={st.searchInput}
@@ -617,7 +596,7 @@ export default function SupportCenter({ navigation }) {
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')} style={{ padding: scale(6) }}>
-              <View style={st.clearBtn}><Icon name="close" size={scale(12)} color="#fff" /></View>
+              <View style={st.clearBtn}><Icon name="close" size={scale(10)} color="#fff" /></View>
             </TouchableOpacity>
           )}
         </View>
@@ -636,7 +615,7 @@ export default function SupportCenter({ navigation }) {
                 onPress={() => handleStatusTabChange(tab.key)}
                 activeOpacity={0.7}
               >
-                <Icon name={tab.icon} size={scale(14)} color={isActive ? '#fff' : C.muted} style={{ marginRight: scale(5) }} />
+                <Icon name={tab.icon} size={scale(12)} color={isActive ? '#fff' : C.muted} style={{ marginRight: scale(4) }} />
                 <Text style={[st.tabText, isActive && st.tabTextActive]}>{tab.label}</Text>
                 {cnt !== null && cnt > 0 && (
                   <View style={[st.tabBadge, isActive && st.tabBadgeActive]}>
@@ -647,14 +626,6 @@ export default function SupportCenter({ navigation }) {
             );
           })}
         </ScrollView>
-      </View>
-
-      {/* ─── List Title ─── */}
-      <View style={st.listTitleRow}>
-        <Text style={st.listTitle}>
-          {activeTab === 'all' ? 'All Tickets' : (STATUS_CONFIG[activeTab]?.label || 'Tickets')}
-        </Text>
-        <Text style={st.listCount}>{filteredTickets.length} tickets</Text>
       </View>
 
       {/* ─── Ticket List ─── */}
@@ -1062,12 +1033,12 @@ const st = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: scale(16),
-    paddingVertical: scale(14),
+    paddingVertical: scale(9),
   },
   backBtn: {
-    width: scale(38),
-    height: scale(38),
-    borderRadius: scale(12),
+    width: scale(32),
+    height: scale(32),
+    borderRadius: scale(10),
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1075,21 +1046,21 @@ const st = StyleSheet.create({
   headerCenter: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: scale(8),
+    gap: scale(7),
   },
   headerTitle: {
-    fontSize: moderateScale(18),
+    fontSize: moderateScale(16),
     fontWeight: '800',
     color: '#fff',
   },
   countBadge: {
     backgroundColor: '#fff',
-    paddingHorizontal: scale(9),
-    paddingVertical: scale(3),
-    borderRadius: scale(12),
+    paddingHorizontal: scale(7),
+    paddingVertical: scale(2),
+    borderRadius: scale(10),
   },
   countBadgeText: {
-    fontSize: moderateScale(12),
+    fontSize: moderateScale(10.5),
     fontWeight: '800',
     color: C.primary,
   },
@@ -1123,24 +1094,24 @@ const st = StyleSheet.create({
   restaurantBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: scale(10),
+    gap: scale(8),
     paddingHorizontal: scale(16),
-    paddingVertical: scale(10),
+    paddingVertical: scale(7),
     backgroundColor: '#FFF5F5',
     borderBottomWidth: 1,
     borderBottomColor: '#FEE2E2',
   },
   restaurantIconBox: {
-    width: scale(32),
-    height: scale(32),
-    borderRadius: scale(10),
+    width: scale(26),
+    height: scale(26),
+    borderRadius: scale(8),
     backgroundColor: '#FEE2E2',
     alignItems: 'center',
     justifyContent: 'center',
   },
   restaurantName: {
     flex: 1,
-    fontSize: moderateScale(14),
+    fontSize: moderateScale(12.5),
     fontWeight: '700',
     color: C.ink,
   },
@@ -1148,65 +1119,66 @@ const st = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: scale(4),
-    paddingHorizontal: scale(10),
-    paddingVertical: scale(5),
+    paddingHorizontal: scale(8),
+    paddingVertical: scale(4),
     backgroundColor: '#fff',
-    borderRadius: scale(16),
+    borderRadius: scale(14),
     borderWidth: 1.5,
     borderColor: C.primary,
   },
   switchText: {
-    fontSize: moderateScale(12),
+    fontSize: moderateScale(10.5),
     fontWeight: '700',
     color: C.primary,
   },
 
   // ─── Summary Grid ───
   summarySection: {
-    paddingHorizontal: scale(16),
-    paddingTop: scale(14),
-    paddingBottom: scale(6),
+    paddingHorizontal: scale(12),
+    paddingTop: scale(10),
+    paddingBottom: scale(4),
   },
-  summaryGrid: {
+  summaryStrip: {
     flexDirection: 'row',
-    gap: scale(8),
-  },
-  summaryCard: {
-    flex: 1,
+    alignItems: 'center',
     backgroundColor: C.card,
     borderRadius: scale(14),
-    padding: scale(10),
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: C.border,
+    paddingVertical: scale(10),
+    paddingHorizontal: scale(2),
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: scale(4),
-    elevation: 1,
+    shadowOffset: { width: 0, height: scale(2) },
+    shadowOpacity: 0.05,
+    shadowRadius: scale(6),
+    elevation: 2,
   },
-  summaryCardActive: {
-    borderColor: C.primary,
-    borderWidth: 1.5,
+  summaryTile: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: scale(2),
   },
-  summaryIconCircle: {
-    width: scale(34),
-    height: scale(34),
-    borderRadius: scale(10),
+  summaryDivider: {
+    width: 1,
+    height: scale(30),
+    backgroundColor: C.border,
+  },
+  summaryTileIcon: {
+    width: scale(26),
+    height: scale(26),
+    borderRadius: scale(8),
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: scale(6),
+    marginBottom: scale(4),
   },
-  summaryCount: {
-    fontSize: moderateScale(18),
+  summaryTileValue: {
+    fontSize: moderateScale(12.5),
     fontWeight: '800',
     color: C.ink,
   },
-  summaryLabel: {
-    fontSize: moderateScale(10),
+  summaryTileLabel: {
+    fontSize: moderateScale(8.5),
     fontWeight: '600',
     color: C.muted,
-    marginTop: scale(2),
+    marginTop: scale(1),
     textTransform: 'uppercase',
     letterSpacing: 0.3,
   },
@@ -1214,16 +1186,16 @@ const st = StyleSheet.create({
   // ─── Search ───
   searchSection: {
     paddingHorizontal: scale(16),
-    paddingTop: scale(8),
+    paddingTop: scale(5),
     paddingBottom: scale(4),
   },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: C.card,
-    borderRadius: scale(14),
-    paddingHorizontal: scale(6),
-    paddingVertical: scale(4),
+    borderRadius: scale(11),
+    paddingHorizontal: scale(5),
+    paddingVertical: scale(3),
     borderWidth: 1,
     borderColor: '#EEF2F7',
     shadowColor: '#000',
@@ -1233,25 +1205,25 @@ const st = StyleSheet.create({
     elevation: 2,
   },
   searchIconBox: {
-    width: scale(34),
-    height: scale(34),
-    borderRadius: scale(10),
+    width: scale(28),
+    height: scale(28),
+    borderRadius: scale(8),
     backgroundColor: '#FEF2F2',
     alignItems: 'center',
     justifyContent: 'center',
   },
   searchInput: {
     flex: 1,
-    marginLeft: scale(10),
-    fontSize: moderateScale(14),
+    marginLeft: scale(8),
+    fontSize: moderateScale(12.5),
     fontWeight: '500',
     color: C.text,
     padding: 0,
   },
   clearBtn: {
-    width: scale(20),
-    height: scale(20),
-    borderRadius: scale(10),
+    width: scale(17),
+    height: scale(17),
+    borderRadius: scale(9),
     backgroundColor: C.muted,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1259,21 +1231,21 @@ const st = StyleSheet.create({
 
   // ─── Filter Tabs ───
   tabsWrapper: {
-    paddingTop: scale(8),
-    paddingBottom: scale(4),
+    paddingTop: scale(5),
+    paddingBottom: scale(5),
     borderBottomWidth: 1,
     borderBottomColor: '#EEEFF2',
   },
   tabsContent: {
     paddingHorizontal: scale(16),
-    gap: scale(8),
+    gap: scale(6),
   },
   tab: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: scale(14),
-    paddingVertical: scale(8),
-    borderRadius: scale(20),
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(6),
+    borderRadius: scale(16),
     backgroundColor: C.card,
     borderWidth: 1.5,
     borderColor: C.border,
@@ -1283,7 +1255,7 @@ const st = StyleSheet.create({
     borderColor: C.primary,
   },
   tabText: {
-    fontSize: moderateScale(13),
+    fontSize: moderateScale(11.5),
     fontWeight: '600',
     color: C.muted,
   },
@@ -1291,17 +1263,17 @@ const st = StyleSheet.create({
     color: '#fff',
   },
   tabBadge: {
-    marginLeft: scale(6),
+    marginLeft: scale(5),
     backgroundColor: '#FEF3C7',
-    paddingHorizontal: scale(6),
+    paddingHorizontal: scale(5),
     paddingVertical: 1,
-    borderRadius: scale(8),
+    borderRadius: scale(7),
   },
   tabBadgeActive: {
     backgroundColor: 'rgba(255,255,255,0.3)',
   },
   tabBadgeText: {
-    fontSize: moderateScale(10),
+    fontSize: moderateScale(9),
     fontWeight: '700',
     color: '#D97706',
   },
@@ -1309,31 +1281,9 @@ const st = StyleSheet.create({
     color: '#fff',
   },
 
-  // ─── List Title ───
-  listTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: scale(16),
-    paddingTop: scale(12),
-    paddingBottom: scale(6),
-  },
-  listTitle: {
-    fontSize: moderateScale(15),
-    fontWeight: '700',
-    color: C.ink,
-  },
-  listCount: {
-    fontSize: moderateScale(12),
-    fontWeight: '600',
-    color: C.muted,
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: scale(8),
-    paddingVertical: scale(3),
-    borderRadius: scale(8),
-  },
   listContent: {
     paddingHorizontal: scale(16),
+    paddingTop: scale(10),
     paddingBottom: scale(100),
   },
 

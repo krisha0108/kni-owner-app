@@ -196,9 +196,9 @@ export default function VendorLedgerScreen({ navigation }) {
   };
 
   const saveEntry = async () => {
-    if (!form.vendorName.trim()) { AppAppAlert.alert('Error', 'Vendor name is required'); return; }
-    if (!form.amount || parseFloat(form.amount) <= 0) { AppAppAlert.alert('Error', 'Please enter a valid amount'); return; }
-    if (!form.description.trim()) { AppAppAlert.alert('Error', 'Description is required'); return; }
+    if (!form.vendorName.trim()) { AppAlert.alert('Error', 'Vendor name is required'); return; }
+    if (!form.amount || parseFloat(form.amount) <= 0) { AppAlert.alert('Error', 'Please enter a valid amount'); return; }
+    if (!form.description.trim()) { AppAlert.alert('Error', 'Description is required'); return; }
 
     setSaving(true);
     try {
@@ -324,68 +324,50 @@ export default function VendorLedgerScreen({ navigation }) {
     );
   };
 
+  // Summary tiles data -- compact single-row strip instead of 4 big
+  // horizontally-scrolling cards.
+  const summaryTiles = [
+    { key: 'vendors', icon: 'people', color: C.info, label: 'Vendors', value: String(summary.totalVendors) },
+    { key: 'due', icon: 'trending-up', color: C.danger, label: 'Total Due', value: formatPrice(summary.totalDue) },
+    { key: 'advance', icon: 'trending-down', color: C.ok, label: 'Advance', value: formatPrice(summary.totalAdvance) },
+    { key: 'net', icon: 'wallet', color: C.warn, label: 'Net Balance', value: formatPrice(summary.netBalance), valueColor: summary.netBalance > 0 ? C.danger : C.ok },
+  ];
+
   // ==================== RENDER HEADER ====================
   const renderHeader = () => (
     <>
-      {/* Summary Cards */}
-      <View style={st.summarySection}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.summaryScroll}>
-          <View style={[st.summaryCard, { borderLeftColor: C.info }]}>
-            <View style={[st.summaryIcon, { backgroundColor: C.infoLight }]}>
-              <Icon name="people" size={scale(18)} color={C.info} />
+      {/* Summary Strip */}
+      <View style={st.summaryStrip}>
+        {summaryTiles.map((t, i) => (
+          <React.Fragment key={t.key}>
+            {i > 0 && <View style={st.summaryDivider} />}
+            <View style={st.summaryTile}>
+              <View style={[st.summaryTileIcon, { backgroundColor: t.color + '20' }]}>
+                <Icon name={t.icon} size={scale(14)} color={t.color} />
+              </View>
+              <Text style={[st.summaryTileValue, t.valueColor && { color: t.valueColor }]} numberOfLines={1} adjustsFontSizeToFit>
+                {t.value}
+              </Text>
+              <Text style={st.summaryTileLabel} numberOfLines={1}>{t.label}</Text>
             </View>
-            <Text style={st.summaryLabel}>Vendors</Text>
-            <Text style={st.summaryValue}>{summary.totalVendors}</Text>
-          </View>
-          <View style={[st.summaryCard, { borderLeftColor: C.danger }]}>
-            <View style={[st.summaryIcon, { backgroundColor: C.dangerLight }]}>
-              <Icon name="trending-up" size={scale(18)} color={C.danger} />
-            </View>
-            <Text style={st.summaryLabel}>Total Due</Text>
-            <Text style={[st.summaryValue, { color: C.danger }]}>{formatPrice(summary.totalDue)}</Text>
-          </View>
-          <View style={[st.summaryCard, { borderLeftColor: C.ok }]}>
-            <View style={[st.summaryIcon, { backgroundColor: C.okLight }]}>
-              <Icon name="trending-down" size={scale(18)} color={C.ok} />
-            </View>
-            <Text style={st.summaryLabel}>Advance</Text>
-            <Text style={[st.summaryValue, { color: C.ok }]}>{formatPrice(summary.totalAdvance)}</Text>
-          </View>
-          <View style={[st.summaryCard, { borderLeftColor: C.warn }]}>
-            <View style={[st.summaryIcon, { backgroundColor: C.warnLight }]}>
-              <Icon name="wallet" size={scale(18)} color={C.warn} />
-            </View>
-            <Text style={st.summaryLabel}>Net Balance</Text>
-            <Text style={[st.summaryValue, { color: summary.netBalance > 0 ? C.danger : C.ok }]}>{formatPrice(summary.netBalance)}</Text>
-          </View>
-        </ScrollView>
+          </React.Fragment>
+        ))}
       </View>
 
-      {/* Quick Actions */}
+      {/* Quick Actions -- Q1 "Solid Buttons": full solid color instead of
+          light-tint + border, white icon and text, icon+label side by side. */}
       {can('vendor-ledger:create') && (
       <View style={st.quickRow}>
-        <TouchableOpacity style={[st.quickBtn, { backgroundColor: C.dangerLight, borderColor: C.danger }]} onPress={() => openEntryModal('PURCHASE')}>
-          <Icon name="cart" size={scale(18)} color={C.danger} />
-          <Text style={[st.quickBtnText, { color: C.danger }]}>Add Purchase</Text>
+        <TouchableOpacity style={[st.quickBtn, { backgroundColor: C.danger }]} onPress={() => openEntryModal('PURCHASE')} activeOpacity={0.85}>
+          <Icon name="cart" size={scale(17)} color="#fff" />
+          <Text style={st.quickBtnText}>Add Purchase</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[st.quickBtn, { backgroundColor: C.okLight, borderColor: C.ok }]} onPress={() => openEntryModal('PAYMENT')}>
-          <Icon name="wallet" size={scale(18)} color={C.ok} />
-          <Text style={[st.quickBtnText, { color: C.ok }]}>Add Payment</Text>
+        <TouchableOpacity style={[st.quickBtn, { backgroundColor: C.ok }]} onPress={() => openEntryModal('PAYMENT')} activeOpacity={0.85}>
+          <Icon name="wallet" size={scale(17)} color="#fff" />
+          <Text style={st.quickBtnText}>Add Payment</Text>
         </TouchableOpacity>
       </View>
       )}
-
-      {/* Tabs */}
-      <View style={st.tabsContainer}>
-        <TouchableOpacity style={[st.tab, activeTab === 'summary' && st.tabActive]} onPress={() => setActiveTab('summary')}>
-          <Icon name="people" size={scale(16)} color={activeTab === 'summary' ? '#fff' : C.muted} />
-          <Text style={[st.tabText, activeTab === 'summary' && st.tabTextActive]}>Vendors ({vendors.length})</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[st.tab, activeTab === 'transactions' && st.tabActive]} onPress={() => setActiveTab('transactions')}>
-          <Icon name="list" size={scale(16)} color={activeTab === 'transactions' ? '#fff' : C.muted} />
-          <Text style={[st.tabText, activeTab === 'transactions' && st.tabTextActive]}>Transactions ({entries.length})</Text>
-        </TouchableOpacity>
-      </View>
     </>
   );
 
@@ -465,6 +447,33 @@ export default function VendorLedgerScreen({ navigation }) {
 
       {/* Restaurant Selector */}
       <RestaurantSelectorBar />
+
+      {/* Tabs -- static here (not inside the scrolling list header) so it
+          stays visible while switching between Vendors and Transactions.
+          Underline style with a count badge, instead of a solid-fill
+          segmented control. */}
+      <View style={st.tabsContainer}>
+        <TouchableOpacity style={st.tab} onPress={() => setActiveTab('summary')} activeOpacity={0.7}>
+          <View style={st.tabTop}>
+            <Icon name="people" size={scale(15)} color={activeTab === 'summary' ? C.primary : C.muted} />
+            <Text style={[st.tabText, activeTab === 'summary' && st.tabTextActive]}>Vendors</Text>
+            <View style={[st.tabBadge, activeTab === 'summary' && st.tabBadgeActive]}>
+              <Text style={[st.tabBadgeText, activeTab === 'summary' && st.tabBadgeTextActive]}>{vendors.length}</Text>
+            </View>
+          </View>
+          <View style={[st.tabUnderline, activeTab === 'summary' && st.tabUnderlineActive]} />
+        </TouchableOpacity>
+        <TouchableOpacity style={st.tab} onPress={() => setActiveTab('transactions')} activeOpacity={0.7}>
+          <View style={st.tabTop}>
+            <Icon name="list" size={scale(15)} color={activeTab === 'transactions' ? C.primary : C.muted} />
+            <Text style={[st.tabText, activeTab === 'transactions' && st.tabTextActive]}>Transactions</Text>
+            <View style={[st.tabBadge, activeTab === 'transactions' && st.tabBadgeActive]}>
+              <Text style={[st.tabBadgeText, activeTab === 'transactions' && st.tabBadgeTextActive]}>{entries.length}</Text>
+            </View>
+          </View>
+          <View style={[st.tabUnderline, activeTab === 'transactions' && st.tabUnderlineActive]} />
+        </TouchableOpacity>
+      </View>
 
       {/* Main List */}
       <FlatList
@@ -728,25 +737,53 @@ const st = StyleSheet.create({
   headerActions: { flexDirection: 'row' },
   headerIconBtn: { width: scale(40), height: scale(40), borderRadius: scale(10), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', marginLeft: scale(8) },
 
-  // Summary Section
-  summarySection: { marginTop: scale(16), marginBottom: scale(4) },
-  summaryScroll: { paddingHorizontal: scale(16), paddingBottom: scale(8) },
-  summaryCard: { width: scale(140), backgroundColor: C.card, borderRadius: scale(12), padding: scale(14), marginRight: scale(10), marginBottom: scale(4), borderLeftWidth: 3, shadowColor: '#000', shadowOffset: { width: 0, height: scale(2) }, shadowOpacity: 0.05, shadowRadius: scale(4), elevation: 2 },
-  summaryIcon: { width: scale(36), height: scale(36), borderRadius: scale(10), alignItems: 'center', justifyContent: 'center', marginBottom: scale(10) },
-  summaryLabel: { fontSize: moderateScale(11), color: C.muted, marginBottom: scale(4) },
-  summaryValue: { fontSize: moderateScale(16), fontWeight: '700', color: C.ink },
+  // Summary Strip -- one compact non-scrolling row of 4 tiles
+  summaryStrip: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: C.card,
+    marginHorizontal: scale(4), marginTop: scale(4), borderRadius: scale(14),
+    paddingVertical: scale(10), paddingHorizontal: scale(2),
+    shadowColor: '#000', shadowOffset: { width: 0, height: scale(2) },
+    shadowOpacity: 0.05, shadowRadius: scale(6), elevation: 2,
+  },
+  summaryTile: { flex: 1, alignItems: 'center', paddingHorizontal: scale(1) },
+  summaryDivider: { width: 1, height: scale(30), backgroundColor: C.border },
+  summaryTileIcon: {
+    width: scale(26), height: scale(26), borderRadius: scale(8),
+    alignItems: 'center', justifyContent: 'center', marginBottom: scale(4),
+  },
+  summaryTileValue: { fontSize: moderateScale(13), fontWeight: '800', color: C.ink },
+  summaryTileLabel: { fontSize: moderateScale(8.5), color: C.muted, marginTop: scale(1), fontWeight: '500' },
 
   // Quick Actions
-  quickRow: { flexDirection: 'row', paddingHorizontal: scale(16), marginTop: scale(16) },
-  quickBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: scale(12), borderRadius: scale(10), borderWidth: 1.5, marginRight: scale(8) },
-  quickBtnText: { fontSize: moderateScale(13), fontWeight: '600', marginLeft: scale(8) },
+  quickRow: { flexDirection: 'row', gap: scale(10), paddingHorizontal: scale(16), marginTop: scale(12), marginBottom: scale(16) },
+  quickBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: scale(8),
+    borderRadius: scale(12), paddingVertical: scale(13),
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1, shadowRadius: 6, elevation: 3,
+  },
+  quickBtnText: { fontSize: moderateScale(13), fontWeight: '700', color: '#fff' },
 
-  // Tabs
-  tabsContainer: { flexDirection: 'row', marginHorizontal: scale(16), marginTop: scale(16), marginBottom: scale(16), backgroundColor: C.card, borderRadius: scale(12), padding: scale(4), borderWidth: 1, borderColor: C.border },
-  tab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: scale(10), borderRadius: scale(10) },
-  tabActive: { backgroundColor: C.primary },
-  tabText: { fontSize: moderateScale(12), fontWeight: '600', color: C.muted, marginLeft: scale(6) },
-  tabTextActive: { color: '#fff' },
+  // Tabs -- static, sits right under the restaurant selector. Underline
+  // style (flat, colored bottom bar on the active tab) with a small count
+  // badge, instead of a solid-fill segmented control.
+  tabsContainer: {
+    flexDirection: 'row', marginHorizontal: scale(16), marginTop: scale(4), marginBottom: scale(8),
+    backgroundColor: C.card, borderRadius: scale(12), borderWidth: 1, borderColor: C.border, overflow: 'hidden',
+  },
+  tab: { flex: 1, alignItems: 'center', paddingTop: scale(11), paddingBottom: scale(9) },
+  tabTop: { flexDirection: 'row', alignItems: 'center', gap: scale(6) },
+  tabText: { fontSize: moderateScale(12.5), fontWeight: '600', color: C.muted },
+  tabTextActive: { color: C.primary, fontWeight: '800' },
+  tabBadge: {
+    minWidth: scale(18), height: scale(18), borderRadius: scale(9), backgroundColor: C.bg,
+    alignItems: 'center', justifyContent: 'center', paddingHorizontal: scale(4),
+  },
+  tabBadgeActive: { backgroundColor: C.primary + '18' },
+  tabBadgeText: { fontSize: moderateScale(10), fontWeight: '700', color: C.muted },
+  tabBadgeTextActive: { color: C.primary },
+  tabUnderline: { height: scale(3), width: '55%', borderRadius: 2, backgroundColor: 'transparent', marginTop: scale(8) },
+  tabUnderlineActive: { backgroundColor: C.primary },
 
   // List
   listContent: { paddingHorizontal: scale(16), paddingBottom: scale(120), paddingTop: scale(16) },

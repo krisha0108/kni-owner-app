@@ -13,7 +13,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import { api } from '../api/client';
 import { useRestaurant } from '../context/RestaurantContext';
-import { RestaurantSelectorBar } from '../components/RestaurantSelector';
+import { RestaurantSelectorCompact } from '../components/RestaurantSelector';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
@@ -97,7 +97,6 @@ function SkeletonLoader({ pulse }) {
 export default function KhatabookScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const {
-    selectedRestaurant,
     selectedRestaurantId,
     loading: restaurantsLoading,
     loadRestaurants,
@@ -229,7 +228,6 @@ export default function KhatabookScreen({ navigation }) {
         <LinearGradient colors={[C.gradient1, C.gradient2]} style={st.loadingHero}>
           <Text style={st.heroTitle}>Khatabook</Text>
         </LinearGradient>
-        <RestaurantSelectorBar />
         <SkeletonLoader pulse={pulse} />
         <KniBottomNav navigation={navigation} active="khatabook" />
       </SafeAreaView>
@@ -254,7 +252,7 @@ export default function KhatabookScreen({ navigation }) {
           </TouchableOpacity>
           <View style={st.heroTextContainer}>
             <Text style={st.heroTitle}>Khatabook</Text>
-            <Text style={st.heroSubtitle}>{selectedRestaurant?.name || 'Financial Overview'}</Text>
+            <RestaurantSelectorCompact dark style={st.heroRestaurantPill} />
           </View>
           <View style={st.heroActions}>
             <TouchableOpacity
@@ -289,9 +287,6 @@ export default function KhatabookScreen({ navigation }) {
           </View>
         </View>
       </LinearGradient>
-
-      {/* ═══ Restaurant Selector ═══ */}
-      <RestaurantSelectorBar />
 
       {/* ═══ Period Filter ═══ */}
       <View style={st.periodSection}>
@@ -551,10 +546,9 @@ const st = StyleSheet.create({
     color: '#fff',
     letterSpacing: -0.5,
   },
-  heroSubtitle: {
-    fontSize: moderateScale(13),
-    color: 'rgba(255,255,255,0.8)',
-    marginTop: scale(2),
+  heroRestaurantPill: {
+    alignSelf: 'flex-start',
+    marginTop: scale(6),
   },
   heroActions: {
     flexDirection: 'row',

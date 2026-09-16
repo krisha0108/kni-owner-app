@@ -529,26 +529,26 @@ export default function ProfileScreen({ navigation }) {
         </View>
 
         {/* ===== 1: STICKY PROFILE CARD ===== */}
-        <View style={[st.stickyContainer, { paddingTop: insets.top > 0 ? insets.top : 0 }]}>
+        <View style={[st.stickyContainer, { paddingTop: (insets.top > 0 ? insets.top : 0) + scale(16) }]}>
           {/* Profile Info */}
           <View style={st.profileCard}>
             <View style={st.profileTop}>
               <LinearGradient colors={[C.primary, C.primaryDark]} style={st.avatar}>
                 <Text style={st.avatarText}>{initial}</Text>
               </LinearGradient>
-              <View style={{ flex: 1, marginLeft: scale(14) }}>
+              <View style={{ flex: 1, marginLeft: scale(10) }}>
                 <Text style={st.pName}>{user?.name ?? '-'}</Text>
                 <View style={st.pInfoRow}>
-                  <Icon name="mail-outline" size={scale(13)} color={C.muted} />
+                  <Icon name="mail-outline" size={scale(10.5)} color={C.muted} />
                   <Text style={st.pInfoText} numberOfLines={1}>{user?.email ?? '-'}</Text>
                 </View>
                 <View style={st.pInfoRow}>
-                  <Icon name="call-outline" size={scale(13)} color={C.muted} />
+                  <Icon name="call-outline" size={scale(10.5)} color={C.muted} />
                   <Text style={st.pInfoText}>{needsPhone ? 'Not added' : user.phone}</Text>
                 </View>
                 {selectedRestaurant?.restaurantRole && (
                   <View style={st.pInfoRow}>
-                    <Icon name="shield-outline" size={scale(13)} color={C.muted} />
+                    <Icon name="shield-outline" size={scale(10.5)} color={C.muted} />
                     <Text style={[st.pInfoText, { color: '#6366F1', fontWeight: '600' }]}>
                       {selectedRestaurant.restaurantRole.charAt(0) + selectedRestaurant.restaurantRole.slice(1).toLowerCase()}
                     </Text>
@@ -556,7 +556,7 @@ export default function ProfileScreen({ navigation }) {
                 )}
               </View>
               <TouchableOpacity onPress={navigateEdit} style={st.editBtn}>
-                <Icon name="create-outline" size={scale(16)} color={C.primary} />
+                <Icon name="create-outline" size={scale(13)} color={C.primary} />
               </TouchableOpacity>
             </View>
 
@@ -583,7 +583,7 @@ export default function ProfileScreen({ navigation }) {
                   {i > 0 && <View style={st.statDivider} />}
                   <View style={st.statCell}>
                     <LinearGradient colors={s.grad} style={st.statIcon}>
-                      <Icon name={s.icon} size={scale(15)} color={s.color} />
+                      <Icon name={s.icon} size={scale(11.5)} color={s.color} />
                     </LinearGradient>
                     <Text style={st.statNum}>{s.num}</Text>
                     <Text style={st.statLabel}>{s.label}</Text>
@@ -846,7 +846,7 @@ const st = StyleSheet.create({
   blobA: { position: 'absolute', width: scale(180), height: scale(180), borderRadius: scale(90), top: scale(-40), left: scale(-40) },
   blobB: { position: 'absolute', width: scale(240), height: scale(240), borderRadius: scale(120), bottom: scale(-80), right: scale(-60) },
   heroBottomFade: { position: 'absolute', left: 0, right: 0, bottom: 0, height: scale(120) },
-  heroContent: { position: 'absolute', left: scale(20), right: scale(20), bottom: scale(20) },
+  heroContent: { position: 'absolute', left: scale(20), right: scale(20), bottom: scale(38) },
   heroWelcome: { color: 'rgba(255,255,255,0.8)', fontSize: moderateScale(14), fontWeight: '600', marginBottom: scale(4) },
   heroName: { color: '#fff', fontSize: moderateScale(28), fontWeight: '900', letterSpacing: -0.5, marginBottom: scale(10) },
   heroTagRow: { flexDirection: 'row', gap: scale(8) },
@@ -866,42 +866,42 @@ const st = StyleSheet.create({
     backgroundColor: C.bg, paddingTop: 0,
   },
   profileCard: {
-    backgroundColor: '#fff', borderRadius: scale(20), marginHorizontal: scale(16), marginTop: scale(-30),
-    padding: scale(16),
+    backgroundColor: '#fff', borderRadius: scale(14), marginHorizontal: scale(16), marginTop: scale(-30),
+    padding: scale(10),
     shadowColor: '#000', shadowOffset: { width: 0, height: scale(8) }, shadowOpacity: 0.1, shadowRadius: scale(16), elevation: 8,
     borderWidth: 1, borderColor: '#EEF2F7',
   },
   profileTop: { flexDirection: 'row', alignItems: 'center' },
   phonePrompt: {
-    flexDirection: 'row', alignItems: 'center', marginTop: scale(14),
-    backgroundColor: '#FFF5F5', borderRadius: scale(12), padding: scale(12),
+    flexDirection: 'row', alignItems: 'center', marginTop: scale(10),
+    backgroundColor: '#FFF5F5', borderRadius: scale(12), padding: scale(10),
     borderWidth: 1, borderColor: '#FFD9D9',
   },
-  phonePromptTitle: { color: C.primaryDark, fontWeight: '800', fontSize: moderateScale(13) },
-  phonePromptSub: { color: C.muted, fontSize: moderateScale(11), marginTop: scale(2) },
+  phonePromptTitle: { color: C.primaryDark, fontWeight: '800', fontSize: moderateScale(12.5) },
+  phonePromptSub: { color: C.muted, fontSize: moderateScale(10.5), marginTop: scale(2) },
   avatar: {
-    width: scale(60), height: scale(60), borderRadius: scale(20), alignItems: 'center', justifyContent: 'center',
+    width: scale(42), height: scale(42), borderRadius: scale(14), alignItems: 'center', justifyContent: 'center',
     shadowColor: C.primary, shadowOpacity: 0.3, shadowRadius: scale(8), elevation: 5,
   },
-  avatarText: { color: '#fff', fontSize: moderateScale(26), fontWeight: '900' },
-  pName: { color: C.ink, fontWeight: '900', fontSize: moderateScale(19), letterSpacing: -0.3 },
-  pInfoRow: { flexDirection: 'row', alignItems: 'center', gap: scale(5), marginTop: scale(3) },
-  pInfoText: { color: C.muted, fontSize: moderateScale(12.5), flex: 1 },
+  avatarText: { color: '#fff', fontSize: moderateScale(18), fontWeight: '900' },
+  pName: { color: C.ink, fontWeight: '900', fontSize: moderateScale(15), letterSpacing: -0.3 },
+  pInfoRow: { flexDirection: 'row', alignItems: 'center', gap: scale(4), marginTop: scale(1) },
+  pInfoText: { color: C.muted, fontSize: moderateScale(10.5), flex: 1 },
   editBtn: {
-    width: scale(34), height: scale(34), borderRadius: scale(10), backgroundColor: '#FEF2F2',
+    width: scale(26), height: scale(26), borderRadius: scale(8), backgroundColor: '#FEF2F2',
     alignItems: 'center', justifyContent: 'center', position: 'absolute', top: 0, right: 0,
   },
 
   /* Stats */
   statsRow: {
-    flexDirection: 'row', alignItems: 'center', marginTop: scale(14), paddingTop: scale(14),
+    flexDirection: 'row', alignItems: 'center', marginTop: scale(8), paddingTop: scale(8),
     borderTopWidth: 1, borderTopColor: '#F1F5F9',
   },
   statCell: { flex: 1, alignItems: 'center' },
-  statIcon: { width: scale(34), height: scale(34), borderRadius: scale(10), alignItems: 'center', justifyContent: 'center', marginBottom: scale(5) },
-  statNum: { color: C.ink, fontWeight: '900', fontSize: moderateScale(17) },
-  statLabel: { color: C.muted, fontSize: moderateScale(11), fontWeight: '600', marginTop: 1 },
-  statDivider: { width: 1, height: scale(40), backgroundColor: '#E5E7EB' },
+  statIcon: { width: scale(24), height: scale(24), borderRadius: scale(8), alignItems: 'center', justifyContent: 'center', marginBottom: scale(3) },
+  statNum: { color: C.ink, fontWeight: '900', fontSize: moderateScale(13.5) },
+  statLabel: { color: C.muted, fontSize: moderateScale(9.5), fontWeight: '600', marginTop: 1 },
+  statDivider: { width: 1, height: scale(28), backgroundColor: '#E5E7EB' },
 
   /* Card */
   card: {

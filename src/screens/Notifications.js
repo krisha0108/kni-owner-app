@@ -334,7 +334,7 @@ export default function Notifications({ navigation }) {
       {/* ─── Gradient Header ─── */}
       <LinearGradient colors={[C.primary, C.primaryDark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.header}>
         <TouchableOpacity onPress={() => navigation.goBack?.()} style={st.backBtn}>
-          <Icon name="arrow-back" size={scale(22)} color="#fff" />
+          <Icon name="arrow-back" size={scale(18)} color="#fff" />
         </TouchableOpacity>
         <View style={st.headerCenter}>
           <Text style={st.headerTitle}>Notifications</Text>
@@ -346,60 +346,39 @@ export default function Notifications({ navigation }) {
         </View>
         <View style={{ flexDirection: 'row', gap: scale(8) }}>
           <TouchableOpacity onPress={onRefresh} style={[st.backBtn, refreshing && { opacity: 0.5 }]} disabled={refreshing}>
-            <Icon name="refresh" size={scale(18)} color="#fff" />
+            <Icon name="refresh" size={scale(15)} color="#fff" />
           </TouchableOpacity>
           <TouchableOpacity onPress={markAllRead} style={st.backBtn}>
-            <Icon name="checkmark-done" size={scale(18)} color="#fff" />
+            <Icon name="checkmark-done" size={scale(15)} color="#fff" />
           </TouchableOpacity>
         </View>
       </LinearGradient>
 
-      {/* ─── Summary Grid ─── */}
+      {/* ─── Summary Strip -- one compact non-scrolling row of 4 tiles
+          instead of 4 separate cards ─── */}
       <View style={st.summarySection}>
-        <View style={st.summaryGrid}>
-          <TouchableOpacity
-            style={[st.summaryCard, filter === 'ORDER' && st.summaryCardActive]}
-            onPress={() => setFilter(filter === 'ORDER' ? 'all' : 'ORDER')}
-          >
-            <LinearGradient colors={['#DBEAFE', '#BFDBFE']} style={st.summaryIconCircle}>
-              <Icon name="cube" size={scale(18)} color="#2563EB" />
-            </LinearGradient>
-            <Text style={st.summaryCount}>{filterCounts.ORDER}</Text>
-            <Text style={st.summaryLabel}>Orders</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[st.summaryCard, filter === 'EQUIPMENT' && st.summaryCardActive]}
-            onPress={() => setFilter(filter === 'EQUIPMENT' ? 'all' : 'EQUIPMENT')}
-          >
-            <LinearGradient colors={['#FEF3C7', '#FDE68A']} style={st.summaryIconCircle}>
-              <Icon name="construct" size={scale(18)} color="#D97706" />
-            </LinearGradient>
-            <Text style={st.summaryCount}>{filterCounts.EQUIPMENT}</Text>
-            <Text style={st.summaryLabel}>Equipment</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[st.summaryCard, filter === 'BOOKING' && st.summaryCardActive]}
-            onPress={() => setFilter(filter === 'BOOKING' ? 'all' : 'BOOKING')}
-          >
-            <LinearGradient colors={['#D1FAE5', '#A7F3D0']} style={st.summaryIconCircle}>
-              <Icon name="calendar" size={scale(18)} color="#059669" />
-            </LinearGradient>
-            <Text style={st.summaryCount}>{filterCounts.BOOKING}</Text>
-            <Text style={st.summaryLabel}>Bookings</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[st.summaryCard, filter === 'all' && st.summaryCardActive]}
-            onPress={() => setFilter('all')}
-          >
-            <LinearGradient colors={['#FEE2E2', '#FECACA']} style={st.summaryIconCircle}>
-              <Icon name="notifications" size={scale(18)} color={C.primary} />
-            </LinearGradient>
-            <Text style={st.summaryCount}>{totalNotifCount || items.length}</Text>
-            <Text style={st.summaryLabel}>Total</Text>
-          </TouchableOpacity>
+        <View style={st.summaryStrip}>
+          {[
+            { key: 'ORDER', icon: 'cube', color: '#2563EB', label: 'Orders', value: filterCounts.ORDER },
+            { key: 'EQUIPMENT', icon: 'construct', color: '#D97706', label: 'Equipment', value: filterCounts.EQUIPMENT },
+            { key: 'BOOKING', icon: 'calendar', color: '#059669', label: 'Bookings', value: filterCounts.BOOKING },
+            { key: 'all', icon: 'notifications', color: C.primary, label: 'Total', value: totalNotifCount || items.length },
+          ].map((s, i) => (
+            <React.Fragment key={s.key}>
+              {i > 0 && <View style={st.summaryDivider} />}
+              <TouchableOpacity
+                style={st.summaryTile}
+                onPress={() => setFilter(s.key === 'all' ? 'all' : (filter === s.key ? 'all' : s.key))}
+                activeOpacity={0.7}
+              >
+                <View style={[st.summaryTileIcon, { backgroundColor: s.color + '20' }, filter === s.key && { borderWidth: 1.5, borderColor: s.color }]}>
+                  <Icon name={s.icon} size={scale(14)} color={s.color} />
+                </View>
+                <Text style={st.summaryTileValue} numberOfLines={1}>{s.value}</Text>
+                <Text style={st.summaryTileLabel} numberOfLines={1}>{s.label}</Text>
+              </TouchableOpacity>
+            </React.Fragment>
+          ))}
         </View>
       </View>
 
@@ -416,7 +395,7 @@ export default function Notifications({ navigation }) {
                 onPress={() => setFilter(tab.key)}
                 activeOpacity={0.7}
               >
-                <Icon name={tab.icon} size={scale(14)} color={isActive ? '#fff' : C.muted} style={{ marginRight: scale(5) }} />
+                <Icon name={tab.icon} size={scale(12)} color={isActive ? '#fff' : C.muted} style={{ marginRight: scale(4) }} />
                 <Text style={[st.tabText, isActive && st.tabTextActive]}>{tab.label}</Text>
                 {cnt !== null && cnt > 0 && (
                   <View style={[st.tabBadge, isActive && st.tabBadgeActive]}>
@@ -491,12 +470,12 @@ const st = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: scale(16),
-    paddingVertical: scale(14),
+    paddingVertical: scale(9),
   },
   backBtn: {
-    width: scale(38),
-    height: scale(38),
-    borderRadius: scale(12),
+    width: scale(32),
+    height: scale(32),
+    borderRadius: scale(10),
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -504,92 +483,93 @@ const st = StyleSheet.create({
   headerCenter: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: scale(8),
+    gap: scale(7),
   },
   headerTitle: {
-    fontSize: moderateScale(18),
+    fontSize: moderateScale(16),
     fontWeight: '800',
     color: '#fff',
   },
   countBadge: {
     backgroundColor: '#fff',
-    paddingHorizontal: scale(9),
-    paddingVertical: scale(3),
-    borderRadius: scale(12),
+    paddingHorizontal: scale(7),
+    paddingVertical: scale(2),
+    borderRadius: scale(10),
   },
   countBadgeText: {
-    fontSize: moderateScale(12),
+    fontSize: moderateScale(10.5),
     fontWeight: '800',
     color: C.primary,
   },
 
-  // ─── Summary Grid ───
+  // ─── Summary Strip ───
   summarySection: {
-    paddingHorizontal: scale(16),
-    paddingTop: scale(14),
-    paddingBottom: scale(6),
+    paddingHorizontal: scale(12),
+    paddingTop: scale(10),
+    paddingBottom: scale(4),
   },
-  summaryGrid: {
+  summaryStrip: {
     flexDirection: 'row',
-    gap: scale(8),
-  },
-  summaryCard: {
-    flex: 1,
+    alignItems: 'center',
     backgroundColor: C.card,
     borderRadius: scale(14),
-    padding: scale(10),
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: C.border,
+    paddingVertical: scale(10),
+    paddingHorizontal: scale(2),
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: scale(4),
-    elevation: 1,
+    shadowOffset: { width: 0, height: scale(2) },
+    shadowOpacity: 0.05,
+    shadowRadius: scale(6),
+    elevation: 2,
   },
-  summaryCardActive: {
-    borderColor: C.primary,
-    borderWidth: 1.5,
+  summaryTile: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: scale(2),
   },
-  summaryIconCircle: {
-    width: scale(34),
-    height: scale(34),
-    borderRadius: scale(10),
+  summaryDivider: {
+    width: 1,
+    height: scale(30),
+    backgroundColor: C.border,
+  },
+  summaryTileIcon: {
+    width: scale(26),
+    height: scale(26),
+    borderRadius: scale(8),
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: scale(6),
+    marginBottom: scale(4),
   },
-  summaryCount: {
-    fontSize: moderateScale(18),
+  summaryTileValue: {
+    fontSize: moderateScale(12.5),
     fontWeight: '800',
     color: C.ink,
   },
-  summaryLabel: {
-    fontSize: moderateScale(9),
+  summaryTileLabel: {
+    fontSize: moderateScale(8.5),
     fontWeight: '600',
     color: C.muted,
-    marginTop: scale(2),
+    marginTop: scale(1),
     textTransform: 'uppercase',
     letterSpacing: 0.3,
   },
 
   // ─── Filter Tabs ───
   tabsWrapper: {
-    paddingTop: scale(8),
-    paddingBottom: scale(4),
+    paddingTop: scale(5),
+    paddingBottom: scale(5),
     borderBottomWidth: 1,
     borderBottomColor: '#EEEFF2',
   },
   tabsContent: {
     paddingHorizontal: scale(16),
-    gap: scale(8),
+    gap: scale(6),
   },
   tab: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: scale(14),
-    paddingVertical: scale(8),
-    borderRadius: scale(20),
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(6),
+    borderRadius: scale(16),
     backgroundColor: C.card,
     borderWidth: 1.5,
     borderColor: C.border,
@@ -599,7 +579,7 @@ const st = StyleSheet.create({
     borderColor: C.primary,
   },
   tabText: {
-    fontSize: moderateScale(13),
+    fontSize: moderateScale(11.5),
     fontWeight: '600',
     color: C.muted,
   },
@@ -607,17 +587,17 @@ const st = StyleSheet.create({
     color: '#fff',
   },
   tabBadge: {
-    marginLeft: scale(6),
+    marginLeft: scale(5),
     backgroundColor: '#FEF3C7',
-    paddingHorizontal: scale(6),
+    paddingHorizontal: scale(5),
     paddingVertical: 1,
-    borderRadius: scale(8),
+    borderRadius: scale(7),
   },
   tabBadgeActive: {
     backgroundColor: 'rgba(255,255,255,0.3)',
   },
   tabBadgeText: {
-    fontSize: moderateScale(10),
+    fontSize: moderateScale(9),
     fontWeight: '700',
     color: '#D97706',
   },

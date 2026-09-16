@@ -15,7 +15,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { api } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRestaurant } from '../context/RestaurantContext';
-import { RestaurantSelectorBar } from '../components/RestaurantSelector';
+import { RestaurantSelectorCompact } from '../components/RestaurantSelector';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 import { scale, moderateScale } from '../utils/responsive';
@@ -52,6 +52,13 @@ const QA = [
   { icon: 'add-circle-outline', label: 'New Request', grad: ['#7C3AED', '#6D28D9'], screen: 'AMCRequest', permission: 'amc:create' },
   { icon: 'document-text-outline', label: 'My Requests', grad: ['#3B82F6', '#2563EB'], screen: 'AMCRequestsList' },
   { icon: 'shield-checkmark-outline', label: 'My Contracts', grad: ['#10B981', '#059669'], screen: 'AMCContracts' },
+];
+
+const STATS = [
+  { key: 'activeContracts', icon: 'shield-checkmark', color: C.ok, label: 'Active Contracts' },
+  { key: 'completedVisits', icon: 'checkmark-done-circle', color: C.info, label: 'Completed Visits' },
+  { key: 'pendingRequests', icon: 'time-outline', color: C.warn, label: 'Pending Requests' },
+  { key: 'activeBreakdowns', icon: 'construct-outline', color: C.danger, label: 'Active Breakdowns' },
 ];
 
 export default function AMCDashboardScreen({ navigation }) {
@@ -122,14 +129,14 @@ export default function AMCDashboardScreen({ navigation }) {
         <LinearGradient colors={[C.purple, C.purpleDark]} style={styles.heroHeader}>
           <View style={styles.heroContent}>
             <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-              <Icon name="arrow-back" size={scale(24)} color="#fff" />
+              <Icon name="arrow-back" size={scale(18)} color="#fff" />
             </TouchableOpacity>
             <View style={styles.heroTitleRow}>
-              <Icon name="shield-checkmark-outline" size={scale(22)} color="#fff" />
+              <Icon name="shield-checkmark-outline" size={scale(18)} color="#fff" />
               <Text style={styles.heroTitle}>AMC Management</Text>
             </View>
             <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
-              <Icon name="menu" size={scale(24)} color="#fff" />
+              <Icon name="menu" size={scale(18)} color="#fff" />
             </TouchableOpacity>
           </View>
         </LinearGradient>
@@ -156,20 +163,20 @@ export default function AMCDashboardScreen({ navigation }) {
       >
         <View style={styles.heroContent}>
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-            <Icon name="arrow-back" size={scale(24)} color="#fff" />
+            <Icon name="arrow-back" size={scale(18)} color="#fff" />
           </TouchableOpacity>
-          <View style={styles.heroTitleRow}>
-            <Icon name="shield-checkmark-outline" size={scale(22)} color="#fff" />
-            <Text style={styles.heroTitle}>AMC Management</Text>
+          <View style={styles.heroTextContainer}>
+            <View style={styles.heroTitleRow}>
+              <Icon name="shield-checkmark-outline" size={scale(18)} color="#fff" />
+              <Text style={styles.heroTitle}>AMC Management</Text>
+            </View>
+            <RestaurantSelectorCompact dark style={styles.heroRestaurantPill} />
           </View>
           <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
-            <Icon name="menu" size={scale(24)} color="#fff" />
+            <Icon name="menu" size={scale(18)} color="#fff" />
           </TouchableOpacity>
         </View>
       </LinearGradient>
-
-      {/* Restaurant Selector */}
-      <RestaurantSelectorBar />
 
       <ScrollView
         style={styles.scrollView}
@@ -179,38 +186,20 @@ export default function AMCDashboardScreen({ navigation }) {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.purple]} tintColor={C.purple} />
         }
       >
-        {/* Stats Grid */}
-        <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
-            <View style={[styles.statIconBox, { backgroundColor: C.ok + '20' }]}>
-              <Icon name="shield-checkmark" size={scale(22)} color={C.ok} />
-            </View>
-            <Text style={styles.statValue}>{data?.activeContracts || 0}</Text>
-            <Text style={styles.statLabel}>Active Contracts</Text>
-          </View>
-          <View style={styles.statCard}>
-            <View style={[styles.statIconBox, { backgroundColor: C.info + '20' }]}>
-              <Icon name="checkmark-done-circle" size={scale(22)} color={C.info} />
-            </View>
-            <Text style={styles.statValue}>{data?.completedVisits || 0}</Text>
-            <Text style={styles.statLabel}>Completed Visits</Text>
-          </View>
-        </View>
-        <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
-            <View style={[styles.statIconBox, { backgroundColor: C.warn + '20' }]}>
-              <Icon name="time-outline" size={scale(22)} color={C.warn} />
-            </View>
-            <Text style={styles.statValue}>{data?.pendingRequests || 0}</Text>
-            <Text style={styles.statLabel}>Pending Requests</Text>
-          </View>
-          <View style={styles.statCard}>
-            <View style={[styles.statIconBox, { backgroundColor: C.danger + '20' }]}>
-              <Icon name="construct-outline" size={scale(22)} color={C.danger} />
-            </View>
-            <Text style={styles.statValue}>{data?.activeBreakdowns || 0}</Text>
-            <Text style={styles.statLabel}>Active Breakdowns</Text>
-          </View>
+        {/* Stats Strip -- one compact row instead of 2x2 big cards */}
+        <View style={styles.statsStrip}>
+          {STATS.map((s, i) => (
+            <React.Fragment key={s.key}>
+              {i > 0 && <View style={styles.statTileDivider} />}
+              <View style={styles.statTile}>
+                <View style={[styles.statTileIcon, { backgroundColor: s.color + '20' }]}>
+                  <Icon name={s.icon} size={scale(16)} color={s.color} />
+                </View>
+                <Text style={styles.statTileValue}>{data?.[s.key] || 0}</Text>
+                <Text style={styles.statTileLabel} numberOfLines={2}>{s.label}</Text>
+              </View>
+            </React.Fragment>
+          ))}
         </View>
 
         {/* Quick Actions */}
@@ -336,26 +325,32 @@ const styles = StyleSheet.create({
 
   // Hero Header
   heroHeader: {
-    paddingBottom: scale(20),
-    borderBottomLeftRadius: scale(24),
-    borderBottomRightRadius: scale(24),
+    paddingBottom: scale(6),
+    borderBottomLeftRadius: scale(20),
+    borderBottomRightRadius: scale(20),
   },
   heroContent: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: scale(16), paddingTop: scale(8), paddingBottom: scale(8),
+    paddingHorizontal: scale(16), paddingTop: scale(8), paddingBottom: scale(4),
   },
   backBtn: {
-    width: scale(40), height: scale(40), borderRadius: scale(12),
+    width: scale(34), height: scale(34), borderRadius: scale(10),
     backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center',
   },
+  heroTextContainer: {
+    flex: 1, marginHorizontal: scale(12),
+  },
   heroTitleRow: {
-    flexDirection: 'row', alignItems: 'center', gap: scale(8),
+    flexDirection: 'row', alignItems: 'center', gap: scale(6),
   },
   heroTitle: {
-    fontSize: moderateScale(20), fontWeight: '700', color: '#fff',
+    fontSize: moderateScale(18), fontWeight: '700', color: '#fff',
+  },
+  heroRestaurantPill: {
+    alignSelf: 'flex-start', marginTop: scale(4),
   },
   menuBtn: {
-    width: scale(40), height: scale(40), borderRadius: scale(12),
+    width: scale(34), height: scale(34), borderRadius: scale(10),
     backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center',
   },
 
@@ -367,24 +362,30 @@ const styles = StyleSheet.create({
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   loadingText: { fontSize: moderateScale(14), color: C.muted, marginTop: scale(12) },
 
-  // Stats Grid
-  statsGrid: {
-    flexDirection: 'row', gap: scale(12), marginBottom: scale(12),
-  },
-  statCard: {
-    flex: 1, backgroundColor: C.card, borderRadius: scale(16), padding: scale(16),
+  // Stats Strip -- one compact row of 4 tiles instead of 2x2 big cards
+  statsStrip: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: C.card,
+    borderRadius: scale(14), paddingVertical: scale(10), paddingHorizontal: scale(6),
+    marginBottom: scale(14),
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
   },
-  statIconBox: {
-    width: scale(44), height: scale(44), borderRadius: scale(12),
-    alignItems: 'center', justifyContent: 'center', marginBottom: scale(10),
+  statTile: {
+    flex: 1, alignItems: 'center', paddingHorizontal: scale(2),
   },
-  statValue: {
-    fontSize: moderateScale(24), fontWeight: '800', color: C.ink,
+  statTileDivider: {
+    width: 1, height: scale(34), backgroundColor: C.border,
   },
-  statLabel: {
-    fontSize: moderateScale(12), color: C.muted, marginTop: scale(2), fontWeight: '500',
+  statTileIcon: {
+    width: scale(30), height: scale(30), borderRadius: scale(9),
+    alignItems: 'center', justifyContent: 'center', marginBottom: scale(5),
+  },
+  statTileValue: {
+    fontSize: moderateScale(15), fontWeight: '800', color: C.ink,
+  },
+  statTileLabel: {
+    fontSize: moderateScale(8.5), color: C.muted, marginTop: scale(2),
+    fontWeight: '500', textAlign: 'center', lineHeight: moderateScale(10.5),
   },
 
   // Section Title

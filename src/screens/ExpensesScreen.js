@@ -19,7 +19,7 @@ import RNFS from 'react-native-fs';
 import { api, API_BASE_URL } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRestaurant } from '../context/RestaurantContext';
-import { RestaurantSelectorBar } from '../components/RestaurantSelector';
+import { RestaurantSelectorCompact } from '../components/RestaurantSelector';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
@@ -345,14 +345,14 @@ export default function ExpensesScreen({ navigation }) {
         <View style={st.summaryCard}>
           <View style={st.summaryRow}>
             <View style={st.summaryLeft}>
-              <Icon name="wallet" size={scale(24)} color="#fff" />
+              <Icon name="wallet" size={scale(18)} color="#fff" />
               <Text style={st.summaryLabel}>Total Expenses</Text>
             </View>
             <TouchableOpacity
               style={st.reportsBtn}
               onPress={() => navigation.navigate('ExpenseReports')}
             >
-              <Icon name="bar-chart" size={scale(16)} color={C.warning} />
+              <Icon name="bar-chart" size={scale(13)} color={C.warning} />
               <Text style={st.reportsBtnText}>Reports</Text>
             </TouchableOpacity>
           </View>
@@ -360,9 +360,6 @@ export default function ExpensesScreen({ navigation }) {
           <Text style={st.summaryCount}>{summary.count} expense{summary.count !== 1 ? 's' : ''} recorded</Text>
         </View>
       )}
-
-      {/* Restaurant Selector */}
-      <RestaurantSelectorBar />
 
       {/* Category Filter */}
       <View style={st.filterSection}>
@@ -378,9 +375,9 @@ export default function ExpensesScreen({ navigation }) {
             return (
               <TouchableOpacity
                 style={[st.filterChip, isActive && { backgroundColor: cat.color, borderColor: cat.color }]}
-                onPress={() => setSelectedCategory(cat.value)}
+                onPress={() => setSelectedCategory(isActive && cat.value !== 'all' ? 'all' : cat.value)}
               >
-                <Icon name={cat.icon} size={scale(16)} color={isActive ? '#fff' : cat.color} />
+                <Icon name={cat.icon} size={scale(13)} color={isActive ? '#fff' : cat.color} />
                 <Text style={[st.filterChipText, isActive && { color: '#fff' }]}>
                   {cat.label} ({count})
                 </Text>
@@ -388,17 +385,6 @@ export default function ExpensesScreen({ navigation }) {
             );
           }}
         />
-      </View>
-
-      {/* Results Header */}
-      <View style={st.resultsHeader}>
-        <Text style={st.resultsTitle}>{filtered.length} Expense{filtered.length !== 1 ? 's' : ''}</Text>
-        {selectedCategory !== 'all' && (
-          <TouchableOpacity style={st.clearBtn} onPress={() => setSelectedCategory('all')}>
-            <Icon name="close-circle" size={scale(14)} color={C.warning} />
-            <Text style={st.clearBtnText}>Clear</Text>
-          </TouchableOpacity>
-        )}
       </View>
     </>
   );
@@ -474,7 +460,7 @@ export default function ExpensesScreen({ navigation }) {
         </TouchableOpacity>
         <View style={st.headerCenter}>
           <Text style={st.headerTitle}>Expenses</Text>
-          <Text style={st.headerSubtitle}>Track your spending</Text>
+          <RestaurantSelectorCompact style={st.headerRestaurantPill} />
         </View>
         <View style={st.headerActions}>
           {can('expenses:create') && (
@@ -656,13 +642,14 @@ const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
 
   // Header Section
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(16), paddingVertical: scale(12), backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border },
-  headerBackBtn: { width: scale(40), height: scale(40), borderRadius: scale(10), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(16), paddingVertical: scale(9), backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border },
+  headerBackBtn: { width: scale(34), height: scale(34), borderRadius: scale(9), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
   headerCenter: { flex: 1, marginLeft: scale(12) },
-  headerTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink },
+  headerTitle: { fontSize: moderateScale(17), fontWeight: '700', color: C.ink },
   headerSubtitle: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(2) },
+  headerRestaurantPill: { alignSelf: 'flex-start', marginTop: scale(4) },
   headerActions: { flexDirection: 'row' },
-  headerIconBtn: { width: scale(40), height: scale(40), borderRadius: scale(10), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', marginLeft: scale(8) },
+  headerIconBtn: { width: scale(34), height: scale(34), borderRadius: scale(9), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', marginLeft: scale(8) },
 
   // Hero Section (kept for modal header)
   heroSection: { paddingTop: scale(8), paddingBottom: scale(16), borderBottomLeftRadius: scale(20), borderBottomRightRadius: scale(20) },
@@ -675,29 +662,23 @@ const st = StyleSheet.create({
   heroIconBtn: { width: scale(40), height: scale(40), borderRadius: scale(12), backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginLeft: scale(8) },
 
   // Summary Card
-  summaryCard: { backgroundColor: C.warning, marginHorizontal: scale(16), marginTop: scale(16), padding: scale(20), borderRadius: scale(16) },
-  summaryRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: scale(8) },
-  summaryLeft: { flexDirection: 'row', alignItems: 'center', gap: scale(8) },
-  summaryLabel: { fontSize: moderateScale(14), color: '#fff', fontWeight: '600' },
-  reportsBtn: { flexDirection: 'row', alignItems: 'center', gap: scale(6), paddingHorizontal: scale(12), paddingVertical: scale(6), backgroundColor: '#fff', borderRadius: scale(20) },
+  summaryCard: { backgroundColor: C.warning, marginHorizontal: scale(16), marginTop: scale(10), padding: scale(14), borderRadius: scale(14) },
+  summaryRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: scale(4) },
+  summaryLeft: { flexDirection: 'row', alignItems: 'center', gap: scale(6) },
+  summaryLabel: { fontSize: moderateScale(12.5), color: '#fff', fontWeight: '600' },
+  reportsBtn: { flexDirection: 'row', alignItems: 'center', gap: scale(5), paddingHorizontal: scale(10), paddingVertical: scale(5), backgroundColor: '#fff', borderRadius: scale(16) },
   reportsBtnText: { fontSize: moderateScale(12), fontWeight: '700', color: C.warning },
-  summaryValue: { fontSize: moderateScale(32), fontWeight: '800', color: '#fff' },
-  summaryCount: { fontSize: moderateScale(13), color: 'rgba(255,255,255,0.85)', marginTop: scale(4) },
+  summaryValue: { fontSize: moderateScale(24), fontWeight: '800', color: '#fff' },
+  summaryCount: { fontSize: moderateScale(11.5), color: 'rgba(255,255,255,0.85)', marginTop: scale(2) },
 
   // Filters
-  filterSection: { paddingVertical: scale(12), backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border, marginTop: scale(12) },
+  filterSection: { paddingVertical: scale(7), backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border, marginTop: scale(8) },
   filterScroll: { paddingHorizontal: scale(16) },
-  filterChip: { flexDirection: 'row', alignItems: 'center', gap: scale(6), paddingHorizontal: scale(14), paddingVertical: scale(10), marginRight: scale(8), backgroundColor: C.card, borderRadius: scale(20), borderWidth: 1.5, borderColor: C.border },
-  filterChipText: { fontSize: moderateScale(13), fontWeight: '600', color: C.ink },
-
-  // Results Header
-  resultsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: scale(16), paddingVertical: scale(12) },
-  resultsTitle: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink },
-  clearBtn: { flexDirection: 'row', alignItems: 'center', gap: scale(4), paddingHorizontal: scale(10), paddingVertical: scale(6), backgroundColor: C.warningLight, borderRadius: scale(8) },
-  clearBtnText: { fontSize: moderateScale(12), fontWeight: '600', color: C.warning },
+  filterChip: { flexDirection: 'row', alignItems: 'center', gap: scale(5), paddingHorizontal: scale(10), paddingVertical: scale(6), marginRight: scale(6), backgroundColor: C.card, borderRadius: scale(16), borderWidth: 1.5, borderColor: C.border },
+  filterChipText: { fontSize: moderateScale(11.5), fontWeight: '600', color: C.ink },
 
   // List
-  listContent: { paddingHorizontal: scale(16), paddingBottom: scale(120) },
+  listContent: { paddingHorizontal: scale(16), paddingTop: scale(8), paddingBottom: scale(120) },
   columnWrapper: { justifyContent: 'space-between' },
 
   // Card

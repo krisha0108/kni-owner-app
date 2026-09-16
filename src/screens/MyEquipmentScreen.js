@@ -17,7 +17,7 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { api, getImageUrl, uploadFile } from '../api/client';
 import { useRestaurant } from '../context/RestaurantContext';
-import { RestaurantSelectorBar } from '../components/RestaurantSelector';
+import { RestaurantSelectorCompact } from '../components/RestaurantSelector';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 import AppAlert from '../utils/AppAlert';
@@ -509,20 +509,20 @@ export default function MyEquipmentScreen({ navigation }) {
       >
         <View style={st.heroContent}>
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
-            <Icon name="arrow-back" size={scale(22)} color="#fff" />
+            <Icon name="arrow-back" size={scale(18)} color="#fff" />
           </TouchableOpacity>
           <View style={st.heroTextContainer}>
             <Text style={st.heroTitle}>My Equipment</Text>
-            <Text style={st.heroSubtitle}>{selectedRestaurant?.name || 'Select Restaurant'}</Text>
+            <RestaurantSelectorCompact dark style={st.heroRestaurantPill} />
           </View>
           <View style={st.heroActions}>
             {can('equipment:create') && (
             <TouchableOpacity style={st.heroIconBtn} onPress={() => openForm()}>
-              <Icon name="add" size={scale(22)} color="#fff" />
+              <Icon name="add" size={scale(18)} color="#fff" />
             </TouchableOpacity>
             )}
             <TouchableOpacity style={st.heroIconBtn} onPress={() => setMenuVisible(true)}>
-              <Icon name="menu" size={scale(22)} color="#fff" />
+              <Icon name="menu" size={scale(18)} color="#fff" />
             </TouchableOpacity>
           </View>
         </View>
@@ -530,7 +530,7 @@ export default function MyEquipmentScreen({ navigation }) {
         {/* Search Bar */}
         <View style={st.searchContainer}>
           <View style={st.searchBar}>
-            <Icon name="search" size={scale(20)} color={C.muted} />
+            <Icon name="search" size={scale(14)} color={C.muted} />
             <TextInput
               style={st.searchInput}
               placeholder="Search equipment..."
@@ -541,15 +541,12 @@ export default function MyEquipmentScreen({ navigation }) {
             />
             {search.length > 0 && (
               <TouchableOpacity onPress={() => setSearch('')} style={st.clearBtn}>
-                <Icon name="close-circle" size={scale(20)} color={C.muted} />
+                <Icon name="close-circle" size={scale(14)} color={C.muted} />
               </TouchableOpacity>
             )}
           </View>
         </View>
       </LinearGradient>
-
-      {/* Restaurant Selector */}
-      <RestaurantSelectorBar />
 
       {/* Status Filter Chips */}
       <View style={st.filterSection}>
@@ -560,9 +557,9 @@ export default function MyEquipmentScreen({ navigation }) {
               <TouchableOpacity
                 key={filter.key}
                 style={[st.filterChip, isActive && st.filterChipActive]}
-                onPress={() => setStatusFilter(filter.key)}
+                onPress={() => setStatusFilter(isActive && filter.key !== 'all' ? 'all' : filter.key)}
               >
-                <Icon name={filter.icon} size={scale(16)} color={isActive ? '#fff' : filter.color} />
+                <Icon name={filter.icon} size={scale(13)} color={isActive ? '#fff' : filter.color} />
                 <Text style={[st.filterChipText, isActive && st.filterChipTextActive]}>
                   {filter.label} ({statusCounts[filter.key] || 0})
                 </Text>
@@ -574,35 +571,25 @@ export default function MyEquipmentScreen({ navigation }) {
 
       {/* Warranty Filter Chips */}
       <View style={st.warrantyFilterSection}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.filterScroll}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={[st.filterScroll, st.warrantyFilterScroll, { minWidth: width }]}
+        >
           {warrantyFilters.map((filter) => {
             const isActive = warrantyFilter === filter.key;
             return (
               <TouchableOpacity
                 key={filter.key}
                 style={[st.warrantyChip, isActive && st.warrantyChipActive]}
-                onPress={() => setWarrantyFilter(filter.key)}
+                onPress={() => setWarrantyFilter(isActive && filter.key !== 'all' ? 'all' : filter.key)}
               >
-                <Icon name={filter.icon} size={scale(14)} color={isActive ? '#fff' : (filter.color || C.muted)} />
+                <Icon name={filter.icon} size={scale(12)} color={isActive ? '#fff' : (filter.color || C.muted)} />
                 <Text style={[st.warrantyChipText, isActive && st.warrantyChipTextActive]}>{filter.label}</Text>
               </TouchableOpacity>
             );
           })}
         </ScrollView>
-      </View>
-
-      {/* Results Header */}
-      <View style={st.resultsHeader}>
-        <Text style={st.resultsTitle}>{filtered.length} Equipment</Text>
-        {(statusFilter !== 'all' || warrantyFilter !== 'all' || search) && (
-          <TouchableOpacity
-            style={st.clearFiltersBtn}
-            onPress={() => { setStatusFilter('all'); setWarrantyFilter('all'); setSearch(''); }}
-          >
-            <Icon name="close-circle" size={scale(14)} color={C.primary} />
-            <Text style={st.clearFiltersText}>Clear</Text>
-          </TouchableOpacity>
-        )}
       </View>
 
       {/* Equipment List */}
@@ -638,7 +625,6 @@ export default function MyEquipmentScreen({ navigation }) {
         }
         initialNumToRender={10}
         maxToRenderPerBatch={10}
-        removeClippedSubviews={true}
       />
 
       {/* Add/Edit Modal */}
@@ -878,42 +864,37 @@ const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
 
   // Hero Section (Compact)
-  heroSection: { paddingTop: scale(8), paddingBottom: scale(16), borderBottomLeftRadius: scale(20), borderBottomRightRadius: scale(20) },
-  heroContent: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(16), marginBottom: scale(12) },
-  backBtn: { width: scale(40), height: scale(40), borderRadius: scale(12), backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginRight: scale(12) },
+  heroSection: { paddingTop: scale(6), paddingBottom: scale(10), borderBottomLeftRadius: scale(16), borderBottomRightRadius: scale(16) },
+  heroContent: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(16), marginBottom: scale(8) },
+  backBtn: { width: scale(32), height: scale(32), borderRadius: scale(10), backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginRight: scale(10) },
   heroTextContainer: { flex: 1 },
-  heroTitle: { fontSize: moderateScale(24), fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
-  heroSubtitle: { fontSize: moderateScale(13), color: 'rgba(255,255,255,0.8)', marginTop: scale(2) },
-  heroActions: { flexDirection: 'row', gap: scale(8) },
-  heroIconBtn: { width: scale(40), height: scale(40), borderRadius: scale(12), backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
+  heroTitle: { fontSize: moderateScale(18), fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
+  heroRestaurantPill: { alignSelf: 'flex-start', marginTop: scale(4) },
+  heroActions: { flexDirection: 'row', gap: scale(6) },
+  heroIconBtn: { width: scale(32), height: scale(32), borderRadius: scale(10), backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
 
   // Search
   searchContainer: { paddingHorizontal: scale(16) },
-  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: scale(14), paddingHorizontal: scale(14), height: scale(48), shadowColor: '#000', shadowOffset: { width: 0, height: scale(4) }, shadowOpacity: 0.1, shadowRadius: scale(12), elevation: 5 },
-  searchInput: { flex: 1, marginLeft: scale(10), fontSize: moderateScale(15), color: C.ink },
+  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: scale(10), paddingHorizontal: scale(12), height: scale(34), shadowColor: '#000', shadowOffset: { width: 0, height: scale(2) }, shadowOpacity: 0.08, shadowRadius: scale(8), elevation: 3 },
+  searchInput: { flex: 1, marginLeft: scale(8), fontSize: moderateScale(12.5), color: C.ink },
   clearBtn: { padding: scale(4) },
 
   // Filters
-  filterSection: { paddingVertical: scale(10), borderBottomWidth: 1, borderBottomColor: C.border, backgroundColor: C.card },
-  warrantyFilterSection: { paddingVertical: scale(8), backgroundColor: C.bg },
+  filterSection: { paddingVertical: scale(6), borderBottomWidth: 1, borderBottomColor: C.border, backgroundColor: C.card },
+  warrantyFilterSection: { paddingVertical: scale(5), backgroundColor: C.bg },
   filterScroll: { paddingHorizontal: scale(16) },
-  filterChip: { flexDirection: 'row', alignItems: 'center', gap: scale(6), paddingHorizontal: scale(14), paddingVertical: scale(10), marginRight: scale(8), backgroundColor: C.card, borderRadius: scale(20), borderWidth: 1.5, borderColor: C.border },
+  warrantyFilterScroll: { gap: scale(10), justifyContent: 'center' },
+  filterChip: { flexDirection: 'row', alignItems: 'center', gap: scale(5), paddingHorizontal: scale(10), paddingVertical: scale(6), marginRight: scale(8), backgroundColor: C.card, borderRadius: scale(16), borderWidth: 1.5, borderColor: C.border },
   filterChipActive: { backgroundColor: C.primary, borderColor: C.primary },
-  filterChipText: { fontSize: moderateScale(13), fontWeight: '600', color: C.ink },
+  filterChipText: { fontSize: moderateScale(11.5), fontWeight: '600', color: C.ink },
   filterChipTextActive: { color: '#fff' },
-  warrantyChip: { flexDirection: 'row', alignItems: 'center', gap: scale(6), paddingHorizontal: scale(12), paddingVertical: scale(8), marginRight: scale(8), backgroundColor: C.card, borderRadius: scale(16), borderWidth: 1, borderColor: C.border },
+  warrantyChip: { flexDirection: 'row', alignItems: 'center', gap: scale(5), paddingHorizontal: scale(9), paddingVertical: scale(5), backgroundColor: C.card, borderRadius: scale(13), borderWidth: 1, borderColor: C.border },
   warrantyChipActive: { backgroundColor: C.info, borderColor: C.info },
-  warrantyChipText: { fontSize: moderateScale(12), fontWeight: '600', color: C.muted },
+  warrantyChipText: { fontSize: moderateScale(10.5), fontWeight: '600', color: C.muted },
   warrantyChipTextActive: { color: '#fff' },
 
-  // Results Header
-  resultsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: scale(16), paddingVertical: scale(10) },
-  resultsTitle: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink },
-  clearFiltersBtn: { flexDirection: 'row', alignItems: 'center', gap: scale(4), paddingHorizontal: scale(10), paddingVertical: scale(6), backgroundColor: C.primaryLight, borderRadius: scale(8) },
-  clearFiltersText: { fontSize: moderateScale(12), fontWeight: '600', color: C.primary },
-
   // List
-  listContent: { paddingHorizontal: scale(16), paddingBottom: scale(120) },
+  listContent: { paddingHorizontal: scale(16), paddingTop: scale(10), paddingBottom: scale(120) },
   columnWrapper: { justifyContent: 'space-between' },
 
   // Card

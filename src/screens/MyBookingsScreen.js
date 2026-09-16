@@ -24,7 +24,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { api } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRestaurant } from '../context/RestaurantContext';
-import { RestaurantSelectorBar } from '../components/RestaurantSelector';
+import { RestaurantSelectorCompact } from '../components/RestaurantSelector';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 import { scale, moderateScale, isTablet, getContainerMaxWidth } from '../utils/responsive';
@@ -192,7 +192,7 @@ export default function MyBookingsScreen({ navigation }) {
       <TouchableOpacity
         key={statusKey}
         style={[styles.statusTab, isActive && { backgroundColor: config.color }]}
-        onPress={() => setActiveStatusTab(statusKey)}
+        onPress={() => setActiveStatusTab(isActive && statusKey !== 'all' ? 'all' : statusKey)}
         activeOpacity={0.7}
       >
         <Icon
@@ -231,7 +231,7 @@ export default function MyBookingsScreen({ navigation }) {
         <View style={styles.cardHeader}>
           <View style={styles.cardHeaderLeft}>
             <View style={[styles.bookingIconBox, { backgroundColor: config.bg }]}>
-              <Icon name={config.icon} size={20} color={config.color} />
+              <Icon name={config.icon} size={16} color={config.color} />
             </View>
             <View>
               <Text style={styles.bookingId}>#{item.id.slice(0, 8).toUpperCase()}</Text>
@@ -249,7 +249,7 @@ export default function MyBookingsScreen({ navigation }) {
         <View style={styles.cardBody}>
           {/* Items Summary */}
           <View style={styles.itemsSummary}>
-            <Icon name="cube-outline" size={16} color={C.muted} />
+            <Icon name="cube-outline" size={13} color={C.muted} />
             <Text style={styles.itemsText}>
               {itemCount} item{itemCount !== 1 ? 's' : ''}
             </Text>
@@ -258,7 +258,7 @@ export default function MyBookingsScreen({ navigation }) {
           {/* Schedule if exists */}
           {item.slotStartDateTime && (
             <View style={styles.scheduleRow}>
-              <Icon name="calendar-outline" size={16} color={C.info} />
+              <Icon name="calendar-outline" size={13} color={C.info} />
               <Text style={styles.scheduleText}>{formatDate(item.slotStartDateTime)}</Text>
             </View>
           )}
@@ -266,7 +266,7 @@ export default function MyBookingsScreen({ navigation }) {
           {/* Engineer if assigned */}
           {item.engineerAssignments?.length > 0 && (
             <View style={styles.engineerRow}>
-              <Icon name="person-outline" size={16} color={C.purple} />
+              <Icon name="person-outline" size={13} color={C.purple} />
               <Text style={styles.engineerText} numberOfLines={1}>
                 {item.engineerAssignments[0].engineer?.name || 'Engineer Assigned'}
               </Text>
@@ -289,7 +289,7 @@ export default function MyBookingsScreen({ navigation }) {
           </View>
           <View style={styles.viewDetailsBtn}>
             <Text style={styles.viewDetailsText}>View</Text>
-            <Icon name="chevron-forward" size={16} color={C.primary} />
+            <Icon name="chevron-forward" size={13} color={C.primary} />
           </View>
         </View>
       </TouchableOpacity>
@@ -304,11 +304,11 @@ export default function MyBookingsScreen({ navigation }) {
         <LinearGradient colors={[C.primary, C.primaryDark]} style={styles.heroHeader}>
           <View style={styles.heroContent}>
             <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-              <Icon name="arrow-back" size={24} color="#fff" />
+              <Icon name="arrow-back" size={18} color="#fff" />
             </TouchableOpacity>
             <Text style={styles.heroTitle}>My Bookings</Text>
             <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
-              <Icon name="menu" size={24} color="#fff" />
+              <Icon name="menu" size={18} color="#fff" />
             </TouchableOpacity>
           </View>
         </LinearGradient>
@@ -329,11 +329,11 @@ export default function MyBookingsScreen({ navigation }) {
         <LinearGradient colors={[C.primary, C.primaryDark]} style={styles.heroHeader}>
           <View style={styles.heroContent}>
             <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-              <Icon name="arrow-back" size={24} color="#fff" />
+              <Icon name="arrow-back" size={18} color="#fff" />
             </TouchableOpacity>
             <Text style={styles.heroTitle}>My Bookings</Text>
             <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
-              <Icon name="menu" size={24} color="#fff" />
+              <Icon name="menu" size={18} color="#fff" />
             </TouchableOpacity>
           </View>
         </LinearGradient>
@@ -365,7 +365,10 @@ export default function MyBookingsScreen({ navigation }) {
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
             <Icon name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.heroTitle}>My Bookings</Text>
+          <View style={styles.heroTextContainer}>
+            <Text style={styles.heroTitle}>My Bookings</Text>
+            <RestaurantSelectorCompact dark style={styles.heroRestaurantPill} />
+          </View>
           <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
             <Icon name="menu" size={24} color="#fff" />
           </TouchableOpacity>
@@ -399,16 +402,6 @@ export default function MyBookingsScreen({ navigation }) {
         >
           {Object.keys(STATUS_CONFIG).map(renderStatusTab)}
         </ScrollView>
-      </View>
-
-      {/* Restaurant Selector */}
-      <RestaurantSelectorBar />
-
-      {/* Results Count */}
-      <View style={styles.resultsRow}>
-        <Text style={styles.resultsText}>
-          {filteredBookings.length} booking{filteredBookings.length !== 1 ? 's' : ''}
-        </Text>
       </View>
 
       {/* Bookings List */}
@@ -463,9 +456,9 @@ const styles = StyleSheet.create({
 
   // Hero Header
   heroHeader: {
-    paddingBottom: scale(20),
-    borderBottomLeftRadius: scale(24),
-    borderBottomRightRadius: scale(24),
+    paddingBottom: scale(10),
+    borderBottomLeftRadius: scale(20),
+    borderBottomRightRadius: scale(20),
   },
   heroContent: {
     flexDirection: 'row',
@@ -473,25 +466,33 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: scale(16),
     paddingTop: scale(8),
-    paddingBottom: scale(16),
+    paddingBottom: scale(8),
   },
   backBtn: {
-    width: scale(40),
-    height: scale(40),
-    borderRadius: scale(12),
+    width: scale(34),
+    height: scale(34),
+    borderRadius: scale(10),
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
+  heroTextContainer: {
+    flex: 1,
+    marginHorizontal: scale(12),
+  },
   heroTitle: {
-    fontSize: moderateScale(20),
+    fontSize: moderateScale(18),
     fontWeight: '700',
     color: '#fff',
   },
+  heroRestaurantPill: {
+    alignSelf: 'flex-start',
+    marginTop: scale(4),
+  },
   menuBtn: {
-    width: scale(40),
-    height: scale(40),
-    borderRadius: scale(12),
+    width: scale(34),
+    height: scale(34),
+    borderRadius: scale(10),
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -509,18 +510,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statValue: {
-    fontSize: moderateScale(24),
+    fontSize: moderateScale(18),
     fontWeight: '800',
     color: '#fff',
   },
   statLabel: {
-    fontSize: moderateScale(12),
+    fontSize: moderateScale(10.5),
     color: 'rgba(255,255,255,0.8)',
-    marginTop: scale(2),
+    marginTop: scale(1),
   },
   statDivider: {
     width: 1,
-    height: scale(32),
+    height: scale(22),
     backgroundColor: 'rgba(255,255,255,0.3)',
     marginHorizontal: scale(16),
   },
@@ -564,107 +565,97 @@ const styles = StyleSheet.create({
     color: C.muted,
   },
 
-  // Results Row
-  resultsRow: {
-    paddingHorizontal: scale(16),
-    paddingVertical: scale(10),
-  },
-  resultsText: {
-    fontSize: moderateScale(13),
-    color: C.muted,
-    fontWeight: '500',
-  },
-
   // List
   listContent: {
     paddingHorizontal: scale(16),
+    paddingTop: scale(10),
     paddingBottom: scale(100),
   },
 
   // Booking Card
   bookingCard: {
     backgroundColor: C.card,
-    borderRadius: scale(16),
-    marginBottom: scale(12),
+    borderRadius: scale(14),
+    marginBottom: scale(10),
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
     elevation: 3,
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: scale(16),
+    padding: scale(12),
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
   cardHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: scale(12),
+    gap: scale(9),
   },
   bookingIconBox: {
-    width: scale(44),
-    height: scale(44),
-    borderRadius: scale(12),
+    width: scale(36),
+    height: scale(36),
+    borderRadius: scale(10),
     alignItems: 'center',
     justifyContent: 'center',
   },
   bookingId: {
-    fontSize: moderateScale(15),
+    fontSize: moderateScale(13.5),
     fontWeight: '700',
     color: C.ink,
   },
   bookingDate: {
-    fontSize: moderateScale(12),
+    fontSize: moderateScale(10.5),
     color: C.muted,
-    marginTop: scale(2),
+    marginTop: scale(1),
   },
   statusPill: {
-    paddingHorizontal: scale(10),
-    paddingVertical: scale(5),
-    borderRadius: scale(12),
+    paddingHorizontal: scale(8),
+    paddingVertical: scale(4),
+    borderRadius: scale(10),
   },
   statusPillText: {
-    fontSize: moderateScale(11),
+    fontSize: moderateScale(9.5),
     fontWeight: '600',
   },
 
   // Card Body
   cardBody: {
-    padding: scale(16),
-    gap: scale(10),
+    padding: scale(12),
+    gap: scale(7),
   },
   itemsSummary: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: scale(8),
+    gap: scale(6),
   },
   itemsText: {
-    fontSize: moderateScale(14),
+    fontSize: moderateScale(12.5),
     color: C.text,
     fontWeight: '500',
   },
   scheduleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: scale(8),
+    gap: scale(6),
   },
   scheduleText: {
-    fontSize: moderateScale(13),
+    fontSize: moderateScale(11.5),
     color: C.info,
     fontWeight: '500',
   },
   engineerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: scale(8),
+    gap: scale(6),
   },
   engineerText: {
-    fontSize: moderateScale(13),
+    fontSize: moderateScale(11.5),
     color: C.purple,
     fontWeight: '500',
     flex: 1,
@@ -675,34 +666,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: scale(16),
+    padding: scale(12),
     backgroundColor: '#F8FAFC',
     borderTopWidth: 1,
     borderTopColor: C.border,
   },
   amountLabel: {
-    fontSize: moderateScale(11),
+    fontSize: moderateScale(9.5),
     color: C.muted,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   amountValue: {
-    fontSize: moderateScale(18),
+    fontSize: moderateScale(15),
     fontWeight: '700',
     color: C.ink,
-    marginTop: scale(2),
+    marginTop: scale(1),
   },
   viewDetailsBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: scale(4),
     backgroundColor: '#FEE2E2',
-    paddingHorizontal: scale(14),
-    paddingVertical: scale(8),
-    borderRadius: scale(20),
+    paddingHorizontal: scale(11),
+    paddingVertical: scale(6),
+    borderRadius: scale(16),
   },
   viewDetailsText: {
-    fontSize: moderateScale(13),
+    fontSize: moderateScale(11.5),
     fontWeight: '600',
     color: C.primary,
   },

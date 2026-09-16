@@ -30,7 +30,7 @@ import { api, getImageUrl, downloadAuthenticatedFile } from '../api/client';
 import AppAlert from '../utils/AppAlert';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRestaurant } from '../context/RestaurantContext';
-import { RestaurantSelectorBar } from '../components/RestaurantSelector';
+import { RestaurantSelectorCompact } from '../components/RestaurantSelector';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
@@ -695,13 +695,11 @@ export default function MarketplaceOrdersScreen({ navigation }) {
         <View style={styles.heroContent}>
           <View style={styles.heroLeft}>
             <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-              <Icon name="arrow-back" size={scale(22)} color="#fff" />
+              <Icon name="arrow-back" size={scale(18)} color="#fff" />
             </TouchableOpacity>
             <View>
               <Text style={styles.heroTitle}>My Orders</Text>
-              <Text style={styles.heroSubtitle}>
-                {currentRestaurant?.name || 'Select Restaurant'}
-              </Text>
+              <RestaurantSelectorCompact dark style={styles.heroRestaurantPill} />
             </View>
           </View>
           <View style={styles.heroActions}>
@@ -709,13 +707,13 @@ export default function MarketplaceOrdersScreen({ navigation }) {
               style={styles.heroIconBtn}
               onPress={() => navigation.navigate('Marketplace')}
             >
-              <Icon name="bag-add-outline" size={scale(22)} color="#fff" />
+              <Icon name="bag-add-outline" size={scale(18)} color="#fff" />
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.heroIconBtn}
               onPress={() => setMenuVisible(true)}
             >
-              <Icon name="menu-outline" size={scale(22)} color="#fff" />
+              <Icon name="menu-outline" size={scale(18)} color="#fff" />
             </TouchableOpacity>
           </View>
         </View>
@@ -739,9 +737,6 @@ export default function MarketplaceOrdersScreen({ navigation }) {
         </View>
       </LinearGradient>
 
-      {/* Global Restaurant Selector */}
-      <RestaurantSelectorBar />
-
       {/* Main Tab Switcher: Orders | Payments */}
       <View style={styles.mainTabWrapper}>
         <TouchableOpacity
@@ -749,7 +744,7 @@ export default function MarketplaceOrdersScreen({ navigation }) {
           onPress={() => setActiveMainTab('orders')}
           activeOpacity={0.7}
         >
-          <Icon name="receipt-outline" size={scale(18)} color={activeMainTab === 'orders' ? C.primary : C.muted} />
+          <Icon name="receipt-outline" size={scale(15)} color={activeMainTab === 'orders' ? C.primary : C.muted} />
           <Text style={[styles.mainTabText, activeMainTab === 'orders' && styles.mainTabTextActive]}>
             Orders
           </Text>
@@ -759,7 +754,7 @@ export default function MarketplaceOrdersScreen({ navigation }) {
           onPress={() => setActiveMainTab('payments')}
           activeOpacity={0.7}
         >
-          <Icon name="card-outline" size={scale(18)} color={activeMainTab === 'payments' ? C.primary : C.muted} />
+          <Icon name="card-outline" size={scale(15)} color={activeMainTab === 'payments' ? C.primary : C.muted} />
           <Text style={[styles.mainTabText, activeMainTab === 'payments' && styles.mainTabTextActive]}>
             Payments
           </Text>
@@ -795,7 +790,7 @@ export default function MarketplaceOrdersScreen({ navigation }) {
                     onPress={() => setActiveStatusTab(status.value)}
                     activeOpacity={0.7}
                   >
-                    <Icon name={config.icon} size={scale(14)} color={isActive ? config.color : C.muted} />
+                    <Icon name={config.icon} size={scale(12)} color={isActive ? config.color : C.muted} />
                     <Text style={[styles.filterChipText, isActive && { color: config.color }]}>
                       {status.label}
                     </Text>
@@ -1625,7 +1620,7 @@ const styles = StyleSheet.create({
   // Hero Section
   heroSection: {
     paddingTop: scale(8),
-    paddingBottom: scale(16),
+    paddingBottom: scale(10),
   },
   heroContent: {
     flexDirection: 'row',
@@ -1639,32 +1634,31 @@ const styles = StyleSheet.create({
     gap: scale(12),
   },
   backBtn: {
-    width: scale(40),
-    height: scale(40),
-    borderRadius: scale(12),
+    width: scale(34),
+    height: scale(34),
+    borderRadius: scale(10),
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   heroTitle: {
-    fontSize: moderateScale(24),
+    fontSize: moderateScale(19),
     fontWeight: '800',
     color: '#fff',
     letterSpacing: -0.5,
   },
-  heroSubtitle: {
-    fontSize: moderateScale(13),
-    color: 'rgba(255,255,255,0.8)',
-    marginTop: scale(2),
+  heroRestaurantPill: {
+    alignSelf: 'flex-start',
+    marginTop: scale(4),
   },
   heroActions: {
     flexDirection: 'row',
     gap: scale(8),
   },
   heroIconBtn: {
-    width: scale(44),
-    height: scale(44),
-    borderRadius: scale(12),
+    width: scale(34),
+    height: scale(34),
+    borderRadius: scale(10),
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1675,26 +1669,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: scale(16),
-    paddingHorizontal: scale(40),
+    marginTop: scale(8),
+    paddingHorizontal: scale(24),
   },
   statItem: {
     alignItems: 'center',
     flex: 1,
   },
   statNumber: {
-    fontSize: moderateScale(24),
+    fontSize: moderateScale(18),
     fontWeight: '800',
     color: '#fff',
   },
   statLabel: {
-    fontSize: moderateScale(12),
+    fontSize: moderateScale(10.5),
     color: 'rgba(255,255,255,0.8)',
-    marginTop: scale(2),
+    marginTop: scale(1),
   },
   statDivider: {
     width: 1,
-    height: scale(30),
+    height: scale(22),
     backgroundColor: 'rgba(255,255,255,0.3)',
   },
 
@@ -1717,7 +1711,7 @@ const styles = StyleSheet.create({
   // Filter Tabs - Premium Style
   filterWrapper: {
     backgroundColor: C.card,
-    paddingVertical: scale(10),
+    paddingVertical: scale(6),
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
@@ -1727,11 +1721,11 @@ const styles = StyleSheet.create({
   filterChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: scale(14),
-    paddingVertical: scale(10),
-    marginHorizontal: scale(4),
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(6),
+    marginHorizontal: scale(3),
     backgroundColor: C.card,
-    borderRadius: scale(25),
+    borderRadius: scale(20),
     borderWidth: 1.5,
     borderColor: C.border,
     shadowColor: '#000',
@@ -1741,23 +1735,23 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   filterChipText: {
-    fontSize: moderateScale(13),
+    fontSize: moderateScale(11.5),
     fontWeight: '600',
     color: C.ink,
-    marginHorizontal: scale(6),
+    marginHorizontal: scale(4),
   },
   filterBadge: {
-    minWidth: scale(22),
-    height: scale(22),
-    borderRadius: scale(11),
+    minWidth: scale(17),
+    height: scale(17),
+    borderRadius: scale(9),
     backgroundColor: C.border,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: scale(6),
-    marginLeft: scale(2),
+    paddingHorizontal: scale(4),
+    marginLeft: scale(1),
   },
   filterBadgeText: {
-    fontSize: moderateScale(11),
+    fontSize: moderateScale(9.5),
     fontWeight: '700',
     color: C.ink,
   },
@@ -1771,13 +1765,13 @@ const styles = StyleSheet.create({
   // Order Card - Premium Design
   orderCard: {
     backgroundColor: C.card,
-    borderRadius: scale(16),
-    marginBottom: scale(12),
+    borderRadius: scale(14),
+    marginBottom: scale(10),
     overflow: 'hidden',
     shadowColor: C.shadow,
-    shadowOffset: { width: 0, height: scale(4) },
+    shadowOffset: { width: 0, height: scale(3) },
     shadowOpacity: 0.08,
-    shadowRadius: scale(12),
+    shadowRadius: scale(10),
     elevation: 3,
   },
   orderStatusStrip: {
@@ -1785,23 +1779,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: scale(6),
-    paddingVertical: scale(8),
+    paddingVertical: scale(5),
   },
   orderStatusText: {
-    fontSize: moderateScale(12),
+    fontSize: moderateScale(11),
     fontWeight: '700',
     color: '#fff',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   orderContent: {
-    padding: scale(16),
+    padding: scale(12),
   },
   orderHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: scale(12),
+    marginBottom: scale(8),
   },
   orderIdSection: {},
   orderIdLabel: {
@@ -1834,17 +1828,17 @@ const styles = StyleSheet.create({
   vendorSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: scale(10),
-    paddingVertical: scale(10),
-    paddingHorizontal: scale(12),
+    gap: scale(8),
+    paddingVertical: scale(7),
+    paddingHorizontal: scale(10),
     backgroundColor: C.primaryLight,
     borderRadius: scale(10),
-    marginBottom: scale(12),
+    marginBottom: scale(8),
   },
   vendorIcon: {
-    width: scale(36),
-    height: scale(36),
-    borderRadius: scale(10),
+    width: scale(30),
+    height: scale(30),
+    borderRadius: scale(8),
     backgroundColor: C.card,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1866,12 +1860,12 @@ const styles = StyleSheet.create({
 
   // Items Preview
   itemsPreview: {
-    marginBottom: scale(12),
+    marginBottom: scale(8),
   },
   itemPreviewRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: scale(4),
+    paddingVertical: scale(3),
   },
   itemDot: {
     width: scale(6),
@@ -1906,8 +1900,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF7ED',
     borderRadius: scale(8),
     paddingHorizontal: scale(10),
-    paddingVertical: scale(6),
-    marginBottom: scale(10),
+    paddingVertical: scale(5),
+    marginBottom: scale(8),
   },
   finalPaymentDueBadgeText: {
     fontSize: moderateScale(12),
@@ -1920,7 +1914,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: scale(12),
+    paddingTop: scale(9),
     borderTopWidth: 1,
     borderTopColor: C.border,
   },
@@ -1930,10 +1924,10 @@ const styles = StyleSheet.create({
     color: C.muted,
   },
   orderTotalAmount: {
-    fontSize: moderateScale(20),
+    fontSize: moderateScale(17),
     fontWeight: '800',
     color: C.ink,
-    marginTop: scale(2),
+    marginTop: scale(1),
   },
   orderActions: {
     flexDirection: 'row',
@@ -1941,9 +1935,9 @@ const styles = StyleSheet.create({
     gap: scale(8),
   },
   rateBtn: {
-    width: scale(40),
-    height: scale(40),
-    borderRadius: scale(12),
+    width: scale(34),
+    height: scale(34),
+    borderRadius: scale(10),
     backgroundColor: C.warnLight,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1952,10 +1946,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: scale(4),
-    paddingHorizontal: scale(14),
-    paddingVertical: scale(10),
+    paddingHorizontal: scale(12),
+    paddingVertical: scale(8),
     backgroundColor: C.primaryLight,
-    borderRadius: scale(10),
+    borderRadius: scale(9),
   },
   viewDetailsText: {
     fontSize: moderateScale(13),
@@ -2579,7 +2573,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: C.card,
     paddingHorizontal: scale(16),
-    paddingVertical: scale(8),
+    paddingVertical: scale(6),
     borderBottomWidth: 1,
     borderBottomColor: C.border,
     gap: scale(8),
@@ -2589,9 +2583,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: scale(8),
-    paddingVertical: scale(12),
-    borderRadius: scale(12),
+    gap: scale(6),
+    paddingVertical: scale(8),
+    borderRadius: scale(10),
     backgroundColor: C.bg,
     borderWidth: 1.5,
     borderColor: C.border,
@@ -2601,7 +2595,7 @@ const styles = StyleSheet.create({
     borderColor: C.primary,
   },
   mainTabText: {
-    fontSize: moderateScale(15),
+    fontSize: moderateScale(13),
     fontWeight: '700',
     color: C.muted,
   },

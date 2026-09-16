@@ -11,7 +11,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
-import { RestaurantSelectorCompact, RestaurantSelectorChips } from '../components/RestaurantSelector';
+import { RestaurantSelectorBar, RestaurantSelectorChips } from '../components/RestaurantSelector';
 import { useRestaurant } from '../context/RestaurantContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
@@ -505,12 +505,11 @@ export default function HomeScreen({ navigation }) {
           <SkeletonHome pulse={pulse} />
         ) : (
           <>
-            {/* Restaurant Selector (for multi-restaurant owners) */}
-            {hasMultipleRestaurants && (
-              <View style={{ paddingHorizontal: scale(16), paddingTop: scale(12) }}>
-                <RestaurantSelectorCompact />
-              </View>
-            )}
+            {/* Restaurant Selector -- same button-look bar + first-time coach
+                mark as the Dashboard screen (shared component, shared
+                AsyncStorage "seen" flag, so the coach mark won't repeat if
+                it was already dismissed on Dashboard). */}
+            <RestaurantSelectorBar />
 
             {/* ══════ HERO OFFER ══════ */}
             <View style={{ paddingHorizontal: scale(16), marginTop: scale(14) }}>

@@ -27,7 +27,7 @@ import {
   TextInput, ActivityIndicator, Modal, Image,
   useWindowDimensions, Dimensions,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary } from 'react-native-image-picker';
 import Clipboard from '@react-native-clipboard/clipboard';
@@ -37,7 +37,7 @@ import { useRestaurant } from '../context/RestaurantContext';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 import OfferSelector from '../components/OfferSelector';
-import { scale, moderateScale, isTablet, getContainerMaxWidth } from '../utils/responsive';
+import { scale, moderateScale, getContainerMaxWidth } from '../utils/responsive';
 import useKeyboardHeight from '../utils/useKeyboardHeight';
 import { invalidate } from '../utils/focusCache';
 import AppAlert from '../utils/AppAlert';
@@ -87,12 +87,8 @@ export default function ServiceRequestScreen({ navigation, route }) {
 
   // Responsive dimensions
   const { width, height } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
-  const isTabletDevice = isTablet(width);
   const containerMaxWidth = getContainerMaxWidth(width);
   const keyboardHeight = useKeyboardHeight();
-  // Bottom nav height: bar (74) + wrap padding (12) + extra spacing
-  const BOTTOM_NAV_HEIGHT = 100;
 
   // Restaurant context
   const { selectedRestaurant, selectedRestaurantId } = useRestaurant();
@@ -117,6 +113,7 @@ export default function ServiceRequestScreen({ navigation, route }) {
   // UI state
   const [menuVisible, setMenuVisible] = useState(false);
   const [dateModalVisible, setDateModalVisible] = useState(false);
+  const [breakdownExpanded, setBreakdownExpanded] = useState(false);
 
   // Custom date picker
   const MONTHS_S = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -697,13 +694,18 @@ export default function ServiceRequestScreen({ navigation, route }) {
               </View>
             )}
 
-            <View style={{ height: scale(240) }} />
+            {renderOrderSummary()}
+            {/* Reserves room only for the real bottom nav bar -- it hides
+                itself while the keyboard is open, so there's nothing to
+                clear then and this collapses to avoid a big empty gap
+                under the (already keyboard-safe) inline summary above. */}
+            {keyboardHeight === 0 && <View style={{ height: scale(100) }} />}
           </ScrollView>
         );
 
       case 'date':
         return (
-          <ScrollView style={st.scrollContent} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: scale(40) + keyboardHeight }} keyboardShouldPersistTaps="handled">
+          <ScrollView style={st.scrollContent} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: scale(40) }} keyboardShouldPersistTaps="handled">
             {/* Date Selection */}
             <View style={st.section}>
               <View style={st.sectionHeader}>
@@ -754,48 +756,49 @@ export default function ServiceRequestScreen({ navigation, route }) {
               />
             </View>
 
-            <View style={{ height: scale(240) }} />
+            {renderOrderSummary()}
+            {keyboardHeight === 0 && <View style={{ height: scale(100) }} />}
           </ScrollView>
         );
 
       case 'payment':
         return (
-          <ScrollView style={st.scrollContent} showsVerticalScrollIndicator={false}>
-            {/* Payment Summary */}
-            <View style={st.section}>
-              <View style={st.sectionHeader}>
-                <Icon name="receipt-outline" size={20} color={C.primary} />
-                <Text style={st.sectionTitle}>Payment Summary</Text>
+          <ScrollView
+            style={st.scrollContent}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: scale(40) }}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Tip Selection — comes before the hero so the Pay button below
+                already reflects the tip you picked, not a stale total. */}
+            <View style={[st.section, { marginBottom: scale(14) }]}>
+              <View style={[st.sectionHeader, { marginBottom: scale(8) }]}>
+                <Icon name="heart-outline" size={16} color={C.primary} />
+                <Text style={[st.sectionTitle, { fontSize: moderateScale(14) }]}>Add a Tip</Text>
+              </View>
+              <View style={st.tipRow}>
+                {TIP_OPTIONS.map(amount => (
+                  <TouchableOpacity
+                    key={amount}
+                    style={[st.tipBtn, tip === amount && st.tipBtnActive]}
+                    onPress={() => setTip(tip === amount ? 0 : amount)}
+                  >
+                    <Text style={[st.tipText, tip === amount && st.tipTextActive]}>₹{amount}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Promo code — same reason as Tip: apply it before the hero so
+                Amount to Pay already reflects the discount. */}
+            <View style={[st.section, { marginBottom: scale(14) }]}>
+              <View style={[st.sectionHeader, { marginBottom: scale(8) }]}>
+                <Icon name="pricetag-outline" size={16} color={C.primary} />
+                <Text style={[st.sectionTitle, { fontSize: moderateScale(14) }]}>Promo Code</Text>
               </View>
               <View style={st.summaryCard}>
-                <View style={st.summaryRow}>
-                  <Text style={st.summaryLabel}>Item Total</Text>
-                  <Text style={st.summaryValue}>{formatPrice(totals.itemTotal)}</Text>
-                </View>
-                {totals.discountAmount > 0 && (
-                  <View style={st.summaryRow}>
-                    <Text style={st.summaryLabel}>
-                      Discount ({totals.discountPercent}%{totals.discountSource ? ` — ${totals.discountSource}` : ''})
-                    </Text>
-                    <Text style={[st.summaryValue, { color: C.ok }]}>-{formatPrice(totals.discountAmount)}</Text>
-                  </View>
-                )}
-                <View style={st.summaryRow}>
-                  <Text style={st.summaryLabel}>GST (18%)</Text>
-                  <Text style={st.summaryValue}>{formatPrice(totals.gst)}</Text>
-                </View>
-                <View style={st.summaryRow}>
-                  <Text style={st.summaryLabel}>Tip</Text>
-                  <Text style={st.summaryValue}>{formatPrice(totals.tip)}</Text>
-                </View>
-                <View style={[st.summaryRow, st.summaryTotal]}>
-                  <Text style={st.totalLabel}>Total Amount</Text>
-                  <Text style={st.totalValue}>{formatPrice(totals.total)}</Text>
-                </View>
-
-                {/* Promo code */}
                 {promoCode ? (
-                  <View style={[st.summaryRow, { backgroundColor: C.bg, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 }]}>
+                  <View style={[st.summaryRow, { backgroundColor: C.bg, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 0 }]}>
                     <View style={{ flex: 1 }}>
                       <Text style={st.summaryLabel}>Code <Text style={{ fontWeight: '700' }}>{promoCode}</Text> applied</Text>
                       {discount?.promoCodeError ? (
@@ -811,10 +814,11 @@ export default function ServiceRequestScreen({ navigation, route }) {
                     </TouchableOpacity>
                   </View>
                 ) : (
-                  <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
                     <TextInput
                       style={[st.textInput, { flex: 1 }]}
                       placeholder="Promo code"
+                      placeholderTextColor={C.muted}
                       value={promoCodeInput}
                       onChangeText={(t) => setPromoCodeInput(t.toUpperCase())}
                       autoCapitalize="characters"
@@ -836,58 +840,73 @@ export default function ServiceRequestScreen({ navigation, route }) {
               </View>
             </View>
 
-            {/* Tip Selection */}
-            <View style={st.section}>
-              <View style={st.sectionHeader}>
-                <Icon name="heart-outline" size={20} color={C.primary} />
-                <Text style={st.sectionTitle}>Add a Tip</Text>
+            {/* Hero: Amount + Pay — sits after Tip/Promo so the total shown
+                here is always final, then the primary action itself. Secure
+                Payment and the breakdown link are folded in as a compact
+                footer row instead of separate cards. */}
+            <View style={st.heroCard}>
+              <View style={st.heroTopRow}>
+                <TouchableOpacity style={st.heroBackBtn} onPress={() => setStep('date')}>
+                  <Icon name="arrow-back" size={16} color="#fff" />
+                </TouchableOpacity>
+                <Text style={st.heroLabel}>Amount to Pay</Text>
               </View>
-              <View style={st.tipRow}>
-                {TIP_OPTIONS.map(amount => (
-                  <TouchableOpacity
-                    key={amount}
-                    style={[st.tipBtn, tip === amount && st.tipBtnActive]}
-                    onPress={() => setTip(tip === amount ? 0 : amount)}
-                  >
-                    <Text style={[st.tipText, tip === amount && st.tipTextActive]}>₹{amount}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
+              <Text style={st.heroAmount}>{formatPrice(totals.total)}</Text>
+              <TouchableOpacity
+                style={[st.heroPayBtn, isSubmitting && st.heroPayBtnDisabled]}
+                disabled={isSubmitting}
+                onPress={handleRazorpayPayment}
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator color={C.primary} size="small" />
+                ) : (
+                  <>
+                    <Icon name="card" size={17} color={C.primary} />
+                    <Text style={st.heroPayBtnText}>Pay with Razorpay</Text>
+                  </>
+                )}
+              </TouchableOpacity>
 
-            {/* Razorpay Payment */}
-            <View style={st.section}>
-              <View style={st.sectionHeader}>
-                <Icon name="card-outline" size={20} color={C.primary} />
-                <Text style={st.sectionTitle}>Payment</Text>
-              </View>
+              <View style={st.heroDivider} />
 
-              <View style={[st.summaryCard, { alignItems: 'center', paddingVertical: scale(24) }]}>
-                <View style={{
-                  width: scale(64), height: scale(64), borderRadius: scale(32),
-                  backgroundColor: '#DBEAFE', alignItems: 'center', justifyContent: 'center',
-                  marginBottom: scale(12),
-                }}>
-                  <Icon name="shield-checkmark" size={32} color={C.info} />
+              <View style={st.heroFooterRow}>
+                <View style={st.heroSecureRow}>
+                  <Icon name="shield-checkmark" size={13} color="rgba(255,255,255,0.85)" />
+                  <Text style={st.heroSecureText} numberOfLines={1}>Secure via Razorpay</Text>
                 </View>
-                <Text style={{ fontSize: moderateScale(16), fontWeight: '700', color: C.ink, marginBottom: scale(4) }}>
-                  Secure Payment via Razorpay
-                </Text>
-                <Text style={{ fontSize: moderateScale(13), color: C.muted, textAlign: 'center', lineHeight: moderateScale(18) }}>
-                  Pay using UPI, Credit/Debit Card, NetBanking, or Wallets.{'\n'}Your booking will be confirmed instantly.
-                </Text>
-              </View>
-
-              <View style={{
-                flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-                backgroundColor: '#FEE2E2', borderRadius: scale(12), padding: scale(16), marginTop: scale(12),
-              }}>
-                <Text style={{ fontSize: moderateScale(14), fontWeight: '600', color: '#DC2626' }}>Amount to Pay</Text>
-                <Text style={{ fontSize: moderateScale(22), fontWeight: '800', color: '#DC2626' }}>{formatPrice(totals.total)}</Text>
+                <TouchableOpacity style={st.heroBreakdownLink} onPress={() => setBreakdownExpanded(v => !v)}>
+                  <Text style={st.heroBreakdownLinkText}>{breakdownExpanded ? 'Hide breakdown' : 'View breakdown'}</Text>
+                  <Icon name={breakdownExpanded ? 'chevron-up' : 'chevron-down'} size={13} color="rgba(255,255,255,0.85)" />
+                </TouchableOpacity>
               </View>
             </View>
 
-            <View style={{ height: scale(240) }} />
+            {breakdownExpanded && (
+              <View style={[st.summaryCard, { marginBottom: scale(16) }]}>
+                <View style={st.summaryRow}>
+                  <Text style={st.summaryLabel}>Item Total</Text>
+                  <Text style={st.summaryValue}>{formatPrice(totals.itemTotal)}</Text>
+                </View>
+                {totals.discountAmount > 0 && (
+                  <View style={st.summaryRow}>
+                    <Text style={st.summaryLabel}>
+                      Discount ({totals.discountPercent}%{totals.discountSource ? ` — ${totals.discountSource}` : ''})
+                    </Text>
+                    <Text style={[st.summaryValue, { color: C.ok }]}>-{formatPrice(totals.discountAmount)}</Text>
+                  </View>
+                )}
+                <View style={st.summaryRow}>
+                  <Text style={st.summaryLabel}>GST (18%)</Text>
+                  <Text style={st.summaryValue}>{formatPrice(totals.gst)}</Text>
+                </View>
+                <View style={[st.summaryRow, { marginBottom: 0 }]}>
+                  <Text style={st.summaryLabel}>Tip</Text>
+                  <Text style={st.summaryValue}>{formatPrice(totals.tip)}</Text>
+                </View>
+              </View>
+            )}
+
+            {keyboardHeight === 0 && <View style={{ height: scale(100) }} />}
           </ScrollView>
         );
 
@@ -917,36 +936,28 @@ export default function ServiceRequestScreen({ navigation, route }) {
     }
   };
 
-  // Render order summary (sidebar equivalent for mobile)
+  // Order summary + Continue action -- lives inline in the normal scroll
+  // flow at the end of the select/date steps (not a floating bar), so
+  // there's nothing that needs to reposition itself against the keyboard.
+  // The payment step has its own hero Pay button instead (see 'payment'
+  // case above) rather than reusing this Continue bar.
   const renderOrderSummary = () => {
-    if (step === 'confirm') return null;
-
     const itemCount = selectedItems.size;
-    const canContinue = step === 'select' ? itemCount > 0
-      : step === 'date' ? selectedDate && selectedSlot
-      : step === 'payment' ? true
-      : false;
-
-    // Calculate proper bottom position: nav height + safe area + extra gap
-    const footerBottom = BOTTOM_NAV_HEIGHT + Math.max(insets.bottom, 10) + 20;
+    const canContinue = step === 'select' ? itemCount > 0 : selectedDate && selectedSlot;
 
     return (
-      <View style={[st.footer, { bottom: footerBottom }]}>
-        {/* Mini summary */}
+      <View style={st.inlineSummary}>
         <View style={st.footerSummary}>
-          <View>
-            <Text style={st.footerItems}>{itemCount} items selected</Text>
-            <Text style={st.footerTotal}>{formatPrice(totals.total)}</Text>
+          <View style={st.footerLeft}>
+            <Text style={st.footerItems} numberOfLines={1}>{itemCount} items selected</Text>
+            <Text style={st.footerTotal} numberOfLines={1}>{formatPrice(totals.total)}</Text>
           </View>
 
           {/* Navigation buttons */}
           <View style={st.footerBtns}>
             {step !== 'select' && (
-              <TouchableOpacity
-                style={st.backBtn}
-                onPress={() => setStep(step === 'date' ? 'select' : step === 'payment' ? 'date' : step)}
-              >
-                <Icon name="arrow-back" size={20} color={C.ink} />
+              <TouchableOpacity style={st.backBtn} onPress={() => setStep('select')}>
+                <Icon name="arrow-back" size={20} color="#fff" />
               </TouchableOpacity>
             )}
 
@@ -956,8 +967,8 @@ export default function ServiceRequestScreen({ navigation, route }) {
                 disabled={!canContinue}
                 onPress={() => setStep('date')}
               >
-                <Text style={st.continueBtnText}>Continue</Text>
-                <Icon name="arrow-forward" size={18} color="#fff" />
+                <Text style={st.continueBtnText} numberOfLines={1} ellipsizeMode="tail">Continue</Text>
+                <Icon name="arrow-forward" size={18} color={C.primary} />
               </TouchableOpacity>
             )}
 
@@ -967,25 +978,8 @@ export default function ServiceRequestScreen({ navigation, route }) {
                 disabled={!canContinue}
                 onPress={() => setStep('payment')}
               >
-                <Text style={st.continueBtnText}>Continue to Payment</Text>
-                <Icon name="arrow-forward" size={18} color="#fff" />
-              </TouchableOpacity>
-            )}
-
-            {step === 'payment' && (
-              <TouchableOpacity
-                style={[st.continueBtn, isSubmitting && st.continueBtnDisabled]}
-                disabled={isSubmitting}
-                onPress={handleRazorpayPayment}
-              >
-                {isSubmitting ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <>
-                    <Icon name="card" size={18} color="#fff" />
-                    <Text style={st.continueBtnText}>Pay with Razorpay</Text>
-                  </>
-                )}
+                <Text style={st.continueBtnText} numberOfLines={1} ellipsizeMode="tail">Continue to Payment</Text>
+                <Icon name="arrow-forward" size={18} color={C.primary} />
               </TouchableOpacity>
             )}
           </View>
@@ -1081,9 +1075,6 @@ export default function ServiceRequestScreen({ navigation, route }) {
         renderStepContent()
       )}
 
-      {/* Footer */}
-      {renderOrderSummary()}
-
       {/* Custom Date Picker Modal */}
       <Modal visible={dateModalVisible} transparent animationType="slide" onRequestClose={() => setDateModalVisible(false)}>
         <View style={st.dpBackdrop}>
@@ -1161,7 +1152,9 @@ export default function ServiceRequestScreen({ navigation, route }) {
       </Modal>
 
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
-      <KniBottomNav navigation={navigation} />
+      {/* Hidden while the keyboard is open so it doesn't sit on top of/behind
+          the keyboard and overlap the focused input (e.g. Problem Description). */}
+      {keyboardHeight === 0 && <KniBottomNav navigation={navigation} />}
     </SafeAreaView>
   );
 }
@@ -1273,31 +1266,54 @@ const st = StyleSheet.create({
   },
 
   // Summary
-  summaryCard: { backgroundColor: C.card, borderRadius: scale(12), padding: scale(16), borderWidth: 1, borderColor: C.border },
+  summaryCard: { backgroundColor: C.card, borderRadius: scale(12), padding: scale(12), borderWidth: 1, borderColor: C.border },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: scale(8) },
   summaryLabel: { fontSize: moderateScale(14), color: C.muted },
   summaryValue: { fontSize: moderateScale(14), fontWeight: '600', color: C.ink },
-  summaryTotal: { borderTopWidth: 1, borderTopColor: C.border, paddingTop: scale(12), marginTop: scale(8) },
-  totalLabel: { fontSize: moderateScale(16), fontWeight: '800', color: C.ink },
-  totalValue: { fontSize: moderateScale(18), fontWeight: '800', color: C.primary },
   textInput: {
     backgroundColor: C.bg, borderRadius: scale(10), borderWidth: 1, borderColor: C.border,
-    paddingHorizontal: scale(12), paddingVertical: scale(10), fontSize: moderateScale(14), color: C.text,
+    paddingHorizontal: scale(12), paddingVertical: scale(8), fontSize: moderateScale(13), color: C.text,
   },
   applyBtn: {
-    backgroundColor: C.primary, borderRadius: scale(10), paddingHorizontal: scale(16),
+    backgroundColor: C.primary, borderRadius: scale(10), paddingHorizontal: scale(14),
     alignItems: 'center', justifyContent: 'center',
   },
   applyBtnText: { color: '#fff', fontWeight: '700', fontSize: moderateScale(13) },
 
+  // Payment hero (Amount + Pay Now, top of the payment step)
+  heroCard: {
+    backgroundColor: C.primary, borderRadius: scale(16), padding: scale(16),
+    marginBottom: scale(16),
+  },
+  heroTopRow: { flexDirection: 'row', alignItems: 'center', gap: scale(10), marginBottom: scale(10) },
+  heroBackBtn: {
+    width: scale(28), height: scale(28), borderRadius: scale(14),
+    backgroundColor: 'rgba(255,255,255,0.16)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  heroLabel: { fontSize: moderateScale(12), color: 'rgba(255,255,255,0.85)', fontWeight: '600' },
+  heroAmount: { fontSize: moderateScale(26), fontWeight: '900', color: '#fff', marginBottom: scale(12) },
+  heroPayBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: scale(8),
+    backgroundColor: '#fff', borderRadius: scale(12), paddingVertical: scale(12), width: '100%',
+  },
+  heroPayBtnDisabled: { opacity: 0.7 },
+  heroPayBtnText: { fontSize: moderateScale(14), fontWeight: '800', color: C.primary },
+  heroDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.2)', marginTop: scale(12), marginBottom: scale(10) },
+  heroFooterRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: scale(8) },
+  heroSecureRow: { flexDirection: 'row', alignItems: 'center', gap: scale(5), flexShrink: 1 },
+  heroSecureText: { fontSize: moderateScale(11), color: 'rgba(255,255,255,0.85)', flexShrink: 1 },
+  heroBreakdownLink: { flexDirection: 'row', alignItems: 'center', gap: scale(4), flexShrink: 0 },
+  heroBreakdownLinkText: { fontSize: moderateScale(11), fontWeight: '700', color: '#fff' },
+
   // Tip
-  tipRow: { flexDirection: 'row', gap: scale(12) },
+  tipRow: { flexDirection: 'row', gap: scale(8) },
   tipBtn: {
-    flex: 1, paddingVertical: scale(14), borderRadius: scale(12), backgroundColor: C.card,
+    flex: 1, paddingVertical: scale(9), borderRadius: scale(10), backgroundColor: C.card,
     borderWidth: 1, borderColor: C.border, alignItems: 'center'
   },
   tipBtnActive: { backgroundColor: C.primary, borderColor: C.primary },
-  tipText: { fontSize: moderateScale(16), fontWeight: '700', color: C.ink },
+  tipText: { fontSize: moderateScale(13), fontWeight: '700', color: C.ink },
   tipTextActive: { color: '#fff' },
 
   // UPI
@@ -1348,33 +1364,37 @@ const st = StyleSheet.create({
   confirmBtn: { backgroundColor: C.primary, borderRadius: scale(12), paddingVertical: scale(14), paddingHorizontal: scale(32) },
   confirmBtnText: { fontSize: moderateScale(16), fontWeight: '700', color: '#fff' },
 
-  // Footer
-  footer: {
-    position: 'absolute', left: 0, right: 0,
-    backgroundColor: C.card,
-    borderTopWidth: 1, borderTopColor: C.border,
-    borderTopLeftRadius: scale(20), borderTopRightRadius: scale(20),
+  // Inline order summary + Continue bar -- sits in the normal scroll flow at
+  // the end of each step's content (Option 6: "Inline Mini Summary"), never
+  // floats over the keyboard, so it needs no keyboard-offset math at all.
+  inlineSummary: {
+    marginTop: scale(20),
+    backgroundColor: C.primary,
+    borderRadius: scale(16),
     paddingHorizontal: scale(16), paddingVertical: scale(14),
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -scale(4) },
-    shadowOpacity: 0.1,
-    shadowRadius: scale(12),
-    elevation: 10,
+    shadowOffset: { width: 0, height: scale(4) },
+    shadowOpacity: 0.15,
+    shadowRadius: scale(10),
+    elevation: 4,
   },
   footerSummary: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  footerItems: { fontSize: moderateScale(12), color: C.muted },
-  footerTotal: { fontSize: moderateScale(18), fontWeight: '800', color: C.primary },
-  footerBtns: { flexDirection: 'row', gap: scale(10) },
+  footerLeft: { flexShrink: 1, marginRight: scale(10) },
+  footerItems: { fontSize: moderateScale(12), color: 'rgba(255,255,255,0.85)' },
+  footerTotal: { fontSize: moderateScale(18), fontWeight: '800', color: '#fff' },
+  footerBtns: { flexDirection: 'row', gap: scale(10), flexShrink: 0, alignItems: 'center' },
   backBtn: {
-    width: scale(44), height: scale(44), borderRadius: scale(12), backgroundColor: C.bg,
-    alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.border
+    width: scale(40), height: scale(40), borderRadius: scale(20),
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)'
   },
   continueBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: scale(8),
-    backgroundColor: C.primary, paddingHorizontal: scale(20), paddingVertical: scale(12), borderRadius: scale(12)
+    flexDirection: 'row', alignItems: 'center', gap: scale(8), flexShrink: 1,
+    backgroundColor: '#fff', paddingHorizontal: scale(16), paddingVertical: scale(12), borderRadius: scale(12)
   },
-  continueBtnDisabled: { backgroundColor: '#FECACA' },
-  continueBtnText: { fontSize: moderateScale(14), fontWeight: '700', color: '#fff' },
+  continueBtnDisabled: { backgroundColor: 'rgba(255,255,255,0.55)' },
+  continueBtnText: { fontSize: moderateScale(14), fontWeight: '700', color: C.primary, flexShrink: 1 },
 
   // Empty
   emptyBox: { alignItems: 'center', paddingVertical: scale(40) },

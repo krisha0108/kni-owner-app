@@ -663,7 +663,7 @@ export default function MarketplaceScreen({ navigation }) {
                 cart: cart,
               })}
             >
-              <Icon name="cart-outline" size={scale(22)} color="#fff" />
+              <Icon name="cart-outline" size={scale(17)} color="#fff" />
               {cart.length > 0 && (
                 <View style={st.heroCartBadge}>
                   <Text style={st.heroCartBadgeText}>{cart.length}</Text>
@@ -674,13 +674,13 @@ export default function MarketplaceScreen({ navigation }) {
               style={st.heroIconBtn}
               onPress={() => navigation.navigate('MarketplaceOrders')}
             >
-              <Icon name="receipt-outline" size={scale(22)} color="#fff" />
+              <Icon name="receipt-outline" size={scale(17)} color="#fff" />
             </TouchableOpacity>
             <TouchableOpacity
               style={st.heroIconBtn}
               onPress={() => setMenuVisible(true)}
             >
-              <Icon name="menu-outline" size={scale(22)} color="#fff" />
+              <Icon name="menu-outline" size={scale(17)} color="#fff" />
             </TouchableOpacity>
           </View>
         </View>
@@ -688,7 +688,7 @@ export default function MarketplaceScreen({ navigation }) {
         {/* Search Bar */}
         <View style={st.searchContainer}>
           <View style={st.searchBar}>
-            <Icon name="search" size={scale(20)} color={C.muted} />
+            <Icon name="search" size={scale(16)} color={C.muted} />
             <TextInput
               style={st.searchInput}
               placeholder="Search products..."
@@ -699,7 +699,7 @@ export default function MarketplaceScreen({ navigation }) {
             />
             {search.length > 0 && (
               <TouchableOpacity onPress={() => setSearch('')} style={st.clearBtn}>
-                <Icon name="close-circle" size={scale(20)} color={C.muted} />
+                <Icon name="close-circle" size={scale(16)} color={C.muted} />
               </TouchableOpacity>
             )}
           </View>
@@ -718,7 +718,7 @@ export default function MarketplaceScreen({ navigation }) {
             style={[st.categoryChip, selectedCategory === 'all' && st.categoryChipActive]}
             onPress={() => setSelectedCategory('all')}
           >
-            <Icon name="apps" size={scale(16)} color={selectedCategory === 'all' ? '#fff' : C.primary} />
+            <Icon name="apps" size={scale(13)} color={selectedCategory === 'all' ? '#fff' : C.primary} />
             <Text style={[st.categoryChipText, selectedCategory === 'all' && st.categoryChipTextActive]}>
               All ({products.length})
             </Text>
@@ -735,7 +735,7 @@ export default function MarketplaceScreen({ navigation }) {
                 style={[st.categoryChip, isActive && st.categoryChipActive]}
                 onPress={() => setSelectedCategory(cat.id)}
               >
-                <Icon name={iconName} size={scale(16)} color={isActive ? '#fff' : C.primary} />
+                <Icon name={iconName} size={scale(13)} color={isActive ? '#fff' : C.primary} />
                 <Text style={[st.categoryChipText, isActive && st.categoryChipTextActive]}>
                   {cat.name} ({catCount})
                 </Text>
@@ -743,14 +743,6 @@ export default function MarketplaceScreen({ navigation }) {
             );
           })}
         </ScrollView>
-      </View>
-
-      {/* Products Header */}
-      <View style={st.productsHeader}>
-        <Text style={st.productsTitle}>
-          {selectedCategory === 'all' ? 'All Products' : categories.find(c => c.id === selectedCategory)?.name || 'Products'}
-        </Text>
-        <Text style={st.productsCount}>{filteredProducts.length} items</Text>
       </View>
 
       {/* Scrollable Products List */}
@@ -805,38 +797,38 @@ const st = StyleSheet.create({
 
   // Hero Section
   heroSection: {
-    paddingTop: scale(16),
-    paddingBottom: scale(24),
-    borderBottomLeftRadius: scale(24),
-    borderBottomRightRadius: scale(24),
+    paddingTop: scale(8),
+    paddingBottom: scale(10),
+    borderBottomLeftRadius: scale(20),
+    borderBottomRightRadius: scale(20),
   },
   heroContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    paddingHorizontal: scale(20),
-    marginBottom: scale(20),
+    paddingHorizontal: scale(16),
+    marginBottom: scale(10),
   },
   heroTextContainer: {},
   heroTitle: {
-    fontSize: moderateScale(28),
+    fontSize: moderateScale(19),
     fontWeight: '800',
     color: '#fff',
     letterSpacing: -0.5,
   },
   heroSubtitle: {
-    fontSize: moderateScale(14),
+    fontSize: moderateScale(11.5),
     color: 'rgba(255,255,255,0.8)',
-    marginTop: scale(4),
+    marginTop: scale(2),
   },
   heroActions: {
     flexDirection: 'row',
-    gap: scale(8),
+    gap: scale(6),
   },
   heroIconBtn: {
-    width: scale(44),
-    height: scale(44),
-    borderRadius: scale(12),
+    width: scale(32),
+    height: scale(32),
+    borderRadius: scale(10),
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -844,25 +836,24 @@ const st = StyleSheet.create({
 
   // Search Bar
   searchContainer: {
-    paddingHorizontal: scale(20),
+    paddingHorizontal: scale(16),
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
-    borderRadius: scale(16),
-    paddingHorizontal: scale(16),
-    height: scale(52),
+    borderRadius: scale(12),
+    paddingHorizontal: scale(12),
+    height: scale(38),
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: scale(4) },
-    shadowOpacity: 0.1,
-    shadowRadius: scale(12),
-    elevation: 5,
+    shadowOffset: { width: 0, height: scale(2) },
+    shadowOpacity: 0.08, shadowRadius: scale(8),
+    elevation: 3,
   },
   searchInput: {
     flex: 1,
-    marginLeft: scale(12),
-    fontSize: moderateScale(16),
+    marginLeft: scale(8),
+    fontSize: moderateScale(13.5),
     color: C.ink,
   },
   clearBtn: {
@@ -872,7 +863,7 @@ const st = StyleSheet.create({
   // Categories - Compact Chips (Fixed)
   categoriesSection: {
     backgroundColor: C.card,
-    paddingVertical: scale(12),
+    paddingVertical: scale(7),
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
@@ -882,12 +873,12 @@ const st = StyleSheet.create({
   categoryChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: scale(6),
-    paddingHorizontal: scale(14),
-    paddingVertical: scale(10),
-    marginRight: scale(8),
+    gap: scale(5),
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(6),
+    marginRight: scale(6),
     backgroundColor: C.card,
-    borderRadius: scale(20),
+    borderRadius: scale(16),
     borderWidth: 1.5,
     borderColor: C.border,
   },
@@ -896,31 +887,12 @@ const st = StyleSheet.create({
     borderColor: C.primary,
   },
   categoryChipText: {
-    fontSize: moderateScale(13),
+    fontSize: moderateScale(11),
     fontWeight: '600',
     color: C.ink,
   },
   categoryChipTextActive: {
     color: '#fff',
-  },
-
-  // Products Header (Fixed)
-  productsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: scale(16),
-    paddingVertical: scale(10),
-    backgroundColor: C.bg,
-  },
-  productsTitle: {
-    fontSize: moderateScale(16),
-    fontWeight: '700',
-    color: C.ink,
-  },
-  productsCount: {
-    fontSize: moderateScale(13),
-    color: C.muted,
   },
 
   // Products List
@@ -1372,17 +1344,17 @@ const st = StyleSheet.create({
   // Hero Cart Badge
   heroCartBadge: {
     position: 'absolute',
-    top: scale(-4),
-    right: scale(-4),
+    top: scale(-3),
+    right: scale(-3),
     backgroundColor: '#fff',
-    borderRadius: scale(10),
-    minWidth: scale(20),
-    height: scale(20),
+    borderRadius: scale(8),
+    minWidth: scale(16),
+    height: scale(16),
     alignItems: 'center',
     justifyContent: 'center',
   },
   heroCartBadgeText: {
-    fontSize: moderateScale(11),
+    fontSize: moderateScale(9),
     fontWeight: '700',
     color: C.primary,
   },

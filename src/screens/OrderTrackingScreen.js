@@ -543,7 +543,7 @@ export default function OrderTrackingScreen({ navigation }) {
       <SafeAreaView style={s.container}>
         <LinearGradient colors={[C.primary, C.primaryDark]} style={s.header}>
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={s.headerBtn}>
-            <Icon name="arrow-back" size={scale(22)} color="#fff" />
+            <Icon name="arrow-back" size={scale(18)} color="#fff" />
           </TouchableOpacity>
           <Text style={s.headerTitle}>Order Tracking</Text>
           <View style={{ width: scale(38) }} />
@@ -566,7 +566,7 @@ export default function OrderTrackingScreen({ navigation }) {
         style={s.header}
       >
         <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={s.headerBtn}>
-          <Icon name="arrow-back" size={scale(22)} color="#fff" />
+          <Icon name="arrow-back" size={scale(18)} color="#fff" />
         </TouchableOpacity>
         <View style={s.headerCenter}>
           <Text style={s.headerTitle}>Order Tracking</Text>
@@ -577,7 +577,7 @@ export default function OrderTrackingScreen({ navigation }) {
           )}
         </View>
         <TouchableOpacity onPress={() => setMenuVisible(true)} style={s.headerBtn}>
-          <Icon name="menu" size={scale(22)} color="#fff" />
+          <Icon name="menu" size={scale(18)} color="#fff" />
         </TouchableOpacity>
       </LinearGradient>
 
@@ -589,7 +589,7 @@ export default function OrderTrackingScreen({ navigation }) {
           activeOpacity={restaurants.length > 1 ? 0.7 : 1}
         >
           <View style={s.restIconBox}>
-            <Icon name="restaurant" size={scale(15)} color={C.primary} />
+            <Icon name="restaurant" size={scale(13)} color={C.primary} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={s.restName} numberOfLines={1}>{currentRestaurant.name}</Text>
@@ -597,7 +597,7 @@ export default function OrderTrackingScreen({ navigation }) {
           </View>
           {restaurants.length > 1 && (
             <View style={s.restSwitch}>
-              <Icon name="swap-horizontal" size={scale(14)} color={C.primary} />
+              <Icon name="swap-horizontal" size={scale(11)} color={C.primary} />
               <Text style={s.restSwitchText}>Switch</Text>
             </View>
           )}
@@ -611,7 +611,7 @@ export default function OrderTrackingScreen({ navigation }) {
           onPress={() => setActiveTab('services')}
           activeOpacity={0.7}
         >
-          <Icon name="construct" size={scale(16)} color={activeTab === 'services' ? '#fff' : C.muted} />
+          <Icon name="construct" size={scale(13)} color={activeTab === 'services' ? '#fff' : C.muted} />
           <Text style={[s.tabText, activeTab === 'services' && s.tabTextActive]}>Services</Text>
           {activeServices > 0 && (
             <View style={[s.tabCountBadge, activeTab === 'services' && s.tabCountBadgeActive]}>
@@ -626,7 +626,7 @@ export default function OrderTrackingScreen({ navigation }) {
           onPress={() => setActiveTab('orders')}
           activeOpacity={0.7}
         >
-          <Icon name="bag" size={scale(16)} color={activeTab === 'orders' ? '#fff' : C.muted} />
+          <Icon name="bag" size={scale(13)} color={activeTab === 'orders' ? '#fff' : C.muted} />
           <Text style={[s.tabText, activeTab === 'orders' && s.tabTextActive]}>Orders</Text>
           {activeOrders > 0 && (
             <View style={[s.tabCountBadge, activeTab === 'orders' && s.tabCountBadgeActive]}>
@@ -641,7 +641,7 @@ export default function OrderTrackingScreen({ navigation }) {
       {/* Search & Filter - Fixed */}
       <View style={s.filterBar}>
         <View style={s.searchBox}>
-          <Icon name="search" size={scale(17)} color={C.muted} />
+          <Icon name="search" size={scale(13)} color={C.muted} />
           <TextInput
             style={s.searchInput}
             placeholder={activeTab === 'services' ? 'Search by ID or equipment...' : 'Search by ID, vendor, item...'}
@@ -651,26 +651,16 @@ export default function OrderTrackingScreen({ navigation }) {
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Icon name="close-circle" size={scale(17)} color={C.muted} />
+              <Icon name="close-circle" size={scale(13)} color={C.muted} />
             </TouchableOpacity>
           )}
         </View>
         <TouchableOpacity style={s.filterBtn} onPress={() => setStatusPickerVisible(true)}>
-          <Icon name="funnel" size={scale(15)} color={C.primary} />
+          <Icon name="funnel" size={scale(12)} color={C.primary} />
           <Text style={s.filterBtnText} numberOfLines={1}>
             {currentStatusOptions.find(st => st.value === currentStatusFilter)?.label || 'Filter'}
           </Text>
         </TouchableOpacity>
-      </View>
-
-      {/* List Title */}
-      <View style={s.listTitleRow}>
-        <Text style={s.listTitle}>
-          {activeTab === 'services' ? 'Service Bookings' : 'Marketplace Orders'}
-        </Text>
-        <Text style={s.listCount}>
-          {activeTab === 'services' ? filteredServices.length : filteredOrders.length} items
-        </Text>
       </View>
 
       {/* Scrollable List */}
@@ -1063,12 +1053,12 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: scale(16),
-    paddingVertical: scale(14),
+    paddingVertical: scale(9),
   },
   headerBtn: {
-    width: scale(38),
-    height: scale(38),
-    borderRadius: scale(12),
+    width: scale(32),
+    height: scale(32),
+    borderRadius: scale(10),
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1076,21 +1066,21 @@ const s = StyleSheet.create({
   headerCenter: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: scale(8),
+    gap: scale(7),
   },
   headerTitle: {
-    fontSize: moderateScale(18),
+    fontSize: moderateScale(16),
     fontWeight: '800',
     color: '#fff',
   },
   headerBadge: {
     backgroundColor: 'rgba(255,255,255,0.25)',
-    paddingHorizontal: scale(10),
-    paddingVertical: scale(3),
-    borderRadius: scale(12),
+    paddingHorizontal: scale(8),
+    paddingVertical: scale(2),
+    borderRadius: scale(10),
   },
   headerBadgeText: {
-    fontSize: moderateScale(11),
+    fontSize: moderateScale(10),
     fontWeight: '700',
     color: '#fff',
   },
@@ -1102,42 +1092,42 @@ const s = StyleSheet.create({
   restBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: scale(10),
+    gap: scale(8),
     paddingHorizontal: scale(16),
-    paddingVertical: scale(10),
+    paddingVertical: scale(7),
     backgroundColor: '#FFF5F5',
     borderBottomWidth: 1,
     borderBottomColor: '#FEE2E2',
   },
   restIconBox: {
-    width: scale(32),
-    height: scale(32),
-    borderRadius: scale(10),
+    width: scale(26),
+    height: scale(26),
+    borderRadius: scale(8),
     backgroundColor: '#FEE2E2',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  restName: { fontSize: moderateScale(14), fontWeight: '700', color: C.ink },
-  restSub: { fontSize: moderateScale(11), color: C.muted, marginTop: 1 },
+  restName: { fontSize: moderateScale(12.5), fontWeight: '700', color: C.ink },
+  restSub: { fontSize: moderateScale(9.5), color: C.muted, marginTop: 1 },
   restSwitch: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: scale(4),
-    paddingHorizontal: scale(10),
-    paddingVertical: scale(5),
+    paddingHorizontal: scale(8),
+    paddingVertical: scale(4),
     backgroundColor: '#fff',
-    borderRadius: scale(16),
+    borderRadius: scale(14),
     borderWidth: 1.5,
     borderColor: C.primary,
   },
-  restSwitchText: { fontSize: moderateScale(12), fontWeight: '700', color: C.primary },
+  restSwitchText: { fontSize: moderateScale(10.5), fontWeight: '700', color: C.primary },
 
   // Tabs
   tabBar: {
     flexDirection: 'row',
-    gap: scale(10),
+    gap: scale(8),
     paddingHorizontal: scale(16),
-    paddingVertical: scale(10),
+    paddingVertical: scale(7),
     backgroundColor: C.card,
     borderBottomWidth: 1,
     borderBottomColor: C.border,
@@ -1147,9 +1137,9 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: scale(6),
-    paddingVertical: scale(10),
-    borderRadius: scale(12),
+    gap: scale(5),
+    paddingVertical: scale(7),
+    borderRadius: scale(10),
     backgroundColor: '#F8FAFC',
     borderWidth: 1.5,
     borderColor: C.border,
@@ -1158,26 +1148,26 @@ const s = StyleSheet.create({
     backgroundColor: C.primary,
     borderColor: C.primary,
   },
-  tabText: { fontSize: moderateScale(13), fontWeight: '700', color: C.muted },
+  tabText: { fontSize: moderateScale(11.5), fontWeight: '700', color: C.muted },
   tabTextActive: { color: '#fff' },
   tabCountBadge: {
     backgroundColor: '#FEF3C7',
-    paddingHorizontal: scale(6),
+    paddingHorizontal: scale(5),
     paddingVertical: 1,
-    borderRadius: scale(8),
+    borderRadius: scale(7),
   },
   tabCountBadgeActive: {
     backgroundColor: 'rgba(255,255,255,0.3)',
   },
-  tabCountText: { fontSize: moderateScale(10), fontWeight: '700', color: '#D97706' },
+  tabCountText: { fontSize: moderateScale(9), fontWeight: '700', color: '#D97706' },
   tabCountTextActive: { color: '#fff' },
 
   // Filter Bar
   filterBar: {
     flexDirection: 'row',
-    gap: scale(10),
+    gap: scale(8),
     paddingHorizontal: scale(16),
-    paddingVertical: scale(10),
+    paddingVertical: scale(7),
     backgroundColor: C.card,
     borderBottomWidth: 1,
     borderBottomColor: '#EEEFF2',
@@ -1186,49 +1176,29 @@ const s = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: scale(8),
+    gap: scale(6),
     backgroundColor: '#F8FAFC',
-    borderRadius: scale(12),
-    paddingHorizontal: scale(12),
-    paddingVertical: scale(9),
+    borderRadius: scale(9),
+    paddingHorizontal: scale(9),
+    paddingVertical: scale(5),
     borderWidth: 1,
     borderColor: C.border,
   },
-  searchInput: { flex: 1, fontSize: moderateScale(13), color: C.text, padding: 0 },
+  searchInput: { flex: 1, fontSize: moderateScale(11.5), color: C.text, padding: 0 },
   filterBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: scale(5),
-    paddingHorizontal: scale(12),
-    paddingVertical: scale(9),
+    gap: scale(4),
+    paddingHorizontal: scale(9),
+    paddingVertical: scale(5),
     backgroundColor: '#FFF5F5',
-    borderRadius: scale(12),
+    borderRadius: scale(9),
     borderWidth: 1.5,
     borderColor: '#FECACA',
   },
-  filterBtnText: { fontSize: moderateScale(12), fontWeight: '700', color: C.primary, maxWidth: scale(70) },
+  filterBtnText: { fontSize: moderateScale(11), fontWeight: '700', color: C.primary, maxWidth: scale(70) },
 
-  // List Title
-  listTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: scale(16),
-    paddingTop: scale(12),
-    paddingBottom: scale(4),
-  },
-  listTitle: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink },
-  listCount: {
-    fontSize: moderateScale(12),
-    fontWeight: '600',
-    color: C.muted,
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: scale(8),
-    paddingVertical: scale(3),
-    borderRadius: scale(8),
-  },
-
-  list: { paddingHorizontal: scale(16), paddingBottom: scale(100), flexGrow: 1 },
+  list: { paddingHorizontal: scale(16), paddingTop: scale(10), paddingBottom: scale(100), flexGrow: 1 },
 
   // Card
   card: {

@@ -391,64 +391,118 @@ export default function StaffScreen({ navigation }) {
     );
   };
 
+  // Filter chips row -- extracted so it can be reused both inline (tablet)
+  // and as the sticky sentinel item (phone, see listItems below).
+  const renderFilterBar = () => (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[st.filterScroll, { minWidth: width - scale(24) }]}>
+      {['all', ...STAFF_STATUSES.map(s => s.value)].map(statusKey => {
+        const isActive = activeStatusTab === statusKey;
+        const config = statusKey === 'all'
+          ? { label: 'All', color: C.ink, bg: C.bg, icon: 'grid' }
+          : getStatusConfig(statusKey);
+        const count = statusCounts[statusKey] || 0;
+
+        return (
+          <TouchableOpacity
+            key={statusKey}
+            style={[st.filterChip, isActive && { backgroundColor: config.color, borderColor: config.color }]}
+            onPress={() => setActiveStatusTab(statusKey)}
+          >
+            <Icon name={config.icon} size={scale(12)} color={isActive ? '#fff' : config.color} />
+            <Text style={[st.filterChipText, isActive && { color: '#fff' }]} numberOfLines={1}>{config.label} ({count})</Text>
+          </TouchableOpacity>
+        );
+      })}
+    </ScrollView>
+  );
+
+  const renderResultsRow = () => (
+    <View style={st.resultsRow}>
+      <Text style={st.resultsText}>{filteredStaff.length} Staff Member{filteredStaff.length !== 1 ? 's' : ''}</Text>
+      {activeStatusTab !== 'all' && (
+        <TouchableOpacity style={st.clearBtn} onPress={() => setActiveStatusTab('all')}>
+          <Icon name="close-circle" size={scale(14)} color={C.primary} />
+          <Text style={st.clearBtnText}>Clear</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+
   // ==================== RENDER HEADER ====================
   const renderHeader = () => (
     <>
-      {/* Stats Summary */}
-      <View style={st.statsContainer}>
-        <View style={[st.statCard, { backgroundColor: C.primaryLight }]}>
-          <Icon name="people" size={scale(24)} color={C.primary} />
-          <Text style={[st.statValue, { color: C.primary }]}>{totalCount || staff.length}</Text>
-          <Text style={st.statLabel}>Total Staff</Text>
-        </View>
-        <View style={[st.statCard, { backgroundColor: C.successLight }]}>
-          <Icon name="checkmark-circle" size={scale(24)} color={C.success} />
-          <Text style={[st.statValue, { color: C.success }]}>{statusCounts.ACTIVE}</Text>
-          <Text style={st.statLabel}>Active</Text>
-        </View>
-        <View style={[st.statCard, { backgroundColor: C.warningLight }]}>
-          <Icon name="airplane" size={scale(24)} color={C.warning} />
-          <Text style={[st.statValue, { color: C.warning }]}>{statusCounts.ON_LEAVE}</Text>
-          <Text style={st.statLabel}>On Leave</Text>
-        </View>
+      {/* Stats Strip -- one compact non-scrolling row of 3 tiles instead of
+          3 wide cards. */}
+      <View style={st.statsStrip}>
+        {[
+          { key: 'total', icon: 'people', color: C.primary, label: 'Total Staff', value: totalCount || staff.length },
+          { key: 'active', icon: 'checkmark-circle', color: C.success, label: 'Active', value: statusCounts.ACTIVE },
+          { key: 'leave', icon: 'airplane', color: C.warning, label: 'On Leave', value: statusCounts.ON_LEAVE },
+        ].map((t, i) => (
+          <React.Fragment key={t.key}>
+            {i > 0 && <View style={st.statsDivider} />}
+            <View style={st.statsTile}>
+              <View style={[st.statsTileIcon, { backgroundColor: t.color + '20' }]}>
+                <Icon name={t.icon} size={scale(14)} color={t.color} />
+              </View>
+              <Text style={st.statsTileValue} numberOfLines={1}>{t.value}</Text>
+              <Text style={st.statsTileLabel} numberOfLines={1}>{t.label}</Text>
+            </View>
+          </React.Fragment>
+        ))}
       </View>
 
-      {/* Filter Tabs */}
-      <View style={st.filterContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.filterScroll}>
-          {['all', ...STAFF_STATUSES.map(s => s.value)].map(statusKey => {
-            const isActive = activeStatusTab === statusKey;
-            const config = statusKey === 'all'
-              ? { label: 'All', color: C.ink, bg: C.bg, icon: 'grid' }
-              : getStatusConfig(statusKey);
-            const count = statusCounts[statusKey] || 0;
-
-            return (
-              <TouchableOpacity
-                key={statusKey}
-                style={[st.filterChip, isActive && { backgroundColor: config.color, borderColor: config.color }]}
-                onPress={() => setActiveStatusTab(statusKey)}
-              >
-                <Icon name={config.icon} size={scale(16)} color={isActive ? '#fff' : config.color} />
-                <Text style={[st.filterChipText, isActive && { color: '#fff' }]}>{config.label} ({count})</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      </View>
-
-      {/* Results Count */}
-      <View style={st.resultsRow}>
-        <Text style={st.resultsText}>{filteredStaff.length} Staff Member{filteredStaff.length !== 1 ? 's' : ''}</Text>
-        {activeStatusTab !== 'all' && (
-          <TouchableOpacity style={st.clearBtn} onPress={() => setActiveStatusTab('all')}>
-            <Icon name="close-circle" size={scale(14)} color={C.primary} />
-            <Text style={st.clearBtnText}>Clear</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+      {/* Filter Tabs + Results -- on phone these are injected as sticky
+          data-array items instead (see listItems/renderListItem below).
+          Tablet (2-column grid) keeps the old always-inline behavior since
+          stickyHeaderIndices doesn't combine cleanly with numColumns. */}
+      {isTablet && (
+        <>
+          <View style={st.filterContainer}>{renderFilterBar()}</View>
+          {renderResultsRow()}
+        </>
+      )}
     </>
   );
+
+  const renderEmptyState = () => (
+    <View style={st.emptyState}>
+      <View style={st.emptyIcon}>
+        <Icon name="people-outline" size={scale(64)} color={C.muted} />
+      </View>
+      <Text style={st.emptyTitle}>{staff.length === 0 ? 'No Staff Yet' : 'No Results'}</Text>
+      <Text style={st.emptySubtitle}>
+        {staff.length === 0 ? 'Add your first team member' : 'No matching staff found'}
+      </Text>
+      {staff.length === 0 && can('staff:create') && (
+        <TouchableOpacity style={st.emptyBtn} onPress={() => openForm()}>
+          <Icon name="add" size={scale(18)} color="#fff" />
+          <Text style={st.emptyBtnText}>Add Staff</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+
+  // Phone: prepend sentinel rows so the filter row is a genuine, separate
+  // FlatList cell -- which is what lets native `stickyHeaderIndices` dock
+  // just that row to the top instead of the whole scrolling header.
+  const listItems = useMemo(() => {
+    if (isTablet) return filteredStaff;
+    const items = [{ __type: 'sticky-filter' }, { __type: 'results' }];
+    if (filteredStaff.length === 0) items.push({ __type: 'empty' });
+    else items.push(...filteredStaff);
+    return items;
+  }, [isTablet, filteredStaff]);
+
+  const listKeyExtractor = (item) => item.__type || item.id.toString();
+
+  const renderListItem = (info) => {
+    const { item } = info;
+    if (item.__type === 'sticky-filter') return <View style={st.filterContainer}>{renderFilterBar()}</View>;
+    if (item.__type === 'results') return renderResultsRow();
+    if (item.__type === 'empty') return renderEmptyState();
+    return renderStaffCard(info);
+  };
 
   // ==================== LOADING STATE ====================
   if ((loading || restaurantsLoading) && !refreshing) {
@@ -532,35 +586,23 @@ export default function StaffScreen({ navigation }) {
       {/* Restaurant Selector */}
       <RestaurantSelectorBar />
 
-      {/* Staff List */}
+      {/* Staff List -- on phone, the filter row is a real sentinel item in
+          `data` at index 1 (index 0 is the ListHeaderComponent cell), so
+          native stickyHeaderIndices docks just that row to the top while
+          scrolling past it, releasing it again once scrolled back up. */}
       <FlatList
-        data={filteredStaff}
-        keyExtractor={item => item.id.toString()}
-        renderItem={renderStaffCard}
+        data={listItems}
+        keyExtractor={listKeyExtractor}
+        renderItem={renderListItem}
         numColumns={isTablet ? 2 : 1}
         key={`grid-${isTablet ? 2 : 1}`}
         ListHeaderComponent={renderHeader}
+        stickyHeaderIndices={isTablet ? undefined : [1]}
         contentContainerStyle={st.listContent}
         columnWrapperStyle={isTablet ? st.columnWrapper : undefined}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} />}
-        ListEmptyComponent={
-          <View style={st.emptyState}>
-            <View style={st.emptyIcon}>
-              <Icon name="people-outline" size={scale(64)} color={C.muted} />
-            </View>
-            <Text style={st.emptyTitle}>{staff.length === 0 ? 'No Staff Yet' : 'No Results'}</Text>
-            <Text style={st.emptySubtitle}>
-              {staff.length === 0 ? 'Add your first team member' : 'No matching staff found'}
-            </Text>
-            {staff.length === 0 && can('staff:create') && (
-              <TouchableOpacity style={st.emptyBtn} onPress={() => openForm()}>
-                <Icon name="add" size={scale(18)} color="#fff" />
-                <Text style={st.emptyBtnText}>Add Staff</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        }
+        ListEmptyComponent={isTablet ? renderEmptyState : undefined}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.3}
         ListFooterComponent={renderListFooter}
@@ -816,16 +858,29 @@ const st = StyleSheet.create({
   headerIconBtn: { width: scale(40), height: scale(40), borderRadius: scale(10), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', marginLeft: scale(8) },
 
   // Stats
-  statsContainer: { flexDirection: 'row', paddingHorizontal: scale(16), paddingVertical: scale(16) },
-  statCard: { flex: 1, alignItems: 'center', padding: scale(12), borderRadius: scale(12), marginHorizontal: scale(4) },
-  statValue: { fontSize: moderateScale(24), fontWeight: '800', marginTop: scale(6) },
-  statLabel: { fontSize: moderateScale(11), fontWeight: '600', color: C.muted, marginTop: scale(2) },
+  // Stats Strip -- one compact non-scrolling row of 3 tiles instead of 3
+  // wide cards.
+  statsStrip: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: C.card,
+    marginHorizontal: scale(12), marginTop: scale(12), marginBottom: scale(12), borderRadius: scale(14),
+    paddingVertical: scale(10), paddingHorizontal: scale(2),
+    shadowColor: '#000', shadowOffset: { width: 0, height: scale(2) },
+    shadowOpacity: 0.05, shadowRadius: scale(6), elevation: 2,
+  },
+  statsTile: { flex: 1, alignItems: 'center', paddingHorizontal: scale(2) },
+  statsDivider: { width: 1, height: scale(30), backgroundColor: C.border },
+  statsTileIcon: {
+    width: scale(26), height: scale(26), borderRadius: scale(8),
+    alignItems: 'center', justifyContent: 'center', marginBottom: scale(4),
+  },
+  statsTileValue: { fontSize: moderateScale(12.5), fontWeight: '800', color: C.ink },
+  statsTileLabel: { fontSize: moderateScale(8.5), color: C.muted, marginTop: scale(1), fontWeight: '500' },
 
   // Filters
-  filterContainer: { paddingVertical: scale(12), backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border },
-  filterScroll: { paddingHorizontal: scale(16) },
-  filterChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(14), paddingVertical: scale(10), marginRight: scale(8), borderRadius: scale(20), backgroundColor: C.card, borderWidth: 1.5, borderColor: C.border },
-  filterChipText: { fontSize: moderateScale(13), fontWeight: '600', color: C.ink, marginLeft: scale(6) },
+  filterContainer: { paddingVertical: scale(7), backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border },
+  filterScroll: { paddingHorizontal: scale(12), gap: scale(6), justifyContent: 'space-between' },
+  filterChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(10), paddingVertical: scale(6), borderRadius: scale(16), backgroundColor: C.card, borderWidth: 1.5, borderColor: C.border },
+  filterChipText: { fontSize: moderateScale(11.5), fontWeight: '600', color: C.ink, marginLeft: scale(4) },
 
   // Results
   resultsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: scale(16), paddingVertical: scale(12) },

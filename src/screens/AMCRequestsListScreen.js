@@ -16,7 +16,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { api } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRestaurant } from '../context/RestaurantContext';
-import { RestaurantSelectorBar } from '../components/RestaurantSelector';
+import { RestaurantSelectorCompact } from '../components/RestaurantSelector';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 import { scale, moderateScale, isTablet } from '../utils/responsive';
@@ -172,7 +172,7 @@ export default function AMCRequestsListScreen({ navigation }) {
         onPress={() => setActiveTab(statusKey)}
         activeOpacity={0.7}
       >
-        <Icon name={config.icon} size={16} color={isActive ? '#fff' : config.color} />
+        <Icon name={config.icon} size={13} color={isActive ? '#fff' : config.color} />
         <Text style={[styles.statusTabLabel, isActive && { color: '#fff' }]}>{config.label}</Text>
         <View style={[styles.statusTabCount, isActive && { backgroundColor: 'rgba(255,255,255,0.3)' }]}>
           <Text style={[styles.statusTabCountText, isActive && { color: '#fff' }]}>{count}</Text>
@@ -240,11 +240,11 @@ export default function AMCRequestsListScreen({ navigation }) {
         <LinearGradient colors={[C.purple, C.purpleDark]} style={styles.heroHeader}>
           <View style={styles.heroContent}>
             <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-              <Icon name="arrow-back" size={24} color="#fff" />
+              <Icon name="arrow-back" size={18} color="#fff" />
             </TouchableOpacity>
             <Text style={styles.heroTitle}>AMC Requests</Text>
             <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
-              <Icon name="menu" size={24} color="#fff" />
+              <Icon name="menu" size={18} color="#fff" />
             </TouchableOpacity>
           </View>
         </LinearGradient>
@@ -270,7 +270,10 @@ export default function AMCRequestsListScreen({ navigation }) {
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
             <Icon name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.heroTitle}>AMC Requests</Text>
+          <View style={styles.heroTextContainer}>
+            <Text style={styles.heroTitle}>AMC Requests</Text>
+            <RestaurantSelectorCompact dark style={styles.heroRestaurantPill} />
+          </View>
           <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
             <Icon name="menu" size={24} color="#fff" />
           </TouchableOpacity>
@@ -298,12 +301,6 @@ export default function AMCRequestsListScreen({ navigation }) {
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.statusTabsScroll}>
           {Object.keys(AMC_STATUS_CONFIG).map(renderStatusTab)}
         </ScrollView>
-      </View>
-
-      <RestaurantSelectorBar />
-
-      <View style={styles.resultsRow}>
-        <Text style={styles.resultsText}>{filtered.length} request{filtered.length !== 1 ? 's' : ''}</Text>
       </View>
 
       <FlatList
@@ -354,19 +351,21 @@ const styles = StyleSheet.create({
 
   // Hero
   heroHeader: {
-    paddingBottom: scale(20), borderBottomLeftRadius: scale(24), borderBottomRightRadius: scale(24),
+    paddingBottom: scale(10), borderBottomLeftRadius: scale(20), borderBottomRightRadius: scale(20),
   },
   heroContent: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: scale(16), paddingTop: scale(8), paddingBottom: scale(16),
+    paddingHorizontal: scale(16), paddingTop: scale(8), paddingBottom: scale(8),
   },
   backBtn: {
-    width: scale(40), height: scale(40), borderRadius: scale(12),
+    width: scale(34), height: scale(34), borderRadius: scale(10),
     backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center',
   },
-  heroTitle: { fontSize: moderateScale(20), fontWeight: '700', color: '#fff' },
+  heroTextContainer: { flex: 1, marginHorizontal: scale(12) },
+  heroTitle: { fontSize: moderateScale(18), fontWeight: '700', color: '#fff' },
+  heroRestaurantPill: { alignSelf: 'flex-start', marginTop: scale(4) },
   menuBtn: {
-    width: scale(40), height: scale(40), borderRadius: scale(12),
+    width: scale(34), height: scale(34), borderRadius: scale(10),
     backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center',
   },
 
@@ -375,32 +374,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: scale(24),
   },
   statItem: { flex: 1, alignItems: 'center' },
-  statValue: { fontSize: moderateScale(24), fontWeight: '800', color: '#fff' },
-  statLabel: { fontSize: moderateScale(12), color: 'rgba(255,255,255,0.8)', marginTop: scale(2) },
+  statValue: { fontSize: moderateScale(18), fontWeight: '800', color: '#fff' },
+  statLabel: { fontSize: moderateScale(10.5), color: 'rgba(255,255,255,0.8)', marginTop: scale(1) },
   statDivider: {
-    width: 1, height: scale(32), backgroundColor: 'rgba(255,255,255,0.3)', marginHorizontal: scale(16),
+    width: 1, height: scale(22), backgroundColor: 'rgba(255,255,255,0.3)', marginHorizontal: scale(16),
   },
 
   // Status Tabs
   statusTabsContainer: { backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border },
-  statusTabsScroll: { paddingHorizontal: scale(16), paddingVertical: scale(12) },
+  statusTabsScroll: { paddingHorizontal: scale(16), paddingVertical: scale(7) },
   statusTab: {
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(12), paddingVertical: scale(8),
-    borderRadius: scale(20), backgroundColor: C.bg, marginRight: scale(8), gap: scale(6),
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(10), paddingVertical: scale(6),
+    borderRadius: scale(16), backgroundColor: C.bg, marginRight: scale(6), gap: scale(5),
   },
-  statusTabLabel: { fontSize: moderateScale(13), fontWeight: '600', color: C.ink },
+  statusTabLabel: { fontSize: moderateScale(11.5), fontWeight: '600', color: C.ink },
   statusTabCount: {
-    backgroundColor: C.border, paddingHorizontal: scale(6), paddingVertical: scale(2),
-    borderRadius: scale(10), minWidth: scale(20), alignItems: 'center',
+    backgroundColor: C.border, paddingHorizontal: scale(5), paddingVertical: scale(1),
+    borderRadius: scale(9), minWidth: scale(17), alignItems: 'center',
   },
-  statusTabCountText: { fontSize: moderateScale(11), fontWeight: '700', color: C.muted },
-
-  // Results
-  resultsRow: { paddingHorizontal: scale(16), paddingVertical: scale(10) },
-  resultsText: { fontSize: moderateScale(13), color: C.muted, fontWeight: '500' },
+  statusTabCountText: { fontSize: moderateScale(9.5), fontWeight: '700', color: C.muted },
 
   // List
-  listContent: { paddingHorizontal: scale(16), paddingBottom: scale(100) },
+  listContent: { paddingHorizontal: scale(16), paddingTop: scale(8), paddingBottom: scale(100) },
 
   // Card
   requestCard: {

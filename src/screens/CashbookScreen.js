@@ -312,49 +312,63 @@ export default function CashbookScreen({ navigation }) {
     );
   };
 
+  // Filter chips row -- extracted so the sticky overlay copy (rendered once
+  // scroll passes the inline copy's position) can reuse the exact same JSX.
+  // minWidth forces the row to span the full screen width; combined with
+  // justifyContent:'space-between' that spreads the chips evenly across it
+  // on wider screens (no dead space), while on narrow screens where the
+  // chips' natural width already exceeds the screen, minWidth/space-between
+  // become moot and it just scrolls normally -- responsive either way.
+  const renderFilterBar = () => (
+    <FlatList
+      horizontal
+      data={[{ value: 'all', label: 'All', icon: 'grid', color: C.ink }, ...ENTRY_TYPES]}
+      keyExtractor={(item) => item.value}
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={[st.filterScroll, { minWidth: width - scale(24) }]}
+      renderItem={({ item: filter }) => {
+        const isActive = filterType === filter.value;
+        const count = entryCounts[filter.value] || 0;
+        return (
+          <TouchableOpacity
+            style={[st.filterChip, isActive && { backgroundColor: filter.color || C.gradient1, borderColor: filter.color || C.gradient1 }]}
+            onPress={() => setFilterType(filter.value)}
+          >
+            <Icon name={filter.icon} size={scale(12)} color={isActive ? '#fff' : filter.color || C.ink} />
+            <Text style={[st.filterChipText, isActive && { color: '#fff' }]} numberOfLines={1}>
+              {filter.label} ({count})
+            </Text>
+          </TouchableOpacity>
+        );
+      }}
+    />
+  );
+
   // ==================== RENDER HEADER ====================
   const renderHeader = () => (
     <>
-      {/* Balance Cards */}
+      {/* Balance Strip -- one compact non-scrolling row of 3 tiles instead
+          of 3 wide horizontally-scrolling gradient cards. */}
       {stats && (
-        <View style={st.balanceSection}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.balanceScroll}>
-            {/* Cash Balance */}
-            <LinearGradient colors={[C.success, '#059669']} style={st.balanceCard}>
-              <View style={st.balanceIconBox}>
-                <Icon name="wallet" size={scale(20)} color="#fff" />
+        <View style={st.balanceStrip}>
+          {[
+            { key: 'cash', icon: 'wallet', color: C.success, label: 'Cash', value: stats.cashBalance },
+            { key: 'bank', icon: 'business', color: C.info, label: 'Bank', value: stats.bankBalance },
+            { key: 'total', icon: 'cash', color: C.gradient1, label: 'Total', value: stats.totalBalance },
+          ].map((t, i) => (
+            <React.Fragment key={t.key}>
+              {i > 0 && <View style={st.balanceDivider} />}
+              <View style={st.balanceTile}>
+                <View style={[st.balanceTileIcon, { backgroundColor: t.color + '20' }]}>
+                  <Icon name={t.icon} size={scale(14)} color={t.color} />
+                </View>
+                <Text style={st.balanceTileValue} numberOfLines={1} adjustsFontSizeToFit>
+                  {formatPrice(t.value)}
+                </Text>
+                <Text style={st.balanceTileLabel} numberOfLines={1}>{t.label} Balance</Text>
               </View>
-              <Text style={st.balanceLabel}>Cash Balance</Text>
-              <Text style={st.balanceValue}>{formatPrice(stats.cashBalance)}</Text>
-              <View style={st.balanceBreakdown}>
-                <Text style={st.balanceIn}>↓ {formatPrice(stats.cashIn)}</Text>
-                <Text style={st.balanceOut}>↑ {formatPrice(stats.cashOut)}</Text>
-              </View>
-            </LinearGradient>
-
-            {/* Bank Balance */}
-            <LinearGradient colors={[C.info, '#2563EB']} style={st.balanceCard}>
-              <View style={st.balanceIconBox}>
-                <Icon name="business" size={scale(20)} color="#fff" />
-              </View>
-              <Text style={st.balanceLabel}>Bank Balance</Text>
-              <Text style={st.balanceValue}>{formatPrice(stats.bankBalance)}</Text>
-              <View style={st.balanceBreakdown}>
-                <Text style={st.balanceIn}>↓ {formatPrice(stats.bankIn)}</Text>
-                <Text style={st.balanceOut}>↑ {formatPrice(stats.bankOut)}</Text>
-              </View>
-            </LinearGradient>
-
-            {/* Total Balance */}
-            <LinearGradient colors={[C.gradient1, C.gradient2]} style={st.balanceCard}>
-              <View style={st.balanceIconBox}>
-                <Icon name="cash" size={scale(20)} color="#fff" />
-              </View>
-              <Text style={st.balanceLabel}>Total Balance</Text>
-              <Text style={st.balanceValue}>{formatPrice(stats.totalBalance)}</Text>
-              <Text style={st.balanceCount}>{stats.totalEntries || 0} entries</Text>
-            </LinearGradient>
-          </ScrollView>
+            </React.Fragment>
+          ))}
         </View>
       )}
 
@@ -410,44 +424,89 @@ export default function CashbookScreen({ navigation }) {
       </View>
       )}
 
-      {/* Filter Chips */}
-      <View style={st.filterSection}>
-        <FlatList
-          horizontal
-          data={[{ value: 'all', label: 'All', icon: 'grid', color: C.ink }, ...ENTRY_TYPES]}
-          keyExtractor={(item) => item.value}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={st.filterScroll}
-          renderItem={({ item: filter }) => {
-            const isActive = filterType === filter.value;
-            const count = entryCounts[filter.value] || 0;
-            return (
-              <TouchableOpacity
-                style={[st.filterChip, isActive && { backgroundColor: filter.color || C.gradient1, borderColor: filter.color || C.gradient1 }]}
-                onPress={() => setFilterType(filter.value)}
-              >
-                <Icon name={filter.icon} size={scale(16)} color={isActive ? '#fff' : filter.color || C.ink} />
-                <Text style={[st.filterChipText, isActive && { color: '#fff' }]}>
-                  {filter.label} ({count})
-                </Text>
+      {/* Filter Chips + Results -- on phone these are injected as sticky
+          data-array items instead (see listItems/renderListItem below), so
+          native stickyHeaderIndices can make just the filter row stick.
+          numColumns>1 (tablet) can't mix with stickyHeaderIndices cleanly,
+          so it keeps the old always-inline behavior here. */}
+      {gridColumns > 1 && (
+        <>
+          <View style={st.filterSection}>
+            {renderFilterBar()}
+          </View>
+          <View style={st.resultsHeader}>
+            <Text style={st.resultsTitle}>{filteredEntries.length} Entr{filteredEntries.length !== 1 ? 'ies' : 'y'}</Text>
+            {filterType !== 'all' && (
+              <TouchableOpacity style={st.clearBtn} onPress={() => setFilterType('all')}>
+                <Icon name="close-circle" size={scale(14)} color={C.gradient1} />
+                <Text style={st.clearBtnText}>Clear</Text>
               </TouchableOpacity>
-            );
-          }}
-        />
-      </View>
-
-      {/* Results */}
-      <View style={st.resultsHeader}>
-        <Text style={st.resultsTitle}>{filteredEntries.length} Entr{filteredEntries.length !== 1 ? 'ies' : 'y'}</Text>
-        {filterType !== 'all' && (
-          <TouchableOpacity style={st.clearBtn} onPress={() => setFilterType('all')}>
-            <Icon name="close-circle" size={scale(14)} color={C.gradient1} />
-            <Text style={st.clearBtnText}>Clear</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+            )}
+          </View>
+        </>
+      )}
     </>
   );
+
+  // Empty state, reused both as FlatList's ListEmptyComponent (tablet) and
+  // as the 'empty' sentinel row (phone, since listItems is never truly
+  // empty there once the sticky-filter/results sentinels are injected).
+  const renderEmptyState = () => (
+    <View style={st.emptyState}>
+      <View style={st.emptyIcon}>
+        <Icon name="wallet-outline" size={scale(64)} color={C.muted} />
+      </View>
+      <Text style={st.emptyTitle}>No Entries Yet</Text>
+      <Text style={st.emptySubtitle}>Start tracking your cash and bank transactions</Text>
+      {can('cashbook:create') && (
+        <TouchableOpacity style={st.emptyBtn} onPress={() => openForm()}>
+          <Icon name="add" size={scale(18)} color="#fff" />
+          <Text style={st.emptyBtnText}>Add First Entry</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+
+  // Phone: real data items get a couple of sentinel rows prepended so the
+  // filter row can be a genuine, separate FlatList cell -- which is what
+  // makes native `stickyHeaderIndices` able to target just that row instead
+  // of the whole scrolling header. Tablet (numColumns>1) skips all this
+  // since stickyHeaderIndices doesn't reliably combine with numColumns.
+  const listItems = useMemo(() => {
+    if (gridColumns > 1) return filteredEntries;
+    const items = [{ __type: 'sticky-filter' }, { __type: 'results' }];
+    if (filteredEntries.length === 0) items.push({ __type: 'empty' });
+    else items.push(...filteredEntries);
+    return items;
+  }, [gridColumns, filteredEntries]);
+
+  const listKeyExtractor = (item) => item.__type || item.id;
+
+  const renderListItem = (info) => {
+    const { item } = info;
+    if (item.__type === 'sticky-filter') {
+      return (
+        <View style={st.filterSection}>
+          {renderFilterBar()}
+        </View>
+      );
+    }
+    if (item.__type === 'results') {
+      return (
+        <View style={st.resultsHeader}>
+          <Text style={st.resultsTitle}>{filteredEntries.length} Entr{filteredEntries.length !== 1 ? 'ies' : 'y'}</Text>
+          {filterType !== 'all' && (
+            <TouchableOpacity style={st.clearBtn} onPress={() => setFilterType('all')}>
+              <Icon name="close-circle" size={scale(14)} color={C.gradient1} />
+              <Text style={st.clearBtnText}>Clear</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      );
+    }
+    if (item.__type === 'empty') return renderEmptyState();
+    return renderEntryCard(info);
+  };
 
   // ==================== LOADING STATE ====================
   if (loading && !refreshing && entries.length === 0) {
@@ -537,14 +596,21 @@ export default function CashbookScreen({ navigation }) {
       {/* Restaurant Selector */}
       <RestaurantSelectorBar />
 
-      {/* Entry List */}
+      {/* Entry List -- on phone, the filter row is a real sentinel item in
+          `data` (see listItems above) at index 1 (index 0 is the
+          ListHeaderComponent cell), so native stickyHeaderIndices can dock
+          just that row to the top: it stays put while scrolling down past
+          it, and scrolls away normally as soon as you scroll back up past
+          it -- smooth, since it's the platform's own sticky-header
+          implementation, not a hand-rolled show/hide on JS scroll events. */}
       <FlatList
-        data={filteredEntries}
-        keyExtractor={(item) => item.id}
-        renderItem={renderEntryCard}
+        data={listItems}
+        keyExtractor={listKeyExtractor}
+        renderItem={renderListItem}
         numColumns={gridColumns}
         key={`grid-${gridColumns}`}
         ListHeaderComponent={renderHeader}
+        stickyHeaderIndices={gridColumns === 1 ? [1] : undefined}
         contentContainerStyle={st.listContent}
         columnWrapperStyle={gridColumns > 1 ? st.columnWrapper : undefined}
         showsVerticalScrollIndicator={false}
@@ -552,21 +618,7 @@ export default function CashbookScreen({ navigation }) {
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.3}
         ListFooterComponent={renderListFooter}
-        ListEmptyComponent={
-          <View style={st.emptyState}>
-            <View style={st.emptyIcon}>
-              <Icon name="wallet-outline" size={scale(64)} color={C.muted} />
-            </View>
-            <Text style={st.emptyTitle}>No Entries Yet</Text>
-            <Text style={st.emptySubtitle}>Start tracking your cash and bank transactions</Text>
-            {can('cashbook:create') && (
-            <TouchableOpacity style={st.emptyBtn} onPress={() => openForm()}>
-              <Icon name="add" size={scale(18)} color="#fff" />
-              <Text style={st.emptyBtnText}>Add First Entry</Text>
-            </TouchableOpacity>
-            )}
-          </View>
-        }
+        ListEmptyComponent={gridColumns > 1 ? renderEmptyState : undefined}
         initialNumToRender={10}
         maxToRenderPerBatch={10}
         removeClippedSubviews={true}
@@ -761,19 +813,25 @@ const st = StyleSheet.create({
   heroIconBtn: { width: scale(40), height: scale(40), borderRadius: scale(12), backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginLeft: scale(8) },
 
   // Balance Section
-  balanceSection: { marginTop: scale(16) },
-  balanceScroll: { paddingHorizontal: scale(16) },
-  balanceCard: { width: scale(160), borderRadius: scale(16), padding: scale(16), marginRight: scale(12) },
-  balanceIconBox: { width: scale(36), height: scale(36), borderRadius: scale(10), backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginBottom: scale(10) },
-  balanceLabel: { fontSize: moderateScale(12), color: 'rgba(255,255,255,0.85)', fontWeight: '600' },
-  balanceValue: { fontSize: moderateScale(22), fontWeight: '800', color: '#fff', marginTop: scale(4) },
-  balanceBreakdown: { flexDirection: 'row', marginTop: scale(8) },
-  balanceIn: { fontSize: moderateScale(11), color: 'rgba(255,255,255,0.8)', marginRight: scale(12) },
-  balanceOut: { fontSize: moderateScale(11), color: 'rgba(255,255,255,0.8)' },
-  balanceCount: { fontSize: moderateScale(11), color: 'rgba(255,255,255,0.7)', marginTop: scale(8) },
+  // Balance Strip -- one compact non-scrolling row of 3 tiles
+  balanceStrip: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: C.card,
+    marginHorizontal: scale(12), marginTop: scale(12), marginBottom: scale(4), borderRadius: scale(14),
+    paddingVertical: scale(10), paddingHorizontal: scale(2),
+    shadowColor: '#000', shadowOffset: { width: 0, height: scale(2) },
+    shadowOpacity: 0.05, shadowRadius: scale(6), elevation: 2,
+  },
+  balanceTile: { flex: 1, alignItems: 'center', paddingHorizontal: scale(2) },
+  balanceDivider: { width: 1, height: scale(30), backgroundColor: C.border },
+  balanceTileIcon: {
+    width: scale(26), height: scale(26), borderRadius: scale(8),
+    alignItems: 'center', justifyContent: 'center', marginBottom: scale(4),
+  },
+  balanceTileValue: { fontSize: moderateScale(12.5), fontWeight: '800', color: C.ink },
+  balanceTileLabel: { fontSize: moderateScale(8.5), color: C.muted, marginTop: scale(1), fontWeight: '500' },
 
   // Quick Section - Premium Grid
-  quickSection: { marginHorizontal: scale(16), marginTop: scale(16) },
+  quickSection: { marginHorizontal: scale(16), marginTop: scale(16), marginBottom: scale(12) },
   quickTitleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: scale(12) },
   quickTitle: { fontSize: moderateScale(16), fontWeight: '700', color: C.ink, marginLeft: scale(8) },
   quickGrid: { flexDirection: 'row', justifyContent: 'space-between' },
@@ -782,10 +840,10 @@ const st = StyleSheet.create({
   quickCardLabel: { fontSize: moderateScale(11), fontWeight: '600', color: C.text, marginTop: scale(8), textAlign: 'center' },
 
   // Filters
-  filterSection: { paddingVertical: scale(12), backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border, marginTop: scale(12) },
-  filterScroll: { paddingHorizontal: scale(16) },
-  filterChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(14), paddingVertical: scale(10), marginRight: scale(8), backgroundColor: C.card, borderRadius: scale(20), borderWidth: 1.5, borderColor: C.border },
-  filterChipText: { fontSize: moderateScale(13), fontWeight: '600', color: C.ink, marginLeft: scale(6) },
+  filterSection: { paddingVertical: scale(7), backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border },
+  filterScroll: { paddingHorizontal: scale(12), gap: scale(6), justifyContent: 'space-between' },
+  filterChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(10), paddingVertical: scale(6), backgroundColor: C.card, borderRadius: scale(16), borderWidth: 1.5, borderColor: C.border },
+  filterChipText: { fontSize: moderateScale(11.5), fontWeight: '600', color: C.ink, marginLeft: scale(4) },
 
   // Results
   resultsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: scale(16), paddingVertical: scale(12) },
