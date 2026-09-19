@@ -4,13 +4,14 @@
  * ============================================================================
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   ActivityIndicator, RefreshControl, Modal, TextInput,
-  StatusBar, Share, Platform,
+  StatusBar, Platform, Animated,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import Share from 'react-native-share';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { api, downloadAuthenticatedFile } from '../api/client';
@@ -63,7 +64,46 @@ const URGENCY_OPTIONS = [
 const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
 const formatPrice = (amount) => '₹' + (parseFloat(amount) || 0).toLocaleString('en-IN');
 
+/* ─── Skeleton ─── */
+function SkeletonContractDetail({ pulse }) {
+  return (
+    <View style={styles.scrollContent}>
+      {/* Stats Grid - 2x2 */}
+      <View style={styles.statsGrid}>
+        <View style={styles.statsGridRow}>
+          <Animated.View style={[styles.skelStatCard, { opacity: pulse }]} />
+          <Animated.View style={[styles.skelStatCard, { opacity: pulse }]} />
+        </View>
+        <View style={styles.statsGridRow}>
+          <Animated.View style={[styles.skelStatCard, { opacity: pulse }]} />
+          <Animated.View style={[styles.skelStatCard, { opacity: pulse }]} />
+        </View>
+      </View>
+      {/* Actions Row */}
+      <View style={styles.actionsRow}>
+        <Animated.View style={[styles.skelActionBtn, { opacity: pulse }]} />
+        <Animated.View style={[styles.skelActionBtn, { opacity: pulse }]} />
+      </View>
+      {/* Cards */}
+      {[1, 2, 3].map(i => (
+        <View key={i} style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Animated.View style={[styles.skelCardIcon, { opacity: pulse }]} />
+            <Animated.View style={[styles.skelCardTitle, { opacity: pulse }]} />
+          </View>
+          <View style={styles.cardBody}>
+            <Animated.View style={[styles.skelDetailLine, { opacity: pulse }]} />
+            <Animated.View style={[styles.skelDetailLine, { opacity: pulse, width: '70%' }]} />
+            <Animated.View style={[styles.skelDetailLine, { opacity: pulse, width: '85%' }]} />
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 export default function AMCContractDetailScreen({ navigation, route }) {
+  const insets = useSafeAreaInsets();
   const { contractId } = route.params || {};
 
   const keyboardHeight = useKeyboardHeight();
@@ -82,6 +122,16 @@ export default function AMCContractDetailScreen({ navigation, route }) {
   const [breakdownDescription, setBreakdownDescription] = useState('');
   const [breakdownUrgency, setBreakdownUrgency] = useState('MEDIUM');
   const [breakdownSubmitting, setBreakdownSubmitting] = useState(false);
+
+  const pulse = useRef(new Animated.Value(0.4)).current;
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
+      Animated.timing(pulse, { toValue: 0.4, duration: 800, useNativeDriver: false }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
 
   const loadContract = useCallback(async () => {
     try {
@@ -146,7 +196,7 @@ export default function AMCContractDetailScreen({ navigation, route }) {
         `/owner/amc-contracts/${contractId}/document`,
         `amc-contract-${contractId}.pdf`
       );
-      await Share.share({ url: Platform.OS === 'ios' ? path : `file://${path}`, title: 'AMC Contract Document' });
+      await Share.open({ url: Platform.OS === 'ios' ? path : `file://${path}`, title: 'AMC Contract Document', type: 'application/pdf', failOnCancel: false });
     } catch (error) {
       console.error('Download AMC document error:', error);
       AppAlert.alert('Error', 'Failed to download the contract document');
@@ -181,9 +231,11 @@ export default function AMCContractDetailScreen({ navigation, route }) {
   // Loading
   if (loading && !refreshing) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView style={styles.container} edges={['left', 'right']}>
         <StatusBar barStyle="light-content" backgroundColor="#059669" />
-        <LinearGradient colors={['#059669', '#047857']} style={styles.heroHeader}>
+        <LinearGradient colors={['#059669', '#047857']} style={[styles.heroHeader, { paddingTop: insets.top }]}>
+          <View style={styles.heroBlobA} pointerEvents="none" />
+          <View style={styles.heroBlobB} pointerEvents="none" />
           <View style={styles.heroContent}>
             <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
               <Icon name="arrow-back" size={24} color="#fff" />
@@ -194,9 +246,9 @@ export default function AMCContractDetailScreen({ navigation, route }) {
             </TouchableOpacity>
           </View>
         </LinearGradient>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={C.ok} />
-        </View>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <SkeletonContractDetail pulse={pulse} />
+        </ScrollView>
         <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
       </SafeAreaView>
     );
@@ -204,9 +256,11 @@ export default function AMCContractDetailScreen({ navigation, route }) {
 
   if (!contract) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView style={styles.container} edges={['left', 'right']}>
         <StatusBar barStyle="light-content" backgroundColor="#059669" />
-        <LinearGradient colors={['#059669', '#047857']} style={styles.heroHeader}>
+        <LinearGradient colors={['#059669', '#047857']} style={[styles.heroHeader, { paddingTop: insets.top }]}>
+          <View style={styles.heroBlobA} pointerEvents="none" />
+          <View style={styles.heroBlobB} pointerEvents="none" />
           <View style={styles.heroContent}>
             <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
               <Icon name="arrow-back" size={24} color="#fff" />
@@ -242,11 +296,13 @@ export default function AMCContractDetailScreen({ navigation, route }) {
   const daysRemaining = contract.endDate ? Math.max(0, Math.ceil((new Date(contract.endDate) - new Date()) / (1000 * 60 * 60 * 24))) : 0;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <StatusBar barStyle="light-content" backgroundColor="#059669" />
 
       {/* Hero */}
-      <LinearGradient colors={['#059669', '#047857']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroHeader}>
+      <LinearGradient colors={['#059669', '#047857']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.heroHeader, { paddingTop: insets.top }]}>
+        <View style={styles.heroBlobA} pointerEvents="none" />
+        <View style={styles.heroBlobB} pointerEvents="none" />
         <View style={styles.heroContent}>
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
             <Icon name="arrow-back" size={24} color="#fff" />
@@ -614,19 +670,21 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
 
   // Hero
-  heroHeader: { paddingBottom: scale(20), borderBottomLeftRadius: scale(24), borderBottomRightRadius: scale(24) },
+  heroHeader: { paddingBottom: scale(20), borderBottomLeftRadius: scale(24), borderBottomRightRadius: scale(24), overflow: 'hidden', position: 'relative' },
+  heroBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
+  heroBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
   heroContent: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: scale(16), paddingTop: scale(8), paddingBottom: scale(12),
   },
   backBtn: {
-    width: scale(40), height: scale(40), borderRadius: scale(12),
-    backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center',
+    width: scale(40), height: scale(40), borderRadius: scale(14),
+    backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center',
   },
   heroTitle: { fontSize: moderateScale(18), fontWeight: '700', color: '#fff', letterSpacing: 1 },
   menuBtn: {
-    width: scale(40), height: scale(40), borderRadius: scale(12),
-    backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center',
+    width: scale(40), height: scale(40), borderRadius: scale(14),
+    backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center',
   },
   heroStatusRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: scale(16),
@@ -773,4 +831,22 @@ const styles = StyleSheet.create({
     backgroundColor: C.purple, paddingVertical: scale(16), borderRadius: scale(14), marginTop: scale(8),
   },
   submitBreakdownText: { fontSize: moderateScale(16), fontWeight: '700', color: '#fff' },
+
+  // ═══ Skeleton ═══
+  skelStatCard: {
+    flex: 1, height: scale(64), backgroundColor: '#E2E8F0', borderRadius: scale(14),
+  },
+  skelActionBtn: {
+    flex: 1, height: scale(44), backgroundColor: '#E2E8F0', borderRadius: scale(12),
+  },
+  skelCardIcon: {
+    width: scale(40), height: scale(40), borderRadius: scale(12), backgroundColor: '#E2E8F0',
+  },
+  skelCardTitle: {
+    flex: 1, height: scale(16), backgroundColor: '#E2E8F0', borderRadius: scale(4),
+  },
+  skelDetailLine: {
+    height: scale(12), width: '100%', backgroundColor: '#E2E8F0', borderRadius: scale(4),
+    marginTop: scale(12),
+  },
 });

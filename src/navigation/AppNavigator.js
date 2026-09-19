@@ -15,8 +15,7 @@ import RestaurantOnboarding from '../screens/RestaurantOnboardingScreen';
 import PendingApprovalScreen from '../screens/PendingApprovalScreen';
 import OwnerApprovalPendingScreen from '../screens/OwnerApprovalPendingScreen';
 
-// Dashboard & Analytics
-import DashboardScreen from '../screens/DashboardScreen';
+// Analytics
 import AnalyticsScreen from '../screens/AnalyticsScreen';
 
 // Restaurant Management
@@ -36,6 +35,7 @@ import OffersScreen from '../screens/OffersScreen';
 
 // Finance
 import ExpensesScreen from '../screens/ExpensesScreen';
+import AddExpenseScreen from '../screens/AddExpenseScreen';
 import ExpenseReportsScreen from '../screens/ExpenseReportsScreen';
 import KhatabookScreen from '../screens/KhatabookScreen';
 import CashbookScreen from '../screens/CashbookScreen';
@@ -61,6 +61,8 @@ import MarketplacePaymentScreen from '../screens/MarketplacePaymentScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import EditOwnerProfile from '../screens/EditOwnerProfile';
 import SupportCenter from '../screens/SupportCenter';
+import SupportTicketDetailScreen from '../screens/SupportTicketDetailScreen';
+import CreateSupportTicketScreen from '../screens/CreateSupportTicketScreen';
 import Notifications from '../screens/Notifications';
 import NotificationDetail from '../screens/NotificationDetail';
 
@@ -144,7 +146,6 @@ export default function AppNavigator() {
 
         {/* Main App Screens */}
         <Stack.Screen name="Home" component={Home} />
-        <Stack.Screen name="Dashboard" component={DashboardScreen} />
         <Stack.Screen name="Analytics" component={AnalyticsScreen} />
         <Stack.Screen name="MyRestaurants" component={MyRestaurantsScreen} />
         <Stack.Screen name="RestaurantEdit" component={RestaurantEditScreen} />
@@ -153,6 +154,7 @@ export default function AppNavigator() {
         <Stack.Screen name="MyBookings" component={MyBookingsScreen} />
         <Stack.Screen name="Offers" component={OffersScreen} />
         <Stack.Screen name="Expenses" component={ExpensesScreen} />
+        <Stack.Screen name="AddExpense" component={AddExpenseScreen} />
         <Stack.Screen name="ExpenseReports" component={ExpenseReportsScreen} />
         <Stack.Screen name="Khatabook" component={KhatabookScreen} />
         <Stack.Screen name="Cashbook" component={CashbookScreen} />
@@ -175,6 +177,8 @@ export default function AppNavigator() {
         <Stack.Screen name="EquipmentProfile" component={EquipmentProfileScreen} />
         <Stack.Screen name="ServiceRequest" component={ServiceRequestScreen} />
         <Stack.Screen name="SupportCenter" component={SupportCenter} />
+        <Stack.Screen name="SupportTicketDetail" component={SupportTicketDetailScreen} />
+        <Stack.Screen name="CreateSupportTicket" component={CreateSupportTicketScreen} />
 
         {/* Profile Screens */}
         <Stack.Screen name="Profile" component={ProfileScreen} />

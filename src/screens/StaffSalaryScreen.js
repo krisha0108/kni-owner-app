@@ -4,7 +4,7 @@
  * ============================================================================
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,15 +13,17 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
+  Animated,
   Modal,
   TextInput,
   useWindowDimensions,
   StatusBar,
   Dimensions,
-  Share,
   Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import Share from 'react-native-share';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { api, downloadAuthenticatedFile } from '../api/client';
 import { useRestaurant } from '../context/RestaurantContext';
@@ -36,6 +38,7 @@ const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 // Premium Color Palette
 const C = {
   primary: '#EF3A3A',
+  primaryDark: '#DC2626',
   primaryLight: '#FEE2E2',
   ink: '#1D2254',
   text: '#334155',
@@ -73,7 +76,56 @@ const formatPrice = (amount) => {
   return `₹${num.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 };
 
+/* ─── Skeleton ─── */
+function SkeletonSalary({ pulse }) {
+  return (
+    <View style={{ paddingHorizontal: scale(16), paddingTop: scale(16) }}>
+      <Animated.View style={[st.skelMonth, { opacity: pulse }]} />
+      <View style={{ flexDirection: 'row', marginTop: scale(16) }}>
+        {[1, 2, 3, 4].map(i => (
+          <Animated.View key={i} style={[st.skelStat, { opacity: pulse }]} />
+        ))}
+      </View>
+      {[1, 2, 3].map(i => (
+        <View key={i} style={[st.card, i === 1 && { marginTop: scale(16) }]}>
+          <View style={st.cardHeader}>
+            <View style={st.staffInfo}>
+              <Animated.View style={[st.staffAvatar, st.skelFill, { opacity: pulse }]} />
+              <View style={st.staffDetails}>
+                <Animated.View style={[st.skelLine, { width: '70%', opacity: pulse }]} />
+                <Animated.View style={[st.skelLine, { width: '45%', height: scale(10), marginTop: scale(6), opacity: pulse }]} />
+              </View>
+            </View>
+            <Animated.View style={[st.skelBadge, { opacity: pulse }]} />
+          </View>
+
+          <View style={st.amountRow}>
+            {[1, 2, 3].map(j => (
+              <View key={j} style={st.amountItem}>
+                <Animated.View style={[st.skelLine, { width: '60%', height: scale(8), opacity: pulse }]} />
+                <Animated.View style={[st.skelLine, { width: '80%', height: scale(12), marginTop: scale(6), opacity: pulse }]} />
+              </View>
+            ))}
+          </View>
+
+          <View style={st.progressContainer}>
+            <Animated.View style={[st.progressBar, st.skelFill, { opacity: pulse }]} />
+            <Animated.View style={[st.skelLine, { width: scale(50), height: scale(10), opacity: pulse }]} />
+          </View>
+
+          <View style={st.cardActions}>
+            <Animated.View style={[st.slipBtn, st.skelFill, { opacity: pulse }]} />
+            <Animated.View style={[st.detailBtn, st.skelFill, { opacity: pulse }]} />
+            <Animated.View style={[st.payBtn, st.skelFill, { opacity: pulse }]} />
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 export default function StaffSalaryScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
 
@@ -93,6 +145,17 @@ export default function StaffSalaryScreen({ navigation }) {
   const [generating, setGenerating] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
   const [downloadingSlipId, setDownloadingSlipId] = useState(null);
+
+  const pulse = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
+      Animated.timing(pulse, { toValue: 0.4, duration: 800, useNativeDriver: false }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
 
   // Payment dialog state
   const [paymentModal, setPaymentModal] = useState(null);
@@ -173,7 +236,7 @@ export default function StaffSalaryScreen({ navigation }) {
         `/owner/staff-salary/${item.id}/slip`,
         `salary-slip-${item.id}.pdf`
       );
-      await Share.share({ url: Platform.OS === 'ios' ? path : `file://${path}`, title: 'Salary Slip' });
+      await Share.open({ url: Platform.OS === 'ios' ? path : `file://${path}`, title: 'Salary Slip', type: 'application/pdf', failOnCancel: false });
     } catch (error) {
       console.error('Download salary slip error:', error);
       AppAlert.alert('Error', 'Failed to download the salary slip');
@@ -281,11 +344,13 @@ export default function StaffSalaryScreen({ navigation }) {
   // ==================== LOADING STATE ====================
   if (loading && !refreshing) {
     return (
-      <SafeAreaView style={st.container}>
+      <SafeAreaView style={st.container} edges={['left', 'right']}>
         <StatusBar barStyle="light-content" backgroundColor={C.primary} />
-        <View style={st.header}>
+        <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
+          <View style={st.headerBlobA} pointerEvents="none" />
+          <View style={st.headerBlobB} pointerEvents="none" />
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
-            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
+            <Icon name="arrow-back" size={scale(22)} color="#fff" />
           </TouchableOpacity>
           <View style={st.headerCenter}>
             <Text style={st.headerTitle}>Staff Salary</Text>
@@ -293,14 +358,13 @@ export default function StaffSalaryScreen({ navigation }) {
           </View>
           <View style={st.headerActions}>
             <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
-              <Icon name="menu" size={scale(20)} color={C.ink} />
+              <Icon name="menu" size={scale(20)} color="#fff" />
             </TouchableOpacity>
           </View>
-        </View>
-        <View style={st.loadingBox}>
-          <ActivityIndicator size="large" color={C.primary} />
-          <Text style={st.loadingText}>Loading salaries...</Text>
-        </View>
+        </LinearGradient>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <SkeletonSalary pulse={pulse} />
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -411,13 +475,15 @@ export default function StaffSalaryScreen({ navigation }) {
 
   // ==================== MAIN RENDER ====================
   return (
-    <SafeAreaView style={st.container}>
+    <SafeAreaView style={st.container} edges={['left', 'right']}>
       <StatusBar barStyle="light-content" backgroundColor={C.primary} />
 
       {/* Header */}
-      <View style={st.header}>
+      <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
+        <View style={st.headerBlobA} pointerEvents="none" />
+        <View style={st.headerBlobB} pointerEvents="none" />
         <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
-          <Icon name="arrow-back" size={scale(22)} color={C.ink} />
+          <Icon name="arrow-back" size={scale(22)} color="#fff" />
         </TouchableOpacity>
         <View style={st.headerCenter}>
           <Text style={st.headerTitle}>Staff Salary</Text>
@@ -426,22 +492,22 @@ export default function StaffSalaryScreen({ navigation }) {
         <View style={st.headerActions}>
           {salaries.length > 0 && (
             <TouchableOpacity
-              style={[st.headerIconBtn, { backgroundColor: C.primaryLight }]}
+              style={st.headerIconBtn}
               onPress={generateSalaries}
               disabled={generating}
             >
               {generating ? (
-                <ActivityIndicator size="small" color={C.primary} />
+                <ActivityIndicator size="small" color="#fff" />
               ) : (
-                <Icon name="add" size={scale(20)} color={C.primary} />
+                <Icon name="add" size={scale(20)} color="#fff" />
               )}
             </TouchableOpacity>
           )}
           <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
-            <Icon name="menu" size={scale(20)} color={C.ink} />
+            <Icon name="menu" size={scale(20)} color="#fff" />
           </TouchableOpacity>
         </View>
-      </View>
+      </LinearGradient>
 
       {/* Restaurant Selector */}
       <RestaurantSelectorBar />
@@ -724,28 +790,28 @@ const st = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: scale(16),
-    paddingVertical: scale(12),
-    backgroundColor: C.card,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
+    paddingBottom: scale(12),
+    overflow: 'hidden',
   },
+  headerBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
+  headerBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
   backBtn: {
     width: scale(40),
     height: scale(40),
-    borderRadius: scale(10),
-    backgroundColor: C.bg,
+    borderRadius: scale(14),
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerCenter: { flex: 1, marginLeft: scale(12) },
-  headerTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink },
-  headerSubtitle: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(2) },
+  headerTitle: { fontSize: moderateScale(18), fontWeight: '700', color: '#fff' },
+  headerSubtitle: { fontSize: moderateScale(12), color: 'rgba(255,255,255,0.8)', marginTop: scale(2) },
   headerActions: { flexDirection: 'row' },
   headerIconBtn: {
     width: scale(40),
     height: scale(40),
-    borderRadius: scale(10),
-    backgroundColor: C.bg,
+    borderRadius: scale(14),
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: scale(8),
@@ -1031,4 +1097,32 @@ const st = StyleSheet.create({
     backgroundColor: C.success,
   },
   confirmPayBtnText: { fontSize: moderateScale(15), fontWeight: '700', color: '#fff', marginLeft: scale(8) },
+
+  // ═══ Skeleton ═══
+  skelMonth: {
+    height: scale(64),
+    backgroundColor: '#E2E8F0',
+    borderRadius: scale(14),
+  },
+  skelStat: {
+    flex: 1,
+    height: scale(64),
+    backgroundColor: '#E2E8F0',
+    borderRadius: scale(12),
+    marginHorizontal: scale(3),
+  },
+  skelFill: {
+    backgroundColor: '#E2E8F0',
+  },
+  skelLine: {
+    height: scale(12),
+    backgroundColor: '#E2E8F0',
+    borderRadius: scale(6),
+  },
+  skelBadge: {
+    width: scale(70),
+    height: scale(24),
+    backgroundColor: '#E2E8F0',
+    borderRadius: scale(8),
+  },
 });

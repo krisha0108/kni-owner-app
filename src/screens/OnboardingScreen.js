@@ -6,6 +6,7 @@ import {
   Text,
   TouchableOpacity,
   SafeAreaView,
+  StatusBar,
 } from 'react-native';
 import Onboarding from 'react-native-onboarding-swiper';
 import LottieView from 'lottie-react-native';
@@ -34,6 +35,7 @@ const OnboardingScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" />
       <Onboarding
         bottomBarHighlight={false}
         showSkip={true}

@@ -12,6 +12,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Animated,
   Image,
   RefreshControl,
   Linking,
@@ -20,10 +21,10 @@ import {
   AppState,
   Modal,
   TextInput,
-  Share,
   Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import Share from 'react-native-share';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import RazorpayCheckout from 'react-native-razorpay';
@@ -102,7 +103,21 @@ const formatDateTime = (dateStr) => {
 
 const formatPrice = (amount) => `₹${(amount || 0).toLocaleString('en-IN')}`;
 
+/* ─── Skeleton ─── */
+function SkeletonBookingDetail({ pulse }) {
+  return (
+    <View style={{ padding: scale(16) }}>
+      <Animated.View style={[styles.skelTimeline, { opacity: pulse }]} />
+      <Animated.View style={[styles.skelCard, { height: scale(120), opacity: pulse }]} />
+      <Animated.View style={[styles.skelCard, { height: scale(160), opacity: pulse }]} />
+      <Animated.View style={[styles.skelCard, { height: scale(200), opacity: pulse }]} />
+      <Animated.View style={[styles.skelCard, { height: scale(140), opacity: pulse }]} />
+    </View>
+  );
+}
+
 export default function BookingDetailScreen({ navigation, route }) {
+  const insets = useSafeAreaInsets();
   const { bookingId } = route.params || {};
   const { width } = useWindowDimensions();
   const isTabletDevice = isTablet(width);
@@ -118,6 +133,17 @@ export default function BookingDetailScreen({ navigation, route }) {
   const [rateReview, setRateReview] = useState('');
   const [submittingRating, setSubmittingRating] = useState(false);
   const [downloadingInvoice, setDownloadingInvoice] = useState(false);
+
+  const pulse = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
+      Animated.timing(pulse, { toValue: 0.4, duration: 800, useNativeDriver: false }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
 
   const loadBooking = useCallback(async () => {
     try {
@@ -217,7 +243,7 @@ export default function BookingDetailScreen({ navigation, route }) {
     setDownloadingInvoice(true);
     try {
       const path = await downloadAuthenticatedFile(`/owner/bookings/${bookingId}/invoice`, `invoice-${bookingId}.pdf`);
-      await Share.share({ url: Platform.OS === 'ios' ? path : `file://${path}`, title: 'Booking Invoice' });
+      await Share.open({ url: Platform.OS === 'ios' ? path : `file://${path}`, title: 'Booking Invoice', type: 'application/pdf', failOnCancel: false });
     } catch (error) {
       console.error('Download invoice error:', error);
       AppAlert.alert('Error', 'Failed to download invoice');
@@ -320,22 +346,22 @@ export default function BookingDetailScreen({ navigation, route }) {
   // Loading state
   if (loading && !refreshing) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView style={styles.container} edges={['left', 'right']}>
         <StatusBar barStyle="light-content" backgroundColor={C.primary} />
-        <LinearGradient colors={[C.primary, C.primaryDark]} style={styles.heroHeader}>
+        <LinearGradient colors={[C.primary, C.primaryDark]} style={[styles.heroHeader, { paddingTop: insets.top }]}>
           <View style={styles.heroContent}>
             <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-              <Icon name="arrow-back" size={24} color="#fff" />
+              <Icon name="arrow-back" size={18} color="#fff" />
             </TouchableOpacity>
             <Text style={styles.heroTitle}>Booking Details</Text>
             <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
-              <Icon name="menu" size={24} color="#fff" />
+              <Icon name="menu" size={18} color="#fff" />
             </TouchableOpacity>
           </View>
         </LinearGradient>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={C.primary} />
-        </View>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <SkeletonBookingDetail pulse={pulse} />
+        </ScrollView>
         <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
       </SafeAreaView>
     );
@@ -344,16 +370,16 @@ export default function BookingDetailScreen({ navigation, route }) {
   // Not found state
   if (!booking) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView style={styles.container} edges={['left', 'right']}>
         <StatusBar barStyle="light-content" backgroundColor={C.primary} />
-        <LinearGradient colors={[C.primary, C.primaryDark]} style={styles.heroHeader}>
+        <LinearGradient colors={[C.primary, C.primaryDark]} style={[styles.heroHeader, { paddingTop: insets.top }]}>
           <View style={styles.heroContent}>
             <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-              <Icon name="arrow-back" size={24} color="#fff" />
+              <Icon name="arrow-back" size={18} color="#fff" />
             </TouchableOpacity>
             <Text style={styles.heroTitle}>Booking Details</Text>
             <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
-              <Icon name="menu" size={24} color="#fff" />
+              <Icon name="menu" size={18} color="#fff" />
             </TouchableOpacity>
           </View>
         </LinearGradient>
@@ -405,7 +431,7 @@ export default function BookingDetailScreen({ navigation, route }) {
   const engineer = booking.engineerAssignments?.[0];
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <StatusBar barStyle="light-content" backgroundColor={C.primary} />
 
       {/* Hero Header with Status */}
@@ -413,27 +439,16 @@ export default function BookingDetailScreen({ navigation, route }) {
         colors={[C.primary, C.primaryDark]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={styles.heroHeader}
+        style={[styles.heroHeader, { paddingTop: insets.top }]}
       >
         <View style={styles.heroContent}>
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-            <Icon name="arrow-back" size={24} color="#fff" />
+            <Icon name="arrow-back" size={18} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.heroTitle}>#{booking.id.slice(0, 8).toUpperCase()}</Text>
           <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
-            <Icon name="menu" size={24} color="#fff" />
+            <Icon name="menu" size={18} color="#fff" />
           </TouchableOpacity>
-        </View>
-
-        {/* Status Badge */}
-        <View style={styles.heroStatusRow}>
-          <View style={[styles.heroBadge, { backgroundColor: statusConfig.bg }]}>
-            <Icon name={statusConfig.icon} size={18} color={statusConfig.color} />
-            <Text style={[styles.heroBadgeText, { color: statusConfig.color }]}>
-              {statusConfig.label}
-            </Text>
-          </View>
-          <Text style={styles.heroDate}>{formatDate(booking.createdAt)}</Text>
         </View>
       </LinearGradient>
 
@@ -453,7 +468,16 @@ export default function BookingDetailScreen({ navigation, route }) {
         {/* Timeline Stepper */}
         {booking.status !== 'CANCELLED' && (
           <View style={styles.timelineCard}>
-            <Text style={styles.sectionTitle}>Progress Timeline</Text>
+            <View style={styles.timelineCardHeader}>
+              <Text style={styles.sectionTitleNoMargin}>Progress Timeline</Text>
+              <View style={styles.timelineHeaderRight}>
+                <View style={[styles.heroBadge, { backgroundColor: statusConfig.color }]}>
+                  <Icon name={statusConfig.icon} size={11} color="#fff" />
+                  <Text style={styles.heroBadgeText}>{statusConfig.label}</Text>
+                </View>
+                <Text style={styles.timelineDate}>{formatDate(booking.createdAt)}</Text>
+              </View>
+            </View>
             <View style={styles.timeline}>
               {TIMELINE_STEPS.map((step, index) => {
                 const isCompleted = index < currentStep;
@@ -962,61 +986,52 @@ const styles = StyleSheet.create({
 
   // Hero Header
   heroHeader: {
-    paddingBottom: scale(20),
-    borderBottomLeftRadius: scale(24),
-    borderBottomRightRadius: scale(24),
+    paddingBottom: scale(4),
+    borderBottomLeftRadius: scale(18),
+    borderBottomRightRadius: scale(18),
   },
   heroContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: scale(16),
-    paddingTop: scale(8),
-    paddingBottom: scale(12),
+    paddingTop: scale(6),
+    paddingBottom: scale(8),
   },
   backBtn: {
-    width: scale(40),
-    height: scale(40),
-    borderRadius: scale(12),
+    width: scale(32),
+    height: scale(32),
+    borderRadius: scale(10),
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   heroTitle: {
-    fontSize: moderateScale(18),
+    fontSize: moderateScale(14.5),
     fontWeight: '700',
     color: '#fff',
-    letterSpacing: scale(1),
+    letterSpacing: scale(0.5),
   },
   menuBtn: {
-    width: scale(40),
-    height: scale(40),
-    borderRadius: scale(12),
+    width: scale(32),
+    height: scale(32),
+    borderRadius: scale(10),
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  heroStatusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: scale(16),
-  },
   heroBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: scale(6),
-    paddingHorizontal: scale(14),
-    paddingVertical: scale(8),
-    borderRadius: scale(20),
+    gap: scale(5),
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(5),
+    borderRadius: scale(16),
   },
   heroBadgeText: {
-    fontSize: moderateScale(13),
-    fontWeight: '600',
-  },
-  heroDate: {
-    fontSize: moderateScale(13),
-    color: 'rgba(255,255,255,0.8)',
+    fontSize: moderateScale(11),
+    fontWeight: '700',
+    color: '#fff',
   },
 
   // Scroll
@@ -1066,11 +1081,24 @@ const styles = StyleSheet.create({
     shadowRadius: scale(8),
     elevation: 2,
   },
-  sectionTitle: {
+  sectionTitleNoMargin: {
     fontSize: moderateScale(14),
     fontWeight: '700',
     color: C.ink,
+  },
+  timelineCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: scale(16),
+  },
+  timelineHeaderRight: {
+    alignItems: 'flex-end',
+    gap: scale(3),
+  },
+  timelineDate: {
+    fontSize: moderateScale(9.5),
+    color: C.muted,
   },
   timeline: {
     flexDirection: 'row',
@@ -1510,5 +1538,18 @@ const styles = StyleSheet.create({
     color: '#B45309',
     textAlign: 'center',
     lineHeight: scale(18),
+  },
+
+  // Skeleton
+  skelTimeline: {
+    height: scale(110),
+    backgroundColor: '#E2E8F0',
+    borderRadius: scale(16),
+    marginBottom: scale(16),
+  },
+  skelCard: {
+    backgroundColor: '#E2E8F0',
+    borderRadius: scale(16),
+    marginBottom: scale(16),
   },
 });

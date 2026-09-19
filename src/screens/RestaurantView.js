@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   ActivityIndicator, Image, Linking, RefreshControl,
-  Dimensions, Modal, StatusBar, TextInput,
+  Modal, StatusBar, TextInput, Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
@@ -13,8 +13,7 @@ import restaurantService from '../services/restaurantService';
 import { scale, moderateScale } from '../utils/responsive';
 import { usePermissions } from '../utils/usePermissions';
 import AppAlert from '../utils/AppAlert';
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const HERO_HEIGHT = 260;
+const HERO_HEIGHT = 190;
 
 const C = {
   primary: '#EF3A3A',
@@ -90,6 +89,25 @@ const formatDateShort = (dateString) => {
   });
 };
 
+/* ─── Skeleton ─── */
+function SkeletonRestaurant({ pulse }) {
+  return (
+    <View style={{ flex: 1 }}>
+      <Animated.View style={[st.skelHero, { opacity: pulse }]} />
+      <View style={{ paddingHorizontal: scale(16) }}>
+        <Animated.View style={[st.skelStats, { opacity: pulse }]} />
+        <Animated.View style={[st.skelAlert, { opacity: pulse }]} />
+        <View style={{ flexDirection: 'row', gap: scale(9), marginTop: scale(12) }}>
+          {[1, 2, 3, 4].map(i => (
+            <Animated.View key={i} style={[st.skelAction, { opacity: pulse }]} />
+          ))}
+        </View>
+        <Animated.View style={[st.skelDetailsCard, { opacity: pulse }]} />
+      </View>
+    </View>
+  );
+}
+
 export default function RestaurantView({ navigation, route }) {
   const { can } = usePermissions();
   const { restaurantId } = route.params;
@@ -101,6 +119,17 @@ export default function RestaurantView({ navigation, route }) {
   const [deletionReason, setDeletionReason] = useState('');
   const [submittingRequest, setSubmittingRequest] = useState(false);
   const [cancellingRequest, setCancellingRequest] = useState(false);
+
+  const pulse = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
+      Animated.timing(pulse, { toValue: 0.4, duration: 800, useNativeDriver: false }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
 
   const loadRestaurant = async () => {
     try {
@@ -178,11 +207,10 @@ export default function RestaurantView({ navigation, route }) {
   if (loading) {
     return (
       <SafeAreaView style={st.container} edges={['top']}>
-        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
-        <View style={st.loadingBox}>
-          <ActivityIndicator size="large" color={C.primary} />
-          <Text style={st.loadingText}>Loading restaurant...</Text>
-        </View>
+        <StatusBar barStyle="dark-content" backgroundColor="transparent" />
+        <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+          <SkeletonRestaurant pulse={pulse} />
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -197,7 +225,59 @@ export default function RestaurantView({ navigation, route }) {
 
   return (
     <SafeAreaView style={st.container} edges={['top']}>
-      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" />
+
+      {/* Hero Section with Image — static, doesn't scroll with the list */}
+      <View style={st.heroSection}>
+        {restaurantImage ? (
+          <TouchableOpacity activeOpacity={0.9} onPress={() => setImagePreview(restaurantImage)}>
+            <Image source={{ uri: restaurantImage }} style={st.heroImage} />
+          </TouchableOpacity>
+        ) : (
+          <View style={st.heroPlaceholder}>
+            <Icon name="restaurant-outline" size={scale(64)} color="#D1D5DB" />
+            <Text style={st.heroPlaceholderText}>No Image</Text>
+          </View>
+        )}
+        <LinearGradient
+          colors={['transparent', 'rgba(0,0,0,0.7)']}
+          style={st.heroGradient}
+        />
+
+        {/* Back Button */}
+        <TouchableOpacity
+          style={st.heroBackBtn}
+          onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+        >
+          <Icon name="arrow-back" size={scale(22)} color="#fff" />
+        </TouchableOpacity>
+
+        {/* Edit Button */}
+        {restaurant.status !== 'APPROVED' && can('restaurant:update') && (
+          <TouchableOpacity
+            style={st.heroEditBtn}
+            onPress={() => navigation.navigate('RestaurantEdit', { restaurantId: restaurant.id })}
+          >
+            <Icon name="create-outline" size={scale(20)} color="#fff" />
+          </TouchableOpacity>
+        )}
+
+        {/* Hero Info Overlay */}
+        <View style={st.heroOverlay}>
+          <View style={[st.statusPill, { backgroundColor: statusConfig.color }]}>
+            <Icon name={statusConfig.icon} size={scale(12)} color="#fff" />
+            <Text style={st.statusPillText}>{statusConfig.label}</Text>
+          </View>
+          <Text style={st.heroName}>{restaurant.name}</Text>
+          <View style={st.heroLocationRow}>
+            <Icon name="location" size={scale(14)} color="rgba(255,255,255,0.8)" />
+            <Text style={st.heroLocation}>
+              {restaurant.address}, {restaurant.city}
+              {restaurant.pincode ? ` - ${restaurant.pincode}` : ''}
+            </Text>
+          </View>
+        </View>
+      </View>
 
       <ScrollView
         style={{ flex: 1 }}
@@ -205,82 +285,23 @@ export default function RestaurantView({ navigation, route }) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} />}
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero Section with Image */}
-        <View style={st.heroSection}>
-          {restaurantImage ? (
-            <TouchableOpacity activeOpacity={0.9} onPress={() => setImagePreview(restaurantImage)}>
-              <Image source={{ uri: restaurantImage }} style={st.heroImage} />
-            </TouchableOpacity>
-          ) : (
-            <View style={st.heroPlaceholder}>
-              <Icon name="restaurant-outline" size={scale(64)} color="#D1D5DB" />
-              <Text style={st.heroPlaceholderText}>No Image</Text>
-            </View>
-          )}
-          <LinearGradient
-            colors={['transparent', 'rgba(0,0,0,0.7)']}
-            style={st.heroGradient}
-          />
-
-          {/* Back Button */}
-          <TouchableOpacity
-            style={st.heroBackBtn}
-            onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
-          >
-            <Icon name="arrow-back" size={scale(22)} color="#fff" />
-          </TouchableOpacity>
-
-          {/* Edit Button */}
-          {restaurant.status !== 'APPROVED' && can('restaurant:update') && (
-            <TouchableOpacity
-              style={st.heroEditBtn}
-              onPress={() => navigation.navigate('RestaurantEdit', { restaurantId: restaurant.id })}
-            >
-              <Icon name="create-outline" size={scale(20)} color="#fff" />
-            </TouchableOpacity>
-          )}
-
-          {/* Hero Info Overlay */}
-          <View style={st.heroOverlay}>
-            <View style={[st.statusPill, { backgroundColor: statusConfig.color }]}>
-              <Icon name={statusConfig.icon} size={scale(12)} color="#fff" />
-              <Text style={st.statusPillText}>{statusConfig.label}</Text>
-            </View>
-            <Text style={st.heroName}>{restaurant.name}</Text>
-            <View style={st.heroLocationRow}>
-              <Icon name="location" size={scale(14)} color="rgba(255,255,255,0.8)" />
-              <Text style={st.heroLocation}>
-                {restaurant.address}, {restaurant.city}
-                {restaurant.pincode ? ` - ${restaurant.pincode}` : ''}
-              </Text>
-            </View>
+        {/* At a Glance — dark stats strip */}
+        <LinearGradient colors={[C.ink, '#2E3470']} style={st.statsStrip}>
+          <View style={st.statsStripItem}>
+            <Text style={st.statsStripValue} numberOfLines={1}>{formatDateShort(restaurant.createdAt)}</Text>
+            <Text style={st.statsStripLabel}>REGISTERED</Text>
           </View>
-        </View>
-
-        {/* Quick Stats */}
-        <View style={st.statsRow}>
-          <View style={st.statCard}>
-            <View style={[st.statIconBox, { backgroundColor: '#EFF6FF' }]}>
-              <Icon name="calendar-outline" size={scale(20)} color={C.info} />
-            </View>
-            <Text style={st.statLabel}>Registered</Text>
-            <Text style={st.statValue}>{formatDateShort(restaurant.createdAt)}</Text>
+          <View style={[st.statsStripItem, st.statsStripDivider]}>
+            <Text style={[st.statsStripValue, { color: statusConfig.color }]} numberOfLines={1}>{statusConfig.label}</Text>
+            <Text style={st.statsStripLabel}>STATUS</Text>
           </View>
-          <View style={st.statCard}>
-            <View style={[st.statIconBox, { backgroundColor: statusConfig.bg }]}>
-              <Icon name={statusConfig.icon} size={scale(20)} color={statusConfig.color} />
-            </View>
-            <Text style={st.statLabel}>Status</Text>
-            <Text style={[st.statValue, { color: statusConfig.color }]}>{statusConfig.label}</Text>
+          <View style={st.statsStripItem}>
+            <Text style={st.statsStripValue} numberOfLines={1}>
+              {restaurant.outletType ? restaurant.outletType.replace(/_/g, ' ') : restaurant.city}
+            </Text>
+            <Text style={st.statsStripLabel}>{restaurant.outletType ? 'OUTLET' : 'CITY'}</Text>
           </View>
-          <View style={st.statCard}>
-            <View style={[st.statIconBox, { backgroundColor: '#F5F3FF' }]}>
-              <Icon name="location-outline" size={scale(20)} color={C.purple} />
-            </View>
-            <Text style={st.statLabel}>City</Text>
-            <Text style={st.statValue}>{restaurant.city}</Text>
-          </View>
-        </View>
+        </LinearGradient>
 
         {/* Status Alert Card */}
         <View style={st.alertCard}>
@@ -291,7 +312,7 @@ export default function RestaurantView({ navigation, route }) {
             style={st.alertGradient}
           >
             <View style={st.alertIconBox}>
-              <Icon name={statusConfig.icon} size={scale(28)} color={statusConfig.color} />
+              <Icon name={statusConfig.icon} size={scale(20)} color={statusConfig.color} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[st.alertTitle, { color: statusConfig.color }]}>
@@ -301,7 +322,7 @@ export default function RestaurantView({ navigation, route }) {
 
               {restaurant.status === 'REJECTED' && restaurant.rejectionReason && (
                 <View style={st.rejectionBox}>
-                  <Icon name="information-circle" size={scale(16)} color={C.danger} />
+                  <Icon name="information-circle" size={scale(13)} color={C.danger} />
                   <Text style={st.rejectionText}>Reason: {restaurant.rejectionReason}</Text>
                 </View>
               )}
@@ -309,7 +330,7 @@ export default function RestaurantView({ navigation, route }) {
               {restaurant.pendingDeletionRequest && (
                 <>
                   <View style={[st.rejectionBox, { backgroundColor: 'rgba(180,83,9,0.1)' }]}>
-                    <Icon name="information-circle" size={scale(16)} color="#B45309" />
+                    <Icon name="information-circle" size={scale(13)} color="#B45309" />
                     <Text style={[st.rejectionText, { color: '#B45309' }]}>
                       Reason: {restaurant.pendingDeletionRequest.reason}
                     </Text>
@@ -323,7 +344,7 @@ export default function RestaurantView({ navigation, route }) {
                       <ActivityIndicator size="small" color="#B45309" />
                     ) : (
                       <>
-                        <Icon name="close-circle-outline" size={scale(16)} color="#B45309" />
+                        <Icon name="close-circle-outline" size={scale(13)} color="#B45309" />
                         <Text style={st.cancelRequestBtnText}>Cancel Request</Text>
                       </>
                     )}
@@ -336,7 +357,7 @@ export default function RestaurantView({ navigation, route }) {
                   style={st.requestDeletionBtn}
                   onPress={() => setRequestModalVisible(true)}
                 >
-                  <Icon name="trash-outline" size={scale(16)} color={C.danger} />
+                  <Icon name="trash-outline" size={scale(13)} color={C.danger} />
                   <Text style={st.requestDeletionBtnText}>Request Deletion</Text>
                 </TouchableOpacity>
               )}
@@ -351,25 +372,25 @@ export default function RestaurantView({ navigation, route }) {
             <View style={st.actionsGrid}>
               <TouchableOpacity style={st.actionItem} onPress={() => navigation.navigate('MyEquipment')}>
                 <View style={[st.actionIconBox, { backgroundColor: '#FEE2E2' }]}>
-                  <Icon name="construct" size={scale(22)} color={C.primary} />
+                  <Icon name="construct" size={scale(17)} color={C.primary} />
                 </View>
                 <Text style={st.actionLabel}>Book Service</Text>
               </TouchableOpacity>
               <TouchableOpacity style={st.actionItem} onPress={() => navigation.navigate('MyEquipment')}>
                 <View style={[st.actionIconBox, { backgroundColor: '#EFF6FF' }]}>
-                  <Icon name="hardware-chip" size={scale(22)} color={C.info} />
+                  <Icon name="hardware-chip" size={scale(17)} color={C.info} />
                 </View>
                 <Text style={st.actionLabel}>Equipment</Text>
               </TouchableOpacity>
               <TouchableOpacity style={st.actionItem} onPress={() => navigation.navigate('Marketplace')}>
                 <View style={[st.actionIconBox, { backgroundColor: '#F5F3FF' }]}>
-                  <Icon name="storefront" size={scale(22)} color={C.purple} />
+                  <Icon name="storefront" size={scale(17)} color={C.purple} />
                 </View>
                 <Text style={st.actionLabel}>Marketplace</Text>
               </TouchableOpacity>
               <TouchableOpacity style={st.actionItem} onPress={() => navigation.navigate('MyBookings')}>
                 <View style={[st.actionIconBox, { backgroundColor: '#ECFDF5' }]}>
-                  <Icon name="receipt" size={scale(22)} color={C.ok} />
+                  <Icon name="receipt" size={scale(17)} color={C.ok} />
                 </View>
                 <Text style={st.actionLabel}>Bookings</Text>
               </TouchableOpacity>
@@ -381,14 +402,14 @@ export default function RestaurantView({ navigation, route }) {
         <View style={st.detailsCard}>
           <View style={st.sectionHeader}>
             <View style={st.sectionIconBox}>
-              <Icon name="information-circle" size={scale(20)} color={C.primary} />
+              <Icon name="information-circle" size={scale(15)} color={C.primary} />
             </View>
             <Text style={st.sectionTitle}>Restaurant Details</Text>
           </View>
 
           <View style={st.detailRow}>
             <View style={st.detailIcon}>
-              <Icon name="business-outline" size={scale(18)} color={C.muted} />
+              <Icon name="business-outline" size={scale(14)} color={C.muted} />
             </View>
             <View style={st.detailContent}>
               <Text style={st.detailLabel}>Restaurant Name</Text>
@@ -400,7 +421,7 @@ export default function RestaurantView({ navigation, route }) {
 
           <View style={st.detailRow}>
             <View style={st.detailIcon}>
-              <Icon name="location-outline" size={scale(18)} color={C.muted} />
+              <Icon name="location-outline" size={scale(14)} color={C.muted} />
             </View>
             <View style={st.detailContent}>
               <Text style={st.detailLabel}>Full Address</Text>
@@ -416,7 +437,7 @@ export default function RestaurantView({ navigation, route }) {
               <View style={st.divider} />
               <View style={st.detailRow}>
                 <View style={st.detailIcon}>
-                  <Icon name="navigate-outline" size={scale(18)} color={C.muted} />
+                  <Icon name="navigate-outline" size={scale(14)} color={C.muted} />
                 </View>
                 <View style={st.detailContent}>
                   <Text style={st.detailLabel}>Pincode</Text>
@@ -433,7 +454,7 @@ export default function RestaurantView({ navigation, route }) {
               <View style={st.divider} />
               <View style={st.detailRow}>
                 <View style={st.detailIcon}>
-                  <Icon name="storefront-outline" size={scale(18)} color={C.muted} />
+                  <Icon name="storefront-outline" size={scale(14)} color={C.muted} />
                 </View>
                 <View style={st.detailContent}>
                   <Text style={st.detailLabel}>Outlet Type</Text>
@@ -447,7 +468,7 @@ export default function RestaurantView({ navigation, route }) {
 
           <View style={st.detailRow}>
             <View style={st.detailIcon}>
-              <Icon name="calendar-outline" size={scale(18)} color={C.muted} />
+              <Icon name="calendar-outline" size={scale(14)} color={C.muted} />
             </View>
             <View style={st.detailContent}>
               <Text style={st.detailLabel}>Registration Date</Text>
@@ -461,14 +482,14 @@ export default function RestaurantView({ navigation, route }) {
           <View style={st.detailsCard}>
             <View style={st.sectionHeader}>
               <View style={[st.sectionIconBox, { backgroundColor: '#FFF7ED' }]}>
-                <Icon name="document-text" size={scale(20)} color="#F97316" />
+                <Icon name="document-text" size={scale(15)} color="#F97316" />
               </View>
               <Text style={st.sectionTitle}>FSSAI License</Text>
             </View>
 
             {restaurant.fssaiNumber && (
               <View style={st.fssaiNumberBox}>
-                <Icon name="shield-checkmark" size={scale(20)} color={C.ok} />
+                <Icon name="shield-checkmark" size={scale(15)} color={C.ok} />
                 <View style={{ flex: 1 }}>
                   <Text style={st.fssaiLabel}>License Number</Text>
                   <Text style={st.fssaiNumber}>{restaurant.fssaiNumber}</Text>
@@ -477,7 +498,7 @@ export default function RestaurantView({ navigation, route }) {
             )}
 
             {fssaiImage && (
-              <View style={{ marginTop: scale(16) }}>
+              <View style={{ marginTop: scale(12) }}>
                 <Text style={st.certLabel}>Certificate Document</Text>
                 <TouchableOpacity
                   activeOpacity={0.85}
@@ -491,7 +512,7 @@ export default function RestaurantView({ navigation, route }) {
                     />
                     <View style={st.certOverlay}>
                       <View style={st.certViewBtn}>
-                        <Icon name="expand-outline" size={scale(18)} color="#fff" />
+                        <Icon name="expand-outline" size={scale(14)} color="#fff" />
                         <Text style={st.certViewText}>Tap to view full</Text>
                       </View>
                     </View>
@@ -581,17 +602,20 @@ const st = StyleSheet.create({
 
   // Hero
   heroSection: {
-    width: SCREEN_WIDTH,
     height: HERO_HEIGHT,
+    marginHorizontal: scale(16),
+    marginTop: scale(10),
+    borderRadius: scale(18),
+    overflow: 'hidden',
     position: 'relative',
     backgroundColor: '#1F2937',
   },
   heroImage: {
-    width: SCREEN_WIDTH,
+    width: '100%',
     height: HERO_HEIGHT,
   },
   heroPlaceholder: {
-    width: SCREEN_WIDTH,
+    width: '100%',
     height: HERO_HEIGHT,
     backgroundColor: '#E5E7EB',
     alignItems: 'center',
@@ -654,10 +678,10 @@ const st = StyleSheet.create({
     color: '#fff',
   },
   heroName: {
-    fontSize: moderateScale(26),
+    fontSize: moderateScale(20),
     fontWeight: '900',
     color: '#fff',
-    marginBottom: scale(4),
+    marginBottom: scale(3),
   },
   heroLocationRow: {
     flexDirection: 'row',
@@ -665,97 +689,75 @@ const st = StyleSheet.create({
     gap: scale(4),
   },
   heroLocation: {
-    fontSize: moderateScale(13),
+    fontSize: moderateScale(12),
     color: 'rgba(255,255,255,0.85)',
     flex: 1,
   },
 
-  // Stats
-  statsRow: {
+  // At a Glance — dark stats strip
+  statsStrip: {
     flexDirection: 'row',
     marginHorizontal: scale(16),
     marginTop: scale(16),
-    gap: scale(10),
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: C.card,
     borderRadius: scale(14),
     padding: scale(12),
-    alignItems: 'center',
     shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: scale(12),
+    shadowOpacity: 0.15,
+    shadowRadius: scale(10),
     shadowOffset: { width: 0, height: scale(4) },
     elevation: 4,
   },
-  statIconBox: {
-    width: scale(36),
-    height: scale(36),
-    borderRadius: scale(10),
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: scale(6),
-  },
-  statLabel: {
-    fontSize: moderateScale(10),
-    fontWeight: '600',
-    color: C.muted,
-    marginBottom: scale(2),
-  },
-  statValue: {
-    fontSize: moderateScale(12),
-    fontWeight: '800',
-    color: C.ink,
-    textAlign: 'center',
-  },
+  statsStripItem: { flex: 1, alignItems: 'center' },
+  statsStripDivider: { borderLeftWidth: 1, borderLeftColor: 'rgba(255,255,255,0.15)', borderRightWidth: 1, borderRightColor: 'rgba(255,255,255,0.15)' },
+  statsStripValue: { fontSize: moderateScale(12.5), fontWeight: '800', color: '#fff' },
+  statsStripLabel: { fontSize: moderateScale(8.5), fontWeight: '700', color: 'rgba(255,255,255,0.6)', letterSpacing: 0.4, marginTop: scale(3) },
 
   // Alert
   alertCard: {
     marginHorizontal: scale(16),
-    marginTop: scale(16),
-    borderRadius: scale(16),
+    marginTop: scale(12),
+    borderRadius: scale(14),
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOpacity: 0.06,
-    shadowRadius: scale(10),
+    shadowRadius: scale(8),
     elevation: 3,
   },
   alertGradient: {
     flexDirection: 'row',
-    padding: scale(16),
-    gap: scale(12),
+    padding: scale(12),
+    gap: scale(9),
     alignItems: 'flex-start',
   },
   alertIconBox: {
-    width: scale(44),
-    height: scale(44),
-    borderRadius: scale(12),
+    width: scale(34),
+    height: scale(34),
+    borderRadius: scale(10),
     backgroundColor: 'rgba(255,255,255,0.7)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   alertTitle: {
-    fontSize: moderateScale(16),
+    fontSize: moderateScale(13.5),
     fontWeight: '800',
-    marginBottom: scale(4),
+    marginBottom: scale(3),
   },
   alertDesc: {
-    fontSize: moderateScale(13),
+    fontSize: moderateScale(11.5),
     color: C.text,
-    lineHeight: moderateScale(19),
+    lineHeight: moderateScale(16.5),
   },
   rejectionBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: scale(6),
-    marginTop: scale(10),
-    padding: scale(10),
+    gap: scale(5),
+    marginTop: scale(8),
+    padding: scale(8),
     backgroundColor: 'rgba(239,68,68,0.1)',
-    borderRadius: scale(8),
+    borderRadius: scale(7),
   },
   rejectionText: {
-    fontSize: moderateScale(12),
+    fontSize: moderateScale(10.5),
     fontWeight: '600',
     color: C.danger,
     flex: 1,
@@ -764,15 +766,15 @@ const st = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: scale(6),
-    marginTop: scale(10),
-    paddingVertical: scale(10),
-    borderRadius: scale(10),
+    gap: scale(5),
+    marginTop: scale(8),
+    paddingVertical: scale(8),
+    borderRadius: scale(9),
     borderWidth: 1.5,
     borderColor: '#B45309',
   },
   cancelRequestBtnText: {
-    fontSize: moderateScale(13),
+    fontSize: moderateScale(11.5),
     fontWeight: '700',
     color: '#B45309',
   },
@@ -780,15 +782,15 @@ const st = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: scale(6),
-    marginTop: scale(10),
-    paddingVertical: scale(10),
-    borderRadius: scale(10),
+    gap: scale(5),
+    marginTop: scale(8),
+    paddingVertical: scale(8),
+    borderRadius: scale(9),
     borderWidth: 1.5,
     borderColor: C.danger,
   },
   requestDeletionBtnText: {
-    fontSize: moderateScale(13),
+    fontSize: moderateScale(11.5),
     fontWeight: '700',
     color: C.danger,
   },
@@ -810,34 +812,34 @@ const st = StyleSheet.create({
   // Quick Actions
   actionsCard: {
     marginHorizontal: scale(16),
-    marginTop: scale(16),
+    marginTop: scale(12),
     backgroundColor: C.card,
-    borderRadius: scale(16),
-    padding: scale(16),
+    borderRadius: scale(14),
+    padding: scale(12),
     shadowColor: '#000',
     shadowOpacity: 0.06,
-    shadowRadius: scale(10),
+    shadowRadius: scale(8),
     elevation: 3,
   },
   actionsGrid: {
     flexDirection: 'row',
-    gap: scale(12),
-    marginTop: scale(12),
+    gap: scale(9),
+    marginTop: scale(9),
   },
   actionItem: {
     flex: 1,
     alignItems: 'center',
-    gap: scale(8),
+    gap: scale(6),
   },
   actionIconBox: {
-    width: scale(50),
-    height: scale(50),
-    borderRadius: scale(14),
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(12),
     alignItems: 'center',
     justifyContent: 'center',
   },
   actionLabel: {
-    fontSize: moderateScale(11),
+    fontSize: moderateScale(9.5),
     fontWeight: '700',
     color: C.ink,
     textAlign: 'center',
@@ -846,114 +848,114 @@ const st = StyleSheet.create({
   // Details Card
   detailsCard: {
     marginHorizontal: scale(16),
-    marginTop: scale(16),
+    marginTop: scale(12),
     backgroundColor: C.card,
-    borderRadius: scale(16),
-    padding: scale(20),
+    borderRadius: scale(14),
+    padding: scale(14),
     shadowColor: '#000',
     shadowOpacity: 0.06,
-    shadowRadius: scale(10),
+    shadowRadius: scale(8),
     elevation: 3,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: scale(10),
-    marginBottom: scale(20),
+    gap: scale(8),
+    marginBottom: scale(14),
   },
   sectionIconBox: {
-    width: scale(36),
-    height: scale(36),
-    borderRadius: scale(10),
+    width: scale(28),
+    height: scale(28),
+    borderRadius: scale(9),
     backgroundColor: '#FEE2E2',
     alignItems: 'center',
     justifyContent: 'center',
   },
   sectionTitle: {
-    fontSize: moderateScale(17),
+    fontSize: moderateScale(13.5),
     fontWeight: '800',
     color: C.ink,
   },
   detailRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: scale(12),
-    paddingVertical: scale(4),
+    gap: scale(9),
+    paddingVertical: scale(3),
   },
   detailIcon: {
-    width: scale(32),
-    height: scale(32),
-    borderRadius: scale(8),
+    width: scale(26),
+    height: scale(26),
+    borderRadius: scale(7),
     backgroundColor: C.bg,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: scale(2),
+    marginTop: scale(1),
   },
   detailContent: {
     flex: 1,
   },
   detailLabel: {
-    fontSize: moderateScale(11),
+    fontSize: moderateScale(9.5),
     fontWeight: '600',
     color: C.muted,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: scale(2),
+    letterSpacing: 0.4,
+    marginBottom: scale(1),
   },
   detailValue: {
-    fontSize: moderateScale(15),
+    fontSize: moderateScale(12.5),
     fontWeight: '600',
     color: C.text,
-    lineHeight: moderateScale(21),
+    lineHeight: moderateScale(17),
   },
   divider: {
     height: 1,
     backgroundColor: C.border,
-    marginVertical: scale(12),
-    marginLeft: scale(44),
+    marginVertical: scale(9),
+    marginLeft: scale(35),
   },
 
   // FSSAI
   fssaiNumberBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: scale(12),
+    gap: scale(9),
     backgroundColor: '#F0FDF4',
-    padding: scale(14),
-    borderRadius: scale(12),
+    padding: scale(10),
+    borderRadius: scale(10),
     borderWidth: 1,
     borderColor: '#BBF7D0',
   },
   fssaiLabel: {
-    fontSize: moderateScale(11),
+    fontSize: moderateScale(9.5),
     fontWeight: '600',
     color: C.muted,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
   },
   fssaiNumber: {
-    fontSize: moderateScale(17),
+    fontSize: moderateScale(14),
     fontWeight: '800',
     color: C.ink,
     fontFamily: 'monospace',
-    letterSpacing: 1.5,
-    marginTop: scale(2),
+    letterSpacing: 1.2,
+    marginTop: scale(1),
   },
   certLabel: {
-    fontSize: moderateScale(12),
+    fontSize: moderateScale(10.5),
     fontWeight: '600',
     color: C.muted,
-    marginBottom: scale(8),
+    marginBottom: scale(6),
   },
   certImageBox: {
-    borderRadius: scale(12),
+    borderRadius: scale(10),
     overflow: 'hidden',
     position: 'relative',
   },
   certImage: {
     width: '100%',
-    height: scale(160),
-    borderRadius: scale(12),
+    height: scale(130),
+    borderRadius: scale(10),
     backgroundColor: C.bg,
   },
   certOverlay: {
@@ -961,17 +963,17 @@ const st = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    padding: scale(10),
+    padding: scale(8),
     backgroundColor: 'rgba(0,0,0,0.4)',
     alignItems: 'center',
   },
   certViewBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: scale(6),
+    gap: scale(5),
   },
   certViewText: {
-    fontSize: moderateScale(12),
+    fontSize: moderateScale(10.5),
     fontWeight: '600',
     color: '#fff',
   },
@@ -1000,5 +1002,38 @@ const st = StyleSheet.create({
   previewImage: {
     width: '100%',
     height: '80%',
+  },
+
+  // ═══ Skeleton ═══
+  skelHero: {
+    height: HERO_HEIGHT,
+    marginHorizontal: scale(16),
+    marginTop: scale(10),
+    borderRadius: scale(18),
+    backgroundColor: '#E5E7EB',
+  },
+  skelStats: {
+    height: scale(60),
+    borderRadius: scale(14),
+    backgroundColor: '#E2E8F0',
+    marginTop: scale(16),
+  },
+  skelAlert: {
+    height: scale(90),
+    borderRadius: scale(14),
+    backgroundColor: '#E2E8F0',
+    marginTop: scale(12),
+  },
+  skelAction: {
+    flex: 1,
+    height: scale(70),
+    borderRadius: scale(12),
+    backgroundColor: '#E2E8F0',
+  },
+  skelDetailsCard: {
+    height: scale(160),
+    borderRadius: scale(14),
+    backgroundColor: '#E2E8F0',
+    marginTop: scale(12),
   },
 });

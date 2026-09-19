@@ -8,8 +8,11 @@ import {
   Image,
   FlatList,
   ActivityIndicator,
+  StatusBar,
+  Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 import { api, getImageUrl } from '../api/client';
@@ -26,6 +29,7 @@ import { usePermissions } from '../utils/usePermissions';
 
 const C = {
   primary: '#EF3A3A',
+  primaryDark: '#DC2626',
   ink: '#1D2254',
   text: '#0F172A',
   muted: '#6B7280',
@@ -39,6 +43,11 @@ const C = {
 };
 
 export default function MarketplaceProductScreen({ navigation, route }) {
+  const insets = useSafeAreaInsets();
+  // Clears KniBottomNav's floating pill (barHeight scale(74) + its own
+  // bottom padding, which is the same Math.max(scale(12), insets.bottom)
+  // KniBottomNav.js uses) plus a small gap, so this bar floats just above it.
+  const bottomBarOffset = Math.max(scale(12), insets.bottom) + scale(74) + scale(10);
   const { can } = usePermissions();
   const { product: productParam, restaurantId } = route.params || {};
   const [product, setProduct] = useState(productParam || null);
@@ -276,16 +285,19 @@ export default function MarketplaceProductScreen({ navigation, route }) {
 
   if (!product) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
+      <SafeAreaView style={styles.container} edges={['left', 'right']}>
+        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <LinearGradient colors={[C.primary, C.primaryDark]} style={[styles.header, { paddingTop: insets.top + scale(12) }]}>
+          <View style={styles.headerBlobA} pointerEvents="none" />
+          <View style={styles.headerBlobB} pointerEvents="none" />
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
+            <Icon name="arrow-back" size={scale(22)} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Product Details</Text>
           <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
-            <Icon name="menu" size={scale(22)} color="#1D2254" />
+            <Icon name="menu" size={scale(22)} color="#fff" />
           </TouchableOpacity>
-        </View>
+        </LinearGradient>
         <View style={styles.emptyContainer}>
           <Icon name="cube-outline" size={scale(64)} color={C.muted} />
           <Text style={styles.emptyTitle}>Product Not Found</Text>
@@ -304,21 +316,24 @@ export default function MarketplaceProductScreen({ navigation, route }) {
   const vendorName = typeof product.vendor === 'object' ? product.vendor?.name : product.vendor;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
+      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+      <LinearGradient colors={[C.primary, C.primaryDark]} style={[styles.header, { paddingTop: insets.top + scale(12) }]}>
+        <View style={styles.headerBlobA} pointerEvents="none" />
+        <View style={styles.headerBlobB} pointerEvents="none" />
         <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-          <Icon name="arrow-back" size={scale(22)} color={C.ink} />
+          <Icon name="arrow-back" size={scale(22)} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Product Details</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <TouchableOpacity onPress={() => navigation.navigate('MarketplaceCart', { restaurantId })} style={styles.cartBtn}>
-            <Icon name="cart-outline" size={scale(22)} color={C.ink} />
+            <Icon name="cart-outline" size={scale(22)} color="#fff" />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
-            <Icon name="menu" size={scale(22)} color="#1D2254" />
+            <Icon name="menu" size={scale(22)} color="#fff" />
           </TouchableOpacity>
         </View>
-      </View>
+      </LinearGradient>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: scale(220) }}>
         {/* Product Image */}
@@ -516,89 +531,97 @@ export default function MarketplaceProductScreen({ navigation, route }) {
       {/* Bottom Bar */}
       {can('marketplace:create') && (
         product.priceUnlock?.status === 'UNLOCKED' && !product.priceUnlock.isExpired && product.priceUnlock.unlockedPrice ? (
-          <View style={styles.bottomBar}>
-            <TouchableOpacity
-              style={styles.negotiateIconBtn}
-              onPress={() => setIsCounterOfferOpen(true)}
-            >
-              <Icon name="swap-horizontal-outline" size={scale(20)} color={C.primary} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.addToCartBtn}
-              onPress={() => setIsConfirmQuoteOpen(true)}
-            >
-              <Icon name="checkmark-circle-outline" size={scale(20)} color="#fff" />
-              <Text style={styles.addToCartText}>Confirm Quote</Text>
-            </TouchableOpacity>
+          <View style={[styles.bottomBarWrap, { bottom: bottomBarOffset }]}>
+            <View style={styles.bottomBar}>
+              <TouchableOpacity
+                style={styles.negotiateIconBtn}
+                onPress={() => setIsCounterOfferOpen(true)}
+              >
+                <Icon name="swap-horizontal-outline" size={scale(20)} color={C.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.addToCartBtn}
+                onPress={() => setIsConfirmQuoteOpen(true)}
+              >
+                <Icon name="checkmark-circle-outline" size={scale(20)} color="#fff" />
+                <Text style={styles.addToCartText}>Confirm Quote</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         ) : product.priceUnlock?.status === 'COUNTERED' ? (
-          <View style={styles.bottomBar}>
-            <View style={styles.requestedBottomBar}>
-              <Icon name="swap-horizontal-outline" size={scale(20)} color="#1E40AF" />
-              <Text style={styles.requestedBottomText}>Counter-offer sent, awaiting admin</Text>
+          <View style={[styles.bottomBarWrap, { bottom: bottomBarOffset }]}>
+            <View style={styles.bottomBar}>
+              <View style={styles.requestedBottomBar}>
+                <Icon name="swap-horizontal-outline" size={scale(20)} color="#1E40AF" />
+                <Text style={styles.requestedBottomText}>Counter-offer sent, awaiting admin</Text>
+              </View>
             </View>
           </View>
         ) : product.priceOnRequest && !product.canPurchase ? (
-          <View style={styles.bottomBar}>
-            {product.priceUnlock?.status === 'PENDING' ? (
-              <View style={styles.requestedBottomBar}>
-                <Icon name="time-outline" size={scale(20)} color="#1E40AF" />
-                <Text style={styles.requestedBottomText}>Price Request Pending</Text>
-              </View>
-            ) : (
-              <TouchableOpacity
-                style={styles.requestPriceBottomBtn}
-                onPress={handleRequestPrice}
-              >
-                <Icon name="pricetag-outline" size={scale(20)} color="#92400E" />
-                <Text style={styles.requestPriceBottomText}>
-                  {product.priceUnlock?.status === 'DECLINED' || product.priceUnlock?.isExpired ? 'Re-request Price' : 'Request Price'}
-                </Text>
-              </TouchableOpacity>
-            )}
+          <View style={[styles.bottomBarWrap, { bottom: bottomBarOffset }]}>
+            <View style={styles.bottomBar}>
+              {product.priceUnlock?.status === 'PENDING' ? (
+                <View style={styles.requestedBottomBar}>
+                  <Icon name="time-outline" size={scale(20)} color="#1E40AF" />
+                  <Text style={styles.requestedBottomText}>Price Request Pending</Text>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.requestPriceBottomBtn}
+                  onPress={handleRequestPrice}
+                >
+                  <Icon name="pricetag-outline" size={scale(20)} color="#92400E" />
+                  <Text style={styles.requestPriceBottomText}>
+                    {product.priceUnlock?.status === 'DECLINED' || product.priceUnlock?.isExpired ? 'Re-request Price' : 'Request Price'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
         ) : canPurchase ? (
-          <View style={styles.bottomBar}>
-            {product.isAdminStore && (
-              <TouchableOpacity
-                style={styles.negotiateIconBtn}
-                onPress={handleRequestPrice}
-              >
-                <Icon name="pricetag-outline" size={scale(20)} color={C.primary} />
-              </TouchableOpacity>
-            )}
-            {cartQty > 0 ? (
-              <>
-                <View style={styles.quantityControl}>
-                  <TouchableOpacity style={styles.qtyBtn} onPress={() => updateCartQuantity(-1)}>
-                    <Icon name="remove" size={scale(20)} color={C.primary} />
-                  </TouchableOpacity>
-                  <Text style={styles.qtyText}>{cartQty}</Text>
+          <View style={[styles.bottomBarWrap, { bottom: bottomBarOffset }]}>
+            <View style={styles.bottomBar}>
+              {product.isAdminStore && (
+                <TouchableOpacity
+                  style={styles.negotiateIconBtn}
+                  onPress={handleRequestPrice}
+                >
+                  <Icon name="pricetag-outline" size={scale(20)} color={C.primary} />
+                </TouchableOpacity>
+              )}
+              {cartQty > 0 ? (
+                <>
+                  <View style={styles.quantityControl}>
+                    <TouchableOpacity style={styles.qtyBtn} onPress={() => updateCartQuantity(-1)}>
+                      <Icon name="remove" size={scale(20)} color={C.primary} />
+                    </TouchableOpacity>
+                    <Text style={styles.qtyText}>{cartQty}</Text>
+                    <TouchableOpacity
+                      style={[styles.qtyBtn, cartQty >= (stockQty || 999) && { opacity: 0.4 }]}
+                      onPress={() => updateCartQuantity(1)}
+                      disabled={cartQty >= (stockQty || 999)}
+                    >
+                      <Icon name="add" size={scale(20)} color={C.primary} />
+                    </TouchableOpacity>
+                  </View>
                   <TouchableOpacity
-                    style={[styles.qtyBtn, cartQty >= (stockQty || 999) && { opacity: 0.4 }]}
-                    onPress={() => updateCartQuantity(1)}
-                    disabled={cartQty >= (stockQty || 999)}
+                    style={styles.addToCartBtn}
+                    onPress={() => navigation.navigate('MarketplaceCart', { restaurantId })}
                   >
-                    <Icon name="add" size={scale(20)} color={C.primary} />
+                    <Icon name="cart" size={scale(20)} color="#fff" />
+                    <Text style={styles.addToCartText}>Go to Cart</Text>
                   </TouchableOpacity>
-                </View>
+                </>
+              ) : (
                 <TouchableOpacity
                   style={styles.addToCartBtn}
-                  onPress={() => navigation.navigate('MarketplaceCart', { restaurantId })}
+                  onPress={addToCart}
                 >
                   <Icon name="cart" size={scale(20)} color="#fff" />
-                  <Text style={styles.addToCartText}>Go to Cart</Text>
+                  <Text style={styles.addToCartText}>Add to Cart</Text>
                 </TouchableOpacity>
-              </>
-            ) : (
-              <TouchableOpacity
-                style={styles.addToCartBtn}
-                onPress={addToCart}
-              >
-                <Icon name="cart" size={scale(20)} color="#fff" />
-                <Text style={styles.addToCartText}>Add to Cart</Text>
-              </TouchableOpacity>
-            )}
+              )}
+            </View>
           </View>
         ) : null
       )}
@@ -644,28 +667,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: scale(16),
-    paddingVertical: scale(12),
-    backgroundColor: C.card,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
+    paddingBottom: scale(12),
+    overflow: 'hidden',
   },
+  headerBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
+  headerBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
   backBtn: {
     width: scale(40),
     height: scale(40),
-    borderRadius: scale(12),
-    backgroundColor: C.bg,
+    borderRadius: scale(14),
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   cartBtn: {
     width: scale(40),
     height: scale(40),
-    borderRadius: scale(12),
-    backgroundColor: C.bg,
+    borderRadius: scale(14),
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink },
+  headerTitle: { fontSize: moderateScale(18), fontWeight: '700', color: '#fff' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: scale(32) },
   emptyTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink, marginTop: scale(16) },
@@ -746,21 +769,31 @@ const styles = StyleSheet.create({
   detailLabel: { fontSize: moderateScale(14), color: C.muted },
   detailValue: { fontSize: moderateScale(14), fontWeight: '600', color: C.ink },
 
-  bottomBar: {
+  // Two layers because Android's `elevation` derives its shadow shape from
+  // the view's outline, and a view that also has `overflow:hidden` (needed
+  // to clip the rounded content) makes that outline fall back to a square -
+  // so the rounded+elevated wrap stays plain, and the actual rounded
+  // background/content clipping happens in a separate inner view.
+  bottomBarWrap: {
     position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: scale(85),
+    left: scale(12),
+    right: scale(12),
+    borderRadius: scale(20),
+    backgroundColor: C.card,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 18, shadowOffset: { width: 0, height: 8 } },
+      android: { elevation: 16 },
+    }),
+  },
+  bottomBar: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: scale(12),
-    paddingHorizontal: scale(16),
+    paddingHorizontal: scale(14),
     paddingVertical: scale(12),
     backgroundColor: C.card,
-    borderTopWidth: 1,
-    borderTopColor: C.border,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
+    borderRadius: scale(20),
+    overflow: 'hidden',
   },
   quantityControl: {
     flexDirection: 'row',

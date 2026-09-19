@@ -190,113 +190,6 @@ const PasswordChangeModal = ({ visible, onClose }) => {
   );
 };
 
-/* ===== NOTIFICATION SETTINGS MODAL ===== */
-// Keys match the real NotificationPreference model (prisma/schema.prisma) -
-// there's no backend support for SMS or marketing-email toggles, so those
-// were dropped rather than showing switches that silently do nothing.
-const DEFAULT_NOTIFICATION_PREFS = {
-  enablePush: true, enableEmail: true, enableInApp: true,
-  notifyOnBooking: true, notifyOnPayment: true, notifyOnEngineer: true,
-  notifyOnCompletion: true, notifyOnOrder: true,
-};
-
-const NotificationSettingsModal = ({ visible, onClose, settings, onSave }) => {
-  const [ns, setNs] = useState({ ...DEFAULT_NOTIFICATION_PREFS, ...settings });
-  const [loading, setLoading] = useState(false);
-  const [fetching, setFetching] = useState(false);
-
-  useEffect(() => { if (settings) setNs(prev => ({ ...prev, ...settings })); }, [settings]);
-
-  useEffect(() => {
-    if (!visible) return;
-    (async () => {
-      setFetching(true);
-      try {
-        const response = await api.get('/notifications/preferences');
-        if (response.data.ok) {
-          setNs(prev => ({ ...prev, ...response.data.data }));
-        }
-      } catch (error) {
-        console.error('Fetch notification preferences error:', error);
-      } finally {
-        setFetching(false);
-      }
-    })();
-  }, [visible]);
-
-  const toggle = (key) => setNs(prev => ({ ...prev, [key]: !prev[key] }));
-
-  const handleSave = async () => {
-    setLoading(true);
-    try {
-      const response = await api.patch('/notifications/preferences', ns);
-      if (response.data.ok) { AppAlert.alert('Success', 'Preferences updated'); onSave(ns); onClose(); }
-      else { AppAlert.alert('Error', response.data.error || 'Failed to update'); }
-    } catch (error) { AppAlert.alert('Error', 'Failed to update notification preferences'); }
-    finally { setLoading(false); }
-  };
-
-  const Row = ({ label, k, icon, desc }) => (
-    <View style={notifS.row}>
-      <View style={notifS.rowLeft}>
-        <View style={notifS.rowIcon}><Icon name={icon} size={scale(18)} color={C.primary} /></View>
-        <View style={{ flex: 1 }}>
-          <Text style={notifS.rowLabel}>{label}</Text>
-          <Text style={notifS.rowDesc}>{desc}</Text>
-        </View>
-      </View>
-      <Switch value={ns[k]} onValueChange={() => toggle(k)}
-        trackColor={{ false: C.border, true: '#FFD0D0' }} thumbColor={ns[k] ? C.primary : '#f4f3f4'} />
-    </View>
-  );
-
-  return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={modalBase.overlay}>
-        <View style={modalBase.sheet}>
-          <View style={modalBase.header}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(10) }}>
-              <LinearGradient colors={['#E0F2FE', '#BAE6FD']} style={modalBase.headerIcon}>
-                <Icon name="notifications" size={scale(18)} color="#0EA5E9" />
-              </LinearGradient>
-              <Text style={modalBase.headerTitle}>Notifications</Text>
-            </View>
-            <TouchableOpacity onPress={onClose} style={modalBase.closeBtn}>
-              <Icon name="close" size={scale(20)} color={C.muted} />
-            </TouchableOpacity>
-          </View>
-          <ScrollView style={{ padding: scale(20) }} showsVerticalScrollIndicator={false}>
-            {fetching ? (
-              <ActivityIndicator size="small" color={C.primary} style={{ marginVertical: scale(20) }} />
-            ) : (
-              <>
-                <Text style={notifS.secTitle}>Channels</Text>
-                <Row label="Push Notifications" k="enablePush" icon="notifications" desc="Instant device alerts" />
-                <Row label="Email Notifications" k="enableEmail" icon="mail" desc="Inbox updates" />
-                <Row label="In-App Notifications" k="enableInApp" icon="phone-portrait" desc="Notification center in the app" />
-                <Text style={notifS.secTitle}>Types</Text>
-                <Row label="Booking Updates" k="notifyOnBooking" icon="calendar" desc="Service bookings" />
-                <Row label="Payment Alerts" k="notifyOnPayment" icon="card" desc="Payment status changes" />
-                <Row label="Engineer Assignment" k="notifyOnEngineer" icon="person" desc="Engineer assigned to your job" />
-                <Row label="Job Completion" k="notifyOnCompletion" icon="checkmark-done" desc="Service marked complete" />
-                <Row label="Order Updates" k="notifyOnOrder" icon="cart" desc="Marketplace order status" />
-              </>
-            )}
-          </ScrollView>
-          <View style={[modalBase.footer, { flexDirection: 'row', gap: scale(12) }]}>
-            <TouchableOpacity style={[modalBase.cancelBtn, { flex: 1 }]} onPress={onClose}>
-              <Text style={modalBase.cancelBtnText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[pwS.saveBtn, loading && { opacity: 0.6 }]} onPress={handleSave} disabled={loading}>
-              {loading ? <ActivityIndicator size="small" color="#fff" /> : <Text style={pwS.saveBtnText}>Save</Text>}
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </Modal>
-  );
-};
-
 /* =========================================================
    MAIN SCREEN
    ========================================================= */
@@ -304,6 +197,21 @@ export default function ProfileScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { selectedRestaurant } = useRestaurant();
   const scrollY = useRef(new Animated.Value(0)).current;
+  // The profile card overlaps the hero photo at rest (negative marginTop),
+  // but once stickyHeaderIndices docks it at the top of the screen during
+  // scroll, that same offset would push its top edge off-screen and clip it.
+  // Device-independent: cancels the sticky container's own insets-aware
+  // paddingTop, then pulls up a further fixed amount for the overlap.
+  const cardOverlap = (insets.top > 0 ? insets.top : 0) + scale(16) + scale(22);
+  // Separate, JS-driven (non-native) value for that margin. marginTop affects
+  // layout - so the content below it flows right after with no gap - unlike
+  // a transform, which only shifts the card visually and leaves its original
+  // layout space (and thus a gap) behind. It's kept on its own Animated.Value
+  // (not derived from the native-driven scrollY) because native-driven and
+  // JS-driven animations can't share one value; a scroll listener below
+  // toggles it between -cardOverlap and 0 as the card docks/undocks.
+  const cardMarginAnim = useRef(new Animated.Value(-cardOverlap)).current;
+  const isDockedRef = useRef(false);
   const [user, setUser] = useState(null);
   const [hotels, setHotels] = useState([]);
   const [reviews, setReviews] = useState([]);
@@ -311,10 +219,15 @@ export default function ProfileScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
-  const [notificationModalVisible, setNotificationModalVisible] = useState(false);
-  const [notificationSettings, setNotificationSettings] = useState({});
+  const [pushEnabled, setPushEnabled] = useState(true);
+  const [pushSaving, setPushSaving] = useState(false);
   const [cartCount, setCartCount] = useState(0);
   const [menuVisible, setMenuVisible] = useState(false);
+  // Status bar icons need to be light while the colored hero image is behind
+  // them, but dark once the white sticky card docks at the top and covers
+  // that area - otherwise the docked-card state has invisible white-on-white
+  // icons/clock.
+  const [darkStatusBar, setDarkStatusBar] = useState(false);
 
   const calculateCartCount = useCallback(async () => {
     try {
@@ -395,6 +308,30 @@ export default function ProfileScreen({ navigation }) {
   useEffect(() => { const t = setTimeout(() => fetchProfile(), 650); return () => clearTimeout(t); }, [fetchProfile]);
   const onRefresh = () => { setRefreshing(true); fetchProfile(); };
 
+  useEffect(() => {
+    (async () => {
+      try {
+        const response = await api.get('/notifications/preferences');
+        if (response.data.ok && typeof response.data.data?.enablePush === 'boolean') {
+          setPushEnabled(response.data.data.enablePush);
+        }
+      } catch (error) { console.error('Fetch notification preferences error:', error); }
+    })();
+  }, []);
+
+  const togglePush = async () => {
+    const next = !pushEnabled;
+    setPushEnabled(next);
+    setPushSaving(true);
+    try {
+      const response = await api.patch('/notifications/preferences', { enablePush: next });
+      if (!response.data.ok) { setPushEnabled(!next); AppAlert.alert('Error', response.data.error || 'Failed to update'); }
+    } catch (error) {
+      setPushEnabled(!next);
+      AppAlert.alert('Error', 'Failed to update notification preferences');
+    } finally { setPushSaving(false); }
+  };
+
   const handleLogout = async () => {
     try {
       const provider = await AsyncStorage.getItem('authProvider');
@@ -445,8 +382,8 @@ export default function ProfileScreen({ navigation }) {
     });
   };
 
-  const SettingRow = ({ icon, iconColor, iconBg, title, subtitle, onPress, last, danger }) => (
-    <TouchableOpacity activeOpacity={0.55} onPress={onPress}
+  const SettingRow = ({ icon, iconColor, iconBg, title, subtitle, onPress, last, danger, right }) => (
+    <TouchableOpacity activeOpacity={onPress ? 0.55 : 1} onPress={onPress} disabled={!onPress}
       style={[st.settingRow, last && { borderBottomWidth: 0 }]}>
       <View style={st.settingRowLeft}>
         <LinearGradient colors={iconBg} style={st.settingIcon}>
@@ -457,16 +394,33 @@ export default function ProfileScreen({ navigation }) {
           {subtitle ? <Text style={st.settingSub}>{subtitle}</Text> : null}
         </View>
       </View>
-      <Icon name="chevron-forward" size={scale(18)} color={danger || '#CBD5E1'} />
+      {right ?? <Icon name="chevron-forward" size={scale(18)} color={danger || '#CBD5E1'} />}
     </TouchableOpacity>
   );
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+      <StatusBar barStyle={darkStatusBar ? 'dark-content' : 'light-content'} backgroundColor={darkStatusBar ? C.card : C.primary} />
 
       <Animated.ScrollView
-        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          {
+            useNativeDriver: true,
+            listener: (e) => {
+              const shouldDock = e.nativeEvent.contentOffset.y > HERO_H - 40;
+              setDarkStatusBar((prev) => (prev === shouldDock ? prev : shouldDock));
+              if (shouldDock !== isDockedRef.current) {
+                isDockedRef.current = shouldDock;
+                Animated.timing(cardMarginAnim, {
+                  toValue: shouldDock ? 0 : -cardOverlap,
+                  duration: 180,
+                  useNativeDriver: false,
+                }).start();
+              }
+            },
+          }
+        )}
         scrollEventThrottle={16}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} tintColor={C.primary} progressViewOffset={HERO_H} />}
         contentContainerStyle={{ paddingBottom: insets.bottom + scale(120) }}
@@ -530,14 +484,18 @@ export default function ProfileScreen({ navigation }) {
 
         {/* ===== 1: STICKY PROFILE CARD ===== */}
         <View style={[st.stickyContainer, { paddingTop: (insets.top > 0 ? insets.top : 0) + scale(16) }]}>
-          {/* Profile Info */}
-          <View style={st.profileCard}>
+          {/* Profile Info — marginTop overlaps the hero photo at rest, then
+              animates back to 0 once stickyHeaderIndices docks this section
+              at the top, so the docked card isn't clipped (see cardMarginAnim
+              above). Using margin (not transform) also keeps the content
+              below flowing right after the card instead of leaving a gap. */}
+          <Animated.View style={[st.profileCard, { marginTop: cardMarginAnim }]}>
             <View style={st.profileTop}>
               <LinearGradient colors={[C.primary, C.primaryDark]} style={st.avatar}>
                 <Text style={st.avatarText}>{initial}</Text>
               </LinearGradient>
-              <View style={{ flex: 1, marginLeft: scale(10) }}>
-                <Text style={st.pName}>{user?.name ?? '-'}</Text>
+              <View style={{ flex: 1, marginLeft: scale(10), marginRight: scale(28) }}>
+                <Text style={st.pName} numberOfLines={1}>{user?.name ?? '-'}</Text>
                 <View style={st.pInfoRow}>
                   <Icon name="mail-outline" size={scale(10.5)} color={C.muted} />
                   <Text style={st.pInfoText} numberOfLines={1}>{user?.email ?? '-'}</Text>
@@ -591,7 +549,7 @@ export default function ProfileScreen({ navigation }) {
                 </React.Fragment>
               ))}
             </View>
-          </View>
+          </Animated.View>
         </View>
 
         {/* ===== FSSAI & REFERRAL ===== */}
@@ -712,17 +670,13 @@ export default function ProfileScreen({ navigation }) {
           </>
         )}
 
-        {/* ===== QUICK ACCESS ===== */}
-        <View style={st.secHeader}><Text style={st.secTitle}>Quick Access</Text></View>
+        {/* ===== SETTINGS (includes the single quick-access shortcut -
+            a whole extra section header for one row wasn't worth it) ===== */}
+        <View style={st.secHeader}><Text style={st.secTitle}>Settings</Text></View>
         <View style={st.settingsCard}>
           <SettingRow icon="construct" iconColor="#3B82F6" iconBg={['#EFF6FF', '#DBEAFE']}
             title="My Equipment" subtitle="Manage kitchen equipment"
-            onPress={() => navigation.navigate('MyEquipment')} last />
-        </View>
-
-        {/* ===== SETTINGS ===== */}
-        <View style={st.secHeader}><Text style={st.secTitle}>Settings</Text></View>
-        <View style={st.settingsCard}>
+            onPress={() => navigation.navigate('MyEquipment')} />
           <SettingRow icon="people" iconColor="#8B5CF6" iconBg={['#F3E8FF', '#EDE9FE']}
             title="Team Management" subtitle="Invite & manage members"
             onPress={() => navigation.navigate('TeamManagement')} />
@@ -730,8 +684,14 @@ export default function ProfileScreen({ navigation }) {
             title="Change Password" subtitle="Update account password"
             onPress={() => setPasswordModalVisible(true)} />
           <SettingRow icon="notifications" iconColor="#0EA5E9" iconBg={['#E0F2FE', '#BAE6FD']}
-            title="Notification Settings" subtitle="Manage preferences"
-            onPress={() => setNotificationModalVisible(true)} last />
+            title="Push Notifications" subtitle="Instant alerts on this device"
+            last
+            right={
+              pushSaving
+                ? <ActivityIndicator size="small" color={C.primary} />
+                : <Switch value={pushEnabled} onValueChange={togglePush}
+                    trackColor={{ false: C.border, true: '#FFD0D0' }} thumbColor={pushEnabled ? C.primary : '#f4f3f4'} />
+            } />
         </View>
 
         {/* ===== ACCOUNT ===== */}
@@ -749,8 +709,6 @@ export default function ProfileScreen({ navigation }) {
       {/* MODALS */}
       <DeleteAccountModal visible={deleteModalVisible} onClose={() => setDeleteModalVisible(false)} user={user} />
       <PasswordChangeModal visible={passwordModalVisible} onClose={() => setPasswordModalVisible(false)} />
-      <NotificationSettingsModal visible={notificationModalVisible}
-        onClose={() => setNotificationModalVisible(false)} settings={notificationSettings} onSave={setNotificationSettings} />
 
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
       <KniBottomNav navigation={navigation} active="profile" cartCount={cartCount} notifCount={0} />
@@ -778,7 +736,7 @@ function SkeletonProfileView({ insetsBottom = 0 }) {
       <ScrollView contentContainerStyle={{ paddingBottom: insetsBottom + 120 }} showsVerticalScrollIndicator={false}>
         <Animated.View style={{ height: HERO_H, backgroundColor: '#CBD5E1', opacity: pulse }} />
         <View style={st.stickyContainer}>
-          <View style={st.profileCard}>
+          <View style={[st.profileCard, { marginTop: scale(-30) }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <B w={60} h={60} r={20} />
               <View style={{ flex: 1, marginLeft: scale(14) }}>
@@ -846,7 +804,7 @@ const st = StyleSheet.create({
   blobA: { position: 'absolute', width: scale(180), height: scale(180), borderRadius: scale(90), top: scale(-40), left: scale(-40) },
   blobB: { position: 'absolute', width: scale(240), height: scale(240), borderRadius: scale(120), bottom: scale(-80), right: scale(-60) },
   heroBottomFade: { position: 'absolute', left: 0, right: 0, bottom: 0, height: scale(120) },
-  heroContent: { position: 'absolute', left: scale(20), right: scale(20), bottom: scale(38) },
+  heroContent: { position: 'absolute', left: scale(20), right: scale(20), bottom: scale(34) },
   heroWelcome: { color: 'rgba(255,255,255,0.8)', fontSize: moderateScale(14), fontWeight: '600', marginBottom: scale(4) },
   heroName: { color: '#fff', fontSize: moderateScale(28), fontWeight: '900', letterSpacing: -0.5, marginBottom: scale(10) },
   heroTagRow: { flexDirection: 'row', gap: scale(8) },
@@ -866,7 +824,12 @@ const st = StyleSheet.create({
     backgroundColor: C.bg, paddingTop: 0,
   },
   profileCard: {
-    backgroundColor: '#fff', borderRadius: scale(14), marginHorizontal: scale(16), marginTop: scale(-30),
+    // No marginTop here - the main render overlaps the hero via an animated
+    // marginTop (see cardMarginAnim) instead of a static one, so it can
+    // animate back to 0 once stickyHeaderIndices docks the card and avoid
+    // clipping it. The loading skeleton (which never scrolls/docks) applies
+    // its own flat inline marginTop where this style is used.
+    backgroundColor: '#fff', borderRadius: scale(14), marginHorizontal: scale(16),
     padding: scale(10),
     shadowColor: '#000', shadowOffset: { width: 0, height: scale(8) }, shadowOpacity: 0.1, shadowRadius: scale(16), elevation: 8,
     borderWidth: 1, borderColor: '#EEF2F7',
@@ -1016,12 +979,3 @@ const pwS = StyleSheet.create({
   saveBtnText: { fontSize: moderateScale(14), fontWeight: '700', color: '#fff' },
 });
 
-/* Notification modal specific */
-const notifS = StyleSheet.create({
-  secTitle: { fontSize: moderateScale(14), fontWeight: '800', color: C.ink, marginBottom: scale(12), marginTop: scale(8) },
-  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F8FAFC', padding: scale(14), borderRadius: scale(14), marginBottom: scale(10), borderWidth: 1, borderColor: '#E5E7EB' },
-  rowLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  rowIcon: { width: scale(38), height: scale(38), borderRadius: scale(11), backgroundColor: '#FFE8E8', alignItems: 'center', justifyContent: 'center', marginRight: scale(12) },
-  rowLabel: { fontSize: moderateScale(14), fontWeight: '700', color: C.ink },
-  rowDesc: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(2) },
-});

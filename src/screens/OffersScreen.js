@@ -4,12 +4,12 @@
  * ============================================================================
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  RefreshControl, ActivityIndicator, StatusBar,
+  RefreshControl, StatusBar, Animated,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { api } from '../api/client';
@@ -28,12 +28,49 @@ const C = {
 
 const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
 
+function SkeletonOffers({ pulse }) {
+  return (
+    <View style={styles.listContent}>
+      {[1, 2, 3, 4].map(i => (
+        <View key={i} style={styles.offerCard}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardHeaderLeft}>
+              <Animated.View style={[styles.iconBox, styles.skelFill, { opacity: pulse }]} />
+              <View style={styles.skelTextCol}>
+                <Animated.View style={[styles.skelLine, styles.skelLineWide, { opacity: pulse }]} />
+                <Animated.View style={[styles.skelLine, styles.skelLineSmall, styles.skelLineMed, { opacity: pulse }]} />
+              </View>
+            </View>
+            <Animated.View style={[styles.skelDiscount, { opacity: pulse }]} />
+          </View>
+          <View style={styles.dateRow}>
+            <Animated.View style={[styles.skelLine, styles.skelLineSmall, styles.skelLineWide, { opacity: pulse }]} />
+          </View>
+          <Animated.View style={[styles.skelBadge, { opacity: pulse }]} />
+        </View>
+      ))}
+    </View>
+  );
+}
+
 export default function OffersScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const { selectedRestaurantId: selectedRestaurant } = useRestaurant();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [offers, setOffers] = useState([]);
   const [menuVisible, setMenuVisible] = useState(false);
+
+  const pulse = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
+      Animated.timing(pulse, { toValue: 0.4, duration: 800, useNativeDriver: false }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
 
   useFocusEffect(
     useCallback(() => {
@@ -112,10 +149,12 @@ export default function OffersScreen({ navigation }) {
 
   if (loading && !refreshing) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView style={styles.container} edges={['left', 'right']}>
         <StatusBar barStyle="light-content" backgroundColor={C.primaryDark} />
         <LinearGradient colors={[C.primary, C.primaryDark]} style={styles.heroHeader}>
-          <View style={styles.heroContent}>
+          <View style={styles.heroBlobA} pointerEvents="none" />
+          <View style={styles.heroBlobB} pointerEvents="none" />
+          <View style={[styles.heroContent, { paddingTop: insets.top + scale(8) }]}>
             <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
               <Icon name="arrow-back" size={24} color="#fff" />
             </TouchableOpacity>
@@ -124,22 +163,22 @@ export default function OffersScreen({ navigation }) {
               <Icon name="menu" size={24} color="#fff" />
             </TouchableOpacity>
           </View>
+          <Text style={styles.heroSubtitle}>Discounts on service &amp; parts bookings — best one applies automatically</Text>
         </LinearGradient>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={C.primary} />
-          <Text style={styles.loadingText}>Loading offers...</Text>
-        </View>
+        <SkeletonOffers pulse={pulse} />
         <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <StatusBar barStyle="light-content" backgroundColor={C.primaryDark} />
 
       <LinearGradient colors={[C.primary, C.primaryDark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroHeader}>
-        <View style={styles.heroContent}>
+        <View style={styles.heroBlobA} pointerEvents="none" />
+        <View style={styles.heroBlobB} pointerEvents="none" />
+        <View style={[styles.heroContent, { paddingTop: insets.top + scale(8) }]}>
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
             <Icon name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
@@ -178,19 +217,21 @@ export default function OffersScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
 
-  heroHeader: { paddingBottom: scale(20), borderBottomLeftRadius: scale(24), borderBottomRightRadius: scale(24) },
+  heroHeader: { paddingBottom: scale(20), borderBottomLeftRadius: scale(24), borderBottomRightRadius: scale(24), overflow: 'hidden' },
+  heroBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
+  heroBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
   heroContent: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: scale(16), paddingTop: scale(8), paddingBottom: scale(8),
   },
   backBtn: {
-    width: scale(40), height: scale(40), borderRadius: scale(12),
-    backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center',
+    width: scale(40), height: scale(40), borderRadius: scale(14),
+    backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center',
   },
   heroTitle: { fontSize: moderateScale(20), fontWeight: '700', color: '#fff' },
   menuBtn: {
-    width: scale(40), height: scale(40), borderRadius: scale(12),
-    backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center',
+    width: scale(40), height: scale(40), borderRadius: scale(14),
+    backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center',
   },
   heroSubtitle: { fontSize: moderateScale(13), color: 'rgba(255,255,255,0.85)', paddingHorizontal: scale(16) },
 
@@ -215,6 +256,16 @@ const styles = StyleSheet.create({
 
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   loadingText: { fontSize: moderateScale(14), color: C.muted, marginTop: scale(12) },
+
+  // Skeleton loading
+  skelFill: { backgroundColor: '#E2E8F0' },
+  skelTextCol: { flex: 1 },
+  skelLine: { height: scale(11), width: '60%', borderRadius: scale(4), backgroundColor: '#E2E8F0' },
+  skelLineSmall: { height: scale(8), marginTop: scale(6) },
+  skelLineMed: { width: '40%' },
+  skelLineWide: { width: '70%' },
+  skelDiscount: { width: scale(38), height: scale(20), borderRadius: scale(6), backgroundColor: '#E2E8F0' },
+  skelBadge: { width: scale(140), height: scale(20), borderRadius: scale(10), backgroundColor: '#E2E8F0' },
 
   emptyList: { alignItems: 'center', paddingTop: scale(60) },
   emptyIconBox: {

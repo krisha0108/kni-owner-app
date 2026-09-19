@@ -70,11 +70,55 @@ const formatPrice = (price) => {
   return `₹${(price || 0).toLocaleString('en-IN')}`;
 };
 
+function SkeletonMarketplace({ pulse }) {
+  return (
+    <View style={{ paddingTop: scale(14) }}>
+      <View style={{ paddingHorizontal: scale(16) }}>
+        <Animated.View style={[st.skelSearch, { opacity: pulse }]} />
+        <View style={{ flexDirection: 'row', gap: scale(8), marginTop: scale(12) }}>
+          {[1, 2, 3, 4].map(i => (
+            <Animated.View key={i} style={[st.skelChip, { opacity: pulse }]} />
+          ))}
+        </View>
+      </View>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: scale(14) }}>
+        {Array.from({ length: 6 }).map((_, i) => (
+          <View key={i} style={[st.skelProductCard, { marginLeft: i % 2 === 0 ? 16 : 8, marginRight: i % 2 === 1 ? 16 : 8 }]}>
+            <Animated.View style={[st.skelProductImage, { opacity: pulse }]} />
+            <View style={st.skelProductInfo}>
+              <Animated.View style={[st.skelLineWide, { opacity: pulse }]} />
+              <Animated.View style={[st.skelLineTitle2, { opacity: pulse }]} />
+              <View style={st.skelVendorRow}>
+                <Animated.View style={[st.skelVendorDot, { opacity: pulse }]} />
+                <Animated.View style={[st.skelLineNarrow, { opacity: pulse }]} />
+              </View>
+              <Animated.View style={[st.skelPrice, { opacity: pulse }]} />
+            </View>
+            <View style={st.skelCardFooter}>
+              <Animated.View style={[st.skelAddToCartBtn, { opacity: pulse }]} />
+            </View>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 export default function MarketplaceScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const scrollY = useRef(new Animated.Value(0)).current;
   const cartAnimation = useRef(new Animated.Value(1)).current;
+  const pulse = useRef(new Animated.Value(0.4)).current;
   const { can } = usePermissions();
+
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
+      Animated.timing(pulse, { toValue: 0.4, duration: 800, useNativeDriver: false }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
 
   const {
     selectedRestaurant: currentRestaurant,
@@ -601,15 +645,12 @@ export default function MarketplaceScreen({ navigation }) {
   // ==================== LOADING STATE ====================
   if ((loading || restaurantsLoading) && !refreshing) {
     return (
-      <SafeAreaView style={st.container} edges={['top']}>
+      <SafeAreaView style={st.container} edges={['left', 'right']}>
         <StatusBar barStyle="light-content" backgroundColor={C.primary} />
-        <LinearGradient colors={[C.gradient1, C.gradient2]} style={st.loadingHero}>
+        <LinearGradient colors={[C.gradient1, C.gradient2]} style={[st.loadingHero, { paddingTop: insets.top + scale(24) }]}>
           <Text style={st.heroTitle}>Marketplace</Text>
         </LinearGradient>
-        <View style={st.loadingContainer}>
-          <ActivityIndicator size="large" color={C.primary} />
-          <Text style={st.loadingText}>Loading products...</Text>
-        </View>
+        <SkeletonMarketplace pulse={pulse} />
         {renderFloatingCart()}
         <KniBottomNav navigation={navigation} active="request" />
       </SafeAreaView>
@@ -619,9 +660,9 @@ export default function MarketplaceScreen({ navigation }) {
   // ==================== NO RESTAURANT SELECTED ====================
   if (!selectedRestaurantId) {
     return (
-      <SafeAreaView style={st.container} edges={['top']}>
+      <SafeAreaView style={st.container} edges={['left', 'right']}>
         <StatusBar barStyle="light-content" backgroundColor={C.primary} />
-        <LinearGradient colors={[C.gradient1, C.gradient2]} style={st.loadingHero}>
+        <LinearGradient colors={[C.gradient1, C.gradient2]} style={[st.loadingHero, { paddingTop: insets.top + scale(24) }]}>
           <Text style={st.heroTitle}>Marketplace</Text>
         </LinearGradient>
         <View style={st.emptyState}>
@@ -638,7 +679,7 @@ export default function MarketplaceScreen({ navigation }) {
 
   // ==================== MAIN RENDER ====================
   return (
-    <SafeAreaView style={st.container} edges={['top']}>
+    <SafeAreaView style={st.container} edges={['left', 'right']}>
       <StatusBar barStyle="light-content" backgroundColor={C.primary} />
 
       {/* Fixed Hero Header */}
@@ -646,8 +687,10 @@ export default function MarketplaceScreen({ navigation }) {
         colors={[C.gradient1, C.gradient2]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={st.heroSection}
+        style={[st.heroSection, { paddingTop: insets.top + scale(8) }]}
       >
+        <View style={st.heroBlobA} pointerEvents="none" />
+        <View style={st.heroBlobB} pointerEvents="none" />
         <View style={st.heroContent}>
           <View style={st.heroTextContainer}>
             <Text style={st.heroTitle}>Marketplace</Text>
@@ -801,7 +844,10 @@ const st = StyleSheet.create({
     paddingBottom: scale(10),
     borderBottomLeftRadius: scale(20),
     borderBottomRightRadius: scale(20),
+    overflow: 'hidden',
   },
+  heroBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
+  heroBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
   heroContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -828,8 +874,8 @@ const st = StyleSheet.create({
   heroIconBtn: {
     width: scale(32),
     height: scale(32),
-    borderRadius: scale(10),
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: scale(11),
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1210,6 +1256,21 @@ const st = StyleSheet.create({
     fontSize: moderateScale(16),
     color: C.muted,
   },
+
+  // Skeleton
+  skelSearch: { height: scale(44), backgroundColor: '#E2E8F0', borderRadius: scale(12) },
+  skelChip: { width: scale(70), height: scale(28), backgroundColor: '#E2E8F0', borderRadius: scale(16) },
+  skelProductCard: { width: CARD_WIDTH, backgroundColor: C.card, borderRadius: scale(12), marginBottom: scale(12), overflow: 'hidden' },
+  skelProductImage: { width: '100%', height: scale(100), backgroundColor: '#E2E8F0' },
+  skelProductInfo: { padding: scale(10), paddingBottom: scale(6) },
+  skelLineWide: { height: scale(12), width: '85%', backgroundColor: '#E2E8F0', borderRadius: scale(6) },
+  skelLineTitle2: { height: scale(12), width: '55%', backgroundColor: '#E2E8F0', borderRadius: scale(6), marginTop: scale(6) },
+  skelVendorRow: { flexDirection: 'row', alignItems: 'center', gap: scale(4), marginTop: scale(8) },
+  skelVendorDot: { width: scale(10), height: scale(10), borderRadius: scale(5), backgroundColor: '#E2E8F0' },
+  skelLineNarrow: { height: scale(10), width: '45%', backgroundColor: '#E2E8F0', borderRadius: scale(6) },
+  skelCardFooter: { paddingHorizontal: scale(10), paddingBottom: scale(10) },
+  skelAddToCartBtn: { height: scale(30), backgroundColor: '#E2E8F0', borderRadius: scale(8) },
+  skelPrice: { height: scale(16), width: '60%', backgroundColor: '#E2E8F0', borderRadius: scale(6), marginTop: scale(8) },
 
   // Floating Cart
   floatingCart: {

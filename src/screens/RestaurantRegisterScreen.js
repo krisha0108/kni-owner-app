@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  Image, ScrollView, ActivityIndicator
+  Image, ScrollView, ActivityIndicator, StatusBar
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { api } from '../api/client';
@@ -271,6 +271,7 @@ export default function RestaurantRegisterScreen({ navigation }) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: scale(40) + keyboardHeight }} keyboardShouldPersistTaps="handled">
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" />
       {/* Logo */}
       <Image
         source={require('../assets/images/kni-logo.png')}

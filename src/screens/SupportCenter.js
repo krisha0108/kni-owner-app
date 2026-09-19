@@ -1,13 +1,13 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl,
-  ActivityIndicator, Modal, ScrollView, TextInput, Image, Linking, Dimensions,
+  ActivityIndicator, Animated, Modal, ScrollView, TextInput, Linking, Dimensions,
+  StatusBar,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
-import { launchImageLibrary } from 'react-native-image-picker';
-import { api, IMAGE_BASE_URL, uploadFile } from '../api/client';
+import { api } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
 
 import { scale, moderateScale } from '../utils/responsive';
@@ -62,16 +62,9 @@ const FILTER_TABS = [
   { key: 'REJECTED', label: 'Rejected', icon: 'close-circle' },
 ];
 
-const CATEGORY_OPTIONS = ['General', 'Equipment', 'Billing', 'Service', 'Account', 'Other'];
-
 const formatDate = (d) => {
   if (!d) return '-';
   return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-};
-
-const formatDateTime = (d) => {
-  if (!d) return '-';
-  return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 };
 
 const formatTimeAgo = (d) => {
@@ -87,18 +80,40 @@ const formatTimeAgo = (d) => {
   return formatDate(d);
 };
 
-const toStorageUrl = (u) => {
-  if (!u) return '';
-  const s = String(u).trim();
-  if (!s) return '';
-  if (/^https?:\/\//i.test(s) && !/https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i.test(s)) return s;
-  const m = s.match(/\/storage\/(.+)$/);
-  const tail = m ? m[1] : s.replace(/^\/?storage\/?/, '');
-  const base = IMAGE_BASE_URL.replace(/\/$/, '');
-  return `${base}/${tail.replace(/^\/+/, '')}`;
-};
+/* ─── Skeleton ─── */
+function SkeletonTickets({ pulse }) {
+  return (
+    <View style={{ paddingHorizontal: scale(16), paddingTop: scale(14) }}>
+      {[1, 2, 3, 4].map(i => (
+        <View key={i} style={st.itemCard}>
+          <Animated.View style={[st.itemAccent, { backgroundColor: '#E2E8F0' }]} />
+          <View style={st.itemBody}>
+            <View style={st.itemHeaderRow}>
+              <Animated.View style={[st.typeIconBox, { backgroundColor: '#E2E8F0', opacity: pulse }]} />
+              <View style={st.itemHeaderInfo}>
+                <Animated.View style={[st.skelLine, { width: '80%', opacity: pulse }]} />
+                <View style={[st.itemMetaRow, { marginTop: scale(8) }]}>
+                  <Animated.View style={[st.skelChip, { opacity: pulse }]} />
+                  <Animated.View style={[st.skelMeta, { opacity: pulse }]} />
+                </View>
+              </View>
+            </View>
+            <View style={st.itemFooter}>
+              <Animated.View style={[st.skelChip, { opacity: pulse }]} />
+              <Animated.View style={[st.skelMeta, { width: scale(60), opacity: pulse }]} />
+            </View>
+            <View style={st.actionRow}>
+              <Animated.View style={[st.actionButton, { backgroundColor: '#E2E8F0', borderWidth: 0, opacity: pulse }]} />
+            </View>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
 
 export default function SupportCenter({ navigation }) {
+  const insets = useSafeAreaInsets();
   const { can } = usePermissions();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -113,18 +128,16 @@ export default function SupportCenter({ navigation }) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
 
-  const [createModalVisible, setCreateModalVisible] = useState(false);
-  const [formData, setFormData] = useState({ title: '', equipmentName: '', category: 'General', description: '' });
-  const [ticketImageUri, setTicketImageUri] = useState('');
-  const [isCreating, setIsCreating] = useState(false);
-  const [categoryPickerVisible, setCategoryPickerVisible] = useState(false);
+  const pulse = useRef(new Animated.Value(0.4)).current;
 
-  const [selectedTicket, setSelectedTicket] = useState(null);
-  const [detailModalVisible, setDetailModalVisible] = useState(false);
-  const [threads, setThreads] = useState([]);
-  const [newMessage, setNewMessage] = useState('');
-  const [replyImageUri, setReplyImageUri] = useState('');
-  const [isSending, setIsSending] = useState(false);
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
+      Animated.timing(pulse, { toValue: 0.4, duration: 800, useNativeDriver: false }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
 
   const loadTickets = useCallback(async (restaurantId, pageNum = 1, append = false) => {
     if (!restaurantId) return;
@@ -268,92 +281,8 @@ export default function SupportCenter({ navigation }) {
 
   const getStatus = (status) => STATUS_CONFIG[status] || STATUS_CONFIG.PENDING;
 
-  const resetForm = () => { setFormData({ title: '', equipmentName: '', category: 'General', description: '' }); setTicketImageUri(''); };
-
-  const pickTicketImage = async () => {
-    try {
-      const r = await launchImageLibrary({ mediaType: 'photo', quality: 0.85 });
-      if (r?.assets?.[0]?.uri) setTicketImageUri(r.assets[0].uri);
-    } catch (e) { console.error('Image pick error:', e); }
-  };
-
-  const handleCreate = async () => {
-    if (!formData.title || !formData.description) { AppAlert.alert('Error', 'Please fill in title and description'); return; }
-    setIsCreating(true);
-    try {
-      // The ticket endpoint only accepts a JSON body with a photoUrl string,
-      // not a raw file - upload the picked image first (same pattern as
-      // MyEquipmentScreen.js), then send its URL along with the ticket.
-      let photoUrl;
-      if (ticketImageUri) {
-        const uploadForm = new FormData();
-        uploadForm.append('file', { uri: ticketImageUri, type: 'image/jpeg', name: `ticket_${Date.now()}.jpg` });
-        uploadForm.append('folder', 'support-tickets');
-        const { data } = await uploadFile(uploadForm);
-        if (data.ok && data.url) photoUrl = data.url;
-      }
-      await api.post('/owner/support', {
-        restaurantId: currentRestaurant?.id,
-        title: formData.title,
-        equipmentName: formData.equipmentName || undefined,
-        category: formData.category,
-        description: formData.description,
-        photoUrl,
-      });
-      AppAlert.alert('Success', 'Support ticket created successfully');
-      setCreateModalVisible(false);
-      resetForm();
-      loadData(currentRestaurant?.id);
-    } catch (e) {
-      console.error('Create ticket error:', e);
-      AppAlert.alert('Error', e?.response?.data?.error || 'Failed to create ticket');
-    } finally { setIsCreating(false); }
-  };
-
-  const openTicketDetail = async (ticket) => {
-    setSelectedTicket(ticket);
-    setNewMessage('');
-    setReplyImageUri('');
-    setDetailModalVisible(true);
-    try {
-      const response = await api.get(`/owner/support/${ticket.id}`);
-      if (response.data.ok) {
-        setSelectedTicket(response.data.data);
-        setThreads(response.data.data.threads || []);
-      }
-    } catch (e) { console.error('Fetch ticket detail error:', e); }
-  };
-
-  const pickReplyImage = async () => {
-    try {
-      const r = await launchImageLibrary({ mediaType: 'photo', quality: 0.85 });
-      if (r?.assets?.[0]?.uri) setReplyImageUri(r.assets[0].uri);
-    } catch (e) { console.error('Image pick error:', e); }
-  };
-
-  const handleSendMessage = async () => {
-    if (!selectedTicket || (!newMessage.trim() && !replyImageUri)) return;
-    setIsSending(true);
-    try {
-      // The thread endpoint only accepts a JSON body with an imageUrl string,
-      // not a raw file - upload the picked image first, then send its URL.
-      let imageUrl;
-      if (replyImageUri) {
-        const uploadForm = new FormData();
-        uploadForm.append('file', { uri: replyImageUri, type: 'image/jpeg', name: `reply_${Date.now()}.jpg` });
-        uploadForm.append('folder', 'support-tickets');
-        const { data } = await uploadFile(uploadForm);
-        if (data.ok && data.url) imageUrl = data.url;
-      }
-      const res = await api.post(`/owner/support/${selectedTicket.id}/threads`, {
-        message: newMessage || 'Image attached',
-        imageUrl,
-      });
-      if (res.data.ok) { setThreads([...threads, res.data.data]); setNewMessage(''); setReplyImageUri(''); }
-    } catch (e) {
-      console.error('Send message error:', e);
-      AppAlert.alert('Error', 'Failed to send message');
-    } finally { setIsSending(false); }
+  const openTicketDetail = (ticket) => {
+    navigation.navigate('SupportTicketDetail', { ticketId: ticket.id });
   };
 
   const handleDeleteTicket = (ticketId) => {
@@ -373,10 +302,6 @@ export default function SupportCenter({ navigation }) {
   };
 
   const callSupport = () => { Linking.openURL('tel:+919999999999'); };
-
-  const canReply = selectedTicket &&
-    selectedTicket.status !== 'COMPLETED' && selectedTicket.status !== 'REJECTED' &&
-    selectedTicket.status !== 'completed' && selectedTicket.status !== 'rejected';
 
   /* ───── TICKET CARD ───── */
   const renderTicketCard = ({ item }) => {
@@ -460,7 +385,7 @@ export default function SupportCenter({ navigation }) {
         {activeTab !== 'all' ? 'Try changing the filter tab' : 'Create your first support ticket'}
       </Text>
       {can('support:create') && (
-      <TouchableOpacity activeOpacity={0.85} onPress={() => { resetForm(); setCreateModalVisible(true); }}>
+      <TouchableOpacity activeOpacity={0.85} onPress={() => navigation.navigate('CreateSupportTicket', { restaurantId: currentRestaurant?.id })}>
         <LinearGradient colors={[C.primary, C.primaryDark]} style={st.emptyBtn}>
           <Icon name="add-circle" size={scale(18)} color="#fff" />
           <Text style={st.emptyBtnText}>New Ticket</Text>
@@ -492,20 +417,24 @@ export default function SupportCenter({ navigation }) {
   /* ───── LOADING ───── */
   if (loading && !refreshing) {
     return (
-      <SafeAreaView style={st.container}>
-        <LinearGradient colors={[C.primary, C.primaryDark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.header}>
+      <SafeAreaView style={st.container} edges={['left', 'right']}>
+        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <LinearGradient colors={[C.primary, C.primaryDark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[st.header, { paddingTop: insets.top + scale(10) }]}>
+          <View style={st.headerBlobA} pointerEvents="none" />
+          <View style={st.headerBlobB} pointerEvents="none" />
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
             <Icon name="arrow-back" size={scale(18)} color="#fff" />
           </TouchableOpacity>
-          <Text style={st.headerTitle}>Support Center</Text>
-          <View style={{ width: scale(38) }} />
+          <View style={st.headerCenter}>
+            <Text style={st.headerTitle}>Support Center</Text>
+          </View>
+          <TouchableOpacity onPress={callSupport} style={st.backBtn}>
+            <Icon name="call" size={scale(15)} color="#fff" />
+          </TouchableOpacity>
         </LinearGradient>
-        <View style={st.loadingBox}>
-          <LinearGradient colors={['#FEE2E2', '#FECACA']} style={st.loadingCircle}>
-            <ActivityIndicator size="large" color={C.primary} />
-          </LinearGradient>
-          <Text style={st.loadingText}>Loading tickets...</Text>
-        </View>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <SkeletonTickets pulse={pulse} />
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -514,9 +443,12 @@ export default function SupportCenter({ navigation }) {
 
   /* ═══════════════════ MAIN RENDER ═══════════════════ */
   return (
-    <SafeAreaView style={st.container}>
+    <SafeAreaView style={st.container} edges={['left', 'right']}>
+      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
       {/* ─── Gradient Header ─── */}
-      <LinearGradient colors={[C.primary, C.primaryDark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.header}>
+      <LinearGradient colors={[C.primary, C.primaryDark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[st.header, { paddingTop: insets.top + scale(10) }]}>
+        <View style={st.headerBlobA} pointerEvents="none" />
+        <View style={st.headerBlobB} pointerEvents="none" />
         <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
           <Icon name="arrow-back" size={scale(18)} color="#fff" />
         </TouchableOpacity>
@@ -657,319 +589,12 @@ export default function SupportCenter({ navigation }) {
 
       {/* ─── FAB (hide when empty state shows its own button) ─── */}
       {filteredTickets.length > 0 && can('support:create') && (
-        <TouchableOpacity style={st.fabWrap} activeOpacity={0.85} onPress={() => { resetForm(); setCreateModalVisible(true); }}>
+        <TouchableOpacity style={st.fabWrap} activeOpacity={0.85} onPress={() => navigation.navigate('CreateSupportTicket', { restaurantId: currentRestaurant?.id })}>
           <LinearGradient colors={[C.primary, C.primaryDark]} style={st.fab}>
             <Icon name="add" size={scale(28)} color="#fff" />
           </LinearGradient>
         </TouchableOpacity>
       )}
-
-      {/* ═══════════ CREATE TICKET MODAL (Full-screen) ═══════════ */}
-      <Modal visible={createModalVisible} animationType="slide">
-        <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top', 'left', 'right']}>
-          <LinearGradient colors={[C.primary, C.primaryDark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.header}>
-            <TouchableOpacity onPress={() => setCreateModalVisible(false)} style={st.backBtn}>
-              <Icon name="chevron-back" size={scale(20)} color="#fff" />
-            </TouchableOpacity>
-            <Text style={st.headerTitle}>New Ticket</Text>
-            <View style={{ width: scale(38) }} />
-          </LinearGradient>
-
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: scale(20), paddingBottom: scale(100) }} keyboardShouldPersistTaps="handled">
-            <Text style={st.inputLabel}>Title *</Text>
-            <TextInput
-              style={st.input}
-              placeholder="Brief description of your issue"
-              placeholderTextColor={C.muted}
-              value={formData.title}
-              onChangeText={(t) => setFormData({ ...formData, title: t })}
-            />
-
-            <Text style={st.inputLabel}>Category</Text>
-            <TouchableOpacity style={st.pickerInput} onPress={() => setCategoryPickerVisible(true)}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(8) }}>
-                <LinearGradient colors={CATEGORY_CONFIG[formData.category]?.gradient || ['#94A3B8', '#64748B']} style={st.pickerCatIcon}>
-                  <Icon name={CATEGORY_CONFIG[formData.category]?.icon || 'help-circle'} size={scale(14)} color="#fff" />
-                </LinearGradient>
-                <Text style={st.pickerInputText}>{formData.category}</Text>
-              </View>
-              <Icon name="chevron-down" size={scale(18)} color={C.muted} />
-            </TouchableOpacity>
-
-            <Text style={st.inputLabel}>Equipment Name (Optional)</Text>
-            <TextInput
-              style={st.input}
-              placeholder="If related to specific equipment"
-              placeholderTextColor={C.muted}
-              value={formData.equipmentName}
-              onChangeText={(t) => setFormData({ ...formData, equipmentName: t })}
-            />
-
-            <Text style={st.inputLabel}>Description *</Text>
-            <TextInput
-              style={[st.input, st.textArea]}
-              placeholder="Describe your issue in detail..."
-              placeholderTextColor={C.muted}
-              value={formData.description}
-              onChangeText={(t) => setFormData({ ...formData, description: t })}
-              multiline
-              numberOfLines={4}
-            />
-
-            <Text style={st.inputLabel}>Attachment (Optional)</Text>
-            {ticketImageUri ? (
-              <View style={st.imgPreviewWrap}>
-                <Image source={{ uri: ticketImageUri }} style={st.imgPreview} />
-                <TouchableOpacity style={st.removeImgBtn} onPress={() => setTicketImageUri('')}>
-                  <Icon name="close" size={scale(14)} color="#fff" />
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <TouchableOpacity style={st.uploadBtn} onPress={pickTicketImage}>
-                <Icon name="cloud-upload-outline" size={scale(22)} color={C.primary} />
-                <Text style={st.uploadBtnText}>Upload Image</Text>
-              </TouchableOpacity>
-            )}
-          </ScrollView>
-
-          <View style={st.createFooter}>
-            <TouchableOpacity style={st.cancelBtn} onPress={() => setCreateModalVisible(false)}>
-              <Text style={st.cancelBtnText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity activeOpacity={0.85} onPress={handleCreate} disabled={isCreating} style={{ flex: 1 }}>
-              <LinearGradient colors={isCreating ? ['#FCA5A5', '#FCA5A5'] : [C.primary, C.primaryDark]} style={st.submitBtn}>
-                {isCreating ? <ActivityIndicator size="small" color="#fff" /> : (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(8) }}>
-                    <Icon name="send" size={scale(16)} color="#fff" />
-                    <Text style={st.submitBtnText}>Create Ticket</Text>
-                  </View>
-                )}
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
-        </SafeAreaView>
-      </Modal>
-
-      {/* ═══════════ TICKET DETAIL MODAL (Full-screen) ═══════════ */}
-      <Modal visible={detailModalVisible} animationType="slide">
-        <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top', 'left', 'right']}>
-          <LinearGradient colors={[C.primary, C.primaryDark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.header}>
-            <TouchableOpacity onPress={() => setDetailModalVisible(false)} style={st.backBtn}>
-              <Icon name="chevron-back" size={scale(20)} color="#fff" />
-            </TouchableOpacity>
-            <View style={st.headerCenter}>
-              <Text style={st.headerTitle}>Ticket Details</Text>
-              {selectedTicket && (
-                <View style={st.headerStatusPill}>
-                  <Text style={st.headerStatusText}>{getStatus(selectedTicket.status).label}</Text>
-                </View>
-              )}
-            </View>
-            <View style={{ width: scale(38) }} />
-          </LinearGradient>
-
-          {selectedTicket && (() => {
-            const dCat = CATEGORY_CONFIG[selectedTicket.category] || CATEGORY_CONFIG.General;
-            const dSt = getStatus(selectedTicket.status);
-            return (
-              <>
-                <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: scale(16), paddingBottom: canReply ? 90 : 24 }} showsVerticalScrollIndicator={false}>
-                  {/* Ticket Info Card */}
-                  <View style={st.detailCard}>
-                    <LinearGradient colors={dCat.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={st.itemAccent} />
-                    <View style={st.detailCardBody}>
-                      <View style={st.itemHeaderRow}>
-                        <LinearGradient colors={dCat.gradient} style={st.typeIconBox}>
-                          <Icon name={dCat.icon} size={scale(18)} color="#fff" />
-                        </LinearGradient>
-                        <View style={st.itemHeaderInfo}>
-                          <Text style={st.itemTitle}>{selectedTicket.title}</Text>
-                          <View style={st.itemMetaRow}>
-                            <View style={[st.typePill, { backgroundColor: dCat.lightBg }]}>
-                              <Text style={[st.typePillText, { color: dCat.color }]}>{selectedTicket.category}</Text>
-                            </View>
-                            <Text style={st.timeAgoText}>{formatTimeAgo(selectedTicket.createdAt)}</Text>
-                          </View>
-                        </View>
-                      </View>
-
-                      {selectedTicket.equipmentName ? (
-                        <View style={[st.equipmentRow, { marginTop: scale(12) }]}>
-                          <Icon name="hardware-chip-outline" size={scale(13)} color={C.muted} />
-                          <Text style={st.equipmentText}>{selectedTicket.equipmentName}</Text>
-                        </View>
-                      ) : null}
-
-                      <Text style={st.detailDesc}>{selectedTicket.description}</Text>
-
-                      {selectedTicket.photoUrl ? (
-                        <View style={st.detailImgWrap}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(4), marginBottom: scale(8) }}>
-                            <Icon name="image-outline" size={scale(13)} color={C.muted} />
-                            <Text style={{ fontSize: moderateScale(12), color: C.muted, fontWeight: '600' }}>Attachment</Text>
-                          </View>
-                          <Image source={{ uri: toStorageUrl(selectedTicket.photoUrl) }} style={st.detailImg} resizeMode="cover" />
-                        </View>
-                      ) : null}
-
-                      <View style={st.detailFooterRow}>
-                        <View style={[st.statusChip, { backgroundColor: dSt.bg }]}>
-                          <Icon name={dSt.icon} size={scale(13)} color={dSt.color} />
-                          <Text style={[st.statusChipText, { color: dSt.color }]}>{dSt.label}</Text>
-                        </View>
-                        <Text style={st.footerMeta}>#{selectedTicket.id?.slice(0, 8)}</Text>
-                      </View>
-                    </View>
-                  </View>
-
-                  {/* Messages Section */}
-                  <View style={st.msgSectionHeader}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(8) }}>
-                      <Icon name="chatbubbles" size={scale(16)} color={C.ink} />
-                      <Text style={st.msgSectionTitle}>Messages</Text>
-                    </View>
-                    <View style={st.msgCountPill}>
-                      <Text style={st.msgCountText}>{threads.length}</Text>
-                    </View>
-                  </View>
-
-                  {threads.length === 0 ? (
-                    <View style={st.noMsgBox}>
-                      <LinearGradient colors={['#F1F5F9', '#E2E8F0']} style={st.noMsgCircle}>
-                        <Icon name="chatbox-outline" size={scale(28)} color={C.muted} />
-                      </LinearGradient>
-                      <Text style={st.noMsgText}>No messages yet</Text>
-                    </View>
-                  ) : (
-                    threads.map((thread) => (
-                      <View
-                        key={thread.id}
-                        style={[st.threadMsg, thread.isAdmin ? st.threadAdmin : st.threadOwner]}
-                      >
-                        {thread.isAdmin ? (
-                          <LinearGradient colors={['#3B82F6', '#1D4ED8']} style={st.threadAccentLine} />
-                        ) : (
-                          <LinearGradient colors={[C.primary, C.primaryDark]} style={st.threadAccentLine} />
-                        )}
-                        <View style={st.threadInner}>
-                          <View style={st.threadHeader}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(6) }}>
-                              <LinearGradient
-                                colors={thread.isAdmin ? ['#3B82F6', '#1D4ED8'] : [C.primary, C.primaryDark]}
-                                style={st.threadAvatar}
-                              >
-                                <Icon name={thread.isAdmin ? 'headset' : 'person'} size={scale(10)} color="#fff" />
-                              </LinearGradient>
-                              <Text style={st.threadAuthor}>
-                                {thread.user?.name || (thread.isAdmin ? 'Support' : 'You')}
-                              </Text>
-                              {thread.isAdmin && (
-                                <LinearGradient colors={[C.info, '#1D4ED8']} style={st.supportBadge}>
-                                  <Text style={st.supportBadgeText}>Support</Text>
-                                </LinearGradient>
-                              )}
-                            </View>
-                            <Text style={st.threadTime}>{formatDateTime(thread.createdAt)}</Text>
-                          </View>
-                          <Text style={st.threadText}>{thread.message}</Text>
-                          {thread.imageUrl ? (
-                            <Image source={{ uri: toStorageUrl(thread.imageUrl) }} style={st.threadImage} resizeMode="cover" />
-                          ) : null}
-                        </View>
-                      </View>
-                    ))
-                  )}
-                </ScrollView>
-
-                {/* Reply Bar */}
-                {canReply && (
-                  <View style={st.replyBar}>
-                    {replyImageUri ? (
-                      <View style={st.replyImgPreview}>
-                        <Image source={{ uri: replyImageUri }} style={st.replyImg} />
-                        <TouchableOpacity style={st.removeReplyBtn} onPress={() => setReplyImageUri('')}>
-                          <Icon name="close" size={scale(10)} color="#fff" />
-                        </TouchableOpacity>
-                      </View>
-                    ) : null}
-                    <View style={st.replyInputRow}>
-                      <TextInput
-                        style={st.replyInput}
-                        placeholder="Type your message..."
-                        placeholderTextColor={C.muted}
-                        value={newMessage}
-                        onChangeText={setNewMessage}
-                      />
-                      <TouchableOpacity style={st.attachBtn} onPress={pickReplyImage}>
-                        <Icon name="image-outline" size={scale(18)} color={C.primary} />
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        onPress={handleSendMessage}
-                        disabled={isSending || (!newMessage.trim() && !replyImageUri)}
-                        activeOpacity={0.85}
-                      >
-                        <LinearGradient
-                          colors={(!newMessage.trim() && !replyImageUri) ? ['#E2E8F0', '#E2E8F0'] : [C.primary, C.primaryDark]}
-                          style={st.sendBtn}
-                        >
-                          {isSending ? <ActivityIndicator size="small" color="#fff" /> : <Icon name="send" size={scale(16)} color="#fff" />}
-                        </LinearGradient>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                )}
-              </>
-            );
-          })()}
-        </SafeAreaView>
-      </Modal>
-
-      {/* ═══════════ CATEGORY PICKER ═══════════ */}
-      <Modal visible={categoryPickerVisible} animationType="slide" transparent>
-        <View style={st.modalOverlay}>
-          <View style={st.pickerSheet}>
-            <View style={st.modalDragBar} />
-            <View style={st.modalHeaderRow}>
-              <View>
-                <Text style={st.modalTitle}>Select Category</Text>
-                <Text style={st.modalSubtitle}>Choose a category for your ticket</Text>
-              </View>
-              <TouchableOpacity onPress={() => setCategoryPickerVisible(false)} style={st.modalCloseBtn}>
-                <Icon name="close" size={scale(20)} color={C.muted} />
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={st.pickerBody} contentContainerStyle={{ paddingBottom: scale(30) }}>
-              {CATEGORY_OPTIONS.map((cat) => {
-                const isSelected = cat === formData.category;
-                const cfg = CATEGORY_CONFIG[cat] || CATEGORY_CONFIG.General;
-                return (
-                  <TouchableOpacity
-                    key={cat}
-                    style={[st.pickerOption, isSelected && st.pickerOptionSelected]}
-                    onPress={() => { setFormData({ ...formData, category: cat }); setCategoryPickerVisible(false); }}
-                    activeOpacity={0.7}
-                  >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(12) }}>
-                      <LinearGradient
-                        colors={isSelected ? cfg.gradient : [cfg.lightBg, cfg.lightBg]}
-                        style={st.pickerOptionIcon}
-                      >
-                        <Icon name={cfg.icon} size={scale(16)} color={isSelected ? '#fff' : cfg.color} />
-                      </LinearGradient>
-                      <Text style={[st.pickerOptionText, isSelected && { color: cfg.color, fontWeight: '800' }]}>{cat}</Text>
-                    </View>
-                    {isSelected && (
-                      <View style={[st.selectedCheck, { backgroundColor: cfg.color }]}>
-                        <Icon name="checkmark" size={scale(14)} color="#fff" />
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
 
       {/* ═══════════ RESTAURANT PICKER ═══════════ */}
       <Modal visible={restaurantPickerVisible} animationType="slide" transparent>
@@ -1033,13 +658,16 @@ const st = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: scale(16),
-    paddingVertical: scale(9),
+    paddingBottom: scale(16),
+    overflow: 'hidden',
   },
+  headerBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
+  headerBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
   backBtn: {
     width: scale(32),
     height: scale(32),
-    borderRadius: scale(10),
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: scale(11),
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1049,8 +677,8 @@ const st = StyleSheet.create({
     gap: scale(7),
   },
   headerTitle: {
-    fontSize: moderateScale(16),
-    fontWeight: '800',
+    fontSize: moderateScale(18),
+    fontWeight: '900',
     color: '#fff',
   },
   countBadge: {
@@ -1064,20 +692,6 @@ const st = StyleSheet.create({
     fontWeight: '800',
     color: C.primary,
   },
-  headerStatusPill: {
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    paddingHorizontal: scale(10),
-    paddingVertical: scale(3),
-    borderRadius: scale(10),
-    marginTop: scale(2),
-    alignSelf: 'center',
-  },
-  headerStatusText: {
-    fontSize: moderateScale(11),
-    fontWeight: '700',
-    color: '#fff',
-  },
-
   // ─── Loading ───
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   loadingCircle: {
@@ -1089,6 +703,11 @@ const st = StyleSheet.create({
     marginBottom: scale(16),
   },
   loadingText: { fontSize: moderateScale(14), color: C.muted },
+
+  // ─── Skeleton ───
+  skelLine: { height: scale(12), backgroundColor: '#E2E8F0', borderRadius: scale(6) },
+  skelChip: { width: scale(80), height: scale(22), borderRadius: scale(20), backgroundColor: '#E2E8F0' },
+  skelMeta: { width: scale(50), height: scale(14), borderRadius: scale(6), backgroundColor: '#E2E8F0' },
 
   // ─── Restaurant Banner ───
   restaurantBanner: {
@@ -1519,304 +1138,6 @@ const st = StyleSheet.create({
     width: scale(56),
     height: scale(56),
     borderRadius: scale(28),
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  // ─── Create Modal ───
-  createFooter: {
-    flexDirection: 'row',
-    gap: scale(12),
-    paddingHorizontal: scale(20),
-    paddingVertical: scale(14),
-    borderTopWidth: 1,
-    borderTopColor: '#EEF2F7',
-    backgroundColor: C.card,
-  },
-  inputLabel: {
-    fontSize: moderateScale(13),
-    fontWeight: '700',
-    color: C.ink,
-    marginBottom: scale(8),
-    marginTop: scale(16),
-  },
-  input: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: scale(12),
-    paddingHorizontal: scale(16),
-    paddingVertical: scale(13),
-    fontSize: moderateScale(14),
-    color: C.text,
-    borderWidth: 1,
-    borderColor: '#EEF2F7',
-  },
-  textArea: { minHeight: scale(100), textAlignVertical: 'top' },
-  pickerInput: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#F8FAFC',
-    borderRadius: scale(12),
-    paddingHorizontal: scale(16),
-    paddingVertical: scale(13),
-    borderWidth: 1,
-    borderColor: '#EEF2F7',
-  },
-  pickerCatIcon: {
-    width: scale(28),
-    height: scale(28),
-    borderRadius: scale(8),
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pickerInputText: { fontSize: moderateScale(14), color: C.text, fontWeight: '500' },
-  uploadBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: scale(8),
-    paddingVertical: scale(16),
-    borderRadius: scale(14),
-    borderWidth: 1.5,
-    borderColor: '#FECACA',
-    borderStyle: 'dashed',
-    backgroundColor: '#FEF2F2',
-  },
-  uploadBtnText: { fontSize: moderateScale(14), fontWeight: '600', color: C.primary },
-  imgPreviewWrap: { position: 'relative', alignSelf: 'flex-start' },
-  imgPreview: { width: scale(100), height: scale(100), borderRadius: scale(14), borderWidth: 1, borderColor: '#EEF2F7' },
-  removeImgBtn: {
-    position: 'absolute',
-    top: scale(-8),
-    right: scale(-8),
-    width: scale(24),
-    height: scale(24),
-    borderRadius: scale(12),
-    backgroundColor: C.danger,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelBtn: {
-    flex: 1,
-    paddingVertical: scale(14),
-    backgroundColor: '#F1F5F9',
-    borderRadius: scale(12),
-    alignItems: 'center',
-  },
-  cancelBtnText: { fontSize: moderateScale(15), fontWeight: '800', color: C.ink },
-  submitBtn: {
-    paddingVertical: scale(14),
-    borderRadius: scale(12),
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  submitBtnText: { fontSize: moderateScale(15), fontWeight: '800', color: '#fff' },
-
-  // ─── Detail Modal ───
-  detailCard: {
-    backgroundColor: C.card,
-    borderRadius: scale(16),
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: C.border,
-    marginBottom: scale(20),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: scale(2) },
-    shadowOpacity: 0.05,
-    shadowRadius: scale(8),
-    elevation: 2,
-  },
-  detailCardBody: {
-    padding: scale(14),
-  },
-  detailDesc: {
-    fontSize: moderateScale(14),
-    color: C.text,
-    lineHeight: moderateScale(21),
-    marginTop: scale(12),
-    paddingLeft: scale(52),
-  },
-  detailImgWrap: {
-    marginTop: scale(14),
-    paddingLeft: scale(52),
-  },
-  detailImg: {
-    width: '100%',
-    height: scale(160),
-    borderRadius: scale(12),
-  },
-  detailFooterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: scale(14),
-    paddingLeft: scale(52),
-  },
-
-  // ─── Messages ───
-  msgSectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: scale(14),
-  },
-  msgSectionTitle: {
-    fontSize: moderateScale(15),
-    fontWeight: '800',
-    color: C.ink,
-  },
-  msgCountPill: {
-    backgroundColor: '#FEF2F2',
-    paddingHorizontal: scale(10),
-    paddingVertical: scale(3),
-    borderRadius: scale(10),
-  },
-  msgCountText: {
-    fontSize: moderateScale(12),
-    fontWeight: '800',
-    color: C.primary,
-  },
-  noMsgBox: {
-    alignItems: 'center',
-    paddingVertical: scale(30),
-  },
-  noMsgCircle: {
-    width: scale(64),
-    height: scale(64),
-    borderRadius: scale(32),
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: scale(12),
-  },
-  noMsgText: {
-    fontSize: moderateScale(13),
-    color: C.muted,
-  },
-
-  // ─── Thread Messages ───
-  threadMsg: {
-    borderRadius: scale(14),
-    marginBottom: scale(10),
-    overflow: 'hidden',
-    borderWidth: 1,
-  },
-  threadAdmin: {
-    backgroundColor: '#F0F7FF',
-    borderColor: '#DBEAFE',
-    marginLeft: scale(20),
-  },
-  threadOwner: {
-    backgroundColor: '#FEF8F8',
-    borderColor: '#FECACA',
-    marginRight: scale(20),
-  },
-  threadAccentLine: {
-    height: scale(3),
-  },
-  threadInner: {
-    padding: scale(12),
-  },
-  threadHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: scale(8),
-  },
-  threadAvatar: {
-    width: scale(22),
-    height: scale(22),
-    borderRadius: scale(11),
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  threadAuthor: {
-    fontSize: moderateScale(12),
-    fontWeight: '700',
-    color: C.ink,
-  },
-  supportBadge: {
-    paddingHorizontal: scale(6),
-    paddingVertical: scale(2),
-    borderRadius: scale(6),
-  },
-  supportBadgeText: {
-    fontSize: moderateScale(9),
-    fontWeight: '800',
-    color: '#fff',
-  },
-  threadTime: {
-    fontSize: moderateScale(10),
-    color: C.muted,
-  },
-  threadText: {
-    fontSize: moderateScale(13),
-    color: C.text,
-    lineHeight: moderateScale(20),
-  },
-  threadImage: {
-    width: '100%',
-    height: scale(120),
-    borderRadius: scale(10),
-    marginTop: scale(8),
-  },
-
-  // ─── Reply Bar ───
-  replyBar: {
-    paddingHorizontal: scale(16),
-    paddingVertical: scale(10),
-    borderTopWidth: 1,
-    borderTopColor: '#EEF2F7',
-    backgroundColor: C.card,
-  },
-  replyImgPreview: {
-    position: 'relative',
-    alignSelf: 'flex-start',
-    marginBottom: scale(8),
-  },
-  replyImg: {
-    width: scale(56),
-    height: scale(56),
-    borderRadius: scale(10),
-  },
-  removeReplyBtn: {
-    position: 'absolute',
-    top: scale(-5),
-    right: scale(-5),
-    width: scale(18),
-    height: scale(18),
-    borderRadius: scale(9),
-    backgroundColor: C.danger,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  replyInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: scale(8),
-  },
-  replyInput: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-    borderRadius: scale(20),
-    paddingHorizontal: scale(16),
-    paddingVertical: scale(10),
-    fontSize: moderateScale(14),
-    color: C.text,
-    borderWidth: 1,
-    borderColor: '#EEF2F7',
-  },
-  attachBtn: {
-    width: scale(36),
-    height: scale(36),
-    borderRadius: scale(18),
-    backgroundColor: '#FEF2F2',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sendBtn: {
-    width: scale(38),
-    height: scale(38),
-    borderRadius: scale(19),
     alignItems: 'center',
     justifyContent: 'center',
   },

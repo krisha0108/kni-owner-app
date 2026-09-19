@@ -4,7 +4,7 @@
  * ============================================================================
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,13 +13,16 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
+  Animated,
   Modal,
   TextInput,
   ScrollView,
   Platform,
   useWindowDimensions,
+  StatusBar,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { api } from '../api/client';
@@ -36,6 +39,7 @@ import { isStale, markFetched } from '../utils/focusCache';
 // Premium Color Palette
 const C = {
   primary: '#EF3A3A',
+  primaryDark: '#DC2626',
   primaryLight: '#FEE2E2',
   ink: '#1D2254',
   text: '#334155',
@@ -95,7 +99,34 @@ const formatSalary = (item) => {
   return '-';
 };
 
+/* ─── Skeleton ─── */
+function SkeletonStaff({ pulse }) {
+  return (
+    <View style={{ paddingHorizontal: scale(16), paddingTop: scale(12) }}>
+      <Animated.View style={[st.skelStrip, { opacity: pulse }]} />
+      {[1, 2, 3, 4].map(i => (
+        <View key={i} style={st.skelCard}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Animated.View style={[st.skelAvatar, { opacity: pulse }]} />
+            <View style={{ marginLeft: scale(9), flex: 1 }}>
+              <Animated.View style={[st.skelLine, { width: '50%', opacity: pulse }]} />
+              <Animated.View style={[st.skelLine, { width: '30%', marginTop: scale(6), opacity: pulse }]} />
+            </View>
+            <Animated.View style={[st.skelBadge, { opacity: pulse }]} />
+          </View>
+          <View style={{ flexDirection: 'row', marginTop: scale(10) }}>
+            <Animated.View style={[st.skelChip, { opacity: pulse }]} />
+            <Animated.View style={[st.skelChip, { marginLeft: scale(8), opacity: pulse }]} />
+          </View>
+          <Animated.View style={[st.skelActions, { opacity: pulse }]} />
+        </View>
+      ))}
+    </View>
+  );
+}
+
 export default function StaffScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
   const { can } = usePermissions();
@@ -124,6 +155,17 @@ export default function StaffScreen({ navigation }) {
   const [activeStatusTab, setActiveStatusTab] = useState('all');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [modalKey, setModalKey] = useState(0);
+
+  const pulse = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
+      Animated.timing(pulse, { toValue: 0.4, duration: 800, useNativeDriver: false }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
 
   const statusCounts = useMemo(() => {
     const counts = { all: staff.length, ACTIVE: 0, ON_LEAVE: 0, RESIGNED: 0, TERMINATED: 0 };
@@ -334,7 +376,7 @@ export default function StaffScreen({ navigation }) {
         {/* Header */}
         <View style={st.cardHeader}>
           <View style={[st.avatar, { backgroundColor: roleConfig.bg }]}>
-            <Icon name={roleConfig.icon} size={scale(24)} color={roleConfig.color} />
+            <Icon name={roleConfig.icon} size={scale(18)} color={roleConfig.color} />
           </View>
           <View style={st.cardInfo}>
             <Text style={st.cardName}>{item.name}</Text>
@@ -350,13 +392,13 @@ export default function StaffScreen({ navigation }) {
         <View style={st.detailsGrid}>
           <View style={st.detailItem}>
             <View style={st.detailIconBox}>
-              <Icon name="call-outline" size={scale(14)} color={C.muted} />
+              <Icon name="call-outline" size={scale(11)} color={C.muted} />
             </View>
             <Text style={st.detailValue}>{item.phone || '-'}</Text>
           </View>
           <View style={st.detailItem}>
             <View style={st.detailIconBox}>
-              <Icon name="calendar-outline" size={scale(14)} color={C.muted} />
+              <Icon name="calendar-outline" size={scale(11)} color={C.muted} />
             </View>
             <Text style={st.detailValue}>{formatDate(item.joiningDate)}</Text>
           </View>
@@ -365,11 +407,11 @@ export default function StaffScreen({ navigation }) {
         {/* Salary & Type Row */}
         <View style={st.infoRow}>
           <View style={[st.infoChip, { backgroundColor: C.successLight }]}>
-            <Icon name="cash-outline" size={scale(14)} color={C.success} />
+            <Icon name="cash-outline" size={scale(11)} color={C.success} />
             <Text style={[st.infoChipText, { color: C.success }]}>{formatSalary(item)}</Text>
           </View>
           <View style={[st.infoChip, { backgroundColor: typeConfig.bg }]}>
-            <Icon name={typeConfig.icon} size={scale(14)} color={typeConfig.color} />
+            <Icon name={typeConfig.icon} size={scale(11)} color={typeConfig.color} />
             <Text style={[st.infoChipText, { color: typeConfig.color }]}>{typeConfig.label}</Text>
           </View>
         </View>
@@ -378,12 +420,12 @@ export default function StaffScreen({ navigation }) {
         <View style={st.cardActions}>
           {can('staff:update') && (
           <TouchableOpacity style={[st.actionBtn, { backgroundColor: C.infoLight }]} onPress={() => openForm(item)}>
-            <Icon name="pencil" size={scale(16)} color={C.info} />
+            <Icon name="pencil" size={scale(13)} color={C.info} />
             <Text style={[st.actionBtnText, { color: C.info }]}>Edit</Text>
           </TouchableOpacity>
           )}
           <TouchableOpacity style={[st.actionBtn, { backgroundColor: C.bg }]} onPress={() => openActionModal(item)}>
-            <Icon name="ellipsis-horizontal" size={scale(16)} color={C.muted} />
+            <Icon name="ellipsis-horizontal" size={scale(13)} color={C.muted} />
             <Text style={[st.actionBtnText, { color: C.muted }]}>More</Text>
           </TouchableOpacity>
         </View>
@@ -418,7 +460,6 @@ export default function StaffScreen({ navigation }) {
 
   const renderResultsRow = () => (
     <View style={st.resultsRow}>
-      <Text style={st.resultsText}>{filteredStaff.length} Staff Member{filteredStaff.length !== 1 ? 's' : ''}</Text>
       {activeStatusTab !== 'all' && (
         <TouchableOpacity style={st.clearBtn} onPress={() => setActiveStatusTab('all')}>
           <Icon name="close-circle" size={scale(14)} color={C.primary} />
@@ -507,10 +548,13 @@ export default function StaffScreen({ navigation }) {
   // ==================== LOADING STATE ====================
   if ((loading || restaurantsLoading) && !refreshing) {
     return (
-      <SafeAreaView style={st.container}>
-        <View style={st.header}>
+      <SafeAreaView style={st.container} edges={['left', 'right']}>
+        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
+          <View style={st.headerBlobA} pointerEvents="none" />
+          <View style={st.headerBlobB} pointerEvents="none" />
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
-            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
+            <Icon name="arrow-back" size={scale(22)} color="#fff" />
           </TouchableOpacity>
           <View style={st.headerCenter}>
             <Text style={st.headerTitle}>Staff Management</Text>
@@ -518,14 +562,13 @@ export default function StaffScreen({ navigation }) {
           </View>
           <View style={st.headerActions}>
             <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
-              <Icon name="menu" size={scale(20)} color={C.ink} />
+              <Icon name="menu" size={scale(20)} color="#fff" />
             </TouchableOpacity>
           </View>
-        </View>
-        <View style={st.loadingBox}>
-          <ActivityIndicator size="large" color={C.primary} />
-          <Text style={st.loadingText}>Loading staff...</Text>
-        </View>
+        </LinearGradient>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <SkeletonStaff pulse={pulse} />
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -533,10 +576,13 @@ export default function StaffScreen({ navigation }) {
   // ==================== NO RESTAURANT ====================
   if (!hasRestaurants) {
     return (
-      <SafeAreaView style={st.container}>
-        <View style={st.header}>
+      <SafeAreaView style={st.container} edges={['left', 'right']}>
+        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
+          <View style={st.headerBlobA} pointerEvents="none" />
+          <View style={st.headerBlobB} pointerEvents="none" />
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
-            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
+            <Icon name="arrow-back" size={scale(22)} color="#fff" />
           </TouchableOpacity>
           <View style={st.headerCenter}>
             <Text style={st.headerTitle}>Staff Management</Text>
@@ -544,10 +590,10 @@ export default function StaffScreen({ navigation }) {
           </View>
           <View style={st.headerActions}>
             <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
-              <Icon name="menu" size={scale(20)} color={C.ink} />
+              <Icon name="menu" size={scale(20)} color="#fff" />
             </TouchableOpacity>
           </View>
-        </View>
+        </LinearGradient>
         <View style={st.emptyState}>
           <View style={st.emptyIcon}>
             <Icon name="restaurant-outline" size={scale(64)} color={C.muted} />
@@ -561,11 +607,14 @@ export default function StaffScreen({ navigation }) {
 
   // ==================== MAIN RENDER ====================
   return (
-    <SafeAreaView style={st.container}>
+    <SafeAreaView style={st.container} edges={['left', 'right']}>
+      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
       {/* Header */}
-      <View style={st.header}>
+      <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
+        <View style={st.headerBlobA} pointerEvents="none" />
+        <View style={st.headerBlobB} pointerEvents="none" />
         <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
-          <Icon name="arrow-back" size={scale(22)} color={C.ink} />
+          <Icon name="arrow-back" size={scale(22)} color="#fff" />
         </TouchableOpacity>
         <View style={st.headerCenter}>
           <Text style={st.headerTitle}>Staff Management</Text>
@@ -574,14 +623,14 @@ export default function StaffScreen({ navigation }) {
         <View style={st.headerActions}>
           {can('staff:create') && (
           <TouchableOpacity style={st.headerIconBtn} onPress={() => openForm()}>
-            <Icon name="person-add" size={scale(20)} color={C.primary} />
+            <Icon name="person-add" size={scale(20)} color="#fff" />
           </TouchableOpacity>
           )}
           <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
-            <Icon name="menu" size={scale(20)} color={C.ink} />
+            <Icon name="menu" size={scale(20)} color="#fff" />
           </TouchableOpacity>
         </View>
-      </View>
+      </LinearGradient>
 
       {/* Restaurant Selector */}
       <RestaurantSelectorBar />
@@ -849,13 +898,15 @@ const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
 
   // Header
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(16), paddingVertical: scale(12), backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border },
-  backBtn: { width: scale(40), height: scale(40), borderRadius: scale(10), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(16), paddingBottom: scale(12), overflow: 'hidden' },
+  headerBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
+  headerBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
+  backBtn: { width: scale(40), height: scale(40), borderRadius: scale(14), backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
   headerCenter: { flex: 1, marginLeft: scale(12) },
-  headerTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink },
-  headerSubtitle: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(2) },
+  headerTitle: { fontSize: moderateScale(18), fontWeight: '700', color: '#fff' },
+  headerSubtitle: { fontSize: moderateScale(12), color: 'rgba(255,255,255,0.8)', marginTop: scale(2) },
   headerActions: { flexDirection: 'row' },
-  headerIconBtn: { width: scale(40), height: scale(40), borderRadius: scale(10), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', marginLeft: scale(8) },
+  headerIconBtn: { width: scale(40), height: scale(40), borderRadius: scale(14), backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', marginLeft: scale(8) },
 
   // Stats
   // Stats Strip -- one compact non-scrolling row of 3 tiles instead of 3
@@ -877,14 +928,13 @@ const st = StyleSheet.create({
   statsTileLabel: { fontSize: moderateScale(8.5), color: C.muted, marginTop: scale(1), fontWeight: '500' },
 
   // Filters
-  filterContainer: { paddingVertical: scale(7), backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border },
+  filterContainer: { paddingVertical: scale(7), backgroundColor: C.bg },
   filterScroll: { paddingHorizontal: scale(12), gap: scale(6), justifyContent: 'space-between' },
   filterChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(10), paddingVertical: scale(6), borderRadius: scale(16), backgroundColor: C.card, borderWidth: 1.5, borderColor: C.border },
   filterChipText: { fontSize: moderateScale(11.5), fontWeight: '600', color: C.ink, marginLeft: scale(4) },
 
   // Results
-  resultsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: scale(16), paddingVertical: scale(12) },
-  resultsText: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink },
+  resultsRow: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', paddingHorizontal: scale(16), paddingTop: scale(10), paddingBottom: scale(4), minHeight: scale(14) },
   clearBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(10), paddingVertical: scale(6), backgroundColor: C.primaryLight, borderRadius: scale(8) },
   clearBtnText: { fontSize: moderateScale(12), fontWeight: '600', color: C.primary, marginLeft: scale(4) },
 
@@ -893,29 +943,29 @@ const st = StyleSheet.create({
   columnWrapper: { justifyContent: 'space-between' },
 
   // Card
-  card: { backgroundColor: C.card, borderRadius: scale(16), padding: scale(16), marginBottom: scale(12), borderWidth: 1, borderColor: C.border },
+  card: { backgroundColor: C.card, borderRadius: scale(13), padding: scale(11), marginBottom: scale(9), borderWidth: 1, borderColor: C.border },
   cardTablet: { flex: 1, marginHorizontal: scale(6), maxWidth: '48%' },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: scale(12) },
-  avatar: { width: scale(52), height: scale(52), borderRadius: scale(14), alignItems: 'center', justifyContent: 'center' },
-  cardInfo: { flex: 1, marginLeft: scale(12) },
-  cardName: { fontSize: moderateScale(16), fontWeight: '700', color: C.ink },
-  cardRole: { fontSize: moderateScale(13), color: C.muted, marginTop: scale(2) },
-  statusBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(10), paddingVertical: scale(5), borderRadius: scale(20) },
-  statusDot: { width: scale(6), height: scale(6), borderRadius: scale(3), marginRight: scale(6) },
-  statusText: { fontSize: moderateScale(11), fontWeight: '700' },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: scale(9) },
+  avatar: { width: scale(40), height: scale(40), borderRadius: scale(11), alignItems: 'center', justifyContent: 'center' },
+  cardInfo: { flex: 1, marginLeft: scale(9) },
+  cardName: { fontSize: moderateScale(13.5), fontWeight: '700', color: C.ink },
+  cardRole: { fontSize: moderateScale(11), color: C.muted, marginTop: scale(1) },
+  statusBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(8), paddingVertical: scale(4), borderRadius: scale(20) },
+  statusDot: { width: scale(5), height: scale(5), borderRadius: scale(3), marginRight: scale(5) },
+  statusText: { fontSize: moderateScale(9.5), fontWeight: '700' },
 
-  detailsGrid: { flexDirection: 'row', marginBottom: scale(12) },
+  detailsGrid: { flexDirection: 'row', marginBottom: scale(9) },
   detailItem: { flex: 1, flexDirection: 'row', alignItems: 'center' },
-  detailIconBox: { width: scale(28), height: scale(28), borderRadius: scale(8), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', marginRight: scale(8) },
-  detailValue: { fontSize: moderateScale(13), fontWeight: '600', color: C.text },
+  detailIconBox: { width: scale(22), height: scale(22), borderRadius: scale(7), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', marginRight: scale(6) },
+  detailValue: { fontSize: moderateScale(11), fontWeight: '600', color: C.text },
 
-  infoRow: { flexDirection: 'row', marginBottom: scale(14) },
-  infoChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(10), paddingVertical: scale(6), borderRadius: scale(8), marginRight: scale(8) },
-  infoChipText: { fontSize: moderateScale(12), fontWeight: '700', marginLeft: scale(5) },
+  infoRow: { flexDirection: 'row', marginBottom: scale(10) },
+  infoChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(8), paddingVertical: scale(4), borderRadius: scale(7), marginRight: scale(6) },
+  infoChipText: { fontSize: moderateScale(10.5), fontWeight: '700', marginLeft: scale(4) },
 
-  cardActions: { flexDirection: 'row', paddingTop: scale(12), borderTopWidth: 1, borderTopColor: C.border },
-  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: scale(10), borderRadius: scale(10), marginHorizontal: scale(4) },
-  actionBtnText: { fontSize: moderateScale(13), fontWeight: '600', marginLeft: scale(6) },
+  cardActions: { flexDirection: 'row', paddingTop: scale(9), borderTopWidth: 1, borderTopColor: C.border },
+  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: scale(7), borderRadius: scale(9), marginHorizontal: scale(3) },
+  actionBtnText: { fontSize: moderateScale(11), fontWeight: '600', marginLeft: scale(5) },
 
   // Empty & Loading
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
@@ -985,4 +1035,13 @@ const st = StyleSheet.create({
 
   actionCancelBtn: { marginHorizontal: scale(20), marginTop: scale(16), paddingVertical: scale(14), borderRadius: scale(12), backgroundColor: C.bg, alignItems: 'center' },
   actionCancelText: { fontSize: moderateScale(15), fontWeight: '600', color: C.ink },
+
+  // ═══ Skeleton ═══
+  skelStrip: { height: scale(64), backgroundColor: '#E2E8F0', borderRadius: scale(14) },
+  skelCard: { backgroundColor: C.card, borderRadius: scale(13), padding: scale(11), marginTop: scale(12), borderWidth: 1, borderColor: C.border },
+  skelAvatar: { width: scale(40), height: scale(40), borderRadius: scale(11), backgroundColor: '#E2E8F0' },
+  skelLine: { height: scale(11), backgroundColor: '#E2E8F0', borderRadius: scale(6) },
+  skelBadge: { width: scale(60), height: scale(18), borderRadius: scale(20), backgroundColor: '#E2E8F0' },
+  skelChip: { width: scale(90), height: scale(22), borderRadius: scale(7), backgroundColor: '#E2E8F0' },
+  skelActions: { height: scale(32), backgroundColor: '#E2E8F0', borderRadius: scale(9), marginTop: scale(10) },
 });

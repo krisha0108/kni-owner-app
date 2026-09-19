@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,13 +7,16 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
+  Animated,
   Modal,
   TextInput,
   ScrollView,
   Dimensions,
   useWindowDimensions,
+  StatusBar,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { api } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
@@ -28,6 +31,7 @@ import { usePermissions } from '../utils/usePermissions';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const C = {
   primary: '#EF3A3A',
+  primaryDark: '#DC2626',
   ink: '#1D2254',
   text: '#0F172A',
   muted: '#6B7280',
@@ -82,7 +86,43 @@ const formatDate = (dateString) => {
   return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
+/* ─── Skeleton ─── */
+function SkeletonTeam({ pulse }) {
+  return (
+    <View style={{ paddingHorizontal: scale(16), paddingTop: scale(16) }}>
+      {[1, 2, 3].map(i => (
+        <View key={i} style={styles.memberCard}>
+          <View style={styles.memberHeader}>
+            <Animated.View style={[styles.avatarBox, { backgroundColor: '#E2E8F0', opacity: pulse }]} />
+            <View style={styles.memberInfo}>
+              <Animated.View style={[styles.skelLine, { width: '55%', opacity: pulse }]} />
+              <View style={[styles.emailRow, { marginTop: scale(6) }]}>
+                <Animated.View style={[styles.skelLine, { width: '65%', height: scale(10), opacity: pulse }]} />
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.detailsGrid}>
+            {[1, 2, 3, 4].map(j => (
+              <View key={j} style={styles.detailItem}>
+                <Animated.View style={[styles.skelLine, { width: scale(40), height: scale(8), opacity: pulse }]} />
+                <Animated.View style={[styles.skelBadge, { width: scale(70), marginTop: scale(6), opacity: pulse }]} />
+              </View>
+            ))}
+          </View>
+
+          <View style={styles.actionsRow}>
+            <Animated.View style={[styles.actionBtn, { backgroundColor: '#E2E8F0', opacity: pulse }]} />
+            <Animated.View style={[styles.actionBtn, { backgroundColor: '#E2E8F0', opacity: pulse }]} />
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 export default function TeamManagementScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   // RBAC permissions
   const { can } = usePermissions();
   const { height: winHeight } = useWindowDimensions();
@@ -94,37 +134,6 @@ export default function TeamManagementScreen({ navigation }) {
     loading: restaurantsLoading,
     loadRestaurants,
   } = useRestaurant();
-
-  // Access gate: ACCOUNTANT & VIEWER cannot access team management
-  if (!can('team:read')) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
-          </TouchableOpacity>
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Team Management</Text>
-            <Text style={styles.headerSubtitle}>Access Restricted</Text>
-          </View>
-          <View style={styles.headerActions} />
-        </View>
-        <View style={styles.loadingBox}>
-          <View style={[styles.emptyIconBox, { backgroundColor: '#FEF2F2' }]}>
-            <Icon name="lock-closed-outline" size={scale(48)} color={C.danger} />
-          </View>
-          <Text style={styles.emptyTitle}>Access Restricted</Text>
-          <Text style={styles.emptyText}>
-            You don't have permission to view team management. Contact the restaurant owner for access.
-          </Text>
-          <TouchableOpacity style={styles.emptyBtn} onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}>
-            <Icon name="arrow-back-outline" size={scale(18)} color="#fff" />
-            <Text style={styles.emptyBtnText}>Go Back</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -149,8 +158,19 @@ export default function TeamManagementScreen({ navigation }) {
   // Navigation Menu
   const [menuVisible, setMenuVisible] = useState(false);
 
+  const pulse = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
+      Animated.timing(pulse, { toValue: 0.4, duration: 800, useNativeDriver: false }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
+
   const loadData = useCallback(async () => {
-    if (!selectedRestaurantId) { setLoading(false); return; }
+    if (!selectedRestaurantId || !can('team:read')) { setLoading(false); return; }
 
     try {
       setLoading(true);
@@ -164,12 +184,47 @@ export default function TeamManagementScreen({ navigation }) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [selectedRestaurantId]);
+  }, [selectedRestaurantId, can]);
 
   // Load data when restaurant changes
   useEffect(() => {
     loadData();
   }, [selectedRestaurantId, loadData]);
+
+  // Access gate: ACCOUNTANT & VIEWER cannot access team management.
+  // Placed after all hooks above so hook call order never changes between renders.
+  if (!can('team:read')) {
+    return (
+      <SafeAreaView style={styles.container} edges={['left', 'right']}>
+        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <LinearGradient colors={[C.primary, C.primaryDark]} style={[styles.header, { paddingTop: insets.top + scale(12) }]}>
+          <View style={styles.headerBlobA} pointerEvents="none" />
+          <View style={styles.headerBlobB} pointerEvents="none" />
+          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
+            <Icon name="arrow-back" size={scale(22)} color="#fff" />
+          </TouchableOpacity>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>Team Management</Text>
+            <Text style={styles.headerSubtitle}>Access Restricted</Text>
+          </View>
+          <View style={styles.headerActions} />
+        </LinearGradient>
+        <View style={styles.loadingBox}>
+          <View style={[styles.emptyIconBox, { backgroundColor: '#FEF2F2' }]}>
+            <Icon name="lock-closed-outline" size={scale(48)} color={C.danger} />
+          </View>
+          <Text style={styles.emptyTitle}>Access Restricted</Text>
+          <Text style={styles.emptyText}>
+            You don't have permission to view team management. Contact the restaurant owner for access.
+          </Text>
+          <TouchableOpacity style={styles.emptyBtn} onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}>
+            <Icon name="arrow-back-outline" size={scale(18)} color="#fff" />
+            <Text style={styles.emptyBtnText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -379,35 +434,45 @@ export default function TeamManagementScreen({ navigation }) {
   // === LOADING STATE ===
   if ((loading || restaurantsLoading) && !refreshing) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
+      <SafeAreaView style={styles.container} edges={['left', 'right']}>
+        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <LinearGradient colors={[C.primary, C.primaryDark]} style={[styles.header, { paddingTop: insets.top + scale(12) }]}>
+          <View style={styles.headerBlobA} pointerEvents="none" />
+          <View style={styles.headerBlobB} pointerEvents="none" />
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
+            <Icon name="arrow-back" size={scale(22)} color="#fff" />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>Team Management</Text>
             <Text style={styles.headerSubtitle}>Manage team access</Text>
           </View>
           <View style={styles.headerActions}>
+            {can('team:invite') && (
+            <TouchableOpacity onPress={openInviteModal} style={styles.headerIconBtn}>
+              <Icon name="person-add" size={scale(20)} color="#fff" />
+            </TouchableOpacity>
+            )}
             <TouchableOpacity style={styles.headerIconBtn} onPress={() => setMenuVisible(true)}>
-              <Icon name="menu" size={scale(20)} color={C.ink} />
+              <Icon name="menu" size={scale(20)} color="#fff" />
             </TouchableOpacity>
           </View>
-        </View>
-        <View style={styles.loadingBox}>
-          <ActivityIndicator size="large" color={C.primary} />
-          <Text style={styles.loadingText}>Loading team...</Text>
-        </View>
+        </LinearGradient>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <SkeletonTeam pulse={pulse} />
+        </ScrollView>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
+      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
       {/* Header */}
-      <View style={styles.header}>
+      <LinearGradient colors={[C.primary, C.primaryDark]} style={[styles.header, { paddingTop: insets.top + scale(12) }]}>
+        <View style={styles.headerBlobA} pointerEvents="none" />
+        <View style={styles.headerBlobB} pointerEvents="none" />
         <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-          <Icon name="arrow-back" size={scale(22)} color={C.ink} />
+          <Icon name="arrow-back" size={scale(22)} color="#fff" />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>Team Management</Text>
@@ -416,14 +481,14 @@ export default function TeamManagementScreen({ navigation }) {
         <View style={styles.headerActions}>
           {can('team:invite') && (
           <TouchableOpacity onPress={openInviteModal} style={styles.headerIconBtn}>
-            <Icon name="person-add" size={scale(20)} color={C.primary} />
+            <Icon name="person-add" size={scale(20)} color="#fff" />
           </TouchableOpacity>
           )}
           <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.headerIconBtn}>
-            <Icon name="menu" size={scale(20)} color={C.ink} />
+            <Icon name="menu" size={scale(20)} color="#fff" />
           </TouchableOpacity>
         </View>
-      </View>
+      </LinearGradient>
 
       {/* Global Restaurant Selector */}
       <RestaurantSelectorBar />
@@ -680,16 +745,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: scale(16),
-    paddingVertical: scale(12),
-    backgroundColor: C.card,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
+    paddingBottom: scale(12),
+    overflow: 'hidden',
   },
+  headerBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
+  headerBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
   backBtn: {
     width: scale(40),
     height: scale(40),
-    borderRadius: scale(10),
-    backgroundColor: C.bg,
+    borderRadius: scale(14),
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -700,11 +765,11 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: moderateScale(18),
     fontWeight: '700',
-    color: C.ink,
+    color: '#fff',
   },
   headerSubtitle: {
     fontSize: moderateScale(12),
-    color: C.muted,
+    color: 'rgba(255,255,255,0.8)',
     marginTop: scale(2),
   },
   headerActions: {
@@ -713,8 +778,8 @@ const styles = StyleSheet.create({
   headerIconBtn: {
     width: scale(40),
     height: scale(40),
-    borderRadius: scale(10),
-    backgroundColor: C.bg,
+    borderRadius: scale(14),
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: scale(8),
@@ -1116,5 +1181,18 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(12),
     color: C.muted,
     marginTop: scale(2),
+  },
+
+  // ═══ Skeleton ═══
+  skelLine: {
+    height: scale(12),
+    backgroundColor: '#E2E8F0',
+    borderRadius: scale(6),
+  },
+  skelBadge: {
+    width: scale(70),
+    height: scale(22),
+    borderRadius: scale(20),
+    backgroundColor: '#E2E8F0',
   },
 });

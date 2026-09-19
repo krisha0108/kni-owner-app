@@ -4,19 +4,16 @@
  * ============================================================================
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl,
-  ActivityIndicator, Modal, TextInput, ScrollView, Image,
-  StatusBar, useWindowDimensions, Platform, KeyboardAvoidingView, Linking,
+  ActivityIndicator, StatusBar, useWindowDimensions, Platform, Animated,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import Share from 'react-native-share';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { launchImageLibrary } from 'react-native-image-picker';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import RNFS from 'react-native-fs';
-import { api, API_BASE_URL } from '../api/client';
+import { api, downloadAuthenticatedFile } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRestaurant } from '../context/RestaurantContext';
 import { RestaurantSelectorCompact } from '../components/RestaurantSelector';
@@ -77,8 +74,34 @@ const formatDate = (dateStr) => {
   return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
+function SkeletonExpenses({ pulse }) {
+  return (
+    <View style={{ paddingHorizontal: scale(16), paddingTop: scale(10) }}>
+      <Animated.View style={[st.skelSummary, { opacity: pulse }]} />
+      <View style={{ flexDirection: 'row', gap: scale(6), marginTop: scale(14) }}>
+        {[1, 2, 3, 4].map(i => (
+          <Animated.View key={i} style={[st.skelChip, { opacity: pulse }]} />
+        ))}
+      </View>
+      {Array.from({ length: 5 }).map((_, i) => (
+        <View key={i} style={st.skelCard}>
+          <View style={st.cardRow}>
+            <Animated.View style={[st.skelIcon, { opacity: pulse }]} />
+            <View style={st.cardInfo}>
+              <Animated.View style={[st.skelLineWide, { opacity: pulse }]} />
+              <Animated.View style={[st.skelLineNarrow, { opacity: pulse }]} />
+            </View>
+            <Animated.View style={[st.skelAmount, { opacity: pulse }]} />
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 export default function ExpensesScreen({ navigation }) {
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const isTablet = width >= 768;
   const { can } = usePermissions();
   const gridColumns = isTablet ? 2 : 1;
@@ -92,20 +115,21 @@ export default function ExpensesScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [expenses, setExpenses] = useState([]);
   const [page, setPage] = useState(1);
+  const pulse = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
+      Animated.timing(pulse, { toValue: 0.4, duration: 800, useNativeDriver: false }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [menuVisible, setMenuVisible] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [receiptImage, setReceiptImage] = useState(null);
-
-  const [form, setForm] = useState({
-    id: null, category: '', amount: '', description: '',
-    expenseDate: new Date().toISOString().split('T')[0],
-    restaurantId: '', receiptUrl: '',
-  });
+  const [downloadingReceiptId, setDownloadingReceiptId] = useState(null);
 
   // Calculate summary
   const summary = useMemo(() => {
@@ -181,89 +205,26 @@ export default function ExpensesScreen({ navigation }) {
 
   const onRefresh = async () => { setRefreshing(true); setPage(1); setHasMore(true); await loadRestaurants({ force: true }); await loadData(1, false); markFetched(`Expenses-${selectedRestaurant}`); };
 
-  const onDateChange = (event, selectedDate) => {
-    setShowDatePicker(Platform.OS === 'ios');
-    if (selectedDate) {
-      const dateStr = selectedDate.toISOString().split('T')[0];
-      setForm(f => ({ ...f, expenseDate: dateStr }));
-    }
-  };
-
   const openForm = (item = null) => {
-    if (item) {
-      setForm({
-        id: item.id, category: item.category || '',
-        amount: item.amount?.toString() || '',
-        description: item.description || '',
-        expenseDate: item.expenseDate?.split('T')[0] || new Date().toISOString().split('T')[0],
-        restaurantId: item.restaurantId?.toString() || selectedRestaurant?.toString() || '',
-        receiptUrl: item.receiptUrl || '',
-      });
-      setReceiptImage(item.receiptUrl ? { uri: item.receiptUrl } : null);
-    } else {
-      setForm({
-        id: null, category: '', amount: '', description: '',
-        expenseDate: new Date().toISOString().split('T')[0],
-        restaurantId: selectedRestaurant?.toString() || '', receiptUrl: '',
-      });
-      setReceiptImage(null);
-    }
-    setModalVisible(true);
+    navigation.navigate('AddExpense', { restaurantId: selectedRestaurant, expense: item });
   };
 
-  const pickReceipt = () => {
-    launchImageLibrary({ mediaType: 'photo', quality: 0.8, maxWidth: scale(1024), maxHeight: scale(1024) }, (response) => {
-      if (response.assets && response.assets[0]) setReceiptImage(response.assets[0]);
-    });
-  };
-
-  const convertReceiptToBase64 = async () => {
-    if (!receiptImage || !receiptImage.uri || receiptImage.uri.startsWith('http')) {
-      return form.receiptUrl || null;
-    }
+  const downloadReceipt = async (item) => {
+    if (downloadingReceiptId) return;
+    setDownloadingReceiptId(item.id);
     try {
-      const fileUri = receiptImage.uri;
-      const filePath = fileUri.startsWith('file://') ? fileUri.slice(7) : fileUri;
-      const base64Data = await RNFS.readFile(filePath, 'base64');
-      return `data:image/jpeg;base64,${base64Data}`;
+      const path = await downloadAuthenticatedFile(`/owner/expenses/${item.id}/receipt`, `expense-receipt-${item.id}.pdf`);
+      await Share.open({
+        url: Platform.OS === 'ios' ? path : `file://${path}`,
+        title: 'Expense Receipt',
+        type: 'application/pdf',
+        failOnCancel: false,
+      });
     } catch (error) {
-      console.log('Error converting receipt to base64:', error);
-      return null;
-    }
-  };
-
-  const saveExpense = async () => {
-    if (!form.category || !form.amount) {
-      AppAlert.alert('Error', 'Please fill in category and amount');
-      return;
-    }
-    setSaving(true);
-    try {
-      const receiptData = await convertReceiptToBase64();
-      const expenseDateISO = new Date(form.expenseDate).toISOString();
-      const payload = {
-        category: form.category,
-        amount: parseFloat(form.amount),
-        description: form.description || '',
-        expenseDate: expenseDateISO,
-        restaurantId: form.restaurantId,
-      };
-      if (receiptData) payload.receiptUrl = receiptData;
-
-      if (form.id) {
-        await api.put(`/owner/expenses/${form.id}`, payload);
-        AppAlert.alert('Success', 'Expense updated successfully');
-      } else {
-        await api.post('/owner/expenses', payload);
-        AppAlert.alert('Success', 'Expense added successfully');
-      }
-      setModalVisible(false);
-      setReceiptImage(null);
-      loadData();
-    } catch (error) {
-      AppAlert.alert('Error', error.response?.data?.error || 'Failed to save expense');
+      console.error('Download receipt error:', error);
+      AppAlert.alert('Error', 'Failed to generate receipt');
     } finally {
-      setSaving(false);
+      setDownloadingReceiptId(null);
     }
   };
 
@@ -293,7 +254,7 @@ export default function ExpensesScreen({ navigation }) {
         <View style={st.cardRow}>
           {/* Category Icon */}
           <View style={[st.categoryIcon, { backgroundColor: cat.bg }]}>
-            <Icon name={cat.icon} size={scale(24)} color={cat.color} />
+            <Icon name={cat.icon} size={scale(15)} color={cat.color} />
           </View>
 
           {/* Info */}
@@ -301,7 +262,7 @@ export default function ExpensesScreen({ navigation }) {
             <Text style={st.cardTitle}>{cat.label}</Text>
             {item.description && <Text style={st.cardDesc} numberOfLines={2}>{item.description}</Text>}
             <View style={st.cardMeta}>
-              <Icon name="calendar-outline" size={scale(12)} color={C.muted} />
+              <Icon name="calendar-outline" size={scale(10)} color={C.muted} />
               <Text style={st.cardDate}>{formatDate(item.expenseDate)}</Text>
             </View>
           </View>
@@ -315,21 +276,24 @@ export default function ExpensesScreen({ navigation }) {
         {/* Actions */}
         <View style={st.cardActions}>
           <TouchableOpacity
-            style={[st.actionBtn, { backgroundColor: C.warningLight, flex: 0, paddingHorizontal: scale(12) }]}
-            onPress={() => Linking.openURL(`${API_BASE_URL}/owner/expenses/${item.id}/receipt`)}
+            style={[st.actionIconBtn, { backgroundColor: C.warningLight }]}
+            onPress={() => downloadReceipt(item)}
+            disabled={downloadingReceiptId === item.id}
           >
-            <Icon name="document-text-outline" size={scale(16)} color={C.warning} />
+            {downloadingReceiptId === item.id ? (
+              <ActivityIndicator size="small" color={C.warning} />
+            ) : (
+              <Icon name="document-text-outline" size={scale(13)} color={C.warning} />
+            )}
           </TouchableOpacity>
           {can('expenses:update') && (
-          <TouchableOpacity style={[st.actionBtn, { backgroundColor: C.infoLight }]} onPress={() => openForm(item)}>
-            <Icon name="pencil" size={scale(16)} color={C.info} />
-            <Text style={[st.actionText, { color: C.info }]}>Edit</Text>
+          <TouchableOpacity style={[st.actionIconBtn, { backgroundColor: C.infoLight }]} onPress={() => openForm(item)}>
+            <Icon name="pencil" size={scale(13)} color={C.info} />
           </TouchableOpacity>
           )}
           {can('expenses:delete') && (
-          <TouchableOpacity style={[st.actionBtn, { backgroundColor: C.dangerLight }]} onPress={() => deleteExpense(item)}>
-            <Icon name="trash" size={scale(16)} color={C.danger} />
-            <Text style={[st.actionText, { color: C.danger }]}>Delete</Text>
+          <TouchableOpacity style={[st.actionIconBtn, { backgroundColor: C.dangerLight }]} onPress={() => deleteExpense(item)}>
+            <Icon name="trash" size={scale(13)} color={C.danger} />
           </TouchableOpacity>
           )}
         </View>
@@ -392,11 +356,13 @@ export default function ExpensesScreen({ navigation }) {
   // ==================== LOADING STATE ====================
   if ((loading || restaurantsLoading) && !refreshing) {
     return (
-      <SafeAreaView style={st.container} edges={['top']}>
-        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
-        <View style={st.header}>
+      <SafeAreaView style={st.container} edges={['left', 'right']}>
+        <StatusBar barStyle="light-content" backgroundColor={C.gradient1} />
+        <LinearGradient colors={[C.gradient1, C.gradient2]} style={[st.header, { paddingTop: insets.top + scale(9) }]}>
+          <View style={st.headerBlobA} pointerEvents="none" />
+          <View style={st.headerBlobB} pointerEvents="none" />
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.headerBackBtn}>
-            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
+            <Icon name="arrow-back" size={scale(22)} color="#fff" />
           </TouchableOpacity>
           <View style={st.headerCenter}>
             <Text style={st.headerTitle}>Expenses</Text>
@@ -404,14 +370,11 @@ export default function ExpensesScreen({ navigation }) {
           </View>
           <View style={st.headerActions}>
             <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
-              <Icon name="menu" size={scale(20)} color={C.ink} />
+              <Icon name="menu" size={scale(20)} color="#fff" />
             </TouchableOpacity>
           </View>
-        </View>
-        <View style={st.loadingBox}>
-          <ActivityIndicator size="large" color={C.warning} />
-          <Text style={st.loadingText}>Loading expenses...</Text>
-        </View>
+        </LinearGradient>
+        <SkeletonExpenses pulse={pulse} />
         <KniBottomNav navigation={navigation} active="khatabook" />
       </SafeAreaView>
     );
@@ -420,11 +383,13 @@ export default function ExpensesScreen({ navigation }) {
   // ==================== NO RESTAURANT STATE ====================
   if (!hasRestaurants) {
     return (
-      <SafeAreaView style={st.container} edges={['top']}>
-        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
-        <View style={st.header}>
+      <SafeAreaView style={st.container} edges={['left', 'right']}>
+        <StatusBar barStyle="light-content" backgroundColor={C.gradient1} />
+        <LinearGradient colors={[C.gradient1, C.gradient2]} style={[st.header, { paddingTop: insets.top + scale(9) }]}>
+          <View style={st.headerBlobA} pointerEvents="none" />
+          <View style={st.headerBlobB} pointerEvents="none" />
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.headerBackBtn}>
-            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
+            <Icon name="arrow-back" size={scale(22)} color="#fff" />
           </TouchableOpacity>
           <View style={st.headerCenter}>
             <Text style={st.headerTitle}>Expenses</Text>
@@ -432,10 +397,10 @@ export default function ExpensesScreen({ navigation }) {
           </View>
           <View style={st.headerActions}>
             <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
-              <Icon name="menu" size={scale(20)} color={C.ink} />
+              <Icon name="menu" size={scale(20)} color="#fff" />
             </TouchableOpacity>
           </View>
-        </View>
+        </LinearGradient>
         <View style={st.emptyState}>
           <View style={st.emptyIcon}>
             <Icon name="restaurant-outline" size={scale(64)} color={C.muted} />
@@ -450,29 +415,31 @@ export default function ExpensesScreen({ navigation }) {
 
   // ==================== MAIN RENDER ====================
   return (
-    <SafeAreaView style={st.container} edges={['top']}>
-      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+    <SafeAreaView style={st.container} edges={['left', 'right']}>
+      <StatusBar barStyle="light-content" backgroundColor={C.gradient1} />
 
-      {/* White Header */}
-      <View style={st.header}>
+      {/* Gradient Header */}
+      <LinearGradient colors={[C.gradient1, C.gradient2]} style={[st.header, { paddingTop: insets.top + scale(9) }]}>
+        <View style={st.headerBlobA} pointerEvents="none" />
+        <View style={st.headerBlobB} pointerEvents="none" />
         <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.headerBackBtn}>
-          <Icon name="arrow-back" size={scale(22)} color={C.ink} />
+          <Icon name="arrow-back" size={scale(22)} color="#fff" />
         </TouchableOpacity>
         <View style={st.headerCenter}>
           <Text style={st.headerTitle}>Expenses</Text>
-          <RestaurantSelectorCompact style={st.headerRestaurantPill} />
+          <RestaurantSelectorCompact dark style={st.headerRestaurantPill} />
         </View>
         <View style={st.headerActions}>
           {can('expenses:create') && (
           <TouchableOpacity style={st.headerIconBtn} onPress={() => openForm()}>
-            <Icon name="add" size={scale(20)} color={C.primary} />
+            <Icon name="add" size={scale(20)} color="#fff" />
           </TouchableOpacity>
           )}
           <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
-            <Icon name="menu" size={scale(20)} color={C.ink} />
+            <Icon name="menu" size={scale(20)} color="#fff" />
           </TouchableOpacity>
         </View>
-      </View>
+      </LinearGradient>
 
       {/* Fixed Summary, Restaurant Selector & Filters */}
       {renderHeader()}
@@ -511,126 +478,6 @@ export default function ExpensesScreen({ navigation }) {
         removeClippedSubviews={true}
       />
 
-      {/* Add/Edit Modal - Full screen (no transparent) to fix Android scroll */}
-      <Modal visible={modalVisible} animationType="slide" onRequestClose={() => setModalVisible(false)}>
-        <SafeAreaView style={{ flex: 1, backgroundColor: C.card }} edges={['top']}>
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-            {/* Modal Header */}
-            <LinearGradient colors={[C.gradient1, C.gradient2]} style={st.modalHeader}>
-              <Text style={st.modalTitle}>{form.id ? 'Edit Expense' : 'Add Expense'}</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)} style={st.modalClose}>
-                <Icon name="close" size={scale(24)} color="#fff" />
-              </TouchableOpacity>
-            </LinearGradient>
-
-            <ScrollView style={st.modalBody} contentContainerStyle={{ paddingBottom: scale(30) }} showsVerticalScrollIndicator={true} keyboardShouldPersistTaps="handled">
-              {/* Category Selection */}
-              <Text style={st.label}>Category *</Text>
-              <View style={st.categoryGrid}>
-                {CATEGORIES.map(cat => {
-                  const isActive = form.category === cat.value;
-                  return (
-                    <TouchableOpacity
-                      key={cat.value}
-                      style={[st.categoryChip, isActive && { backgroundColor: cat.color, borderColor: cat.color }]}
-                      onPress={() => setForm(f => ({ ...f, category: cat.value }))}
-                    >
-                      <Icon name={cat.icon} size={scale(18)} color={isActive ? '#fff' : cat.color} />
-                      <Text style={[st.categoryChipText, isActive && { color: '#fff' }]}>{cat.label}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              {/* Amount */}
-              <Text style={st.label}>Amount (₹) *</Text>
-              <View style={st.inputRow}>
-                <View style={st.currencyBox}>
-                  <Text style={st.currencyText}>₹</Text>
-                </View>
-                <TextInput
-                  style={st.amountInput}
-                  placeholder="Enter amount"
-                  placeholderTextColor={C.muted}
-                  keyboardType="numeric"
-                  value={form.amount}
-                  onChangeText={v => setForm(f => ({ ...f, amount: v }))}
-                />
-              </View>
-
-              {/* Date */}
-              <Text style={st.label}>Date</Text>
-              <TouchableOpacity style={st.dateBtn} onPress={() => setShowDatePicker(true)}>
-                <Icon name="calendar" size={scale(20)} color={C.warning} />
-                <Text style={st.dateBtnText}>{form.expenseDate ? formatDate(form.expenseDate) : 'Select date'}</Text>
-                <Icon name="chevron-down" size={scale(18)} color={C.muted} />
-              </TouchableOpacity>
-              {showDatePicker && (
-                <DateTimePicker
-                  value={form.expenseDate ? new Date(form.expenseDate) : new Date()}
-                  mode="date"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  onChange={onDateChange}
-                  maximumDate={new Date()}
-                />
-              )}
-
-              {/* Description */}
-              <Text style={st.label}>Description</Text>
-              <TextInput
-                style={st.textArea}
-                placeholder="Add notes about this expense"
-                placeholderTextColor={C.muted}
-                multiline
-                numberOfLines={3}
-                value={form.description}
-                onChangeText={v => setForm(f => ({ ...f, description: v }))}
-              />
-
-              {/* Receipt */}
-              <Text style={st.label}>Receipt (Optional)</Text>
-              {receiptImage ? (
-                <View style={st.receiptPreview}>
-                  <Image source={{ uri: receiptImage.uri }} style={st.receiptImage} resizeMode="cover" />
-                  <TouchableOpacity style={st.receiptRemove} onPress={() => setReceiptImage(null)}>
-                    <Icon name="close" size={scale(16)} color="#fff" />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={st.receiptChange} onPress={pickReceipt}>
-                    <Icon name="camera" size={scale(14)} color={C.warning} />
-                    <Text style={st.receiptChangeText}>Change</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <TouchableOpacity style={st.receiptUpload} onPress={pickReceipt}>
-                  <View style={st.receiptUploadIcon}>
-                    <Icon name="cloud-upload" size={scale(28)} color={C.muted} />
-                  </View>
-                  <Text style={st.receiptUploadText}>Tap to upload receipt</Text>
-                  <Text style={st.receiptUploadHint}>PNG, JPG up to 5MB</Text>
-                </TouchableOpacity>
-              )}
-            </ScrollView>
-
-            {/* Modal Footer */}
-            <View style={st.modalFooter}>
-              <TouchableOpacity style={st.cancelBtn} onPress={() => setModalVisible(false)}>
-                <Text style={st.cancelBtnText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={st.saveBtn} onPress={saveExpense} disabled={saving}>
-                {saving ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <>
-                    <Icon name={form.id ? 'checkmark' : 'add'} size={scale(18)} color="#fff" />
-                    <Text style={st.saveBtnText}>{form.id ? 'Update' : 'Add'}</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
-          </KeyboardAvoidingView>
-        </SafeAreaView>
-      </Modal>
-
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
       <KniBottomNav navigation={navigation} active="khatabook" />
     </SafeAreaView>
@@ -642,14 +489,16 @@ const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
 
   // Header Section
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(16), paddingVertical: scale(9), backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border },
-  headerBackBtn: { width: scale(34), height: scale(34), borderRadius: scale(9), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(16), paddingBottom: scale(9), overflow: 'hidden' },
+  headerBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
+  headerBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
+  headerBackBtn: { width: scale(34), height: scale(34), borderRadius: scale(11), backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
   headerCenter: { flex: 1, marginLeft: scale(12) },
-  headerTitle: { fontSize: moderateScale(17), fontWeight: '700', color: C.ink },
-  headerSubtitle: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(2) },
+  headerTitle: { fontSize: moderateScale(17), fontWeight: '700', color: '#fff' },
+  headerSubtitle: { fontSize: moderateScale(12), color: 'rgba(255,255,255,0.8)', marginTop: scale(2) },
   headerRestaurantPill: { alignSelf: 'flex-start', marginTop: scale(4) },
   headerActions: { flexDirection: 'row' },
-  headerIconBtn: { width: scale(34), height: scale(34), borderRadius: scale(9), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', marginLeft: scale(8) },
+  headerIconBtn: { width: scale(34), height: scale(34), borderRadius: scale(11), backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', marginLeft: scale(8) },
 
   // Hero Section (kept for modal header)
   heroSection: { paddingTop: scale(8), paddingBottom: scale(16), borderBottomLeftRadius: scale(20), borderBottomRightRadius: scale(20) },
@@ -682,24 +531,32 @@ const st = StyleSheet.create({
   columnWrapper: { justifyContent: 'space-between' },
 
   // Card
-  card: { flex: 1, backgroundColor: C.card, borderRadius: scale(16), marginBottom: scale(12), shadowColor: C.shadow, shadowOffset: { width: 0, height: scale(2) }, shadowOpacity: 0.08, shadowRadius: scale(8), elevation: 3, overflow: 'hidden', padding: scale(16) },
-  cardRow: { flexDirection: 'row', alignItems: 'flex-start', gap: scale(12) },
-  categoryIcon: { width: scale(48), height: scale(48), borderRadius: scale(14), alignItems: 'center', justifyContent: 'center' },
+  card: { flex: 1, backgroundColor: C.card, borderRadius: scale(12), marginBottom: scale(8), shadowColor: C.shadow, shadowOffset: { width: 0, height: scale(2) }, shadowOpacity: 0.08, shadowRadius: scale(5), elevation: 3, overflow: 'hidden', padding: scale(9) },
+  cardRow: { flexDirection: 'row', alignItems: 'center', gap: scale(8) },
+  categoryIcon: { width: scale(32), height: scale(32), borderRadius: scale(10), alignItems: 'center', justifyContent: 'center' },
   cardInfo: { flex: 1 },
-  cardTitle: { fontSize: moderateScale(16), fontWeight: '700', color: C.ink },
-  cardDesc: { fontSize: moderateScale(13), color: C.text, marginTop: scale(4) },
-  cardMeta: { flexDirection: 'row', alignItems: 'center', gap: scale(4), marginTop: scale(6) },
-  cardDate: { fontSize: moderateScale(12), color: C.muted },
+  cardTitle: { fontSize: moderateScale(12.5), fontWeight: '700', color: C.ink },
+  cardDesc: { fontSize: moderateScale(10), color: C.text, marginTop: scale(2) },
+  cardMeta: { flexDirection: 'row', alignItems: 'center', gap: scale(3), marginTop: scale(3) },
+  cardDate: { fontSize: moderateScale(9), color: C.muted },
   amountBox: { alignItems: 'flex-end' },
-  amountText: { fontSize: moderateScale(18), fontWeight: '800' },
-  cardActions: { flexDirection: 'row', gap: scale(8), marginTop: scale(14), paddingTop: scale(14), borderTopWidth: 1, borderTopColor: C.border },
-  actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: scale(6), paddingVertical: scale(10), borderRadius: scale(10) },
-  actionText: { fontSize: moderateScale(13), fontWeight: '600' },
+  amountText: { fontSize: moderateScale(13.5), fontWeight: '800' },
+  cardActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: scale(6), marginTop: scale(7), paddingTop: scale(7), borderTopWidth: 1, borderTopColor: C.border },
+  actionIconBtn: { width: scale(28), height: scale(28), borderRadius: scale(8), alignItems: 'center', justifyContent: 'center' },
 
   // Loading & Empty
   loadingHero: { paddingVertical: scale(24), paddingHorizontal: scale(20), borderBottomLeftRadius: scale(20), borderBottomRightRadius: scale(20) },
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   loadingText: { marginTop: scale(16), fontSize: moderateScale(15), color: C.muted },
+
+  // Skeleton
+  skelSummary: { height: scale(78), backgroundColor: '#E2E8F0', borderRadius: scale(14) },
+  skelChip: { flex: 1, height: scale(28), backgroundColor: '#E2E8F0', borderRadius: scale(16) },
+  skelCard: { backgroundColor: C.card, borderRadius: scale(12), marginTop: scale(10), padding: scale(9) },
+  skelIcon: { width: scale(32), height: scale(32), borderRadius: scale(10), backgroundColor: '#E2E8F0' },
+  skelLineWide: { height: scale(12), width: '55%', backgroundColor: '#E2E8F0', borderRadius: scale(6), marginBottom: scale(6) },
+  skelLineNarrow: { height: scale(10), width: '35%', backgroundColor: '#E2E8F0', borderRadius: scale(6) },
+  skelAmount: { width: scale(50), height: scale(14), backgroundColor: '#E2E8F0', borderRadius: scale(6) },
   emptyState: { alignItems: 'center', paddingTop: scale(60), paddingHorizontal: scale(40) },
   emptyIcon: { width: scale(120), height: scale(120), borderRadius: scale(60), backgroundColor: C.border, alignItems: 'center', justifyContent: 'center', marginBottom: scale(20) },
   emptyTitle: { fontSize: moderateScale(20), fontWeight: '700', color: C.ink, marginBottom: scale(8) },
@@ -707,40 +564,4 @@ const st = StyleSheet.create({
   emptyBtn: { flexDirection: 'row', alignItems: 'center', gap: scale(8), marginTop: scale(24), paddingHorizontal: scale(24), paddingVertical: scale(14), backgroundColor: C.warning, borderRadius: scale(14) },
   emptyBtnText: { fontSize: moderateScale(15), fontWeight: '700', color: '#fff' },
 
-  // Modal
-  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: scale(20) },
-  modalTitle: { fontSize: moderateScale(20), fontWeight: '800', color: '#fff' },
-  modalClose: { width: scale(36), height: scale(36), borderRadius: scale(18), backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
-  modalBody: { flex: 1, padding: scale(20) },
-  modalFooter: { flexDirection: 'row', gap: scale(12), padding: scale(20), borderTopWidth: 1, borderTopColor: C.border },
-
-  // Form
-  label: { fontSize: moderateScale(13), fontWeight: '700', color: C.text, marginBottom: scale(10), marginTop: scale(16) },
-  categoryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: scale(10) },
-  categoryChip: { flexDirection: 'row', alignItems: 'center', gap: scale(6), paddingHorizontal: scale(14), paddingVertical: scale(10), borderRadius: scale(12), backgroundColor: C.bg, borderWidth: 1.5, borderColor: C.border },
-  categoryChipText: { fontSize: moderateScale(13), fontWeight: '600', color: C.ink },
-  inputRow: { flexDirection: 'row', alignItems: 'center', borderRadius: scale(12), borderWidth: 1.5, borderColor: C.border, backgroundColor: C.bg, overflow: 'hidden' },
-  currencyBox: { width: scale(48), height: scale(48), backgroundColor: C.warningLight, alignItems: 'center', justifyContent: 'center' },
-  currencyText: { fontSize: moderateScale(18), fontWeight: '700', color: C.warning },
-  amountInput: { flex: 1, paddingHorizontal: scale(14), paddingVertical: scale(12), fontSize: moderateScale(16), fontWeight: '600', color: C.ink },
-  dateBtn: { flexDirection: 'row', alignItems: 'center', gap: scale(10), paddingHorizontal: scale(14), paddingVertical: scale(14), borderRadius: scale(12), borderWidth: 1.5, borderColor: C.border, backgroundColor: C.bg },
-  dateBtnText: { flex: 1, fontSize: moderateScale(14), fontWeight: '600', color: C.ink },
-  textArea: { backgroundColor: C.bg, borderRadius: scale(12), paddingHorizontal: scale(14), paddingVertical: scale(12), fontSize: moderateScale(14), color: C.text, borderWidth: 1.5, borderColor: C.border, minHeight: scale(80), textAlignVertical: 'top' },
-
-  // Receipt
-  receiptUpload: { alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.border, borderStyle: 'dashed', borderRadius: scale(14), paddingVertical: scale(28), backgroundColor: C.bg },
-  receiptUploadIcon: { width: scale(56), height: scale(56), borderRadius: scale(28), backgroundColor: C.card, alignItems: 'center', justifyContent: 'center', marginBottom: scale(10), shadowColor: C.shadow, shadowOffset: { width: 0, height: scale(2) }, shadowOpacity: 0.1, shadowRadius: scale(4), elevation: 2 },
-  receiptUploadText: { fontSize: moderateScale(14), fontWeight: '600', color: C.ink },
-  receiptUploadHint: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(4) },
-  receiptPreview: { position: 'relative', borderRadius: scale(14), overflow: 'hidden' },
-  receiptImage: { width: '100%', height: scale(160), borderRadius: scale(14) },
-  receiptRemove: { position: 'absolute', top: scale(10), right: scale(10), width: scale(32), height: scale(32), borderRadius: scale(16), backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' },
-  receiptChange: { position: 'absolute', bottom: scale(10), right: scale(10), flexDirection: 'row', alignItems: 'center', gap: scale(4), paddingHorizontal: scale(12), paddingVertical: scale(8), borderRadius: scale(20), backgroundColor: '#fff' },
-  receiptChangeText: { fontSize: moderateScale(12), fontWeight: '600', color: C.warning },
-
-  // Buttons
-  cancelBtn: { flex: 1, paddingVertical: scale(14), borderRadius: scale(12), backgroundColor: C.bg, alignItems: 'center' },
-  cancelBtnText: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink },
-  saveBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: scale(8), paddingVertical: scale(14), borderRadius: scale(12), backgroundColor: C.warning },
-  saveBtnText: { fontSize: moderateScale(15), fontWeight: '700', color: '#fff' },
 });

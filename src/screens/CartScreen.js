@@ -1,13 +1,15 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
+  Animated,
+  StatusBar,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
@@ -19,6 +21,7 @@ import NavigationMenu from '../components/NavigationMenu';
 import { scale, moderateScale } from '../utils/responsive';
 const C = {
   primary: '#EF3A3A',
+  primaryDark: '#DC2626',
   ink: '#1D2254',
   text: '#0F172A',
   muted: '#6B7280',
@@ -31,11 +34,61 @@ const C = {
   partColor: '#10B981',
 };
 
+/* ─── Skeleton ─── */
+function SkeletonCart({ pulse }) {
+  return (
+    <View style={{ padding: scale(16) }}>
+      {[1, 2].map(c => (
+        <View key={c} style={styles.categoryCard}>
+          <View style={styles.categoryHeader}>
+            <View style={styles.categoryTitleRow}>
+              <Animated.View style={[styles.skelIconSm, { opacity: pulse }]} />
+              <Animated.View style={[styles.skelLine, { width: scale(90), opacity: pulse }]} />
+            </View>
+            <View style={styles.categoryMeta}>
+              <Animated.View style={[styles.skelLine, { width: scale(50), height: scale(10), opacity: pulse }]} />
+              <Animated.View style={[styles.skelLine, { width: scale(60), marginTop: scale(6), opacity: pulse }]} />
+            </View>
+          </View>
+          <View style={{ paddingHorizontal: scale(12) }}>
+            {[1, 2].map(i => (
+              <View key={i} style={styles.itemRow}>
+                <Animated.View style={[styles.skelItemIcon, { opacity: pulse }]} />
+                <View style={styles.itemInfo}>
+                  <Animated.View style={[styles.skelLine, { width: '60%', opacity: pulse }]} />
+                  <Animated.View style={[styles.skelLine, { width: '30%', height: scale(9), marginTop: scale(6), opacity: pulse }]} />
+                  <Animated.View style={[styles.skelLine, { width: scale(50), marginTop: scale(6), opacity: pulse }]} />
+                </View>
+                <View style={styles.itemActions}>
+                  <Animated.View style={[styles.skelQtyStepper, { opacity: pulse }]} />
+                  <Animated.View style={[styles.skelIconSm, { opacity: pulse }]} />
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 export default function CartScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(null);
   const [menuVisible, setMenuVisible] = useState(false);
+
+  const pulse = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
+      Animated.timing(pulse, { toValue: 0.4, duration: 800, useNativeDriver: false }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
 
   useFocusEffect(
     useCallback(() => {
@@ -306,30 +359,36 @@ export default function CartScreen({ navigation }) {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
+      <SafeAreaView style={styles.container} edges={['left', 'right']}>
+        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <LinearGradient colors={[C.primary, C.primaryDark]} style={[styles.header, { paddingTop: insets.top + scale(12) }]}>
+          <View style={styles.headerBlobA} pointerEvents="none" />
+          <View style={styles.headerBlobB} pointerEvents="none" />
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-            <Icon name="arrow-back" size={scale(24)} color={C.ink} />
+            <Icon name="arrow-back" size={scale(24)} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Cart</Text>
           <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
-            <Icon name="menu" size={scale(22)} color="#1D2254" />
+            <Icon name="menu" size={scale(22)} color="#fff" />
           </TouchableOpacity>
-        </View>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={C.primary} />
-        </View>
+        </LinearGradient>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <SkeletonCart pulse={pulse} />
+        </ScrollView>
         <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
+      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
       {/* Header */}
-      <View style={styles.header}>
+      <LinearGradient colors={[C.primary, C.primaryDark]} style={[styles.header, { paddingTop: insets.top + scale(12) }]}>
+        <View style={styles.headerBlobA} pointerEvents="none" />
+        <View style={styles.headerBlobB} pointerEvents="none" />
         <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-          <Icon name="arrow-back" size={scale(24)} color={C.ink} />
+          <Icon name="arrow-back" size={scale(24)} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Cart ({totalItems})</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -360,10 +419,10 @@ export default function CartScreen({ navigation }) {
             <Icon name="trash-outline" size={scale(20)} color={cart.length > 0 ? C.danger : C.muted} />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
-            <Icon name="menu" size={scale(22)} color="#1D2254" />
+            <Icon name="menu" size={scale(22)} color="#fff" />
           </TouchableOpacity>
         </View>
-      </View>
+      </LinearGradient>
 
       {/* Cart Items by Category */}
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -419,23 +478,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: scale(16),
-    paddingVertical: scale(12),
-    backgroundColor: C.card,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
+    paddingBottom: scale(12),
+    overflow: 'hidden',
   },
+  headerBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
+  headerBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
   backBtn: {
     width: scale(40),
     height: scale(40),
-    borderRadius: scale(12),
-    backgroundColor: C.bg,
+    borderRadius: scale(14),
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerTitle: {
     fontSize: moderateScale(18),
     fontWeight: '700',
-    color: C.ink,
+    color: '#fff',
   },
   loadingContainer: {
     flex: 1,
@@ -630,5 +689,30 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(16),
     fontWeight: '700',
     color: '#FFF',
+  },
+
+  // Skeleton
+  skelItemIcon: {
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(10),
+    backgroundColor: '#E5E7EB',
+  },
+  skelIconSm: {
+    width: scale(22),
+    height: scale(22),
+    borderRadius: scale(6),
+    backgroundColor: '#E5E7EB',
+  },
+  skelQtyStepper: {
+    width: scale(60),
+    height: scale(22),
+    borderRadius: scale(6),
+    backgroundColor: '#E5E7EB',
+  },
+  skelLine: {
+    height: scale(12),
+    backgroundColor: '#E5E7EB',
+    borderRadius: scale(6),
   },
 });

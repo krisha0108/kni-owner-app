@@ -4,7 +4,7 @@
  * ============================================================================
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -19,8 +19,10 @@ import {
   Modal,
   KeyboardAvoidingView,
   Dimensions,
+  Animated,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { api } from '../api/client';
 import KniBottomNav from '../components/KniBottomNav';
@@ -86,7 +88,26 @@ const formatDate = (dateStr) => {
   return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 };
 
+/* ─── Skeleton ─── */
+function SkeletonRequestsList({ pulse }) {
+  return (
+    <View style={st.requestsList}>
+      {Array.from({ length: 3 }).map((_, i) => (
+        <View key={i} style={st.requestCard}>
+          <View style={st.cardHeader}>
+            <Animated.View style={[st.skelBadge, { opacity: pulse }]} />
+            <Animated.View style={[st.skelDate, { opacity: pulse }]} />
+          </View>
+          <Animated.View style={[st.skelTitle, { opacity: pulse }]} />
+          <Animated.View style={[st.skelDesc, { opacity: pulse }]} />
+        </View>
+      ))}
+    </View>
+  );
+}
+
 export default function CategoryRequestScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const { can } = usePermissions();
   const { selectedRestaurantId } = useRestaurant();
   const [categoryName, setCategoryName] = useState('');
@@ -100,6 +121,16 @@ export default function CategoryRequestScreen({ navigation }) {
   const [myRequests, setMyRequests] = useState([]);
   const [loadingRequests, setLoadingRequests] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  const pulse = useRef(new Animated.Value(0.4)).current;
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
+      Animated.timing(pulse, { toValue: 0.4, duration: 800, useNativeDriver: false }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
 
   const loadMyRequests = useCallback(async () => {
     try {
@@ -253,13 +284,15 @@ export default function CategoryRequestScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={st.container} edges={['top']}>
+    <SafeAreaView style={st.container} edges={['left', 'right']}>
       <StatusBar barStyle="light-content" backgroundColor={C.primary} />
 
       {/* Header */}
-      <View style={st.header}>
+      <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
+        <View style={st.headerBlobA} pointerEvents="none" />
+        <View style={st.headerBlobB} pointerEvents="none" />
         <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
-          <Icon name="arrow-back" size={scale(22)} color={C.ink} />
+          <Icon name="arrow-back" size={scale(22)} color="#fff" />
         </TouchableOpacity>
         <View style={st.headerCenter}>
           <Text style={st.headerTitle}>Category Requests</Text>
@@ -272,9 +305,9 @@ export default function CategoryRequestScreen({ navigation }) {
         </TouchableOpacity>
         )}
         <TouchableOpacity style={st.menuBtn} onPress={() => setMenuVisible(true)}>
-          <Icon name="menu" size={scale(20)} color={C.ink} />
+          <Icon name="menu" size={scale(20)} color="#fff" />
         </TouchableOpacity>
-      </View>
+      </LinearGradient>
 
       <ScrollView
         style={st.content}
@@ -303,10 +336,7 @@ export default function CategoryRequestScreen({ navigation }) {
 
         {/* Requests List */}
         {loadingRequests ? (
-          <View style={st.loadingBox}>
-            <ActivityIndicator size="large" color={C.primary} />
-            <Text style={st.loadingText}>Loading requests...</Text>
-          </View>
+          <SkeletonRequestsList pulse={pulse} />
         ) : myRequests.length === 0 ? (
           <View style={st.emptyBox}>
             <Icon name="folder-open-outline" size={scale(48)} color={C.muted} />
@@ -456,25 +486,25 @@ const st = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: scale(16),
-    paddingVertical: scale(12),
-    backgroundColor: C.card,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
+    paddingBottom: scale(12),
+    overflow: 'hidden',
   },
+  headerBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
+  headerBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
   backBtn: {
     width: scale(40),
     height: scale(40),
-    borderRadius: scale(12),
-    backgroundColor: C.bg,
+    borderRadius: scale(14),
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerCenter: { flex: 1, marginLeft: scale(12) },
-  headerTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink },
+  headerTitle: { fontSize: moderateScale(18), fontWeight: '700', color: '#fff' },
   newReqBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: C.primary,
+    backgroundColor: 'rgba(255,255,255,0.15)',
     paddingHorizontal: scale(14),
     paddingVertical: scale(8),
     borderRadius: scale(20),
@@ -484,8 +514,8 @@ const st = StyleSheet.create({
   menuBtn: {
     width: scale(40),
     height: scale(40),
-    borderRadius: scale(12),
-    backgroundColor: C.bg,
+    borderRadius: scale(14),
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -688,4 +718,10 @@ const st = StyleSheet.create({
   },
   submitBtnDisabled: { opacity: 0.5 },
   submitBtnText: { fontSize: moderateScale(15), fontWeight: '700', color: '#FFF', marginLeft: scale(8) },
+
+  // ═══ Skeleton ═══
+  skelBadge: { width: scale(90), height: scale(24), borderRadius: scale(16), backgroundColor: '#E2E8F0' },
+  skelDate: { width: scale(60), height: scale(12), borderRadius: scale(4), backgroundColor: '#E2E8F0' },
+  skelTitle: { width: '60%', height: scale(16), borderRadius: scale(4), backgroundColor: '#E2E8F0', marginBottom: scale(8) },
+  skelDesc: { width: '90%', height: scale(12), borderRadius: scale(4), backgroundColor: '#E2E8F0' },
 });

@@ -9,6 +9,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -128,6 +129,7 @@ export default function TeamAcceptScreen({ navigation, route }) {
   if (!token || error) {
     return (
       <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="transparent" />
         <View style={styles.centerContent}>
           <View style={styles.errorIconContainer}>
             <Icon name="close-circle" size={scale(64)} color={C.danger} />
@@ -150,6 +152,7 @@ export default function TeamAcceptScreen({ navigation, route }) {
   if (isValidating) {
     return (
       <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="transparent" />
         <View style={styles.centerContent}>
           <ActivityIndicator size="large" color={C.primary} />
           <Text style={styles.loadingTitle}>Validating Invitation</Text>
@@ -161,6 +164,7 @@ export default function TeamAcceptScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}

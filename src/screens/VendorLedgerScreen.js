@@ -4,13 +4,14 @@
  * ============================================================================
  */
 
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl,
-  ActivityIndicator, Modal, TextInput, ScrollView, StatusBar,
+  ActivityIndicator, Animated, Modal, TextInput, ScrollView, StatusBar,
   useWindowDimensions, Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { api } from '../api/client';
@@ -25,6 +26,7 @@ import AppAlert from '../utils/AppAlert';
 // Keep original colors - not flashy
 const C = {
   primary: '#EF3A3A',
+  primaryDark: '#DC2626',
   ink: '#1D2254',
   text: '#0F172A',
   muted: '#6B7280',
@@ -69,7 +71,34 @@ const formatDate = (dateStr) => {
   return new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 };
 
+/* ─── Skeleton ─── */
+function SkeletonVendors({ pulse }) {
+  return (
+    <View style={{ paddingHorizontal: scale(16), paddingTop: scale(12) }}>
+      <Animated.View style={[st.skelTabs, { opacity: pulse }]} />
+      {[1, 2, 3, 4].map(i => (
+        <View key={i} style={st.skelCard}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Animated.View style={[st.skelIconBox, { opacity: pulse }]} />
+            <View style={{ marginLeft: scale(10), flex: 1 }}>
+              <Animated.View style={[st.skelLine, { width: '50%', opacity: pulse }]} />
+              <Animated.View style={[st.skelLine, { width: '35%', marginTop: scale(6), opacity: pulse }]} />
+            </View>
+            <Animated.View style={[st.skelBalance, { opacity: pulse }]} />
+          </View>
+          <View style={{ flexDirection: 'row', marginTop: scale(10) }}>
+            <Animated.View style={[st.skelStatBox, { opacity: pulse }]} />
+            <Animated.View style={[st.skelStatBox, { marginLeft: scale(8), opacity: pulse }]} />
+          </View>
+          <Animated.View style={[st.skelFooter, { opacity: pulse }]} />
+        </View>
+      ))}
+    </View>
+  );
+}
+
 export default function VendorLedgerScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
   const { can } = usePermissions();
@@ -102,6 +131,17 @@ export default function VendorLedgerScreen({ navigation }) {
   const [showBillDatePicker, setShowBillDatePicker] = useState(false);
   const [showDueDatePicker, setShowDueDatePicker] = useState(false);
   const [showEntryDatePicker, setShowEntryDatePicker] = useState(false);
+
+  const pulse = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
+      Animated.timing(pulse, { toValue: 0.4, duration: 800, useNativeDriver: false }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
 
   // Date picker handlers
   const onBillDateChange = (event, selectedDate) => {
@@ -235,7 +275,7 @@ export default function VendorLedgerScreen({ navigation }) {
     <View style={[st.vendorCard, isTablet && { marginHorizontal: scale(6) }]}>
       <View style={st.vendorHeader}>
         <View style={st.vendorIconBox}>
-          <Icon name="business" size={scale(22)} color={C.info} />
+          <Icon name="business" size={scale(17)} color={C.info} />
         </View>
         <View style={st.vendorInfo}>
           <Text style={st.vendorName} numberOfLines={1}>{item.vendorName}</Text>
@@ -254,12 +294,12 @@ export default function VendorLedgerScreen({ navigation }) {
 
       <View style={st.vendorStats}>
         <View style={st.statBox}>
-          <Icon name="cart-outline" size={scale(14)} color={C.danger} />
+          <Icon name="cart-outline" size={scale(11)} color={C.danger} />
           <Text style={st.statLabel}>Purchases</Text>
           <Text style={[st.statValue, { color: C.danger }]}>{formatPrice(item.totalPurchases)}</Text>
         </View>
         <View style={st.statBox}>
-          <Icon name="wallet-outline" size={scale(14)} color={C.ok} />
+          <Icon name="wallet-outline" size={scale(11)} color={C.ok} />
           <Text style={st.statLabel}>Payments</Text>
           <Text style={[st.statValue, { color: C.ok }]}>{formatPrice(item.totalPayments)}</Text>
         </View>
@@ -270,11 +310,11 @@ export default function VendorLedgerScreen({ navigation }) {
         {can('vendor-ledger:create') && (
         <View style={st.vendorActions}>
           <TouchableOpacity style={[st.vendorBtn, { backgroundColor: C.dangerLight }]} onPress={() => openEntryModal('PURCHASE', item)}>
-            <Icon name="cart" size={scale(14)} color={C.danger} />
+            <Icon name="cart" size={scale(11)} color={C.danger} />
             <Text style={[st.vendorBtnText, { color: C.danger }]}>Purchase</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[st.vendorBtn, { backgroundColor: C.okLight }]} onPress={() => openEntryModal('PAYMENT', item)}>
-            <Icon name="wallet" size={scale(14)} color={C.ok} />
+            <Icon name="wallet" size={scale(11)} color={C.ok} />
             <Text style={[st.vendorBtnText, { color: C.ok }]}>Payment</Text>
           </TouchableOpacity>
         </View>
@@ -292,7 +332,7 @@ export default function VendorLedgerScreen({ navigation }) {
       <View style={[st.entryCard, isTablet && { marginHorizontal: scale(6) }]}>
         <View style={st.entryHeader}>
           <View style={[st.entryIcon, { backgroundColor: config.bg }]}>
-            <Icon name={config.icon} size={scale(18)} color={config.color} />
+            <Icon name={config.icon} size={scale(14)} color={config.color} />
           </View>
           <View style={st.entryInfo}>
             <Text style={st.entryVendor} numberOfLines={1}>{item.vendorName}</Text>
@@ -374,19 +414,20 @@ export default function VendorLedgerScreen({ navigation }) {
   // ==================== LOADING STATE ====================
   if (loading && !refreshing) {
     return (
-      <SafeAreaView style={st.container} edges={['top']}>
+      <SafeAreaView style={st.container} edges={['left', 'right']}>
         <StatusBar barStyle="light-content" backgroundColor={C.primary} />
-        <View style={st.header}>
+        <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
+          <View style={st.headerBlobA} pointerEvents="none" />
+          <View style={st.headerBlobB} pointerEvents="none" />
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
-            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
+            <Icon name="arrow-back" size={scale(22)} color="#fff" />
           </TouchableOpacity>
           <Text style={st.headerTitle}>Vendor Ledger</Text>
           <View style={{ width: scale(40) }} />
-        </View>
-        <View style={st.loadingBox}>
-          <ActivityIndicator size="large" color={C.primary} />
-          <Text style={st.loadingText}>Loading...</Text>
-        </View>
+        </LinearGradient>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <SkeletonVendors pulse={pulse} />
+        </ScrollView>
         <KniBottomNav navigation={navigation} />
       </SafeAreaView>
     );
@@ -395,15 +436,17 @@ export default function VendorLedgerScreen({ navigation }) {
   // ==================== NO RESTAURANT STATE ====================
   if (!hasRestaurants) {
     return (
-      <SafeAreaView style={st.container} edges={['top']}>
+      <SafeAreaView style={st.container} edges={['left', 'right']}>
         <StatusBar barStyle="light-content" backgroundColor={C.primary} />
-        <View style={st.header}>
+        <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
+          <View style={st.headerBlobA} pointerEvents="none" />
+          <View style={st.headerBlobB} pointerEvents="none" />
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
-            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
+            <Icon name="arrow-back" size={scale(22)} color="#fff" />
           </TouchableOpacity>
           <Text style={st.headerTitle}>Vendor Ledger</Text>
           <View style={{ width: scale(40) }} />
-        </View>
+        </LinearGradient>
         <View style={st.emptyState}>
           <Icon name="business-outline" size={scale(64)} color={C.muted} />
           <Text style={st.emptyTitle}>No Restaurant Found</Text>
@@ -421,13 +464,15 @@ export default function VendorLedgerScreen({ navigation }) {
   const numColumns = isTablet ? 2 : 1;
 
   return (
-    <SafeAreaView style={st.container} edges={['top']}>
+    <SafeAreaView style={st.container} edges={['left', 'right']}>
       <StatusBar barStyle="light-content" backgroundColor={C.primary} />
 
       {/* Header */}
-      <View style={st.header}>
+      <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
+        <View style={st.headerBlobA} pointerEvents="none" />
+        <View style={st.headerBlobB} pointerEvents="none" />
         <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
-          <Icon name="arrow-back" size={scale(22)} color={C.ink} />
+          <Icon name="arrow-back" size={scale(22)} color="#fff" />
         </TouchableOpacity>
         <View style={st.headerCenter}>
           <Text style={st.headerTitle}>Vendor Ledger</Text>
@@ -436,14 +481,14 @@ export default function VendorLedgerScreen({ navigation }) {
         <View style={st.headerActions}>
           {can('vendor-ledger:create') && (
           <TouchableOpacity style={st.headerIconBtn} onPress={() => openEntryModal()}>
-            <Icon name="add" size={scale(20)} color={C.primary} />
+            <Icon name="add" size={scale(20)} color="#fff" />
           </TouchableOpacity>
           )}
           <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
-            <Icon name="menu" size={scale(20)} color={C.ink} />
+            <Icon name="menu" size={scale(20)} color="#fff" />
           </TouchableOpacity>
         </View>
-      </View>
+      </LinearGradient>
 
       {/* Restaurant Selector */}
       <RestaurantSelectorBar />
@@ -514,6 +559,7 @@ export default function VendorLedgerScreen({ navigation }) {
       {/* Add Entry Modal - Full screen (no transparent) to fix Android scroll */}
       <Modal visible={entryModal} animationType="slide" onRequestClose={() => setEntryModal(false)}>
         <SafeAreaView style={{ flex: 1, backgroundColor: C.card }} edges={['top']}>
+            <StatusBar barStyle="dark-content" backgroundColor="transparent" />
             {/* Modal Header */}
             <View style={st.modalHeader}>
               <Text style={st.modalTitle}>Add {getEntryConfig(form.entryType).label}</Text>
@@ -729,13 +775,15 @@ const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
 
   // Header
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(16), paddingVertical: scale(12), backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border },
-  backBtn: { width: scale(40), height: scale(40), borderRadius: scale(10), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(16), paddingBottom: scale(12), overflow: 'hidden' },
+  headerBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
+  headerBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
+  backBtn: { width: scale(40), height: scale(40), borderRadius: scale(14), backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
   headerCenter: { flex: 1, marginLeft: scale(12) },
-  headerTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink },
-  headerSubtitle: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(2) },
+  headerTitle: { fontSize: moderateScale(18), fontWeight: '700', color: '#fff' },
+  headerSubtitle: { fontSize: moderateScale(12), color: 'rgba(255,255,255,0.8)', marginTop: scale(2) },
   headerActions: { flexDirection: 'row' },
-  headerIconBtn: { width: scale(40), height: scale(40), borderRadius: scale(10), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', marginLeft: scale(8) },
+  headerIconBtn: { width: scale(40), height: scale(40), borderRadius: scale(14), backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', marginLeft: scale(8) },
 
   // Summary Strip -- one compact non-scrolling row of 4 tiles
   summaryStrip: {
@@ -790,46 +838,55 @@ const st = StyleSheet.create({
   columnWrapper: { justifyContent: 'space-between' },
 
   // Vendor Card
-  vendorCard: { flex: 1, backgroundColor: C.card, borderRadius: scale(14), padding: scale(14), marginBottom: scale(12), borderWidth: 1, borderColor: C.border },
-  vendorHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: scale(12) },
-  vendorIconBox: { width: scale(44), height: scale(44), borderRadius: scale(12), backgroundColor: C.infoLight, alignItems: 'center', justifyContent: 'center', marginRight: scale(12) },
+  vendorCard: { flex: 1, backgroundColor: C.card, borderRadius: scale(12), padding: scale(10), marginBottom: scale(9), borderWidth: 1, borderColor: C.border },
+  vendorHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: scale(9) },
+  vendorIconBox: { width: scale(34), height: scale(34), borderRadius: scale(10), backgroundColor: C.infoLight, alignItems: 'center', justifyContent: 'center', marginRight: scale(9) },
   vendorInfo: { flex: 1 },
-  vendorName: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink },
-  vendorMeta: { fontSize: moderateScale(11), color: C.muted, marginTop: scale(2) },
-  balanceBadge: { paddingHorizontal: scale(10), paddingVertical: scale(6), borderRadius: scale(8), alignItems: 'flex-end' },
-  balanceBadgeText: { fontSize: moderateScale(14), fontWeight: '700' },
-  balanceBadgeLabel: { fontSize: moderateScale(9), fontWeight: '600', marginTop: scale(2) },
-  vendorStats: { flexDirection: 'row', marginBottom: scale(12) },
-  statBox: { flex: 1, backgroundColor: C.bg, borderRadius: scale(8), padding: scale(10), marginRight: scale(8), alignItems: 'center' },
-  statLabel: { fontSize: moderateScale(10), color: C.muted, marginTop: scale(4), marginBottom: scale(2) },
-  statValue: { fontSize: moderateScale(13), fontWeight: '700' },
-  vendorFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: scale(12), borderTopWidth: 1, borderTopColor: C.border },
-  lastTxn: { fontSize: moderateScale(10), color: C.muted },
+  vendorName: { fontSize: moderateScale(13), fontWeight: '700', color: C.ink },
+  vendorMeta: { fontSize: moderateScale(9.5), color: C.muted, marginTop: scale(1) },
+  balanceBadge: { paddingHorizontal: scale(8), paddingVertical: scale(5), borderRadius: scale(7), alignItems: 'flex-end' },
+  balanceBadgeText: { fontSize: moderateScale(12), fontWeight: '700' },
+  balanceBadgeLabel: { fontSize: moderateScale(8), fontWeight: '600', marginTop: scale(1) },
+  vendorStats: { flexDirection: 'row', marginBottom: scale(9) },
+  statBox: { flex: 1, backgroundColor: C.bg, borderRadius: scale(7), padding: scale(7), marginRight: scale(6), alignItems: 'center' },
+  statLabel: { fontSize: moderateScale(9), color: C.muted, marginTop: scale(3), marginBottom: scale(1) },
+  statValue: { fontSize: moderateScale(11), fontWeight: '700' },
+  vendorFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: scale(9), borderTopWidth: 1, borderTopColor: C.border },
+  lastTxn: { fontSize: moderateScale(9), color: C.muted },
   vendorActions: { flexDirection: 'row' },
-  vendorBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(10), paddingVertical: scale(6), borderRadius: scale(8), marginLeft: scale(6) },
-  vendorBtnText: { fontSize: moderateScale(11), fontWeight: '600', marginLeft: scale(4) },
+  vendorBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(8), paddingVertical: scale(5), borderRadius: scale(7), marginLeft: scale(5) },
+  vendorBtnText: { fontSize: moderateScale(9.5), fontWeight: '600', marginLeft: scale(3) },
 
   // Entry Card
-  entryCard: { flex: 1, backgroundColor: C.card, borderRadius: scale(12), padding: scale(14), marginBottom: scale(10), borderWidth: 1, borderColor: C.border },
-  entryHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: scale(10) },
-  entryIcon: { width: scale(36), height: scale(36), borderRadius: scale(10), alignItems: 'center', justifyContent: 'center', marginRight: scale(10) },
+  entryCard: { flex: 1, backgroundColor: C.card, borderRadius: scale(11), padding: scale(10), marginBottom: scale(8), borderWidth: 1, borderColor: C.border },
+  entryHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: scale(7) },
+  entryIcon: { width: scale(28), height: scale(28), borderRadius: scale(8), alignItems: 'center', justifyContent: 'center', marginRight: scale(8) },
   entryInfo: { flex: 1 },
-  entryVendor: { fontSize: moderateScale(14), fontWeight: '700', color: C.ink },
-  entryDate: { fontSize: moderateScale(11), color: C.muted, marginTop: scale(2) },
-  entryBadge: { paddingHorizontal: scale(8), paddingVertical: scale(4), borderRadius: scale(6) },
-  entryBadgeText: { fontSize: moderateScale(10), fontWeight: '600' },
-  entryDesc: { fontSize: moderateScale(13), color: C.text, marginBottom: scale(6) },
-  entryBill: { fontSize: moderateScale(11), color: C.muted, marginBottom: scale(6) },
-  entryFooter: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: scale(10), borderTopWidth: 1, borderTopColor: C.border },
-  entryAmtLabel: { fontSize: moderateScale(10), color: C.muted },
-  entryAmt: { fontSize: moderateScale(15), fontWeight: '700', marginTop: scale(2) },
+  entryVendor: { fontSize: moderateScale(12), fontWeight: '700', color: C.ink },
+  entryDate: { fontSize: moderateScale(9.5), color: C.muted, marginTop: scale(1) },
+  entryBadge: { paddingHorizontal: scale(7), paddingVertical: scale(3), borderRadius: scale(6) },
+  entryBadgeText: { fontSize: moderateScale(9), fontWeight: '600' },
+  entryDesc: { fontSize: moderateScale(11), color: C.text, marginBottom: scale(5) },
+  entryBill: { fontSize: moderateScale(9.5), color: C.muted, marginBottom: scale(5) },
+  entryFooter: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: scale(7), borderTopWidth: 1, borderTopColor: C.border },
+  entryAmtLabel: { fontSize: moderateScale(9), color: C.muted },
+  entryAmt: { fontSize: moderateScale(12.5), fontWeight: '700', marginTop: scale(1) },
   entryBalBox: { alignItems: 'flex-end' },
-  entryBalLabel: { fontSize: moderateScale(10), color: C.muted },
-  entryBal: { fontSize: moderateScale(14), fontWeight: '700', marginTop: scale(2) },
+  entryBalLabel: { fontSize: moderateScale(9), color: C.muted },
+  entryBal: { fontSize: moderateScale(12), fontWeight: '700', marginTop: scale(1) },
 
   // Loading & Empty
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   loadingText: { marginTop: scale(16), fontSize: moderateScale(14), color: C.muted },
+
+  // ═══ Skeleton ═══
+  skelTabs: { height: scale(48), backgroundColor: '#E2E8F0', borderRadius: scale(12) },
+  skelCard: { backgroundColor: C.card, borderRadius: scale(12), padding: scale(10), marginTop: scale(12), borderWidth: 1, borderColor: C.border },
+  skelIconBox: { width: scale(36), height: scale(36), borderRadius: scale(10), backgroundColor: '#E2E8F0' },
+  skelLine: { height: scale(11), backgroundColor: '#E2E8F0', borderRadius: scale(6) },
+  skelBalance: { width: scale(64), height: scale(34), borderRadius: scale(8), backgroundColor: '#E2E8F0' },
+  skelStatBox: { flex: 1, height: scale(44), backgroundColor: '#E2E8F0', borderRadius: scale(8) },
+  skelFooter: { height: scale(28), backgroundColor: '#E2E8F0', borderRadius: scale(8), marginTop: scale(10) },
   emptyState: { alignItems: 'center', paddingTop: scale(60), paddingHorizontal: scale(40) },
   emptyTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink, marginTop: scale(16) },
   emptySubtitle: { fontSize: moderateScale(13), color: C.muted, textAlign: 'center', marginTop: scale(6) },

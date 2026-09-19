@@ -1,8 +1,8 @@
 // screens/EditOwnerProfile.js
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
-  StyleSheet, ActivityIndicator, StatusBar, KeyboardAvoidingView, Platform
+  StyleSheet, ActivityIndicator, Animated, StatusBar, KeyboardAvoidingView, Platform
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,6 +17,62 @@ const C = {
   text: '#0F172A', muted: '#6B7280', border: '#E5E7EB', bg: '#F5F7FA',
 };
 
+/* ─── Skeleton ─── */
+function SkeletonEditProfile({ pulse }) {
+  const renderField = (key) => (
+    <View key={key}>
+      <Animated.View style={[st.skelLabel, { opacity: pulse }]} />
+      <Animated.View style={[st.skelInput, { opacity: pulse }]} />
+    </View>
+  );
+  return (
+    <View style={{ padding: scale(16) }}>
+      {/* Avatar preview */}
+      <View style={st.avatarSection}>
+        <Animated.View style={[st.skelAvatarCircle, { opacity: pulse }]} />
+        <Animated.View style={[st.skelLine, { width: scale(140), marginTop: scale(12), opacity: pulse }]} />
+        <Animated.View style={[st.skelLine, { width: scale(100), marginTop: scale(8), opacity: pulse }]} />
+      </View>
+
+      {/* Form */}
+      <View style={st.formCard}>
+        {/* Personal Details group */}
+        <Animated.View style={[st.skelGroupLabel, { opacity: pulse }]} />
+        <View style={st.nameRow}>
+          <View style={{ flex: 1, marginRight: scale(6) }}>
+            <Animated.View style={[st.skelLabel, { opacity: pulse }]} />
+            <Animated.View style={[st.skelInput, { opacity: pulse }]} />
+          </View>
+          <View style={{ flex: 1, marginLeft: scale(6) }}>
+            <Animated.View style={[st.skelLabel, { opacity: pulse }]} />
+            <Animated.View style={[st.skelInput, { opacity: pulse }]} />
+          </View>
+        </View>
+        {renderField('email')}
+        {renderField('phone')}
+
+        <View style={st.divider} />
+
+        {/* Security group */}
+        <Animated.View style={[st.skelGroupLabel, { opacity: pulse }]} />
+        {renderField('password')}
+        <Animated.View style={[st.skelLine, { width: scale(190), height: scale(9), marginTop: scale(-6), marginBottom: scale(8), opacity: pulse }]} />
+
+        <View style={st.divider} />
+
+        {/* Business group */}
+        <Animated.View style={[st.skelGroupLabel, { opacity: pulse }]} />
+        {renderField('restaurantName')}
+        {renderField('locations')}
+      </View>
+
+      {/* Save / Cancel buttons */}
+      <Animated.View style={[st.saveBtn, { backgroundColor: '#E2E8F0', marginTop: scale(16), opacity: pulse }]} />
+      <View style={st.cancelBtn} />
+    </View>
+  );
+}
+
 export default function EditOwnerProfile() {
   const route = useRoute();
   const navigation = useNavigation();
@@ -26,6 +82,17 @@ export default function EditOwnerProfile() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  const pulse = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
+      Animated.timing(pulse, { toValue: 0.4, duration: 800, useNativeDriver: false }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
 
   const [firstName, setFirstName] = useState(initialFromNav.first_name || '');
   const [lastName, setLastName] = useState(initialFromNav.last_name || '');
@@ -100,29 +167,34 @@ export default function EditOwnerProfile() {
 
   if (loading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top', 'left', 'right']}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['left', 'right']}>
         <StatusBar barStyle="light-content" backgroundColor={C.primary} />
-        <LinearGradient colors={[C.primary, C.primaryDark]} style={st.header}>
+        <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.header, { paddingTop: insets.top + scale(14) }]}>
+          <View style={st.headerBlobA} pointerEvents="none" />
+          <View style={st.headerBlobB} pointerEvents="none" />
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
             <Icon name="chevron-back" size={scale(20)} color="#fff" />
           </TouchableOpacity>
           <Text style={st.headerTitle}>Edit Profile</Text>
-          <View style={{ width: scale(40) }} />
+          <View style={st.saveTopBtn} pointerEvents="none">
+            <Text style={st.saveTopText}>Save</Text>
+          </View>
         </LinearGradient>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <ActivityIndicator size="large" color={C.primary} />
-          <Text style={{ color: C.muted, marginTop: scale(12) }}>Loading...</Text>
-        </View>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <SkeletonEditProfile pulse={pulse} />
+        </ScrollView>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['left', 'right']}>
       <StatusBar barStyle="light-content" backgroundColor={C.primary} />
 
       {/* ===== HEADER ===== */}
-      <LinearGradient colors={[C.primary, C.primaryDark]} style={st.header}>
+      <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.header, { paddingTop: insets.top + scale(14) }]}>
+        <View style={st.headerBlobA} pointerEvents="none" />
+        <View style={st.headerBlobB} pointerEvents="none" />
         <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
           <Icon name="chevron-back" size={scale(20)} color="#fff" />
         </TouchableOpacity>
@@ -251,18 +323,21 @@ const st = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: scale(16),
-    paddingVertical: scale(14),
+    paddingBottom: scale(16),
+    overflow: 'hidden',
   },
+  headerBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
+  headerBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
   backBtn: {
-    width: scale(40), height: scale(40), borderRadius: scale(12),
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    width: scale(40), height: scale(40), borderRadius: scale(14),
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center', justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: moderateScale(18), fontWeight: '800', color: '#fff',
+    fontSize: moderateScale(18), fontWeight: '900', color: '#fff',
   },
   saveTopBtn: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.15)',
     paddingHorizontal: scale(16), paddingVertical: scale(8), borderRadius: scale(10),
   },
   saveTopText: {
@@ -354,4 +429,11 @@ const st = StyleSheet.create({
   cancelBtnText: {
     color: C.muted, fontWeight: '700', fontSize: moderateScale(15),
   },
+
+  /* Skeleton */
+  skelAvatarCircle: { width: scale(72), height: scale(72), borderRadius: scale(24), backgroundColor: '#E2E8F0' },
+  skelLine: { height: scale(14), backgroundColor: '#E2E8F0', borderRadius: scale(6) },
+  skelGroupLabel: { height: scale(14), width: scale(120), backgroundColor: '#E2E8F0', borderRadius: scale(4), marginBottom: scale(12), marginTop: scale(4) },
+  skelLabel: { height: scale(10), width: scale(80), backgroundColor: '#E2E8F0', borderRadius: scale(4), marginBottom: scale(8) },
+  skelInput: { height: scale(46), backgroundColor: '#E2E8F0', borderRadius: scale(12), marginBottom: scale(14) },
 });

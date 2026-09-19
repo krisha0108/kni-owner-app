@@ -4,13 +4,13 @@
  * ============================================================================
  */
 
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl,
-  ActivityIndicator, Modal, TextInput, ScrollView, StatusBar,
+  ActivityIndicator, Animated, Modal, TextInput, ScrollView, StatusBar,
   useWindowDimensions, Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -81,7 +81,30 @@ const formatDate = (dateStr) => {
 
 const getEntryConfig = (entryType) => ENTRY_TYPES.find(t => t.value === entryType) || ENTRY_TYPES[0];
 
+/* ─── Skeleton ─── */
+function SkeletonCashbook({ pulse }) {
+  return (
+    <View style={{ paddingHorizontal: scale(16), paddingTop: scale(16) }}>
+      <Animated.View style={[st.skelBalanceStrip, { opacity: pulse }]} />
+      <View style={{ flexDirection: 'row', gap: scale(8), marginTop: scale(16) }}>
+        {[1, 2, 3, 4].map(i => (
+          <Animated.View key={i} style={[st.skelQuickCard, { opacity: pulse }]} />
+        ))}
+      </View>
+      <View style={{ flexDirection: 'row', gap: scale(6), marginTop: scale(16) }}>
+        {[1, 2, 3, 4].map(i => (
+          <Animated.View key={i} style={[st.skelChip, { opacity: pulse }]} />
+        ))}
+      </View>
+      {[1, 2, 3].map(i => (
+        <Animated.View key={i} style={[st.skelEntryCard, { opacity: pulse }]} />
+      ))}
+    </View>
+  );
+}
+
 export default function CashbookScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
   const { can } = usePermissions();
@@ -104,6 +127,17 @@ export default function CashbookScreen({ navigation }) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const pulse = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
+      Animated.timing(pulse, { toValue: 0.4, duration: 800, useNativeDriver: false }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
 
   const [form, setForm] = useState({
     id: null, entryType: 'CASH_IN', amount: '', paymentMode: 'CASH',
@@ -511,11 +545,13 @@ export default function CashbookScreen({ navigation }) {
   // ==================== LOADING STATE ====================
   if (loading && !refreshing && entries.length === 0) {
     return (
-      <SafeAreaView style={st.container} edges={['top']}>
-        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
-        <View style={st.header}>
+      <SafeAreaView style={st.container} edges={['left', 'right']}>
+        <StatusBar barStyle="light-content" backgroundColor={C.gradient1} />
+        <LinearGradient colors={[C.gradient1, C.gradient2]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
+          <View style={st.headerBlobA} pointerEvents="none" />
+          <View style={st.headerBlobB} pointerEvents="none" />
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.headerBackBtn}>
-            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
+            <Icon name="arrow-back" size={scale(22)} color="#fff" />
           </TouchableOpacity>
           <View style={st.headerCenter}>
             <Text style={st.headerTitle}>Daily Cashbook</Text>
@@ -523,14 +559,13 @@ export default function CashbookScreen({ navigation }) {
           </View>
           <View style={st.headerActions}>
             <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
-              <Icon name="menu" size={scale(20)} color={C.ink} />
+              <Icon name="menu" size={scale(20)} color="#fff" />
             </TouchableOpacity>
           </View>
-        </View>
-        <View style={st.loadingBox}>
-          <ActivityIndicator size="large" color={C.gradient1} />
-          <Text style={st.loadingText}>Loading entries...</Text>
-        </View>
+        </LinearGradient>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <SkeletonCashbook pulse={pulse} />
+        </ScrollView>
         <KniBottomNav navigation={navigation} />
       </SafeAreaView>
     );
@@ -539,11 +574,13 @@ export default function CashbookScreen({ navigation }) {
   // ==================== NO RESTAURANT STATE ====================
   if (!hasRestaurants) {
     return (
-      <SafeAreaView style={st.container} edges={['top']}>
-        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
-        <View style={st.header}>
+      <SafeAreaView style={st.container} edges={['left', 'right']}>
+        <StatusBar barStyle="light-content" backgroundColor={C.gradient1} />
+        <LinearGradient colors={[C.gradient1, C.gradient2]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
+          <View style={st.headerBlobA} pointerEvents="none" />
+          <View style={st.headerBlobB} pointerEvents="none" />
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.headerBackBtn}>
-            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
+            <Icon name="arrow-back" size={scale(22)} color="#fff" />
           </TouchableOpacity>
           <View style={st.headerCenter}>
             <Text style={st.headerTitle}>Daily Cashbook</Text>
@@ -551,10 +588,10 @@ export default function CashbookScreen({ navigation }) {
           </View>
           <View style={st.headerActions}>
             <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
-              <Icon name="menu" size={scale(20)} color={C.ink} />
+              <Icon name="menu" size={scale(20)} color="#fff" />
             </TouchableOpacity>
           </View>
-        </View>
+        </LinearGradient>
         <View style={st.emptyState}>
           <View style={st.emptyIcon}>
             <Icon name="business-outline" size={scale(64)} color={C.muted} />
@@ -569,13 +606,15 @@ export default function CashbookScreen({ navigation }) {
 
   // ==================== MAIN RENDER ====================
   return (
-    <SafeAreaView style={st.container} edges={['top']}>
-      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+    <SafeAreaView style={st.container} edges={['left', 'right']}>
+      <StatusBar barStyle="light-content" backgroundColor={C.gradient1} />
 
-      {/* White Header */}
-      <View style={st.header}>
+      {/* Header */}
+      <LinearGradient colors={[C.gradient1, C.gradient2]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
+        <View style={st.headerBlobA} pointerEvents="none" />
+        <View style={st.headerBlobB} pointerEvents="none" />
         <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.headerBackBtn}>
-          <Icon name="arrow-back" size={scale(22)} color={C.ink} />
+          <Icon name="arrow-back" size={scale(22)} color="#fff" />
         </TouchableOpacity>
         <View style={st.headerCenter}>
           <Text style={st.headerTitle}>Daily Cashbook</Text>
@@ -584,14 +623,14 @@ export default function CashbookScreen({ navigation }) {
         <View style={st.headerActions}>
           {can('cashbook:create') && (
           <TouchableOpacity style={st.headerIconBtn} onPress={() => openForm()}>
-            <Icon name="add" size={scale(20)} color={C.primary} />
+            <Icon name="add" size={scale(20)} color="#fff" />
           </TouchableOpacity>
           )}
           <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
-            <Icon name="menu" size={scale(20)} color={C.ink} />
+            <Icon name="menu" size={scale(20)} color="#fff" />
           </TouchableOpacity>
         </View>
-      </View>
+      </LinearGradient>
 
       {/* Restaurant Selector */}
       <RestaurantSelectorBar />
@@ -794,13 +833,15 @@ const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
 
   // Header Section
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(16), paddingVertical: scale(12), backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border },
-  headerBackBtn: { width: scale(40), height: scale(40), borderRadius: scale(10), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(16), paddingBottom: scale(12), overflow: 'hidden' },
+  headerBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
+  headerBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
+  headerBackBtn: { width: scale(40), height: scale(40), borderRadius: scale(14), backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
   headerCenter: { flex: 1, marginLeft: scale(12) },
-  headerTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink },
-  headerSubtitle: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(2) },
+  headerTitle: { fontSize: moderateScale(18), fontWeight: '700', color: '#fff' },
+  headerSubtitle: { fontSize: moderateScale(12), color: 'rgba(255,255,255,0.8)', marginTop: scale(2) },
   headerActions: { flexDirection: 'row' },
-  headerIconBtn: { width: scale(40), height: scale(40), borderRadius: scale(10), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', marginLeft: scale(8) },
+  headerIconBtn: { width: scale(40), height: scale(40), borderRadius: scale(14), backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', marginLeft: scale(8) },
 
   // Hero Section (kept for loading state)
   heroSection: { paddingTop: scale(8), paddingBottom: scale(16), borderBottomLeftRadius: scale(20), borderBottomRightRadius: scale(20) },
@@ -926,4 +967,10 @@ const st = StyleSheet.create({
   cancelBtnText: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink },
   saveBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: scale(14), borderRadius: scale(12), backgroundColor: C.gradient1, marginLeft: scale(6) },
   saveBtnText: { fontSize: moderateScale(15), fontWeight: '700', color: '#fff', marginLeft: scale(8) },
+
+  // ─── Skeleton ───
+  skelBalanceStrip: { height: scale(76), backgroundColor: '#E2E8F0', borderRadius: scale(14) },
+  skelQuickCard: { flex: 1, height: scale(80), backgroundColor: '#E2E8F0', borderRadius: scale(16) },
+  skelChip: { flex: 1, height: scale(30), backgroundColor: '#E2E8F0', borderRadius: scale(16) },
+  skelEntryCard: { height: scale(90), backgroundColor: '#E2E8F0', borderRadius: scale(16), marginTop: scale(12) },
 });

@@ -2,9 +2,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
-  ScrollView, ActivityIndicator, Keyboard,
+  ScrollView, Keyboard, StatusBar, Animated,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { api } from '../api/client';
 import { useRestaurant } from '../context/RestaurantContext';
@@ -27,8 +28,26 @@ const CATEGORY_MAP = {
   vendors: { icon: 'storefront-outline', color: C.primaryDark, screen: 'Marketplace', paramKey: null },
 };
 
+/* ──────── Skeleton ──────── */
+function SkeletonSearch({ pulse }) {
+  return (
+    <View style={{ paddingHorizontal: scale(14), paddingTop: scale(16) }}>
+      {Array.from({ length: 5 }).map((_, i) => (
+        <View key={i} style={st.skelRow}>
+          <Animated.View style={[st.skelIcon, { opacity: pulse }]} />
+          <View style={{ flex: 1, marginLeft: scale(12) }}>
+            <Animated.View style={[st.skelLine, { opacity: pulse, width: '60%' }]} />
+            <Animated.View style={[st.skelLineSm, { opacity: pulse, width: '35%' }]} />
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 /* ======================================================================= */
 export default function SearchScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const { selectedRestaurantId: restaurantId } = useRestaurant();
   const inputRef = useRef(null);
   const debounceRef = useRef(null);
@@ -37,6 +56,17 @@ export default function SearchScreen({ navigation }) {
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  const pulse = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
+      Animated.timing(pulse, { toValue: 0.4, duration: 800, useNativeDriver: false }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
 
   // Auto-focus on mount
   useEffect(() => {
@@ -104,11 +134,14 @@ export default function SearchScreen({ navigation }) {
 
   /* ──────── Render ──────── */
   return (
-    <SafeAreaView style={st.container}>
+    <SafeAreaView style={st.container} edges={['left', 'right']}>
+      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
       {/* ── Search Bar ── */}
-      <View style={st.searchBarRow}>
+      <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.searchBarRow, { paddingTop: insets.top + scale(10) }]}>
+        <View style={st.headerBlobA} pointerEvents="none" />
+        <View style={st.headerBlobB} pointerEvents="none" />
         <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
-          <Icon name="arrow-back" size={scale(22)} color={C.ink} />
+          <Icon name="arrow-back" size={scale(22)} color="#fff" />
         </TouchableOpacity>
         <View style={st.inputWrap}>
           <Icon name="search" size={scale(18)} color={C.muted} style={{ marginRight: scale(8) }} />
@@ -128,7 +161,7 @@ export default function SearchScreen({ navigation }) {
             </TouchableOpacity>
           )}
         </View>
-      </View>
+      </LinearGradient>
 
       {/* ── Content ── */}
       <ScrollView
@@ -148,12 +181,7 @@ export default function SearchScreen({ navigation }) {
         )}
 
         {/* Loading */}
-        {loading && (
-          <View style={st.emptyWrap}>
-            <ActivityIndicator size="large" color={C.primary} />
-            <Text style={[st.emptySubtitle, { marginTop: scale(12) }]}>Searching...</Text>
-          </View>
-        )}
+        {loading && <SkeletonSearch pulse={pulse} />}
 
         {/* Error */}
         {!loading && error && (
@@ -230,11 +258,11 @@ const st = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: scale(12),
-    paddingVertical: scale(10),
-    backgroundColor: C.card,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
+    paddingBottom: scale(10),
+    overflow: 'hidden',
   },
+  headerBlobA: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-35), right: scale(-20) },
+  headerBlobB: { position: 'absolute', width: scale(60), height: scale(60), borderRadius: scale(30), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-30), left: scale(24) },
   backBtn: {
     width: scale(36),
     height: scale(36),
@@ -337,5 +365,32 @@ const st = StyleSheet.create({
     fontSize: moderateScale(12),
     color: C.muted,
     marginTop: scale(2),
+  },
+
+  /* ─── Skeleton ─── */
+  skelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: C.card,
+    borderRadius: scale(10),
+    padding: scale(12),
+    marginBottom: scale(8),
+  },
+  skelIcon: {
+    width: scale(36),
+    height: scale(36),
+    borderRadius: scale(10),
+    backgroundColor: '#E2E8F0',
+  },
+  skelLine: {
+    height: scale(13),
+    borderRadius: scale(6),
+    backgroundColor: '#E2E8F0',
+  },
+  skelLineSm: {
+    height: scale(11),
+    borderRadius: scale(6),
+    backgroundColor: '#E2E8F0',
+    marginTop: scale(6),
   },
 });

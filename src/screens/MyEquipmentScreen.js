@@ -104,6 +104,27 @@ const DELIVERY_OPTIONS = [
   { value: "1 week", label: "1 week" },
 ];
 
+function SkeletonEquipment({ pulse }) {
+  return (
+    <View style={{ paddingHorizontal: scale(12), paddingTop: scale(10) }}>
+      {Array.from({ length: 4 }).map((_, i) => (
+        <View key={i} style={st.skelCard}>
+          <Animated.View style={[st.skelImage, { opacity: pulse }]} />
+          <View style={st.cardInfo}>
+            <Animated.View style={[st.skelLineWide, { opacity: pulse }]} />
+            <Animated.View style={[st.skelLineNarrow, { opacity: pulse }]} />
+            <Animated.View style={[st.skelWarrantyPill, { opacity: pulse }]} />
+          </View>
+          <View style={st.cardActions}>
+            <Animated.View style={[st.skelActionBtn, { opacity: pulse }]} />
+            <Animated.View style={[st.skelIconBtn, { opacity: pulse }]} />
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 export default function MyEquipmentScreen({ navigation }) {
   const { width, height: winHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -124,6 +145,16 @@ export default function MyEquipmentScreen({ navigation }) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [warrantyFilter, setWarrantyFilter] = useState('all');
+  const pulse = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
+      Animated.timing(pulse, { toValue: 0.4, duration: 800, useNativeDriver: false }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
   const [modalVisible, setModalVisible] = useState(false);
   const [saving, setSaving] = useState(false);
   const [categories, setCategories] = useState([]);
@@ -481,15 +512,38 @@ export default function MyEquipmentScreen({ navigation }) {
   // ==================== LOADING STATE ====================
   if ((loading || restaurantsLoading) && !refreshing) {
     return (
-      <SafeAreaView style={st.container} edges={['top']}>
+      <SafeAreaView style={st.container} edges={['left', 'right']}>
         <StatusBar barStyle="light-content" backgroundColor={C.primary} />
-        <LinearGradient colors={[C.gradient1, C.gradient2]} style={st.loadingHero}>
-          <Text style={st.heroTitle}>My Equipment</Text>
+        <LinearGradient
+          colors={[C.gradient1, C.gradient2]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[st.heroSection, { paddingTop: insets.top + scale(6) }]}
+        >
+          <View style={st.heroBlobA} pointerEvents="none" />
+          <View style={st.heroBlobB} pointerEvents="none" />
+          <View style={st.heroContent}>
+            <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
+              <Icon name="arrow-back" size={scale(18)} color="#fff" />
+            </TouchableOpacity>
+            <View style={st.heroTextContainer}>
+              <Text style={st.heroTitle}>My Equipment</Text>
+              <RestaurantSelectorCompact dark style={st.heroRestaurantPill} />
+            </View>
+            <View style={st.heroActions}>
+              <TouchableOpacity style={st.heroIconBtn} onPress={() => setMenuVisible(true)}>
+                <Icon name="menu" size={scale(18)} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          </View>
+          <View style={st.searchContainer}>
+            <View style={st.searchBar}>
+              <Icon name="search" size={scale(14)} color={C.muted} />
+              <TextInput style={st.searchInput} placeholder="Search equipment..." placeholderTextColor={C.muted} editable={false} />
+            </View>
+          </View>
         </LinearGradient>
-        <View style={st.loadingContainer}>
-          <ActivityIndicator size="large" color={C.primary} />
-          <Text style={st.loadingText}>Loading equipment...</Text>
-        </View>
+        <SkeletonEquipment pulse={pulse} />
         <KniBottomNav navigation={navigation} active="equipment" />
       </SafeAreaView>
     );
@@ -497,7 +551,7 @@ export default function MyEquipmentScreen({ navigation }) {
 
   // ==================== MAIN RENDER ====================
   return (
-    <SafeAreaView style={st.container} edges={['top']}>
+    <SafeAreaView style={st.container} edges={['left', 'right']}>
       <StatusBar barStyle="light-content" backgroundColor={C.primary} />
 
       {/* Premium Gradient Header */}
@@ -505,8 +559,10 @@ export default function MyEquipmentScreen({ navigation }) {
         colors={[C.gradient1, C.gradient2]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={st.heroSection}
+        style={[st.heroSection, { paddingTop: insets.top + scale(6) }]}
       >
+        <View style={st.heroBlobA} pointerEvents="none" />
+        <View style={st.heroBlobB} pointerEvents="none" />
         <View style={st.heroContent}>
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
             <Icon name="arrow-back" size={scale(18)} color="#fff" />
@@ -864,14 +920,16 @@ const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
 
   // Hero Section (Compact)
-  heroSection: { paddingTop: scale(6), paddingBottom: scale(10), borderBottomLeftRadius: scale(16), borderBottomRightRadius: scale(16) },
+  heroSection: { paddingTop: scale(6), paddingBottom: scale(10), borderBottomLeftRadius: scale(16), borderBottomRightRadius: scale(16), overflow: 'hidden' },
+  heroBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
+  heroBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
   heroContent: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(16), marginBottom: scale(8) },
-  backBtn: { width: scale(32), height: scale(32), borderRadius: scale(10), backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginRight: scale(10) },
+  backBtn: { width: scale(32), height: scale(32), borderRadius: scale(11), backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', marginRight: scale(10) },
   heroTextContainer: { flex: 1 },
   heroTitle: { fontSize: moderateScale(18), fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
   heroRestaurantPill: { alignSelf: 'flex-start', marginTop: scale(4) },
   heroActions: { flexDirection: 'row', gap: scale(6) },
-  heroIconBtn: { width: scale(32), height: scale(32), borderRadius: scale(10), backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
+  heroIconBtn: { width: scale(32), height: scale(32), borderRadius: scale(11), backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
 
   // Search
   searchContainer: { paddingHorizontal: scale(16) },
@@ -922,9 +980,17 @@ const st = StyleSheet.create({
   iconBtn: { width: scale(36), height: scale(36), borderRadius: scale(10), backgroundColor: C.infoLight, alignItems: 'center', justifyContent: 'center' },
 
   // Loading & Empty
-  loadingHero: { paddingVertical: scale(24), paddingHorizontal: scale(20), borderBottomLeftRadius: scale(24), borderBottomRightRadius: scale(24) },
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   loadingText: { marginTop: scale(16), fontSize: moderateScale(15), color: C.muted },
+
+  // Skeleton
+  skelCard: { backgroundColor: C.card, borderRadius: scale(16), marginBottom: scale(12), marginHorizontal: scale(4), overflow: 'hidden' },
+  skelImage: { height: scale(120), backgroundColor: '#E2E8F0' },
+  skelLineWide: { height: scale(13), width: '60%', backgroundColor: '#E2E8F0', borderRadius: scale(6), marginTop: scale(2) },
+  skelLineNarrow: { height: scale(11), width: '40%', backgroundColor: '#E2E8F0', borderRadius: scale(6), marginTop: scale(8) },
+  skelWarrantyPill: { height: scale(24), width: '55%', backgroundColor: '#E2E8F0', borderRadius: scale(8), marginTop: scale(10) },
+  skelActionBtn: { flex: 1, height: scale(36), backgroundColor: '#E2E8F0', borderRadius: scale(10) },
+  skelIconBtn: { width: scale(36), height: scale(36), backgroundColor: '#E2E8F0', borderRadius: scale(10) },
   emptyState: { alignItems: 'center', paddingTop: scale(60), paddingHorizontal: scale(40) },
   emptyIconContainer: { width: scale(120), height: scale(120), borderRadius: scale(60), backgroundColor: C.border, alignItems: 'center', justifyContent: 'center', marginBottom: scale(20) },
   emptyTitle: { fontSize: moderateScale(20), fontWeight: '700', color: C.ink, marginBottom: scale(8) },

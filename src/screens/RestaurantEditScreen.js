@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ScrollView, Platform,
-  ActivityIndicator, Image, Modal, Dimensions
+  ActivityIndicator, Image, Modal, Dimensions, StatusBar, Animated
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { api, getImageUrl, uploadFile } from '../api/client';
@@ -16,6 +17,7 @@ import AppAlert from '../utils/AppAlert';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const C = {
   primary: '#EF3A3A',
+  primaryDark: '#DC2626',
   ink: '#1D2254',
   text: '#0F172A',
   muted: '#6B7280',
@@ -39,11 +41,46 @@ const OUTLET_TYPES = [
   { key: 'INSTITUTE', label: 'Institute' },
 ];
 
+function SkeletonRestaurantEdit({ pulse }) {
+  return (
+    <View style={styles.scrollContent}>
+      <Animated.View style={[styles.skelSectionTitle, { opacity: pulse }]} />
+      <Animated.View style={[styles.skelImageBox, { opacity: pulse }]} />
+
+      <Animated.View style={[styles.skelSectionTitle, { opacity: pulse }]} />
+      {[1, 2, 3, 4, 5].map(i => (
+        <Animated.View key={i} style={[styles.skelInputBox, { opacity: pulse }]} />
+      ))}
+
+      <Animated.View style={[styles.skelSectionTitle, { opacity: pulse }]} />
+      <Animated.View style={[styles.skelInputBox, { opacity: pulse }]} />
+      <Animated.View style={[styles.skelImageBox, styles.skelCertBox, { opacity: pulse }]} />
+
+      <View style={styles.buttonContainer}>
+        <Animated.View style={[styles.skelBtn, { opacity: pulse }]} />
+        <Animated.View style={[styles.skelBtn, { opacity: pulse }]} />
+      </View>
+    </View>
+  );
+}
+
 export default function RestaurantEditScreen({ navigation, route }) {
+  const insets = useSafeAreaInsets();
   const { restaurantId } = route.params;
   const { loadRestaurants } = useRestaurant();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  const pulse = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
+      Animated.timing(pulse, { toValue: 0.4, duration: 800, useNativeDriver: false }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
   const [form, setForm] = useState({
     name: '',
     address: '',
@@ -293,18 +330,18 @@ export default function RestaurantEditScreen({ navigation, route }) {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
+      <SafeAreaView style={styles.container} edges={['left', 'right']}>
+        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <LinearGradient colors={[C.primary, C.primaryDark]} style={[styles.header, { paddingTop: insets.top + scale(12) }]}>
+          <View style={styles.headerBlobA} pointerEvents="none" />
+          <View style={styles.headerBlobB} pointerEvents="none" />
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-            <Icon name="arrow-back" size={scale(24)} color={C.ink} />
+            <Icon name="arrow-back" size={scale(24)} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Edit Restaurant</Text>
           <View style={{ width: scale(40) }} />
-        </View>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={C.primary} />
-          <Text style={styles.loadingText}>Loading restaurant...</Text>
-        </View>
+        </LinearGradient>
+        <SkeletonRestaurantEdit pulse={pulse} />
       </SafeAreaView>
     );
   }
@@ -313,14 +350,17 @@ export default function RestaurantEditScreen({ navigation, route }) {
   const displayFssaiCertificate = newFssaiCertificate?.uri || (fssaiCertificateUrl ? getImageUrl(fssaiCertificateUrl) : null);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
+      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+      <LinearGradient colors={[C.primary, C.primaryDark]} style={[styles.header, { paddingTop: insets.top + scale(12) }]}>
+        <View style={styles.headerBlobA} pointerEvents="none" />
+        <View style={styles.headerBlobB} pointerEvents="none" />
         <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-          <Icon name="arrow-back" size={scale(24)} color={C.ink} />
+          <Icon name="arrow-back" size={scale(24)} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Edit Restaurant</Text>
         <View style={{ width: scale(40) }} />
-      </View>
+      </LinearGradient>
 
       <ScrollView
         style={styles.content}
@@ -610,18 +650,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: scale(16),
-    paddingVertical: scale(12),
-    backgroundColor: C.card,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
+    paddingBottom: scale(12),
+    overflow: 'hidden',
   },
+  headerBlobA: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-35), right: scale(-20) },
+  headerBlobB: { position: 'absolute', width: scale(60), height: scale(60), borderRadius: scale(30), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-30), left: scale(24) },
   backBtn: {
     width: scale(40),
   },
   headerTitle: {
     fontSize: moderateScale(18),
     fontWeight: '700',
-    color: C.ink,
+    color: '#fff',
   },
   content: {
     flex: 1,
@@ -639,6 +679,14 @@ const styles = StyleSheet.create({
     color: C.muted,
     marginTop: scale(12),
   },
+
+  // Skeleton loading
+  skelSectionTitle: { width: '45%', height: scale(15), borderRadius: scale(4), backgroundColor: '#E2E8F0', marginBottom: scale(12), marginTop: scale(8) },
+  skelImageBox: { height: scale(140), borderRadius: scale(12), backgroundColor: '#E2E8F0', marginBottom: scale(16) },
+  skelCertBox: { height: scale(100) },
+  skelInputBox: { height: scale(46), borderRadius: scale(12), backgroundColor: '#E2E8F0', marginBottom: scale(12) },
+  skelBtn: { flex: 1, height: scale(48), borderRadius: scale(12), backgroundColor: '#E2E8F0' },
+
   sectionTitle: {
     fontSize: moderateScale(16),
     fontWeight: '700',

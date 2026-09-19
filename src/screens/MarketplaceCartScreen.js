@@ -6,7 +6,7 @@
  * Shows delivery details + vendor-grouped items + per-vendor Pay & Order.
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,9 +15,10 @@ import {
   TouchableOpacity,
   Image,
   TextInput,
-  ActivityIndicator,
+  StatusBar,
+  Animated,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -28,6 +29,7 @@ import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
 import { scale, moderateScale } from '../utils/responsive';
+import useKeyboardHeight from '../utils/useKeyboardHeight';
 
 const C = {
   primary: '#EF3A3A',
@@ -47,12 +49,81 @@ const C = {
 
 const formatPrice = (price) => `₹${(price || 0).toLocaleString('en-IN')}`;
 
+function SkeletonCart({ pulse }) {
+  return (
+    <View style={st.bodyContent}>
+      {/* Delivery Details */}
+      <View style={st.deliverySection}>
+        <Animated.View style={[st.skelLineWide, { width: '50%', height: scale(16), opacity: pulse }]} />
+        <Animated.View style={[st.skelLineNarrow, { width: '35%', height: scale(11), marginTop: scale(14), opacity: pulse }]} />
+        <Animated.View style={[st.skelTextArea, { opacity: pulse }]} />
+        <Animated.View style={[st.skelLineNarrow, { width: '30%', height: scale(11), marginTop: scale(12), opacity: pulse }]} />
+        <Animated.View style={[st.skelInput, { opacity: pulse }]} />
+      </View>
+
+      {/* Vendor Groups */}
+      {Array.from({ length: 2 }).map((_, g) => (
+        <View key={g} style={st.vendorCard}>
+          {/* Vendor Header */}
+          <View style={st.vendorHeader}>
+            <View style={st.vendorNameRow}>
+              <Animated.View style={[st.skelIconSmall, { opacity: pulse }]} />
+              <Animated.View style={[st.skelLineWide, { width: scale(110), height: scale(13), marginBottom: 0, opacity: pulse }]} />
+            </View>
+            <Animated.View style={[st.skelLineNarrow, { width: scale(40), height: scale(10), opacity: pulse }]} />
+          </View>
+
+          {/* Items */}
+          {Array.from({ length: 2 }).map((__, i) => (
+            <View key={i} style={st.cartItem}>
+              <View style={st.cartItemImage}>
+                <Animated.View style={[st.skelImageFill, { opacity: pulse }]} />
+              </View>
+              <View style={st.cartItemInfo}>
+                <Animated.View style={[st.skelLineWide, { opacity: pulse }]} />
+                <Animated.View style={[st.skelLineNarrow, { opacity: pulse }]} />
+              </View>
+              <View style={st.cartItemQty}>
+                <Animated.View style={[st.qtyBtn, st.skelGray, { opacity: pulse }]} />
+                <View style={{ width: scale(28) }} />
+                <Animated.View style={[st.qtyBtn, st.skelGray, { opacity: pulse }]} />
+              </View>
+              <Animated.View style={[st.skelPriceBox, { opacity: pulse }]} />
+            </View>
+          ))}
+
+          {/* Vendor Subtotal + Pay Button */}
+          <View style={st.vendorFooter}>
+            <View style={st.subtotalRow}>
+              <Animated.View style={[st.skelLineNarrow, { width: scale(60), height: scale(12), opacity: pulse }]} />
+              <Animated.View style={[st.skelLineNarrow, { width: scale(70), height: scale(16), opacity: pulse }]} />
+            </View>
+            <Animated.View style={[st.payOrderBtn, st.skelGray, { height: scale(44), opacity: pulse }]} />
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 export default function MarketplaceCartScreen({ navigation, route }) {
+  const insets = useSafeAreaInsets();
+  const keyboardHeight = useKeyboardHeight();
   const { restaurantId } = route.params || {};
 
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(true);
   const [menuVisible, setMenuVisible] = useState(false);
+  const pulse = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
+      Animated.timing(pulse, { toValue: 0.4, duration: 800, useNativeDriver: false }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [deliveryNotes, setDeliveryNotes] = useState('');
 
@@ -181,17 +252,28 @@ export default function MarketplaceCartScreen({ navigation, route }) {
   // Loading state
   if (loading) {
     return (
-      <SafeAreaView style={st.container}>
-        <View style={st.header}>
+      <SafeAreaView style={st.container} edges={['left', 'right']}>
+        <StatusBar barStyle="light-content" backgroundColor={C.gradient1} />
+        <LinearGradient colors={[C.gradient1, C.gradient2]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
+          <View style={st.headerBlobA} pointerEvents="none" />
+          <View style={st.headerBlobB} pointerEvents="none" />
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
-            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
+            <Icon name="arrow-back" size={scale(22)} color="#fff" />
           </TouchableOpacity>
-          <Text style={st.headerTitle}>Your Cart</Text>
-          <View style={{ width: scale(40) }} />
-        </View>
-        <View style={st.loadingContainer}>
-          <ActivityIndicator size="large" color={C.primary} />
-        </View>
+          <View style={st.headerCenter}>
+            <Text style={st.headerTitle}>Your Cart</Text>
+            <Text style={st.headerSubtitle}>Loading...</Text>
+          </View>
+          <View style={st.headerRight}>
+            <TouchableOpacity onPress={handleClearCart} style={{ padding: scale(8) }}>
+              <Icon name="trash-outline" size={scale(20)} color={C.danger} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
+              <Icon name="menu" size={scale(22)} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+        <SkeletonCart pulse={pulse} />
       </SafeAreaView>
     );
   }
@@ -199,16 +281,19 @@ export default function MarketplaceCartScreen({ navigation, route }) {
   // Empty state
   if (cart.length === 0) {
     return (
-      <SafeAreaView style={st.container}>
-        <View style={st.header}>
+      <SafeAreaView style={st.container} edges={['left', 'right']}>
+        <StatusBar barStyle="light-content" backgroundColor={C.gradient1} />
+        <LinearGradient colors={[C.gradient1, C.gradient2]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
+          <View style={st.headerBlobA} pointerEvents="none" />
+          <View style={st.headerBlobB} pointerEvents="none" />
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
-            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
+            <Icon name="arrow-back" size={scale(22)} color="#fff" />
           </TouchableOpacity>
           <Text style={st.headerTitle}>Your Cart</Text>
           <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
-            <Icon name="menu" size={scale(22)} color={C.ink} />
+            <Icon name="menu" size={scale(22)} color="#fff" />
           </TouchableOpacity>
-        </View>
+        </LinearGradient>
         <View style={st.emptyState}>
           <View style={st.emptyIconWrap}>
             <Icon name="cart-outline" size={scale(64)} color={C.muted} />
@@ -229,11 +314,14 @@ export default function MarketplaceCartScreen({ navigation, route }) {
   }
 
   return (
-    <SafeAreaView style={st.container}>
+    <SafeAreaView style={st.container} edges={['left', 'right']}>
+      <StatusBar barStyle="light-content" backgroundColor={C.gradient1} />
       {/* Header */}
-      <View style={st.header}>
+      <LinearGradient colors={[C.gradient1, C.gradient2]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
+        <View style={st.headerBlobA} pointerEvents="none" />
+        <View style={st.headerBlobB} pointerEvents="none" />
         <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
-          <Icon name="arrow-back" size={scale(22)} color={C.ink} />
+          <Icon name="arrow-back" size={scale(22)} color="#fff" />
         </TouchableOpacity>
         <View style={st.headerCenter}>
           <Text style={st.headerTitle}>Your Cart</Text>
@@ -246,15 +334,15 @@ export default function MarketplaceCartScreen({ navigation, route }) {
             <Icon name="trash-outline" size={scale(20)} color={C.danger} />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
-            <Icon name="menu" size={scale(22)} color={C.ink} />
+            <Icon name="menu" size={scale(22)} color="#fff" />
           </TouchableOpacity>
         </View>
-      </View>
+      </LinearGradient>
 
       {/* Scrollable Content */}
       <ScrollView
         style={st.body}
-        contentContainerStyle={st.bodyContent}
+        contentContainerStyle={[st.bodyContent, keyboardHeight > 0 && { paddingBottom: keyboardHeight }]}
         showsVerticalScrollIndicator={true}
         keyboardShouldPersistTaps="handled"
       >
@@ -419,16 +507,16 @@ const st = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: scale(16),
-    paddingVertical: scale(12),
-    backgroundColor: C.card,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
+    paddingBottom: scale(12),
+    overflow: 'hidden',
   },
+  headerBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
+  headerBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
   backBtn: {
     width: scale(40),
     height: scale(40),
-    borderRadius: scale(12),
-    backgroundColor: C.bg,
+    borderRadius: scale(14),
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -439,11 +527,11 @@ const st = StyleSheet.create({
   headerTitle: {
     fontSize: moderateScale(18),
     fontWeight: '700',
-    color: C.ink,
+    color: '#fff',
   },
   headerSubtitle: {
     fontSize: moderateScale(13),
-    color: C.muted,
+    color: 'rgba(255,255,255,0.8)',
     marginTop: scale(2),
   },
   headerRight: {
@@ -457,6 +545,16 @@ const st = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+
+  // Skeleton
+  skelLineWide: { height: scale(12), width: '70%', backgroundColor: '#E2E8F0', borderRadius: scale(6), marginBottom: scale(8) },
+  skelLineNarrow: { height: scale(10), width: '40%', backgroundColor: '#E2E8F0', borderRadius: scale(6) },
+  skelTextArea: { height: scale(80), backgroundColor: '#E2E8F0', borderRadius: scale(12), marginTop: scale(8) },
+  skelInput: { height: scale(48), backgroundColor: '#E2E8F0', borderRadius: scale(12), marginTop: scale(8) },
+  skelIconSmall: { width: scale(18), height: scale(18), borderRadius: scale(9), backgroundColor: '#E2E8F0' },
+  skelPriceBox: { width: scale(50), height: scale(14), backgroundColor: '#E2E8F0', borderRadius: scale(6) },
+  skelImageFill: { width: '100%', height: '100%', backgroundColor: '#E2E8F0' },
+  skelGray: { backgroundColor: '#E2E8F0' },
 
   // Empty State
   emptyState: {

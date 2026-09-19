@@ -4,7 +4,7 @@
  * ============================================================================
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -17,8 +17,9 @@ import {
   Alert,
   useWindowDimensions,
   StatusBar,
+  Animated,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { api } from '../api/client';
@@ -70,8 +71,31 @@ const formatDate = (dateStr) => {
 
 const formatPrice = (amount) => `₹${(amount || 0).toLocaleString('en-IN')}`;
 
+function SkeletonBookings({ pulse }) {
+  return (
+    <View style={{ paddingHorizontal: scale(16), paddingTop: scale(12) }}>
+      <View style={{ flexDirection: 'row', gap: scale(8), marginBottom: scale(12) }}>
+        {[1, 2, 3].map(i => (
+          <Animated.View key={i} style={[styles.skelTab, { opacity: pulse }]} />
+        ))}
+      </View>
+      {Array.from({ length: 6 }).map((_, i) => (
+        <View key={i} style={styles.skelRow}>
+          <Animated.View style={[styles.skelIconBox, { opacity: pulse }]} />
+          <View style={styles.rowInfo}>
+            <Animated.View style={[styles.skelLineWide, { opacity: pulse }]} />
+            <Animated.View style={[styles.skelLineNarrow, { opacity: pulse }]} />
+          </View>
+          <Animated.View style={[styles.skelAmount, { opacity: pulse }]} />
+        </View>
+      ))}
+    </View>
+  );
+}
+
 export default function MyBookingsScreen({ navigation }) {
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const isTabletDevice = isTablet(width);
 
   const {
@@ -90,6 +114,16 @@ export default function MyBookingsScreen({ navigation }) {
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
+  const pulse = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
+      Animated.timing(pulse, { toValue: 0.4, duration: 800, useNativeDriver: false }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
 
   // Calculate status counts
   const statusCounts = useMemo(() => {
@@ -216,6 +250,7 @@ export default function MyBookingsScreen({ navigation }) {
   const renderBookingCard = ({ item, index }) => {
     const config = STATUS_CONFIG[item.status] || STATUS_CONFIG.SLOT_SELECTED;
     const itemCount = (item.items || []).length;
+    const dateLabel = formatDate(item.slotStartDateTime || item.createdAt);
 
     return (
       <TouchableOpacity
@@ -227,71 +262,18 @@ export default function MyBookingsScreen({ navigation }) {
         onPress={() => navigation.navigate('BookingDetail', { bookingId: item.id })}
         activeOpacity={0.7}
       >
-        {/* Card Header */}
-        <View style={styles.cardHeader}>
-          <View style={styles.cardHeaderLeft}>
-            <View style={[styles.bookingIconBox, { backgroundColor: config.bg }]}>
-              <Icon name={config.icon} size={16} color={config.color} />
-            </View>
-            <View>
-              <Text style={styles.bookingId}>#{item.id.slice(0, 8).toUpperCase()}</Text>
-              <Text style={styles.bookingDate}>{formatDate(item.createdAt)}</Text>
-            </View>
-          </View>
-          <View style={[styles.statusPill, { backgroundColor: config.bg }]}>
-            <Text style={[styles.statusPillText, { color: config.color }]}>
-              {config.label}
-            </Text>
-          </View>
+        <View style={[styles.rowIconBox, { backgroundColor: config.bg }]}>
+          <Icon name={config.icon} size={15} color={config.color} />
         </View>
-
-        {/* Card Body */}
-        <View style={styles.cardBody}>
-          {/* Items Summary */}
-          <View style={styles.itemsSummary}>
-            <Icon name="cube-outline" size={13} color={C.muted} />
-            <Text style={styles.itemsText}>
-              {itemCount} item{itemCount !== 1 ? 's' : ''}
-            </Text>
-          </View>
-
-          {/* Schedule if exists */}
-          {item.slotStartDateTime && (
-            <View style={styles.scheduleRow}>
-              <Icon name="calendar-outline" size={13} color={C.info} />
-              <Text style={styles.scheduleText}>{formatDate(item.slotStartDateTime)}</Text>
-            </View>
-          )}
-
-          {/* Engineer if assigned */}
-          {item.engineerAssignments?.length > 0 && (
-            <View style={styles.engineerRow}>
-              <Icon name="person-outline" size={13} color={C.purple} />
-              <Text style={styles.engineerText} numberOfLines={1}>
-                {item.engineerAssignments[0].engineer?.name || 'Engineer Assigned'}
-              </Text>
-            </View>
-          )}
+        <View style={styles.rowInfo}>
+          <Text style={styles.rowId} numberOfLines={1}>#{item.id.slice(0, 8).toUpperCase()}</Text>
+          <Text style={styles.rowMeta} numberOfLines={1}>{dateLabel} · {itemCount} item{itemCount !== 1 ? 's' : ''}</Text>
         </View>
-
-        {/* Card Footer */}
-        <View style={styles.cardFooter}>
-          <View>
-            <Text style={styles.amountLabel}>Total</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Text style={styles.amountValue}>{formatPrice(item.totalAmount)}</Text>
-              {!!item.discountAmount && item.discountAmount > 0 && (
-                <View style={{ backgroundColor: C.ok + '15', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, marginLeft: 6 }}>
-                  <Text style={{ fontSize: 10, fontWeight: '700', color: C.ok }}>{item.discountPercent}% off</Text>
-                </View>
-              )}
-            </View>
-          </View>
-          <View style={styles.viewDetailsBtn}>
-            <Text style={styles.viewDetailsText}>View</Text>
-            <Icon name="chevron-forward" size={13} color={C.primary} />
-          </View>
+        <View style={styles.rowRight}>
+          <Text style={styles.rowAmount} numberOfLines={1}>{formatPrice(item.totalAmount)}</Text>
+          <Text style={[styles.rowStatus, { color: config.color }]} numberOfLines={1}>● {config.label}</Text>
         </View>
+        <Icon name="chevron-forward" size={14} color={C.muted} />
       </TouchableOpacity>
     );
   };
@@ -299,9 +281,11 @@ export default function MyBookingsScreen({ navigation }) {
   // Loading state
   if ((loading || restaurantsLoading) && !refreshing) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView style={styles.container} edges={['left', 'right']}>
         <StatusBar barStyle="light-content" backgroundColor={C.primary} />
-        <LinearGradient colors={[C.primary, C.primaryDark]} style={styles.heroHeader}>
+        <LinearGradient colors={[C.primary, C.primaryDark]} style={[styles.heroHeader, { paddingTop: insets.top + scale(6) }]}>
+          <View style={styles.heroBlobA} pointerEvents="none" />
+          <View style={styles.heroBlobB} pointerEvents="none" />
           <View style={styles.heroContent}>
             <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
               <Icon name="arrow-back" size={18} color="#fff" />
@@ -312,10 +296,7 @@ export default function MyBookingsScreen({ navigation }) {
             </TouchableOpacity>
           </View>
         </LinearGradient>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={C.primary} />
-          <Text style={styles.loadingText}>Loading bookings...</Text>
-        </View>
+        <SkeletonBookings pulse={pulse} />
         <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
       </SafeAreaView>
     );
@@ -324,9 +305,11 @@ export default function MyBookingsScreen({ navigation }) {
   // No restaurant state
   if (!hasRestaurants) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView style={styles.container} edges={['left', 'right']}>
         <StatusBar barStyle="light-content" backgroundColor={C.primary} />
-        <LinearGradient colors={[C.primary, C.primaryDark]} style={styles.heroHeader}>
+        <LinearGradient colors={[C.primary, C.primaryDark]} style={[styles.heroHeader, { paddingTop: insets.top + scale(6) }]}>
+          <View style={styles.heroBlobA} pointerEvents="none" />
+          <View style={styles.heroBlobB} pointerEvents="none" />
           <View style={styles.heroContent}>
             <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
               <Icon name="arrow-back" size={18} color="#fff" />
@@ -351,7 +334,7 @@ export default function MyBookingsScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <StatusBar barStyle="light-content" backgroundColor={C.primary} />
 
       {/* Hero Header */}
@@ -359,9 +342,11 @@ export default function MyBookingsScreen({ navigation }) {
         colors={[C.primary, C.primaryDark]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={styles.heroHeader}
+        style={[styles.heroHeader, { paddingTop: insets.top + scale(6) }]}
       >
-        <View style={styles.heroContent}>
+        <View style={styles.heroBlobA} pointerEvents="none" />
+          <View style={styles.heroBlobB} pointerEvents="none" />
+          <View style={styles.heroContent}>
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
             <Icon name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
@@ -459,7 +444,10 @@ const styles = StyleSheet.create({
     paddingBottom: scale(10),
     borderBottomLeftRadius: scale(20),
     borderBottomRightRadius: scale(20),
+    overflow: 'hidden',
   },
+  heroBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
+  heroBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
   heroContent: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -471,8 +459,8 @@ const styles = StyleSheet.create({
   backBtn: {
     width: scale(34),
     height: scale(34),
-    borderRadius: scale(10),
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: scale(11),
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -492,8 +480,8 @@ const styles = StyleSheet.create({
   menuBtn: {
     width: scale(34),
     height: scale(34),
-    borderRadius: scale(10),
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: scale(11),
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -527,14 +515,10 @@ const styles = StyleSheet.create({
   },
 
   // Status Tabs
-  statusTabsContainer: {
-    backgroundColor: C.card,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
-  },
+  statusTabsContainer: {},
   statusTabsScroll: {
     paddingHorizontal: scale(16),
-    paddingVertical: scale(12),
+    paddingVertical: scale(10),
   },
   statusTab: {
     flexDirection: 'row',
@@ -572,131 +556,34 @@ const styles = StyleSheet.create({
     paddingBottom: scale(100),
   },
 
-  // Booking Card
+  // Booking Card — compact row
   bookingCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: C.card,
-    borderRadius: scale(14),
-    marginBottom: scale(10),
-    overflow: 'hidden',
+    borderRadius: scale(12),
+    padding: scale(10),
+    marginBottom: scale(8),
+    gap: scale(9),
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
-    shadowRadius: 6,
+    shadowRadius: 5,
     elevation: 3,
   },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: scale(12),
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
-  },
-  cardHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: scale(9),
-  },
-  bookingIconBox: {
-    width: scale(36),
-    height: scale(36),
+  rowIconBox: {
+    width: scale(34),
+    height: scale(34),
     borderRadius: scale(10),
     alignItems: 'center',
     justifyContent: 'center',
   },
-  bookingId: {
-    fontSize: moderateScale(13.5),
-    fontWeight: '700',
-    color: C.ink,
-  },
-  bookingDate: {
-    fontSize: moderateScale(10.5),
-    color: C.muted,
-    marginTop: scale(1),
-  },
-  statusPill: {
-    paddingHorizontal: scale(8),
-    paddingVertical: scale(4),
-    borderRadius: scale(10),
-  },
-  statusPillText: {
-    fontSize: moderateScale(9.5),
-    fontWeight: '600',
-  },
-
-  // Card Body
-  cardBody: {
-    padding: scale(12),
-    gap: scale(7),
-  },
-  itemsSummary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: scale(6),
-  },
-  itemsText: {
-    fontSize: moderateScale(12.5),
-    color: C.text,
-    fontWeight: '500',
-  },
-  scheduleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: scale(6),
-  },
-  scheduleText: {
-    fontSize: moderateScale(11.5),
-    color: C.info,
-    fontWeight: '500',
-  },
-  engineerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: scale(6),
-  },
-  engineerText: {
-    fontSize: moderateScale(11.5),
-    color: C.purple,
-    fontWeight: '500',
-    flex: 1,
-  },
-
-  // Card Footer
-  cardFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: scale(12),
-    backgroundColor: '#F8FAFC',
-    borderTopWidth: 1,
-    borderTopColor: C.border,
-  },
-  amountLabel: {
-    fontSize: moderateScale(9.5),
-    color: C.muted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  amountValue: {
-    fontSize: moderateScale(15),
-    fontWeight: '700',
-    color: C.ink,
-    marginTop: scale(1),
-  },
-  viewDetailsBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: scale(4),
-    backgroundColor: '#FEE2E2',
-    paddingHorizontal: scale(11),
-    paddingVertical: scale(6),
-    borderRadius: scale(16),
-  },
-  viewDetailsText: {
-    fontSize: moderateScale(11.5),
-    fontWeight: '600',
-    color: C.primary,
-  },
+  rowInfo: { flex: 1, minWidth: 0 },
+  rowId: { fontSize: moderateScale(11.5), fontWeight: '800', color: C.ink },
+  rowMeta: { fontSize: moderateScale(9), color: C.muted, marginTop: scale(1) },
+  rowRight: { alignItems: 'flex-end', marginRight: scale(4) },
+  rowAmount: { fontSize: moderateScale(12), fontWeight: '800', color: C.ink },
+  rowStatus: { fontSize: moderateScale(8), fontWeight: '700', marginTop: scale(1) },
 
   // Loading
   loadingContainer: {
@@ -709,6 +596,14 @@ const styles = StyleSheet.create({
     color: C.muted,
     marginTop: scale(12),
   },
+
+  // Skeleton
+  skelTab: { flex: 1, height: scale(32), backgroundColor: '#E2E8F0', borderRadius: scale(16) },
+  skelRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.card, borderRadius: scale(12), padding: scale(10), marginBottom: scale(8) },
+  skelIconBox: { width: scale(34), height: scale(34), borderRadius: scale(10), backgroundColor: '#E2E8F0' },
+  skelLineWide: { height: scale(11), width: '60%', backgroundColor: '#E2E8F0', borderRadius: scale(6), marginLeft: scale(10), marginBottom: scale(6) },
+  skelLineNarrow: { height: scale(9), width: '40%', backgroundColor: '#E2E8F0', borderRadius: scale(6), marginLeft: scale(10) },
+  skelAmount: { width: scale(50), height: scale(14), backgroundColor: '#E2E8F0', borderRadius: scale(6) },
 
   // Empty States
   emptyContainer: {

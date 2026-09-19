@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,13 +7,14 @@ import {
   TouchableOpacity,
   Pressable,
   RefreshControl,
-  ActivityIndicator,
   Modal,
   ScrollView,
   TextInput,
   Dimensions,
+  StatusBar,
+  Animated,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import { api } from '../api/client';
@@ -155,10 +156,51 @@ function TimelineStep({ step, isLast }) {
   );
 }
 
+function SkeletonOrderTracking({ pulse }) {
+  return (
+    <View style={s.listContent}>
+      {[1, 2, 3, 4, 5].map(i => (
+        <View key={i} style={s.card}>
+          <Animated.View style={[s.cardAccent, s.skelFill, { opacity: pulse }]} />
+          <View style={s.cardBody}>
+            <View style={s.cardTopRow}>
+              <Animated.View style={[s.cardIconBox, s.skelFill, { opacity: pulse }]} />
+              <View style={s.cardTopInfo}>
+                <Animated.View style={[s.skelLine, s.skelLineTitle, { opacity: pulse }]} />
+                <Animated.View style={[s.skelLine, s.skelLineSmall, { opacity: pulse }]} />
+              </View>
+              <Animated.View style={[s.skelChevron, { opacity: pulse }]} />
+            </View>
+            <View style={s.cardBottomRow}>
+              <Animated.View style={[s.skelPill, { opacity: pulse }]} />
+              <View style={s.cardMetaRight}>
+                <Animated.View style={[s.skelDateLine, { opacity: pulse }]} />
+                <Animated.View style={[s.skelPrice, { opacity: pulse }]} />
+              </View>
+            </View>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 export default function OrderTrackingScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('services');
+
+  const pulse = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
+      Animated.timing(pulse, { toValue: 0.4, duration: 800, useNativeDriver: false }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
 
   const [serviceBookings, setServiceBookings] = useState([]);
   const [trackingItems, setTrackingItems] = useState([]);
@@ -438,7 +480,7 @@ export default function OrderTrackingScreen({ navigation }) {
         <View style={s.cardBody}>
           <View style={s.cardTopRow}>
             <LinearGradient colors={ss.gradient} style={s.cardIconBox}>
-              <Icon name={ss.icon} size={scale(16)} color="#fff" />
+              <Icon name={ss.icon} size={scale(13)} color="#fff" />
             </LinearGradient>
             <View style={s.cardTopInfo}>
               <Text style={s.cardTitle} numberOfLines={1}>{item.equipment?.name || 'General Service'}</Text>
@@ -447,12 +489,12 @@ export default function OrderTrackingScreen({ navigation }) {
               ) : null}
               <Text style={s.cardId}>#{item.id?.slice(0, 8)}</Text>
             </View>
-            <Icon name="chevron-forward" size={scale(18)} color={C.muted} />
+            <Icon name="chevron-forward" size={scale(15)} color={C.muted} />
           </View>
 
           <View style={s.cardBottomRow}>
             <View style={[s.statusPill, { backgroundColor: ss.bg }]}>
-              <Icon name={ss.icon} size={scale(12)} color={ss.color} />
+              <Icon name={ss.icon} size={scale(10)} color={ss.color} />
               <Text style={[s.statusPillText, { color: ss.color }]}>{ss.label}</Text>
             </View>
             <View style={s.cardMetaRight}>
@@ -463,7 +505,7 @@ export default function OrderTrackingScreen({ navigation }) {
 
           {item.slotStartDateTime && (
             <View style={s.scheduleRow}>
-              <Icon name="calendar" size={scale(13)} color={C.info} />
+              <Icon name="calendar" size={scale(11)} color={C.info} />
               <Text style={s.scheduleText}>Scheduled: {formatDate(item.slotStartDateTime)}</Text>
             </View>
           )}
@@ -486,7 +528,7 @@ export default function OrderTrackingScreen({ navigation }) {
         <View style={s.cardBody}>
           <View style={s.cardTopRow}>
             <LinearGradient colors={os.gradient} style={s.cardIconBox}>
-              <Icon name={os.icon} size={scale(16)} color="#fff" />
+              <Icon name={os.icon} size={scale(13)} color="#fff" />
             </LinearGradient>
             <View style={s.cardTopInfo}>
               <Text style={s.cardTitle} numberOfLines={1}>
@@ -497,12 +539,12 @@ export default function OrderTrackingScreen({ navigation }) {
               ) : null}
               <Text style={s.cardId}>#{item.id?.slice(0, 8)}</Text>
             </View>
-            <Icon name="chevron-forward" size={scale(18)} color={C.muted} />
+            <Icon name="chevron-forward" size={scale(15)} color={C.muted} />
           </View>
 
           <View style={s.cardBottomRow}>
             <View style={[s.statusPill, { backgroundColor: os.bg }]}>
-              <Icon name={os.icon} size={scale(12)} color={os.color} />
+              <Icon name={os.icon} size={scale(10)} color={os.color} />
               <Text style={[s.statusPillText, { color: os.color }]}>{os.label}</Text>
             </View>
             <View style={s.cardMetaRight}>
@@ -540,31 +582,38 @@ export default function OrderTrackingScreen({ navigation }) {
 
   if (loading && !refreshing) {
     return (
-      <SafeAreaView style={s.container}>
-        <LinearGradient colors={[C.primary, C.primaryDark]} style={s.header}>
+      <SafeAreaView style={s.container} edges={['left', 'right']}>
+        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <LinearGradient colors={[C.primary, C.primaryDark]} style={[s.header, { paddingTop: insets.top + scale(10) }]}>
+          <View style={s.headerBlobA} pointerEvents="none" />
+          <View style={s.headerBlobB} pointerEvents="none" />
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={s.headerBtn}>
             <Icon name="arrow-back" size={scale(18)} color="#fff" />
           </TouchableOpacity>
-          <Text style={s.headerTitle}>Order Tracking</Text>
-          <View style={{ width: scale(38) }} />
+          <View style={s.headerCenter}>
+            <Text style={s.headerTitle}>Order Tracking</Text>
+          </View>
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={s.headerBtn}>
+            <Icon name="menu" size={scale(18)} color="#fff" />
+          </TouchableOpacity>
         </LinearGradient>
-        <View style={s.loadingBox}>
-          <ActivityIndicator size="large" color={C.primary} />
-          <Text style={s.loadingText}>Loading tracking data...</Text>
-        </View>
+        <SkeletonOrderTracking pulse={pulse} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={s.container}>
+    <SafeAreaView style={s.container} edges={['left', 'right']}>
+      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
       {/* Gradient Header */}
       <LinearGradient
         colors={[C.primary, C.primaryDark]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={s.header}
+        style={[s.header, { paddingTop: insets.top + scale(10) }]}
       >
+        <View style={s.headerBlobA} pointerEvents="none" />
+        <View style={s.headerBlobB} pointerEvents="none" />
         <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={s.headerBtn}>
           <Icon name="arrow-back" size={scale(18)} color="#fff" />
         </TouchableOpacity>
@@ -1053,13 +1102,16 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: scale(16),
-    paddingVertical: scale(9),
+    paddingBottom: scale(16),
+    overflow: 'hidden',
   },
+  headerBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
+  headerBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
   headerBtn: {
     width: scale(32),
     height: scale(32),
-    borderRadius: scale(10),
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: scale(11),
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1069,8 +1121,8 @@ const s = StyleSheet.create({
     gap: scale(7),
   },
   headerTitle: {
-    fontSize: moderateScale(16),
-    fontWeight: '800',
+    fontSize: moderateScale(18),
+    fontWeight: '900',
     color: '#fff',
   },
   headerBadge: {
@@ -1087,6 +1139,17 @@ const s = StyleSheet.create({
 
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   loadingText: { marginTop: scale(12), fontSize: moderateScale(14), color: C.muted },
+
+  // Skeleton loading
+  listContent: { paddingHorizontal: scale(14), paddingTop: scale(12) },
+  skelFill: { backgroundColor: '#E2E8F0' },
+  skelLine: { height: scale(11), width: '55%', borderRadius: scale(4), backgroundColor: '#E2E8F0' },
+  skelLineTitle: { width: '65%' },
+  skelLineSmall: { height: scale(8), width: '40%', marginTop: scale(6), backgroundColor: '#E2E8F0', borderRadius: scale(4) },
+  skelPill: { width: scale(90), height: scale(18), borderRadius: scale(7), backgroundColor: '#E2E8F0' },
+  skelPrice: { width: scale(50), height: scale(14), borderRadius: scale(4), backgroundColor: '#E2E8F0' },
+  skelDateLine: { width: scale(40), height: scale(9), borderRadius: scale(4), backgroundColor: '#E2E8F0', marginBottom: scale(3) },
+  skelChevron: { width: scale(15), height: scale(15), borderRadius: scale(4), backgroundColor: '#E2E8F0' },
 
   // Restaurant Banner
   restBanner: {
@@ -1203,36 +1266,36 @@ const s = StyleSheet.create({
   // Card
   card: {
     backgroundColor: C.card,
-    borderRadius: scale(16),
-    marginBottom: scale(12),
+    borderRadius: scale(13),
+    marginBottom: scale(9),
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: C.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: scale(2) },
     shadowOpacity: 0.04,
-    shadowRadius: scale(8),
+    shadowRadius: scale(6),
     elevation: 2,
   },
   cardAccent: { height: scale(3) },
-  cardBody: { padding: scale(14) },
+  cardBody: { padding: scale(10) },
   cardTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: scale(12),
-    marginBottom: scale(12),
+    gap: scale(9),
+    marginBottom: scale(9),
   },
   cardIconBox: {
-    width: scale(38),
-    height: scale(38),
-    borderRadius: scale(12),
+    width: scale(30),
+    height: scale(30),
+    borderRadius: scale(10),
     alignItems: 'center',
     justifyContent: 'center',
   },
   cardTopInfo: { flex: 1 },
-  cardTitle: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink },
-  cardItemNames: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(2) },
-  cardId: { fontSize: moderateScale(11), color: '#9CA3AF', marginTop: scale(2) },
+  cardTitle: { fontSize: moderateScale(12.5), fontWeight: '700', color: C.ink },
+  cardItemNames: { fontSize: moderateScale(10), color: C.muted, marginTop: scale(1) },
+  cardId: { fontSize: moderateScale(9.5), color: '#9CA3AF', marginTop: scale(1) },
   cardBottomRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1241,26 +1304,26 @@ const s = StyleSheet.create({
   statusPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: scale(5),
-    paddingHorizontal: scale(10),
-    paddingVertical: scale(5),
-    borderRadius: scale(8),
+    gap: scale(4),
+    paddingHorizontal: scale(8),
+    paddingVertical: scale(4),
+    borderRadius: scale(7),
   },
-  statusPillText: { fontSize: moderateScale(11), fontWeight: '700' },
+  statusPillText: { fontSize: moderateScale(9.5), fontWeight: '700' },
   cardMetaRight: { alignItems: 'flex-end' },
-  cardDate: { fontSize: moderateScale(11), color: C.muted },
-  cardPrice: { fontSize: moderateScale(15), fontWeight: '800', color: C.ink, marginTop: scale(2) },
+  cardDate: { fontSize: moderateScale(9.5), color: C.muted },
+  cardPrice: { fontSize: moderateScale(12.5), fontWeight: '800', color: C.ink, marginTop: scale(1) },
   scheduleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: scale(5),
-    marginTop: scale(10),
+    gap: scale(4),
+    marginTop: scale(7),
     backgroundColor: '#EFF6FF',
-    paddingHorizontal: scale(10),
-    paddingVertical: scale(6),
-    borderRadius: scale(8),
+    paddingHorizontal: scale(8),
+    paddingVertical: scale(5),
+    borderRadius: scale(7),
   },
-  scheduleText: { fontSize: moderateScale(12), fontWeight: '600', color: C.info },
+  scheduleText: { fontSize: moderateScale(10), fontWeight: '600', color: C.info },
 
   // Empty State
   emptyBox: { alignItems: 'center', paddingTop: scale(60), paddingBottom: scale(40) },

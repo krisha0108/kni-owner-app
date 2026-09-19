@@ -24,10 +24,11 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList,
-  TextInput, ActivityIndicator, Modal, Image,
-  useWindowDimensions, Dimensions,
+  TextInput, ActivityIndicator, Modal, Image, Animated,
+  useWindowDimensions, Dimensions, StatusBar,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary } from 'react-native-image-picker';
 import Clipboard from '@react-native-clipboard/clipboard';
@@ -57,6 +58,7 @@ const TIP_OPTIONS = [50, 75, 100];
 
 const C = {
   primary: '#EF3A3A',
+  primaryDark: '#DC2626',
   ink: '#1D2254',
   text: '#0F172A',
   muted: '#6B7280',
@@ -75,7 +77,21 @@ const formatPrice = (amount) => {
   return `₹${num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
+/* ─── Skeleton ─── */
+function SkeletonServiceSelect({ pulse }) {
+  return (
+    <View style={{ paddingHorizontal: scale(16), paddingTop: scale(16) }}>
+      <Animated.View style={[st.skelEquipmentCard, { opacity: pulse }]} />
+      <Animated.View style={[st.skelSectionTitle, { opacity: pulse }]} />
+      {[1, 2, 3].map(i => (
+        <Animated.View key={i} style={[st.skelItemCard, { opacity: pulse }]} />
+      ))}
+    </View>
+  );
+}
+
 export default function ServiceRequestScreen({ navigation, route }) {
+  const insets = useSafeAreaInsets();
   const {
     equipmentId,
     equipmentName,
@@ -99,6 +115,17 @@ export default function ServiceRequestScreen({ navigation, route }) {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedItems, setSelectedItems] = useState(new Map());
   const [paymentSettings, setPaymentSettings] = useState(null);
+
+  const pulse = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
+      Animated.timing(pulse, { toValue: 0.4, duration: 800, useNativeDriver: false }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
 
   // Flow state
   const [step, setStep] = useState('select'); // select | date | payment | confirm
@@ -1015,14 +1042,17 @@ export default function ServiceRequestScreen({ navigation, route }) {
   // No category error
   if (!categoryId) {
     return (
-      <SafeAreaView style={st.container} edges={['top']}>
-        <View style={st.header}>
+      <SafeAreaView style={st.container} edges={['left', 'right']}>
+        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
+          <View style={st.headerBlobA} pointerEvents="none" />
+          <View style={st.headerBlobB} pointerEvents="none" />
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.headerBackBtn}>
-            <Icon name="arrow-back" size={22} color={C.ink} />
+            <Icon name="arrow-back" size={22} color="#fff" />
           </TouchableOpacity>
           <Text style={st.headerTitle}>Request Service</Text>
           <View style={{ width: scale(40) }} />
-        </View>
+        </LinearGradient>
         <View style={st.errorContainer}>
           <Icon name="alert-circle-outline" size={64} color={C.muted} />
           <Text style={st.errorTitle}>Invalid Request</Text>
@@ -1041,17 +1071,20 @@ export default function ServiceRequestScreen({ navigation, route }) {
   }
 
   return (
-    <SafeAreaView style={st.container} edges={['top']}>
+    <SafeAreaView style={st.container} edges={['left', 'right']}>
+      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
       {/* Header */}
-      <View style={st.header}>
+      <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
+        <View style={st.headerBlobA} pointerEvents="none" />
+        <View style={st.headerBlobB} pointerEvents="none" />
         <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.headerBackBtn}>
-          <Icon name="arrow-back" size={22} color={C.ink} />
+          <Icon name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
         <Text style={st.headerTitle}>Request Service</Text>
         <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
-          <Icon name="menu" size={22} color={C.ink} />
+          <Icon name="menu" size={22} color="#fff" />
         </TouchableOpacity>
-      </View>
+      </LinearGradient>
 
       {/* Progress Steps */}
       {step !== 'confirm' && (
@@ -1092,9 +1125,7 @@ export default function ServiceRequestScreen({ navigation, route }) {
 
       {/* Loading */}
       {isLoading ? (
-        <View style={st.loadingContainer}>
-          <ActivityIndicator size="large" color={C.primary} />
-        </View>
+        <SkeletonServiceSelect pulse={pulse} />
       ) : (
         renderStepContent()
       )}
@@ -1189,14 +1220,15 @@ const st = StyleSheet.create({
   // Header
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: scale(16), paddingVertical: scale(12), backgroundColor: C.card,
-    borderBottomWidth: 1, borderBottomColor: C.border
+    paddingHorizontal: scale(16), paddingBottom: scale(12), overflow: 'hidden'
   },
+  headerBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
+  headerBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
   headerBackBtn: {
-    width: scale(40), height: scale(40), borderRadius: scale(12), backgroundColor: C.bg,
+    width: scale(40), height: scale(40), borderRadius: scale(14), backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center', justifyContent: 'center'
   },
-  headerTitle: { fontSize: moderateScale(18), fontWeight: '800', color: C.ink },
+  headerTitle: { fontSize: moderateScale(18), fontWeight: '800', color: '#fff' },
 
   // Progress
   progressRow: {
@@ -1222,6 +1254,27 @@ const st = StyleSheet.create({
   // Content
   scrollContent: { flex: 1, padding: scale(16) },
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+
+  // Skeleton
+  skelEquipmentCard: {
+    height: scale(88),
+    borderRadius: scale(16),
+    backgroundColor: '#E2E8F0',
+    marginBottom: scale(20),
+  },
+  skelSectionTitle: {
+    width: '55%',
+    height: scale(16),
+    borderRadius: scale(6),
+    backgroundColor: '#E2E8F0',
+    marginBottom: scale(12),
+  },
+  skelItemCard: {
+    height: scale(76),
+    borderRadius: scale(14),
+    backgroundColor: '#E2E8F0',
+    marginBottom: scale(10),
+  },
 
   // Equipment Card
   equipmentCard: {

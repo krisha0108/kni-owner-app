@@ -1,9 +1,10 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  RefreshControl, ActivityIndicator, useWindowDimensions
+  RefreshControl, ActivityIndicator, useWindowDimensions, StatusBar, Animated
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { api } from '../api/client';
 import { BarChart, PieChart } from 'react-native-chart-kit';
@@ -17,6 +18,7 @@ import { scale, moderateScale } from '../utils/responsive';
 import AppAlert from '../utils/AppAlert';
 const C = {
   primary: '#EF3A3A',
+  primaryDark: '#DC2626',
   ink: '#1D2254',
   text: '#0F172A',
   muted: '#6B7280',
@@ -47,7 +49,31 @@ const monthFilters = [
 
 const equipmentColors = [C.primary, C.info, C.warn, C.ok, '#8B5CF6', '#EC4899', '#14B8A6', '#F97316'];
 
+/* ─── Skeleton ─── */
+function SkeletonSpending({ pulse }) {
+  return (
+    <View style={{ paddingTop: scale(16) }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'center', gap: scale(8), marginBottom: scale(16) }}>
+        {[1, 2, 3].map(i => (
+          <Animated.View key={i} style={[st.skelPill, { opacity: pulse }]} />
+        ))}
+      </View>
+      <View style={st.summaryRow}>
+        {[1, 2, 3].map(i => (
+          <Animated.View key={i} style={[st.skelSummaryCard, { opacity: pulse }]} />
+        ))}
+      </View>
+      <Animated.View style={[st.skelComparisonCard, { opacity: pulse }]} />
+      <Animated.View style={[st.skelTabBar, { opacity: pulse }]} />
+      <View style={{ paddingHorizontal: scale(16) }}>
+        <Animated.View style={[st.skelChartCard, { opacity: pulse }]} />
+      </View>
+    </View>
+  );
+}
+
 export default function SpendingReportsScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
   const chartWidth = screenWidth - 64; // Account for padding
 
@@ -59,6 +85,17 @@ export default function SpendingReportsScreen({ navigation }) {
   const [data, setData] = useState(null);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState('');
+
+  const pulse = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
+      Animated.timing(pulse, { toValue: 0.4, duration: 800, useNativeDriver: false }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
   const [activeTab, setActiveTab] = useState('overview');
   const [exporting, setExporting] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
@@ -152,18 +189,20 @@ export default function SpendingReportsScreen({ navigation }) {
 
   if (loading && !refreshing) {
     return (
-      <SafeAreaView style={st.container} edges={['top']}>
-        <View style={st.header}>
+      <SafeAreaView style={st.container} edges={['left', 'right']}>
+        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
+          <View style={st.headerBlobA} pointerEvents="none" />
+          <View style={st.headerBlobB} pointerEvents="none" />
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
-            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
+            <Icon name="arrow-back" size={scale(22)} color="#fff" />
           </TouchableOpacity>
           <Text style={st.headerTitle}>Spending Reports</Text>
           <View style={{ width: scale(40) }} />
-        </View>
-        <View style={st.loadingBox}>
-          <ActivityIndicator size="large" color={C.primary} />
-          <Text style={st.loadingText}>Loading report...</Text>
-        </View>
+        </LinearGradient>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <SkeletonSpending pulse={pulse} />
+        </ScrollView>
         <KniBottomNav navigation={navigation} />
       </SafeAreaView>
     );
@@ -171,14 +210,17 @@ export default function SpendingReportsScreen({ navigation }) {
 
   if (!hasRestaurants) {
     return (
-      <SafeAreaView style={st.container} edges={['top']}>
-        <View style={st.header}>
+      <SafeAreaView style={st.container} edges={['left', 'right']}>
+        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
+          <View style={st.headerBlobA} pointerEvents="none" />
+          <View style={st.headerBlobB} pointerEvents="none" />
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
-            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
+            <Icon name="arrow-back" size={scale(22)} color="#fff" />
           </TouchableOpacity>
           <Text style={st.headerTitle}>Spending Reports</Text>
           <View style={{ width: scale(40) }} />
-        </View>
+        </LinearGradient>
         <View style={st.emptyState}>
           <Icon name="restaurant-outline" size={scale(64)} color={C.muted} />
           <Text style={st.emptyTitle}>No Restaurant Found</Text>
@@ -194,11 +236,14 @@ export default function SpendingReportsScreen({ navigation }) {
   const pieChartData = getPieChartData();
 
   return (
-    <SafeAreaView style={st.container} edges={['top']}>
+    <SafeAreaView style={st.container} edges={['left', 'right']}>
+      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
       {/* Header */}
-      <View style={st.header}>
+      <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
+        <View style={st.headerBlobA} pointerEvents="none" />
+        <View style={st.headerBlobB} pointerEvents="none" />
         <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
-          <Icon name="arrow-back" size={scale(22)} color={C.ink} />
+          <Icon name="arrow-back" size={scale(22)} color="#fff" />
         </TouchableOpacity>
         <Text style={st.headerTitle}>Spending Reports</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -208,16 +253,16 @@ export default function SpendingReportsScreen({ navigation }) {
             style={st.exportBtn}
           >
             {exporting ? (
-              <ActivityIndicator size="small" color={C.primary} />
+              <ActivityIndicator size="small" color="#fff" />
             ) : (
-              <Icon name="download-outline" size={scale(22)} color={C.primary} />
+              <Icon name="download-outline" size={scale(22)} color="#fff" />
             )}
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
-            <Icon name="menu" size={scale(22)} color="#1D2254" />
+            <Icon name="menu" size={scale(22)} color="#fff" />
           </TouchableOpacity>
         </View>
-      </View>
+      </LinearGradient>
 
       {/* Restaurant Selector */}
       <RestaurantSelectorBar />
@@ -462,14 +507,47 @@ const st = StyleSheet.create({
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   loadingText: { marginTop: scale(12), fontSize: moderateScale(14), color: C.muted },
 
+  // ─── Skeleton ───
+  skelPill: {
+    width: scale(56),
+    height: scale(38),
+    borderRadius: scale(12),
+    backgroundColor: '#E2E8F0',
+  },
+  skelSummaryCard: {
+    flex: 1,
+    height: scale(92),
+    borderRadius: scale(16),
+    backgroundColor: '#E2E8F0',
+  },
+  skelComparisonCard: {
+    margin: scale(16),
+    height: scale(76),
+    borderRadius: scale(16),
+    backgroundColor: '#E2E8F0',
+  },
+  skelTabBar: {
+    marginHorizontal: scale(16),
+    height: scale(44),
+    borderRadius: scale(12),
+    backgroundColor: '#E2E8F0',
+    marginBottom: scale(16),
+  },
+  skelChartCard: {
+    height: scale(240),
+    borderRadius: scale(16),
+    backgroundColor: '#E2E8F0',
+  },
+
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: scale(16), paddingVertical: scale(12), backgroundColor: C.card,
-    borderBottomWidth: 1, borderBottomColor: C.border
+    paddingHorizontal: scale(16), paddingBottom: scale(12), overflow: 'hidden'
   },
-  backBtn: { width: scale(40), height: scale(40), borderRadius: scale(12), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: moderateScale(18), fontWeight: '900', color: C.ink },
-  exportBtn: { width: scale(40), height: scale(40), borderRadius: scale(12), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
+  headerBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
+  headerBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
+  backBtn: { width: scale(40), height: scale(40), borderRadius: scale(14), backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { fontSize: moderateScale(18), fontWeight: '900', color: '#fff' },
+  exportBtn: { width: scale(40), height: scale(40), borderRadius: scale(14), backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
 
   scrollContent: { paddingBottom: scale(32) },
 

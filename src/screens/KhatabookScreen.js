@@ -75,20 +75,50 @@ const fmtDate = (d) => {
 /* ─── Skeleton ─── */
 function SkeletonLoader({ pulse }) {
   return (
-    <View style={{ paddingHorizontal: scale(16), paddingTop: scale(16) }}>
-      <Animated.View style={[st.skelHero, { opacity: pulse }]} />
-      <View style={{ flexDirection: 'row', gap: scale(8), marginTop: scale(14) }}>
-        {[1, 2, 3, 4].map(i => (
-          <Animated.View key={i} style={[st.skelCard, { opacity: pulse }]} />
+    <View>
+      {/* Money Card - same shape as st.moneyCard */}
+      <View style={{ paddingHorizontal: scale(16), paddingTop: scale(14) }}>
+        <View style={[st.moneyCard, { backgroundColor: C.ink }]}>
+          <View style={st.moneyTabRow}>
+            {PERIOD_TABS.map(tab => (
+              <View key={tab.key} style={st.moneyTab} />
+            ))}
+          </View>
+          <Animated.View style={[st.skelLineOnDark, { width: '50%', marginTop: scale(12), opacity: pulse }]} />
+          <Animated.View style={[st.skelLineOnDark, { width: '65%', height: scale(22), marginTop: scale(8), opacity: pulse }]} />
+          <Animated.View style={[st.skelLineOnDark, { width: '40%', height: scale(10), marginTop: scale(8), opacity: pulse }]} />
+          <View style={st.moneyStatsRow}>
+            {[1, 2, 3].map(i => <View key={i} style={st.moneyStat} />)}
+          </View>
+        </View>
+      </View>
+
+      {/* Quick Actions - same shape as st.actionsStrip */}
+      <View style={st.sectionHeader}>
+        <Animated.View style={[st.skelLine, { width: scale(100), opacity: pulse }]} />
+      </View>
+      <View style={st.actionsStrip}>
+        {QUICK_ACTIONS.map((action, i) => (
+          <React.Fragment key={action.key}>
+            {i > 0 && <View style={st.actionsDivider} />}
+            <View style={st.actionStripItem}>
+              <Animated.View style={[st.actionStripIcon, st.skelFillGray, { opacity: pulse }]} />
+              <Animated.View style={[st.skelLine, { width: '70%', height: scale(8), opacity: pulse }]} />
+            </View>
+          </React.Fragment>
         ))}
       </View>
-      <View style={{ flexDirection: 'row', gap: scale(10), marginTop: scale(14) }}>
-        {[1, 2].map(i => (
-          <Animated.View key={i} style={[st.skelAction, { opacity: pulse }]} />
-        ))}
-      </View>
+
+      {/* Breakdown Sections - same shape as collapsed st.breakdownCard */}
       {[1, 2, 3].map(i => (
-        <Animated.View key={i} style={[st.skelItem, { opacity: pulse }]} />
+        <View key={i} style={st.breakdownCard}>
+          <Animated.View style={[st.breakdownAccent, st.skelFillGray, { opacity: pulse }]} />
+          <View style={st.accordionHeader}>
+            <Animated.View style={[st.breakdownHeaderIcon, st.skelFillGray, { opacity: pulse }]} />
+            <Animated.View style={[st.skelLine, { flex: 1, opacity: pulse }]} />
+            <Animated.View style={[st.skelLine, { width: scale(50), opacity: pulse }]} />
+          </View>
+        </View>
       ))}
     </View>
   );
@@ -107,6 +137,8 @@ export default function KhatabookScreen({ navigation }) {
   const [data, setData] = useState(null);
   const [selectedPeriod, setSelectedPeriod] = useState(30);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [expandedSections, setExpandedSections] = useState({});
+  const toggleSection = (idx) => setExpandedSections(prev => ({ ...prev, [idx]: !prev[idx] }));
 
   const pulse = useRef(new Animated.Value(0.4)).current;
 
@@ -163,6 +195,8 @@ export default function KhatabookScreen({ navigation }) {
         title: 'Cashbook',
         icon: 'wallet',
         gradient: ['#60A5FA', '#3B82F6'],
+        summaryValue: fmtFull((cb.cashBalance || 0) + (cb.bankBalance || 0)),
+        summaryColor: C.info,
         rows: [
           { label: 'Cash In', value: fmtFull(cb.cashIn), icon: 'arrow-down-circle', color: C.success },
           { label: 'Cash Out', value: fmtFull(cb.cashOut), icon: 'arrow-up-circle', color: C.danger },
@@ -180,6 +214,8 @@ export default function KhatabookScreen({ navigation }) {
         title: 'Vendor Ledger',
         icon: 'people',
         gradient: ['#A78BFA', '#7C3AED'],
+        summaryValue: fmtFull(vl.totalDue),
+        summaryColor: C.danger,
         rows: [
           { label: 'Total Due', value: fmtFull(vl.totalDue), icon: 'alert-circle', color: C.danger },
           { label: 'Purchases', value: fmtFull(vl.totalPurchases), icon: 'cart', color: C.warning },
@@ -195,6 +231,8 @@ export default function KhatabookScreen({ navigation }) {
         title: 'Staff Salary',
         icon: 'briefcase',
         gradient: ['#F472B6', '#EC4899'],
+        summaryValue: fmtFull(ss.totalPayable),
+        summaryColor: C.warning,
         rows: [
           { label: 'Payable', value: fmtFull(ss.totalPayable), icon: 'time', color: C.warning },
           { label: 'Paid', value: fmtFull(ss.totalPaid), icon: 'checkmark-circle', color: C.success },
@@ -204,14 +242,19 @@ export default function KhatabookScreen({ navigation }) {
     }
 
     if (data.expenses?.byCategory && data.expenses.byCategory.length > 0) {
+      const maxCategoryTotal = Math.max(...data.expenses.byCategory.map(cat => cat.total || cat.amount || 0), 1);
+      const categoryTotalSum = data.expenses.byCategory.reduce((sum, cat) => sum + (cat.total || cat.amount || 0), 0);
       sections.push({
         title: 'Expense Categories',
         icon: 'pie-chart',
         gradient: ['#FBBF24', '#F59E0B'],
+        summaryValue: fmtFull(categoryTotalSum),
+        summaryColor: C.warning,
+        isBarChart: true,
         rows: data.expenses.byCategory.map(cat => ({
           label: cat.category || cat.name || 'Other',
           value: fmtFull(cat.total || cat.amount),
-          icon: 'pricetag',
+          barPct: Math.max(4, Math.round(((cat.total || cat.amount || 0) / maxCategoryTotal) * 100)),
           color: C.warning,
         })),
       });
@@ -223,12 +266,34 @@ export default function KhatabookScreen({ navigation }) {
   /* ─── LOADING STATE ─── */
   if ((loading || restaurantsLoading) && !refreshing) {
     return (
-      <SafeAreaView style={st.container} edges={['top']}>
+      <SafeAreaView style={st.container} edges={['left', 'right']}>
         <StatusBar barStyle="light-content" backgroundColor={C.primary} />
-        <LinearGradient colors={[C.gradient1, C.gradient2]} style={st.loadingHero}>
-          <Text style={st.heroTitle}>Khatabook</Text>
+        <LinearGradient
+          colors={[C.gradient1, C.gradient2]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[st.heroSection, { paddingTop: insets.top + scale(8) }]}
+        >
+          <View style={st.heroBlobA} pointerEvents="none" />
+          <View style={st.heroBlobB} pointerEvents="none" />
+          <View style={st.heroContent}>
+            <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
+              <Icon name="arrow-back" size={scale(18)} color="#fff" />
+            </TouchableOpacity>
+            <View style={st.heroTextContainer}>
+              <Text style={st.heroTitle}>Khatabook</Text>
+              <RestaurantSelectorCompact dark style={st.heroRestaurantPill} />
+            </View>
+            <View style={st.heroActions}>
+              <TouchableOpacity style={st.heroIconBtn} onPress={() => setMenuVisible(true)}>
+                <Icon name="menu" size={scale(16)} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          </View>
         </LinearGradient>
-        <SkeletonLoader pulse={pulse} />
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom + scale(100) }}>
+          <SkeletonLoader pulse={pulse} />
+        </ScrollView>
         <KniBottomNav navigation={navigation} active="khatabook" />
       </SafeAreaView>
     );
@@ -236,7 +301,7 @@ export default function KhatabookScreen({ navigation }) {
 
   /* ─── MAIN RENDER ─── */
   return (
-    <SafeAreaView style={st.container} edges={['top']}>
+    <SafeAreaView style={st.container} edges={['left', 'right']}>
       <StatusBar barStyle="light-content" backgroundColor={C.primary} />
 
       {/* ═══ Premium Gradient Hero Header ═══ */}
@@ -244,11 +309,13 @@ export default function KhatabookScreen({ navigation }) {
         colors={[C.gradient1, C.gradient2]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={st.heroSection}
+        style={[st.heroSection, { paddingTop: insets.top + scale(8) }]}
       >
+        <View style={st.heroBlobA} pointerEvents="none" />
+        <View style={st.heroBlobB} pointerEvents="none" />
         <View style={st.heroContent}>
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
-            <Icon name="arrow-back" size={scale(22)} color="#fff" />
+            <Icon name="arrow-back" size={scale(18)} color="#fff" />
           </TouchableOpacity>
           <View style={st.heroTextContainer}>
             <Text style={st.heroTitle}>Khatabook</Text>
@@ -260,53 +327,14 @@ export default function KhatabookScreen({ navigation }) {
               style={[st.heroIconBtn, refreshing && { opacity: 0.5 }]}
               disabled={refreshing}
             >
-              <Icon name="refresh" size={scale(20)} color="#fff" />
+              <Icon name="refresh" size={scale(16)} color="#fff" />
             </TouchableOpacity>
             <TouchableOpacity style={st.heroIconBtn} onPress={() => setMenuVisible(true)}>
-              <Icon name="menu" size={scale(20)} color="#fff" />
+              <Icon name="menu" size={scale(16)} color="#fff" />
             </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Net Revenue Summary inside Hero */}
-        <View style={st.heroSummaryCard}>
-          <View style={st.heroSummaryLeft}>
-            <View style={[st.heroSummaryIcon, { backgroundColor: isProfit ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)' }]}>
-              <Icon name={isProfit ? 'trending-up' : 'trending-down'} size={scale(20)} color={isProfit ? '#10B981' : '#EF4444'} />
-            </View>
-            <View>
-              <Text style={st.heroSummaryLabel}>Net Revenue</Text>
-              <Text style={st.heroSummaryValue}>{fmtFull(Math.abs(netRevenue))}</Text>
-            </View>
-          </View>
-          <View style={[st.heroSummaryBadge, { backgroundColor: isProfit ? C.successLight : C.dangerLight }]}>
-            <Icon name={isProfit ? 'arrow-up' : 'arrow-down'} size={scale(12)} color={isProfit ? C.success : C.danger} />
-            <Text style={[st.heroSummaryBadgeText, { color: isProfit ? C.success : C.danger }]}>
-              {isProfit ? 'Profit' : 'Loss'}
-            </Text>
           </View>
         </View>
       </LinearGradient>
-
-      {/* ═══ Period Filter ═══ */}
-      <View style={st.periodSection}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.periodScroll}>
-          {PERIOD_TABS.map(tab => {
-            const isActive = selectedPeriod === tab.key;
-            return (
-              <TouchableOpacity
-                key={tab.key}
-                style={[st.periodChip, isActive && st.periodChipActive]}
-                onPress={() => setSelectedPeriod(tab.key)}
-                activeOpacity={0.7}
-              >
-                <Icon name={tab.icon} size={scale(14)} color={isActive ? '#fff' : C.muted} />
-                <Text style={[st.periodChipText, isActive && st.periodChipTextActive]}>{tab.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      </View>
 
       {/* ═══ Scrollable Content ═══ */}
       <ScrollView
@@ -314,111 +342,141 @@ export default function KhatabookScreen({ navigation }) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} />}
         contentContainerStyle={{ paddingBottom: insets.bottom + scale(100) }}
       >
-        {/* ─── Revenue / Expense Mini Cards ─── */}
-        <View style={st.miniCardsRow}>
-          <View style={st.miniCard}>
-            <LinearGradient colors={['#D1FAE5', '#A7F3D0']} style={st.miniCardIcon}>
-              <Icon name="arrow-down-circle" size={scale(18)} color={C.success} />
-            </LinearGradient>
-            <Text style={st.miniCardValue}>{fmt(data?.summary?.totalIncome)}</Text>
-            <Text style={st.miniCardLabel}>REVENUE</Text>
-          </View>
+        {/* ─── Money Card: period tabs + Net Revenue + stats (same system as Home/Analytics) ─── */}
+        <View style={{ paddingHorizontal: scale(16), paddingTop: scale(14) }}>
+          <LinearGradient colors={[C.ink, '#2E3470']} style={st.moneyCard}>
+            <View style={st.moneyTabRow}>
+              {PERIOD_TABS.map(tab => {
+                const isActive = selectedPeriod === tab.key;
+                return (
+                  <TouchableOpacity
+                    key={tab.key}
+                    style={[st.moneyTab, isActive && st.moneyTabOn]}
+                    onPress={() => setSelectedPeriod(tab.key)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[st.moneyTabTxt, isActive && st.moneyTabTxtOn]}>{tab.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
 
-          <View style={st.miniCard}>
-            <LinearGradient colors={['#FEE2E2', '#FECACA']} style={st.miniCardIcon}>
-              <Icon name="arrow-up-circle" size={scale(18)} color={C.danger} />
-            </LinearGradient>
-            <Text style={st.miniCardValue}>{fmt(data?.summary?.totalExpenses)}</Text>
-            <Text style={st.miniCardLabel}>EXPENSES</Text>
-          </View>
+            <Text style={st.moneyLabel}>NET REVENUE · {selectedPeriod} DAYS</Text>
+            <Text style={st.moneyValue}>{fmtFull(Math.abs(netRevenue))}</Text>
+            <View style={st.moneyTrendRow}>
+              <Icon name={isProfit ? 'trending-up' : 'trending-down'} size={scale(13)} color={isProfit ? '#6EE7B7' : '#FCA5A5'} />
+              <Text style={[st.moneyTrendTxt, { color: isProfit ? '#6EE7B7' : '#FCA5A5' }]}>
+                {isProfit ? 'Profit' : 'Loss'} for {selectedPeriod} days
+              </Text>
+            </View>
 
-          <View style={st.miniCard}>
-            <LinearGradient colors={['#FEF3C7', '#FDE68A']} style={st.miniCardIcon}>
-              <Icon name="time" size={scale(18)} color={C.warning} />
-            </LinearGradient>
-            <Text style={st.miniCardValue}>{fmt(data?.vendors?.totalDue)}</Text>
-            <Text style={st.miniCardLabel}>DUES</Text>
-          </View>
-
-          <View style={st.miniCard}>
-            <LinearGradient colors={['#DBEAFE', '#BFDBFE']} style={st.miniCardIcon}>
-              <Icon name="wallet" size={scale(18)} color={C.info} />
-            </LinearGradient>
-            <Text style={st.miniCardValue}>{fmt(data?.cashbook?.cashBalance)}</Text>
-            <Text style={st.miniCardLabel}>BALANCE</Text>
-          </View>
+            <View style={st.moneyStatsRow}>
+              <View style={st.moneyStat}>
+                <Text style={st.moneyStatLabel}>EXPENSES</Text>
+                <Text style={st.moneyStatValue} numberOfLines={1}>{fmt(data?.summary?.totalExpenses)}</Text>
+              </View>
+              <View style={st.moneyStat}>
+                <Text style={st.moneyStatLabel}>DUES</Text>
+                <Text style={st.moneyStatValue} numberOfLines={1}>{fmt(data?.vendors?.totalDue)}</Text>
+              </View>
+              <View style={st.moneyStat}>
+                <Text style={st.moneyStatLabel}>BALANCE</Text>
+                <Text style={st.moneyStatValue} numberOfLines={1}>{fmt(data?.cashbook?.cashBalance)}</Text>
+              </View>
+            </View>
+          </LinearGradient>
         </View>
 
         {/* ─── Quick Actions ─── */}
         <View style={st.sectionHeader}>
           <Text style={st.sectionTitle}>Quick Actions</Text>
         </View>
-        <View style={st.actionsGrid}>
-          {QUICK_ACTIONS.map(action => (
-            <TouchableOpacity
-              key={action.key}
-              style={st.actionCard}
-              onPress={() => navigation.navigate(action.key)}
-              activeOpacity={0.8}
-            >
-              <LinearGradient
-                colors={action.gradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={st.actionIconBox}
+        <View style={st.actionsStrip}>
+          {QUICK_ACTIONS.map((action, i) => (
+            <React.Fragment key={action.key}>
+              {i > 0 && <View style={st.actionsDivider} />}
+              <TouchableOpacity
+                style={st.actionStripItem}
+                onPress={() => navigation.navigate(action.key)}
+                activeOpacity={0.7}
               >
-                <Icon name={action.icon} size={scale(24)} color="#fff" />
-              </LinearGradient>
-              <Text style={st.actionLabel}>{action.label}</Text>
-            </TouchableOpacity>
+                <LinearGradient
+                  colors={action.gradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={st.actionStripIcon}
+                >
+                  <Icon name={action.icon} size={scale(16)} color="#fff" />
+                </LinearGradient>
+                <Text style={st.actionStripLabel} numberOfLines={1}>{action.label}</Text>
+              </TouchableOpacity>
+            </React.Fragment>
           ))}
         </View>
 
-        {/* ─── Breakdown Sections ─── */}
-        {breakdownSections.map((section, idx) => (
-          <View key={idx}>
-            <View style={st.sectionHeader}>
-              <Text style={st.sectionTitle}>{section.title}</Text>
-              <View style={st.sectionCountPill}>
-                <Text style={st.sectionCountText}>{section.rows.length}</Text>
-              </View>
-            </View>
+        {/* ─── Breakdown Sections (collapsible accordion) ─── */}
+        {breakdownSections.map((section, idx) => {
+          const isExpanded = !!expandedSections[idx];
+          return (
+          <View key={idx} style={st.breakdownCard}>
+            <LinearGradient
+              colors={section.gradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={st.breakdownAccent}
+            />
+            <TouchableOpacity
+              style={st.accordionHeader}
+              onPress={() => toggleSection(idx)}
+              activeOpacity={0.7}
+            >
+              <LinearGradient colors={section.gradient} style={st.breakdownHeaderIcon}>
+                <Icon name={section.icon} size={scale(16)} color="#fff" />
+              </LinearGradient>
+              <Text style={st.breakdownHeaderTitle}>{section.title}</Text>
+              <Text style={[st.accordionSummaryValue, { color: section.summaryColor }]} numberOfLines={1}>
+                {section.summaryValue}
+              </Text>
+              <Icon name={isExpanded ? 'chevron-up' : 'chevron-down'} size={scale(16)} color={C.muted} />
+            </TouchableOpacity>
 
-            <View style={st.breakdownCard}>
-              <LinearGradient
-                colors={section.gradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={st.breakdownAccent}
-              />
+            {isExpanded && (
               <View style={st.breakdownBody}>
-                <View style={st.breakdownHeader}>
-                  <LinearGradient colors={section.gradient} style={st.breakdownHeaderIcon}>
-                    <Icon name={section.icon} size={scale(16)} color="#fff" />
-                  </LinearGradient>
-                  <Text style={st.breakdownHeaderTitle}>{section.title}</Text>
-                </View>
-
-                {section.rows.map((row, ri) => (
-                  <View key={ri}>
-                    {ri > 0 && <View style={st.breakdownDivider} />}
-                    <View style={st.breakdownRow}>
-                      <View style={[st.breakdownRowIcon, { backgroundColor: row.color + '18' }]}>
-                        <Icon name={row.icon} size={scale(14)} color={row.color} />
+                {section.isBarChart ? (
+                  section.rows.map((row, ri) => (
+                    <View key={ri} style={ri > 0 ? { marginTop: scale(12) } : null}>
+                      <View style={st.categoryBarRow}>
+                        <Text style={st.categoryBarLabel}>{row.label}</Text>
+                        <Text style={st.categoryBarValue}>{row.value}</Text>
                       </View>
-                      <Text style={[st.breakdownRowLabel, row.bold && { fontWeight: '700', color: C.ink }]}>
-                        {row.label}
-                      </Text>
-                      <Text style={[st.breakdownRowValue, { color: row.color }, row.bold && { fontWeight: '800', fontSize: moderateScale(15) }]}>
-                        {row.value}
-                      </Text>
+                      <View style={st.categoryBarTrack}>
+                        <View style={[st.categoryBarFill, { width: `${row.barPct}%`, backgroundColor: row.color }]} />
+                      </View>
                     </View>
-                  </View>
-                ))}
+                  ))
+                ) : (
+                  section.rows.map((row, ri) => (
+                    <View key={ri}>
+                      {ri > 0 && <View style={st.breakdownDivider} />}
+                      <View style={st.breakdownRow}>
+                        <View style={[st.breakdownRowIcon, { backgroundColor: row.color + '18' }]}>
+                          <Icon name={row.icon} size={scale(14)} color={row.color} />
+                        </View>
+                        <Text style={[st.breakdownRowLabel, row.bold && { fontWeight: '700', color: C.ink }]}>
+                          {row.label}
+                        </Text>
+                        <Text style={[st.breakdownRowValue, { color: row.color }, row.bold && { fontWeight: '800', fontSize: moderateScale(15) }]}>
+                          {row.value}
+                        </Text>
+                      </View>
+                    </View>
+                  ))
+                )}
               </View>
-            </View>
+            )}
           </View>
-        ))}
+          );
+        })}
 
         {/* ─── Recent Transactions ─── */}
         {data?.recentTransactions && data.recentTransactions.length > 0 && (
@@ -519,187 +577,82 @@ const st = StyleSheet.create({
 
   // ═══ Hero Section ═══
   heroSection: {
-    paddingTop: scale(8),
-    paddingBottom: scale(16),
-    borderBottomLeftRadius: scale(20),
-    borderBottomRightRadius: scale(20),
+    paddingTop: scale(6),
+    paddingBottom: scale(10),
+    borderBottomLeftRadius: scale(16),
+    borderBottomRightRadius: scale(16),
+    overflow: 'hidden',
   },
+  heroBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
+  heroBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
   heroContent: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: scale(16),
-    marginBottom: scale(14),
+    marginBottom: scale(8),
   },
   backBtn: {
-    width: scale(40),
-    height: scale(40),
-    borderRadius: scale(12),
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    width: scale(32),
+    height: scale(32),
+    borderRadius: scale(11),
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: scale(12),
+    marginRight: scale(10),
   },
   heroTextContainer: { flex: 1 },
   heroTitle: {
-    fontSize: moderateScale(24),
+    fontSize: moderateScale(18),
     fontWeight: '800',
     color: '#fff',
     letterSpacing: -0.5,
   },
   heroRestaurantPill: {
     alignSelf: 'flex-start',
-    marginTop: scale(6),
+    marginTop: scale(4),
   },
   heroActions: {
     flexDirection: 'row',
-    gap: scale(8),
+    gap: scale(6),
   },
   heroIconBtn: {
-    width: scale(40),
-    height: scale(40),
-    borderRadius: scale(12),
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    width: scale(32),
+    height: scale(32),
+    borderRadius: scale(11),
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
 
-  // Hero Summary Card (inside gradient)
-  heroSummaryCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginHorizontal: scale(16),
-    backgroundColor: '#fff',
-    borderRadius: scale(16),
+  // ═══ Money Card (Net Revenue + period tabs, same system as Home/Analytics) ═══
+  moneyCard: {
+    borderRadius: scale(18),
     padding: scale(14),
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: scale(4) },
-    shadowOpacity: 0.1,
-    shadowRadius: scale(12),
-    elevation: 5,
+    shadowOffset: { width: 0, height: scale(6) },
+    shadowOpacity: 0.18,
+    shadowRadius: scale(14),
+    elevation: 6,
   },
-  heroSummaryLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: scale(12),
-  },
-  heroSummaryIcon: {
-    width: scale(42),
-    height: scale(42),
-    borderRadius: scale(12),
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  heroSummaryLabel: {
-    fontSize: moderateScale(11),
-    fontWeight: '600',
-    color: C.muted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-  },
-  heroSummaryValue: {
-    fontSize: moderateScale(22),
-    fontWeight: '800',
-    color: C.ink,
-    letterSpacing: -0.3,
-  },
-  heroSummaryBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: scale(4),
-    paddingHorizontal: scale(10),
-    paddingVertical: scale(5),
-    borderRadius: scale(20),
-  },
-  heroSummaryBadgeText: {
-    fontSize: moderateScale(12),
-    fontWeight: '700',
-  },
-
-  // Loading
-  loadingHero: {
-    paddingVertical: scale(24),
-    paddingHorizontal: scale(20),
-    borderBottomLeftRadius: scale(20),
-    borderBottomRightRadius: scale(20),
-  },
-
-  // ═══ Period Chips ═══
-  periodSection: {
-    paddingVertical: scale(10),
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
-    backgroundColor: C.card,
-  },
-  periodScroll: {
-    paddingHorizontal: scale(16),
-    gap: scale(8),
-  },
-  periodChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: scale(6),
-    paddingHorizontal: scale(14),
-    paddingVertical: scale(9),
-    backgroundColor: C.card,
-    borderRadius: scale(20),
-    borderWidth: 1.5,
-    borderColor: C.border,
-  },
-  periodChipActive: {
-    backgroundColor: C.primary,
-    borderColor: C.primary,
-  },
-  periodChipText: {
-    fontSize: moderateScale(13),
-    fontWeight: '600',
-    color: C.muted,
-  },
-  periodChipTextActive: {
-    color: '#fff',
-  },
-
-  // ═══ Mini Cards ═══
-  miniCardsRow: {
-    flexDirection: 'row',
-    paddingHorizontal: scale(16),
-    paddingTop: scale(14),
-    gap: scale(8),
-  },
-  miniCard: {
+  moneyTabRow: { flexDirection: 'row', gap: scale(6), marginBottom: scale(4) },
+  moneyTab: {
     flex: 1,
-    backgroundColor: C.card,
-    borderRadius: scale(14),
-    padding: scale(10),
+    paddingVertical: scale(7),
+    borderRadius: scale(9),
+    backgroundColor: 'rgba(255,255,255,0.12)',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: C.border,
-    shadowColor: C.shadow,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: scale(4),
-    elevation: 1,
   },
-  miniCardIcon: {
-    width: scale(34),
-    height: scale(34),
-    borderRadius: scale(10),
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: scale(6),
-  },
-  miniCardValue: {
-    fontSize: moderateScale(13),
-    fontWeight: '800',
-    color: C.ink,
-  },
-  miniCardLabel: {
-    fontSize: moderateScale(8),
-    fontWeight: '700',
-    color: C.muted,
-    marginTop: scale(2),
-    letterSpacing: 0.5,
-  },
+  moneyTabOn: { backgroundColor: '#fff' },
+  moneyTabTxt: { fontSize: moderateScale(10.5), fontWeight: '700', color: 'rgba(255,255,255,0.65)' },
+  moneyTabTxtOn: { color: C.ink },
+  moneyLabel: { fontSize: moderateScale(11), color: 'rgba(255,255,255,0.6)', fontWeight: '700', letterSpacing: 0.4, marginTop: scale(10) },
+  moneyValue: { fontSize: moderateScale(24), fontWeight: '900', color: '#fff', marginTop: scale(2) },
+  moneyTrendRow: { flexDirection: 'row', alignItems: 'center', gap: scale(5), marginTop: scale(4) },
+  moneyTrendTxt: { fontSize: moderateScale(11.5), fontWeight: '700' },
+  moneyStatsRow: { flexDirection: 'row', gap: scale(8), marginTop: scale(14) },
+  moneyStat: { flex: 1, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: scale(10), padding: scale(9) },
+  moneyStatLabel: { fontSize: moderateScale(9), color: 'rgba(255,255,255,0.6)', fontWeight: '700' },
+  moneyStatValue: { fontSize: moderateScale(13.5), color: '#fff', fontWeight: '800', marginTop: scale(3) },
 
   // ═══ Section Header ═══
   sectionHeader: {
@@ -715,33 +668,14 @@ const st = StyleSheet.create({
     fontWeight: '700',
     color: C.ink,
   },
-  sectionCountPill: {
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: scale(8),
-    paddingVertical: scale(3),
-    borderRadius: scale(10),
-  },
-  sectionCountText: {
-    fontSize: moderateScale(11),
-    fontWeight: '700',
-    color: C.muted,
-  },
-
-  // ═══ Quick Actions ═══
-  actionsGrid: {
+  // ═══ Quick Actions (compact strip) ═══
+  actionsStrip: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: scale(16),
-    justifyContent: 'space-between',
-    rowGap: scale(10),
-  },
-  actionCard: {
-    width: '48%',
     alignItems: 'center',
+    marginHorizontal: scale(16),
     backgroundColor: C.card,
-    borderRadius: scale(12),
-    paddingVertical: scale(12),
-    paddingHorizontal: scale(8),
+    borderRadius: scale(14),
+    paddingVertical: scale(10),
     borderWidth: 1,
     borderColor: C.border,
     shadowColor: C.shadow,
@@ -750,24 +684,34 @@ const st = StyleSheet.create({
     shadowRadius: scale(4),
     elevation: 1,
   },
-  actionIconBox: {
-    width: scale(36),
-    height: scale(36),
-    borderRadius: scale(10),
+  actionsDivider: {
+    width: 1,
+    height: scale(30),
+    backgroundColor: C.border,
+  },
+  actionStripItem: {
+    flex: 1,
+    alignItems: 'center',
+    gap: scale(5),
+  },
+  actionStripIcon: {
+    width: scale(28),
+    height: scale(28),
+    borderRadius: scale(9),
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: scale(6),
   },
-  actionLabel: {
-    fontSize: moderateScale(12),
+  actionStripLabel: {
+    fontSize: moderateScale(10),
     fontWeight: '700',
     color: C.ink,
     textAlign: 'center',
   },
 
-  // ═══ Breakdown Card ═══
+  // ═══ Breakdown Card (collapsible accordion) ═══
   breakdownCard: {
     marginHorizontal: scale(16),
+    marginTop: scale(12),
     backgroundColor: C.card,
     borderRadius: scale(16),
     overflow: 'hidden',
@@ -784,12 +728,13 @@ const st = StyleSheet.create({
   },
   breakdownBody: {
     padding: scale(14),
+    paddingTop: 0,
   },
-  breakdownHeader: {
+  accordionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: scale(10),
-    marginBottom: scale(12),
+    padding: scale(14),
   },
   breakdownHeaderIcon: {
     width: scale(32),
@@ -799,9 +744,14 @@ const st = StyleSheet.create({
     justifyContent: 'center',
   },
   breakdownHeaderTitle: {
+    flex: 1,
     fontSize: moderateScale(15),
     fontWeight: '700',
     color: C.ink,
+  },
+  accordionSummaryValue: {
+    fontSize: moderateScale(13),
+    fontWeight: '800',
   },
   breakdownRow: {
     flexDirection: 'row',
@@ -831,6 +781,18 @@ const st = StyleSheet.create({
     backgroundColor: '#F1F5F9',
     marginLeft: scale(38),
   },
+
+  // ═══ Category Bar Ranking ═══
+  categoryBarRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: scale(6),
+  },
+  categoryBarLabel: { fontSize: moderateScale(13), fontWeight: '600', color: C.text },
+  categoryBarValue: { fontSize: moderateScale(13), fontWeight: '700', color: C.ink },
+  categoryBarTrack: { height: scale(6), backgroundColor: C.bg, borderRadius: scale(3) },
+  categoryBarFill: { height: '100%', borderRadius: scale(3) },
 
   // ═══ Transactions ═══
   viewAllBtn: {
@@ -992,27 +954,7 @@ const st = StyleSheet.create({
   },
 
   // ═══ Skeleton ═══
-  skelHero: {
-    height: scale(80),
-    backgroundColor: '#E2E8F0',
-    borderRadius: scale(16),
-  },
-  skelCard: {
-    flex: 1,
-    height: scale(80),
-    backgroundColor: '#E2E8F0',
-    borderRadius: scale(14),
-  },
-  skelAction: {
-    flex: 1,
-    height: scale(56),
-    backgroundColor: '#E2E8F0',
-    borderRadius: scale(14),
-  },
-  skelItem: {
-    height: scale(90),
-    backgroundColor: '#E2E8F0',
-    borderRadius: scale(14),
-    marginTop: scale(10),
-  },
+  skelFillGray: { backgroundColor: '#E2E8F0' },
+  skelLine: { height: scale(12), borderRadius: scale(6), backgroundColor: '#E2E8F0' },
+  skelLineOnDark: { height: scale(12), borderRadius: scale(6), backgroundColor: 'rgba(255,255,255,0.18)' },
 });

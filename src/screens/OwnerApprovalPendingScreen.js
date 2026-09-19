@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
@@ -27,6 +27,7 @@ export default function OwnerApprovalPendingScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" />
       <View style={styles.content}>
         <LinearGradient
           colors={rejected ? ['#FEE2E2', '#FECACA'] : ['#FEF3C7', '#FDE68A']}

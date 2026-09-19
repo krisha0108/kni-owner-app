@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ScrollView, Platform,
-  ActivityIndicator, Image, Modal, Dimensions, BackHandler, Keyboard
+  ActivityIndicator, Image, Modal, Dimensions, BackHandler, Keyboard, StatusBar
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary } from 'react-native-image-picker';
@@ -355,6 +355,7 @@ const RestaurantOnboarding = ({ navigation, route }) => {
 
   return (
     <LinearGradient colors={['#f2f4f7', '#dfe7ee']} style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" />
       <TouchableOpacity
         onPress={handleBack}
         style={styles.floatBackBtn}

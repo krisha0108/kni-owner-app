@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,12 +6,13 @@ import {
   FlatList,
   TouchableOpacity,
   RefreshControl,
-  ActivityIndicator,
   ScrollView,
   Modal,
   Dimensions,
+  StatusBar,
+  Animated,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import { api } from '../api/client';
@@ -130,11 +131,50 @@ const formatTimeAgo = (dateString) => {
   return formatDate(dateString);
 };
 
+function SkeletonPendingApproval({ pulse }) {
+  return (
+    <View style={styles.listContent}>
+      {[1, 2, 3, 4].map(i => (
+        <View key={i} style={styles.itemCard}>
+          <Animated.View style={[styles.itemAccent, styles.skelFill, { opacity: pulse }]} />
+          <View style={styles.itemBody}>
+            <View style={styles.itemHeaderRow}>
+              <Animated.View style={[styles.typeIconBox, styles.skelFill, { opacity: pulse }]} />
+              <View style={styles.itemHeaderInfo}>
+                <Animated.View style={[styles.skelLine, styles.skelLineTitle, { opacity: pulse }]} />
+                <Animated.View style={[styles.skelLine, styles.skelLineSmall, { opacity: pulse }]} />
+              </View>
+            </View>
+            <Animated.View style={[styles.skelLine, styles.skelLineDesc, { opacity: pulse }]} />
+            <Animated.View style={[styles.skelLine, styles.skelLineDescShort, { opacity: pulse }]} />
+            <View style={styles.itemFooter}>
+              <Animated.View style={[styles.skelChip, { opacity: pulse }]} />
+              <Animated.View style={[styles.skelLine, styles.skelLineDate, { opacity: pulse }]} />
+            </View>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 export default function PendingApprovalScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [items, setItems] = useState([]);
   const [activeTab, setActiveTab] = useState('all');
+
+  const pulse = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
+      Animated.timing(pulse, { toValue: 0.4, duration: 800, useNativeDriver: false }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
   const [restaurants, setRestaurants] = useState([]);
   const [currentRestaurant, setCurrentRestaurant] = useState(null);
   const [restaurantPickerVisible, setRestaurantPickerVisible] = useState(false);
@@ -341,31 +381,39 @@ export default function PendingApprovalScreen({ navigation }) {
 
   if (loading && !refreshing) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
+      <SafeAreaView style={styles.container} edges={['left', 'right']}>
+        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <LinearGradient
+          colors={[C.primary, C.primaryDark]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[styles.header, { paddingTop: insets.top + scale(10) }]}
+        >
+          <View style={styles.headerBlobA} pointerEvents="none" />
+          <View style={styles.headerBlobB} pointerEvents="none" />
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
             <Icon name="arrow-back" size={scale(18)} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Pending Approvals</Text>
           <View style={{ width: scale(32) }} />
-        </View>
-        <View style={styles.loadingBox}>
-          <ActivityIndicator size="large" color={C.primary} />
-          <Text style={styles.loadingText}>Loading approvals...</Text>
-        </View>
+        </LinearGradient>
+        <SkeletonPendingApproval pulse={pulse} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
+      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
       {/* Gradient Header */}
       <LinearGradient
         colors={[C.primary, C.primaryDark]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={styles.header}
+        style={[styles.header, { paddingTop: insets.top + scale(10) }]}
       >
+        <View style={styles.headerBlobA} pointerEvents="none" />
+        <View style={styles.headerBlobB} pointerEvents="none" />
         <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
           <Icon name="arrow-back" size={scale(18)} color="#fff" />
         </TouchableOpacity>
@@ -582,13 +630,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: scale(16),
-    paddingVertical: scale(9),
+    paddingBottom: scale(16),
+    overflow: 'hidden',
   },
+  headerBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
+  headerBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
   backBtn: {
     width: scale(32),
     height: scale(32),
-    borderRadius: scale(10),
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: scale(11),
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -598,8 +649,8 @@ const styles = StyleSheet.create({
     gap: scale(7),
   },
   headerTitle: {
-    fontSize: moderateScale(16),
-    fontWeight: '800',
+    fontSize: moderateScale(18),
+    fontWeight: '900',
     color: '#fff',
   },
   countBadge: {
@@ -619,6 +670,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+
+  // Skeleton loading
+  skelFill: { backgroundColor: '#E2E8F0' },
+  skelLine: { height: scale(11), width: '55%', borderRadius: scale(4), backgroundColor: '#E2E8F0' },
+  skelLineTitle: { width: '65%' },
+  skelLineSmall: { height: scale(8), width: '35%', marginTop: scale(6), backgroundColor: '#E2E8F0', borderRadius: scale(4) },
+  skelLineDesc: { width: '90%', marginTop: scale(10) },
+  skelLineDescShort: { width: '60%', marginTop: scale(6) },
+  skelLineDate: { width: scale(60), height: scale(9) },
+  skelChip: { width: scale(100), height: scale(22), borderRadius: scale(20), backgroundColor: '#E2E8F0' },
+
   loadingText: {
     marginTop: scale(12),
     fontSize: moderateScale(14),

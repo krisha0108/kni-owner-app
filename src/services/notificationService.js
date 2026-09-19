@@ -284,6 +284,10 @@ class NotificationService {
         });
       } else if (data?.type === 'amc' && data?.amcId) {
         this.navigationRef.current.navigate('AMCDashboard');
+      } else if (data?.type === 'support' && data?.ticketId) {
+        this.navigationRef.current.navigate('SupportTicketDetail', {
+          ticketId: data.ticketId,
+        });
       } else if (data?.type === 'support') {
         this.navigationRef.current.navigate('SupportCenter');
       } else if (data?.type === 'team') {

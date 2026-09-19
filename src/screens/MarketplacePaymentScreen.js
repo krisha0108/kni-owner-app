@@ -17,7 +17,7 @@ import {
   Image,
 } from 'react-native';
 import { CommonActions } from '@react-navigation/native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import RazorpayCheckout from 'react-native-razorpay';
@@ -55,6 +55,7 @@ const formatPrice = (price) => {
 };
 
 export default function MarketplacePaymentScreen({ navigation, route }) {
+  const insets = useSafeAreaInsets();
   const {
     vendorId,
     vendorName,
@@ -307,15 +308,17 @@ export default function MarketplacePaymentScreen({ navigation, route }) {
   // ==================== RAZORPAY SUCCESS VIEW ====================
   if (razorpaySuccess) {
     return (
-      <SafeAreaView style={st.container} edges={['top']}>
-        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
-        <View style={st.header}>
+      <SafeAreaView style={st.container} edges={['left', 'right']}>
+        <StatusBar barStyle="light-content" backgroundColor={C.gradient1} />
+        <LinearGradient colors={[C.gradient1, C.gradient2]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
+          <View style={st.headerBlobA} pointerEvents="none" />
+          <View style={st.headerBlobB} pointerEvents="none" />
           <TouchableOpacity style={st.headerBackBtn} onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}>
-            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
+            <Icon name="arrow-back" size={scale(22)} color="#fff" />
           </TouchableOpacity>
           <Text style={st.headerTitle}>Payment Successful</Text>
           <View style={{ width: scale(40) }} />
-        </View>
+        </LinearGradient>
 
         <ScrollView contentContainerStyle={st.statusContainer}>
           <View style={[st.statusIconCircle, { backgroundColor: C.successLight }]}>
@@ -363,7 +366,7 @@ export default function MarketplacePaymentScreen({ navigation, route }) {
   if (manualPaymentSuccess) {
     return (
       <SafeAreaView style={st.container} edges={['top']}>
-        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <StatusBar barStyle="dark-content" backgroundColor="transparent" />
         <ScrollView contentContainerStyle={st.statusContainer}>
           <View style={[st.statusIconCircle, { backgroundColor: C.warningLight }]}>
             <Icon name="time" size={scale(48)} color={C.warning} />
@@ -396,11 +399,13 @@ export default function MarketplacePaymentScreen({ navigation, route }) {
 
   // ==================== MAIN PAYMENT VIEW ====================
   return (
-    <SafeAreaView style={st.container} edges={['top']}>
+    <SafeAreaView style={st.container} edges={['left', 'right']}>
       <StatusBar barStyle="light-content" backgroundColor={C.primary} />
 
       {/* Header */}
-      <LinearGradient colors={[C.gradient1, C.gradient2]} style={st.heroHeader}>
+      <LinearGradient colors={[C.gradient1, C.gradient2]} style={[st.heroHeader, { paddingTop: insets.top + scale(20) }]}>
+        <View style={st.headerBlobA} pointerEvents="none" />
+        <View style={st.headerBlobB} pointerEvents="none" />
         <TouchableOpacity style={st.heroBackBtn} onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}>
           <Icon name="arrow-back" size={scale(22)} color="#fff" />
         </TouchableOpacity>
@@ -583,23 +588,23 @@ const st = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: scale(16),
-    paddingVertical: scale(12),
-    backgroundColor: C.card,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
+    paddingBottom: scale(12),
+    overflow: 'hidden',
   },
+  headerBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
+  headerBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
   headerBackBtn: {
     width: scale(40),
     height: scale(40),
-    borderRadius: scale(12),
-    backgroundColor: C.bg,
+    borderRadius: scale(14),
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerTitle: {
     fontSize: moderateScale(18),
     fontWeight: '700',
-    color: C.ink,
+    color: '#fff',
   },
 
   // Hero Header
@@ -610,6 +615,7 @@ const st = StyleSheet.create({
     paddingVertical: scale(20),
     borderBottomLeftRadius: scale(20),
     borderBottomRightRadius: scale(20),
+    overflow: 'hidden',
   },
   heroBackBtn: {
     width: scale(40),

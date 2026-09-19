@@ -22,7 +22,6 @@ const C = {
 
 const MENU_ITEMS = [
   // Overview
-  { name: 'Dashboard', screen: 'Dashboard', icon: 'grid-outline', section: 'overview' },
   { name: 'Analytics', screen: 'Analytics', icon: 'bar-chart-outline', section: 'overview' },
 
   // Business

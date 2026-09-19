@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,10 @@ import {
   RefreshControl,
   ActivityIndicator,
   Dimensions,
+  StatusBar,
+  Animated,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import { api } from '../api/client';
@@ -155,10 +157,63 @@ const TimelineStep = ({ title, description, date, isCompleted, isCurrent, isLast
   </View>
 );
 
+function SkeletonRestaurantStatus({ pulse }) {
+  return (
+    <View>
+      <View style={styles.restaurantCard}>
+        <Animated.View style={[styles.restaurantIconCircle, styles.skelFill, { opacity: pulse }]} />
+        <Animated.View style={[styles.skelNameLine, { opacity: pulse }]} />
+        <Animated.View style={[styles.skelAddressLine, { opacity: pulse }]} />
+      </View>
+
+      <View style={styles.statusCardOuter}>
+        <View style={[styles.statusCard, styles.skelStatusCard]}>
+          <Animated.View style={[styles.statusIconCircle, styles.skelFill, { opacity: pulse }]} />
+          <Animated.View style={[styles.skelStatusLabel, { opacity: pulse }]} />
+          <Animated.View style={[styles.skelStatusDesc, { opacity: pulse }]} />
+          <Animated.View style={[styles.skelStatusDescShort, { opacity: pulse }]} />
+          <Animated.View style={[styles.skelProgressBar, { opacity: pulse }]} />
+        </View>
+      </View>
+
+      <View style={styles.quickInfoRow}>
+        {[1, 2, 3].map(i => (
+          <View key={i} style={styles.quickInfoCard}>
+            <Animated.View style={[styles.quickInfoIcon, styles.skelFill, { opacity: pulse }]} />
+            <Animated.View style={[styles.skelInfoLine, { opacity: pulse }]} />
+          </View>
+        ))}
+      </View>
+
+      <View style={styles.timelineCard}>
+        <View style={styles.sectionHeader}>
+          <Animated.View style={[styles.sectionIconBox, styles.skelFill, { opacity: pulse }]} />
+          <Animated.View style={[styles.skelSectionTitleLine, { opacity: pulse }]} />
+        </View>
+        {[1, 2, 3].map(i => (
+          <Animated.View key={i} style={[styles.skelTimelineRow, { opacity: pulse }]} />
+        ))}
+      </View>
+    </View>
+  );
+}
+
 export default function RestaurantStatusScreen({ navigation, route }) {
+  const insets = useSafeAreaInsets();
   const { restaurantId } = route.params || {};
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  const pulse = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
+      Animated.timing(pulse, { toValue: 0.4, duration: 800, useNativeDriver: false }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
   const [restaurant, setRestaurant] = useState(null);
   const [menuVisible, setMenuVisible] = useState(false);
   const [cancellingDeletion, setCancellingDeletion] = useState(false);
@@ -323,32 +378,37 @@ export default function RestaurantStatusScreen({ navigation, route }) {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['left', 'right']}>
+        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
         <LinearGradient
           colors={[C.primary, C.primaryDark]}
-          style={styles.header}
+          style={[styles.header, { paddingTop: insets.top + scale(14) }]}
         >
+          <View style={styles.headerBlobA} pointerEvents="none" />
+          <View style={styles.headerBlobB} pointerEvents="none" />
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
             <Icon name="arrow-back" size={scale(22)} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Restaurant Status</Text>
           <View style={{ width: scale(40) }} />
         </LinearGradient>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={C.primary} />
-          <Text style={styles.loadingText}>Loading status...</Text>
-        </View>
+        <ScrollView style={styles.skelScroll} showsVerticalScrollIndicator={false} contentContainerStyle={styles.skelScrollContent}>
+          <SkeletonRestaurantStatus pulse={pulse} />
+        </ScrollView>
       </SafeAreaView>
     );
   }
 
   if (!restaurant) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['left', 'right']}>
+        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
         <LinearGradient
           colors={[C.primary, C.primaryDark]}
-          style={styles.header}
+          style={[styles.header, { paddingTop: insets.top + scale(14) }]}
         >
+          <View style={styles.headerBlobA} pointerEvents="none" />
+          <View style={styles.headerBlobB} pointerEvents="none" />
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
             <Icon name="arrow-back" size={scale(22)} color="#fff" />
           </TouchableOpacity>
@@ -386,14 +446,17 @@ export default function RestaurantStatusScreen({ navigation, route }) {
   const timeline = getStatusTimeline();
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
+      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
       {/* Gradient Header */}
       <LinearGradient
         colors={[C.primary, C.primaryDark]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={styles.header}
+        style={[styles.header, { paddingTop: insets.top + scale(14) }]}
       >
+        <View style={styles.headerBlobA} pointerEvents="none" />
+        <View style={styles.headerBlobB} pointerEvents="none" />
         <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
           <Icon name="arrow-back" size={scale(22)} color="#fff" />
         </TouchableOpacity>
@@ -650,19 +713,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: scale(16),
-    paddingVertical: scale(14),
+    paddingBottom: scale(16),
+    overflow: 'hidden',
+    position: 'relative',
   },
+  headerBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
+  headerBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
   backBtn: {
     width: scale(38),
     height: scale(38),
-    borderRadius: scale(12),
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: scale(14),
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerTitle: {
     fontSize: moderateScale(18),
-    fontWeight: '800',
+    fontWeight: '900',
     color: '#fff',
   },
 
@@ -677,6 +744,21 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(14),
     color: C.muted,
   },
+
+  // Skeleton loading
+  skelScroll: { flex: 1 },
+  skelScrollContent: { paddingBottom: scale(100) },
+  skelFill: { backgroundColor: '#E2E8F0' },
+  skelNameLine: { width: '55%', height: scale(15), borderRadius: scale(4), backgroundColor: '#E2E8F0', marginBottom: scale(10) },
+  skelAddressLine: { width: '75%', height: scale(10), borderRadius: scale(4), backgroundColor: '#E2E8F0' },
+  skelStatusCard: { backgroundColor: '#F1F5F9' },
+  skelStatusLabel: { width: '50%', height: scale(16), borderRadius: scale(4), backgroundColor: 'rgba(255,255,255,0.6)', marginTop: scale(16) },
+  skelStatusDesc: { width: '90%', height: scale(10), borderRadius: scale(4), backgroundColor: 'rgba(255,255,255,0.6)', marginTop: scale(12) },
+  skelStatusDescShort: { width: '60%', height: scale(10), borderRadius: scale(4), backgroundColor: 'rgba(255,255,255,0.6)', marginTop: scale(6) },
+  skelProgressBar: { width: '100%', height: scale(6), borderRadius: scale(3), backgroundColor: 'rgba(255,255,255,0.6)', marginTop: scale(20) },
+  skelInfoLine: { width: '70%', height: scale(9), borderRadius: scale(4), backgroundColor: '#E2E8F0' },
+  skelSectionTitleLine: { width: scale(140), height: scale(13), borderRadius: scale(4), backgroundColor: '#E2E8F0' },
+  skelTimelineRow: { height: scale(44), borderRadius: scale(10), backgroundColor: '#E2E8F0', marginBottom: scale(10) },
 
   // Empty State
   emptyContainer: {

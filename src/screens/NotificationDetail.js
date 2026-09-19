@@ -1,7 +1,7 @@
 // screens/NotificationDetail.js
 import React from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, StatusBar
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -42,8 +42,11 @@ export default function NotificationDetail({ navigation, route }) {
 
   if (!notification) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top', 'left', 'right']}>
-        <LinearGradient colors={[C.primary, C.primaryDark]} style={st.headerGrad}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['left', 'right']}>
+        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.headerGrad, { paddingTop: insets.top + scale(14) }]}>
+          <View style={st.headerBlobA} pointerEvents="none" />
+          <View style={st.headerBlobB} pointerEvents="none" />
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.hBtn}>
             <Icon name="chevron-back" size={scale(20)} color="#fff" />
           </TouchableOpacity>
@@ -81,9 +84,12 @@ export default function NotificationDetail({ navigation, route }) {
   const actionButton = getActionButton();
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['left', 'right']}>
+      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
       {/* Gradient Header */}
-      <LinearGradient colors={[C.primary, C.primaryDark]} style={st.headerGrad}>
+      <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.headerGrad, { paddingTop: insets.top + scale(14) }]}>
+        <View style={st.headerBlobA} pointerEvents="none" />
+        <View style={st.headerBlobB} pointerEvents="none" />
         <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.hBtn}>
           <Icon name="chevron-back" size={scale(20)} color="#fff" />
         </TouchableOpacity>
@@ -201,13 +207,17 @@ const st = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: scale(16),
-    paddingVertical: scale(14),
+    paddingBottom: scale(16),
+    overflow: 'hidden',
+    position: 'relative',
   },
+  headerBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
+  headerBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
   hBtn: {
     width: scale(38),
     height: scale(38),
-    borderRadius: scale(12),
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderRadius: scale(13),
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },

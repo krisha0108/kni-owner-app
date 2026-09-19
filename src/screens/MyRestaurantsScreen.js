@@ -4,12 +4,12 @@
  * ============================================================================
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl,
-  ActivityIndicator, Image, StatusBar, useWindowDimensions, Platform, Modal, TextInput,
+  ActivityIndicator, Image, StatusBar, useWindowDimensions, Platform, Modal, TextInput, Animated,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { api, getImageUrl } from '../api/client';
@@ -71,8 +71,40 @@ const getStatusStyle = (item) => {
   }
 };
 
+function SkeletonMyRestaurants({ pulse }) {
+  return (
+    <View style={st.listContent}>
+      <View style={[st.filterRow, st.skelFilterRow]}>
+        {[1, 2, 3, 4].map(i => (
+          <Animated.View key={i} style={[st.skelChip, { opacity: pulse }]} />
+        ))}
+      </View>
+      {[1, 2, 3].map(i => (
+        <View key={i} style={st.card}>
+          <Animated.View style={[st.cardImageContainer, st.skelFill, { opacity: pulse }]} />
+          <View style={st.cardInfo}>
+            <View style={st.infoCol}>
+              <Animated.View style={[st.skelLine, { opacity: pulse }]} />
+            </View>
+            <View style={[st.infoCol, st.infoColDivider]}>
+              <Animated.View style={[st.skelLine, { opacity: pulse }]} />
+            </View>
+            <View style={[st.infoCol, st.infoColDivider]}>
+              <Animated.View style={[st.skelLine, { opacity: pulse }]} />
+            </View>
+          </View>
+          <View style={st.cardActions}>
+            <Animated.View style={[st.skelActionBar, { opacity: pulse }]} />
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 export default function MyRestaurantsScreen({ navigation }) {
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const isTablet = width >= 768;
   const { can } = usePermissions();
   const { loadRestaurants: refreshContextRestaurants } = useRestaurant();
@@ -87,6 +119,17 @@ export default function MyRestaurantsScreen({ navigation }) {
   const [deletionRequestTarget, setDeletionRequestTarget] = useState(null);
   const [deletionReason, setDeletionReason] = useState('');
   const [submittingDeletionRequest, setSubmittingDeletionRequest] = useState(false);
+
+  const pulse = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
+      Animated.timing(pulse, { toValue: 0.4, duration: 800, useNativeDriver: false }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
 
   // Status counts
   const statusCounts = useMemo(() => {
@@ -192,6 +235,8 @@ export default function MyRestaurantsScreen({ navigation }) {
   const renderRestaurantCard = ({ item, index }) => {
     const statusStyle = getStatusStyle(item);
     const isDeleting = deleting === item.id;
+    const hasImage = !!item.restaurantImageUrl;
+    const locationLine = [item.address, item.city].filter(Boolean).join(' · ');
 
     return (
       <TouchableOpacity
@@ -200,74 +245,59 @@ export default function MyRestaurantsScreen({ navigation }) {
         onPress={() => navigation.navigate('RestaurantView', { restaurantId: item.id })}
         disabled={isDeleting}
       >
-        {/* Card Image */}
+        {/* Photo */}
         <View style={st.cardImageContainer}>
-          {item.restaurantImageUrl ? (
+          {hasImage ? (
             <Image source={{ uri: getImageUrl(item.restaurantImageUrl) }} style={st.cardImage} />
           ) : (
-            <View style={st.cardImagePlaceholder}>
-              <Icon name="restaurant-outline" size={scale(40)} color={C.muted} />
-            </View>
+            <LinearGradient colors={['#F1F5F9', '#E2E8F0']} style={st.cardImagePlaceholder}>
+              <Icon name="restaurant-outline" size={scale(30)} color={C.muted} />
+            </LinearGradient>
           )}
-          {/* Status Badge */}
           <View style={[st.statusBadge, { backgroundColor: statusStyle.bg }]}>
-            <Icon name={statusStyle.icon} size={scale(12)} color={statusStyle.text} />
+            <Icon name={statusStyle.icon} size={scale(10)} color={statusStyle.text} />
             <Text style={[st.statusBadgeText, { color: statusStyle.text }]}>{statusStyle.label}</Text>
           </View>
         </View>
 
-        {/* Card Info */}
+        {/* Info — split into 3 columns to keep the card short */}
         <View style={st.cardInfo}>
-          <Text style={st.cardTitle} numberOfLines={1}>{item.name}</Text>
-
-          {item.address && (
+          <View style={st.infoCol}>
+            <Text style={st.infoColLabel}>NAME</Text>
             <View style={st.infoRow}>
-              <Icon name="location" size={scale(14)} color={C.primary} />
-              <Text style={st.infoText} numberOfLines={1}>{item.address}</Text>
+              <Text style={st.cardTitle} numberOfLines={1}>{item.name}</Text>
+              {!!item.fssaiNumber && <Icon name="shield-checkmark" size={scale(11)} color={C.success} />}
             </View>
-          )}
+          </View>
 
-          {item.city && (
-            <View style={st.infoRow}>
-              <Icon name="business" size={scale(14)} color={C.muted} />
-              <Text style={st.infoTextMuted}>{item.city}{item.pincode ? ` - ${item.pincode}` : ''}</Text>
-            </View>
-          )}
+          <View style={[st.infoCol, st.infoColDivider]}>
+            <Text style={st.infoColLabel}>LOCATION</Text>
+            <Text style={st.infoText} numberOfLines={1}>{locationLine || '—'}</Text>
+          </View>
 
-          {item.outletType && (
-            <View style={st.outletBadge}>
-              <Icon name="storefront" size={scale(12)} color={C.info} />
-              <Text style={st.outletText}>{item.outletType.replace(/_/g, ' ')}</Text>
-            </View>
-          )}
-
-          {item.fssaiNumber && (
-            <View style={st.fssaiBadge}>
-              <Icon name="shield-checkmark" size={scale(12)} color={C.success} />
-              <Text style={st.fssaiText}>FSSAI Verified</Text>
-            </View>
-          )}
+          <View style={[st.infoCol, st.infoColDivider]}>
+            <Text style={st.infoColLabel}>TYPE</Text>
+            <Text style={st.infoText} numberOfLines={1}>
+              {item.outletType ? item.outletType.replace(/_/g, ' ') : '—'}
+            </Text>
+          </View>
         </View>
 
-        {/* Card Actions */}
+        {/* Actions */}
         <View style={st.cardActions}>
           <TouchableOpacity
             style={st.viewBtn}
             onPress={() => navigation.navigate('RestaurantView', { restaurantId: item.id })}
             disabled={isDeleting}
           >
-            <Icon name="eye" size={scale(16)} color="#fff" />
-            <Text style={st.viewBtnText}>View</Text>
+            <Icon name="eye-outline" size={scale(14)} color="#fff" />
+            <Text style={st.viewBtnText}>View Details</Text>
           </TouchableOpacity>
 
           {can('restaurant:update') && (
-          <TouchableOpacity
-            style={st.iconBtn}
-            onPress={() => handleEdit(item)}
-            disabled={isDeleting}
-          >
-            <Icon name="pencil" size={scale(18)} color={C.info} />
-          </TouchableOpacity>
+            <TouchableOpacity style={st.iconBtn} onPress={() => handleEdit(item)} disabled={isDeleting}>
+              <Icon name="pencil" size={scale(15)} color={C.info} />
+            </TouchableOpacity>
           )}
 
           {can('restaurant:delete') && (canDelete(item) || canRequestDeletion(item)) && (
@@ -279,7 +309,7 @@ export default function MyRestaurantsScreen({ navigation }) {
               {isDeleting ? (
                 <ActivityIndicator size="small" color={C.danger} />
               ) : (
-                <Icon name="trash" size={scale(18)} color={C.danger} />
+                <Icon name="trash-outline" size={scale(15)} color={C.danger} />
               )}
             </TouchableOpacity>
           )}
@@ -291,57 +321,47 @@ export default function MyRestaurantsScreen({ navigation }) {
   // ==================== HEADER COMPONENT ====================
   const renderHeader = () => (
     <>
-      {/* Status Filter Chips */}
-      <View style={st.filterSection}>
-        <FlatList
-          horizontal
-          data={statusFilters}
-          keyExtractor={(item) => item.key}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={st.filterScroll}
-          renderItem={({ item: filter }) => {
-            const isActive = statusFilter === filter.key;
-            const count = statusCounts[filter.key] || 0;
-            return (
-              <TouchableOpacity
-                style={[st.filterChip, isActive && st.filterChipActive]}
-                onPress={() => setStatusFilter(filter.key)}
-              >
-                <Icon name={filter.icon} size={scale(16)} color={isActive ? '#fff' : filter.color} />
-                <Text style={[st.filterChipText, isActive && st.filterChipTextActive]}>
-                  {filter.label} ({count})
-                </Text>
-              </TouchableOpacity>
-            );
-          }}
-        />
-      </View>
-
-      {/* Results Header */}
-      <View style={st.resultsHeader}>
-        <Text style={st.resultsTitle}>{filtered.length} Restaurant{filtered.length !== 1 ? 's' : ''}</Text>
-        {statusFilter !== 'all' && (
+      {/* Clear-filter action (only shown when a filter is active) */}
+      {statusFilter !== 'all' && (
+        <View style={st.resultsHeader}>
           <TouchableOpacity style={st.clearFilterBtn} onPress={() => setStatusFilter('all')}>
             <Icon name="close-circle" size={scale(14)} color={C.primary} />
-            <Text style={st.clearFilterText}>Clear</Text>
+            <Text style={st.clearFilterText}>Clear Filter</Text>
           </TouchableOpacity>
-        )}
-      </View>
+        </View>
+      )}
     </>
   );
 
   // ==================== LOADING STATE ====================
   if (loading && !refreshing) {
     return (
-      <SafeAreaView style={st.container} edges={['top']}>
+      <SafeAreaView style={st.container} edges={['left', 'right']}>
         <StatusBar barStyle="light-content" backgroundColor={C.primary} />
-        <LinearGradient colors={[C.gradient1, C.gradient2]} style={st.loadingHero}>
-          <Text style={st.heroTitle}>My Restaurants</Text>
+        <LinearGradient
+          colors={[C.gradient1, C.gradient2]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[st.heroSection, { paddingTop: insets.top + scale(6) }]}
+        >
+          <View style={st.heroBlobA} pointerEvents="none" />
+          <View style={st.heroBlobB} pointerEvents="none" />
+          <View style={st.heroContent}>
+            <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
+              <Icon name="arrow-back" size={scale(18)} color="#fff" />
+            </TouchableOpacity>
+            <View style={st.heroTextContainer}>
+              <Text style={st.heroTitle}>My Restaurants</Text>
+              <Text style={st.heroSubtitle}>Loading...</Text>
+            </View>
+            <View style={st.heroActions}>
+              <TouchableOpacity style={st.heroIconBtn} onPress={() => setMenuVisible(true)}>
+                <Icon name="menu" size={scale(18)} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          </View>
         </LinearGradient>
-        <View style={st.loadingContainer}>
-          <ActivityIndicator size="large" color={C.primary} />
-          <Text style={st.loadingText}>Loading restaurants...</Text>
-        </View>
+        <SkeletonMyRestaurants pulse={pulse} />
         <KniBottomNav navigation={navigation} />
       </SafeAreaView>
     );
@@ -349,7 +369,7 @@ export default function MyRestaurantsScreen({ navigation }) {
 
   // ==================== MAIN RENDER ====================
   return (
-    <SafeAreaView style={st.container} edges={['top']}>
+    <SafeAreaView style={st.container} edges={['left', 'right']}>
       <StatusBar barStyle="light-content" backgroundColor={C.primary} />
 
       {/* Premium Gradient Header */}
@@ -357,14 +377,18 @@ export default function MyRestaurantsScreen({ navigation }) {
         colors={[C.gradient1, C.gradient2]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={st.heroSection}
+        style={[st.heroSection, { paddingTop: insets.top + scale(6) }]}
       >
+        {/* Decorative blobs — matches Home page header */}
+        <View style={st.heroBlobA} pointerEvents="none" />
+        <View style={st.heroBlobB} pointerEvents="none" />
+
         <View style={st.heroContent}>
           <TouchableOpacity
             onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
             style={st.backBtn}
           >
-            <Icon name="arrow-back" size={scale(22)} color="#fff" />
+            <Icon name="arrow-back" size={scale(18)} color="#fff" />
           </TouchableOpacity>
           <View style={st.heroTextContainer}>
             <Text style={st.heroTitle}>My Restaurants</Text>
@@ -376,15 +400,34 @@ export default function MyRestaurantsScreen({ navigation }) {
               style={st.heroIconBtn}
               onPress={() => navigation.navigate('RestaurantOnboarding', { isFirstRestaurant: false })}
             >
-              <Icon name="add" size={scale(22)} color="#fff" />
+              <Icon name="add" size={scale(18)} color="#fff" />
             </TouchableOpacity>
             )}
             <TouchableOpacity style={st.heroIconBtn} onPress={() => setMenuVisible(true)}>
-              <Icon name="menu" size={scale(22)} color="#fff" />
+              <Icon name="menu" size={scale(18)} color="#fff" />
             </TouchableOpacity>
           </View>
         </View>
       </LinearGradient>
+
+      {/* Status Filter — static below the header, doesn't scroll with the list */}
+      <View style={st.filterRow}>
+        {statusFilters.map((filter) => {
+          const isActive = statusFilter === filter.key;
+          const count = statusCounts[filter.key] || 0;
+          return (
+            <TouchableOpacity
+              key={filter.key}
+              style={[st.filterChip, isActive && st.filterChipActive]}
+              onPress={() => setStatusFilter(filter.key)}
+            >
+              <Text style={[st.filterChipText, isActive && st.filterChipTextActive]} numberOfLines={1}>
+                {filter.label} ({count})
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
 
       {/* Restaurant List */}
       <FlatList
@@ -499,26 +542,26 @@ const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
 
   // Hero Section (Compact)
-  heroSection: { paddingTop: scale(8), paddingBottom: scale(16), borderBottomLeftRadius: scale(20), borderBottomRightRadius: scale(20) },
+  heroSection: { paddingTop: scale(6), paddingBottom: scale(10), borderBottomLeftRadius: scale(18), borderBottomRightRadius: scale(18), overflow: 'hidden', position: 'relative' },
+  heroBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
+  heroBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
   heroContent: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(16) },
-  backBtn: { width: scale(40), height: scale(40), borderRadius: scale(12), backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginRight: scale(12) },
+  backBtn: { width: scale(32), height: scale(32), borderRadius: scale(11), backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', marginRight: scale(10) },
   heroTextContainer: { flex: 1 },
-  heroTitle: { fontSize: moderateScale(24), fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
-  heroSubtitle: { fontSize: moderateScale(13), color: 'rgba(255,255,255,0.8)', marginTop: scale(2) },
-  heroActions: { flexDirection: 'row', gap: scale(8) },
-  heroIconBtn: { width: scale(40), height: scale(40), borderRadius: scale(12), backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
+  heroTitle: { fontSize: moderateScale(18), fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
+  heroSubtitle: { fontSize: moderateScale(11), color: 'rgba(255,255,255,0.8)', marginTop: scale(1) },
+  heroActions: { flexDirection: 'row', gap: scale(6) },
+  heroIconBtn: { width: scale(32), height: scale(32), borderRadius: scale(11), backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
 
-  // Filters
-  filterSection: { paddingVertical: scale(12), backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border },
-  filterScroll: { paddingHorizontal: scale(16) },
-  filterChip: { flexDirection: 'row', alignItems: 'center', gap: scale(6), paddingHorizontal: scale(14), paddingVertical: scale(10), marginRight: scale(8), backgroundColor: C.card, borderRadius: scale(20), borderWidth: 1.5, borderColor: C.border },
-  filterChipActive: { backgroundColor: C.primary, borderColor: C.primary },
-  filterChipText: { fontSize: moderateScale(13), fontWeight: '600', color: C.ink },
-  filterChipTextActive: { color: '#fff' },
+  // Filters — static segmented row below the header (no wrapping card)
+  filterRow: { flexDirection: 'row', marginHorizontal: scale(16), marginTop: scale(12), marginBottom: scale(4), backgroundColor: '#F1F5F9', borderRadius: scale(11), padding: scale(3) },
+  filterChip: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: scale(7), borderRadius: scale(8) },
+  filterChipActive: { backgroundColor: C.card, borderBottomWidth: scale(2.5), borderBottomColor: C.primary },
+  filterChipText: { fontSize: moderateScale(10.5), fontWeight: '600', color: C.muted },
+  filterChipTextActive: { color: C.primary, fontWeight: '800' },
 
   // Results Header
-  resultsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: scale(16), paddingVertical: scale(12) },
-  resultsTitle: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink },
+  resultsHeader: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', paddingHorizontal: scale(16), paddingVertical: scale(8) },
   clearFilterBtn: { flexDirection: 'row', alignItems: 'center', gap: scale(4), paddingHorizontal: scale(10), paddingVertical: scale(6), backgroundColor: C.primaryLight, borderRadius: scale(8) },
   clearFilterText: { fontSize: moderateScale(12), fontWeight: '600', color: C.primary },
 
@@ -526,30 +569,34 @@ const st = StyleSheet.create({
   listContent: { paddingHorizontal: scale(16), paddingBottom: scale(120) },
   columnWrapper: { justifyContent: 'space-between' },
 
-  // Card
-  card: { flex: 1, backgroundColor: C.card, borderRadius: scale(16), marginBottom: scale(12), shadowColor: C.shadow, shadowOffset: { width: 0, height: scale(2) }, shadowOpacity: 0.08, shadowRadius: scale(8), elevation: 3, overflow: 'hidden' },
-  cardImageContainer: { height: scale(120), backgroundColor: C.bg, position: 'relative' },
+  // Card — clean thumbnail-top layout
+  card: { flex: 1, backgroundColor: C.card, borderRadius: scale(14), marginBottom: scale(9), borderWidth: 1, borderColor: C.border, overflow: 'hidden', shadowColor: C.shadow, shadowOffset: { width: 0, height: scale(2) }, shadowOpacity: 0.06, shadowRadius: scale(6), elevation: 2 },
+  cardImageContainer: { height: scale(96), position: 'relative' },
   cardImage: { width: '100%', height: '100%' },
   cardImagePlaceholder: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
-  statusBadge: { position: 'absolute', top: scale(10), left: scale(10), flexDirection: 'row', alignItems: 'center', gap: scale(4), paddingHorizontal: scale(10), paddingVertical: scale(5), borderRadius: scale(10) },
-  statusBadgeText: { fontSize: moderateScale(11), fontWeight: '700' },
-  cardInfo: { padding: scale(14) },
-  cardTitle: { fontSize: moderateScale(16), fontWeight: '700', color: C.ink, marginBottom: scale(8) },
-  infoRow: { flexDirection: 'row', alignItems: 'center', gap: scale(6), marginBottom: scale(4) },
-  infoText: { fontSize: moderateScale(13), color: C.text, flex: 1 },
-  infoTextMuted: { fontSize: moderateScale(12), color: C.muted },
-  outletBadge: { flexDirection: 'row', alignItems: 'center', gap: scale(4), marginTop: scale(8), paddingHorizontal: scale(10), paddingVertical: scale(5), backgroundColor: C.infoLight, borderRadius: scale(8), alignSelf: 'flex-start' },
-  outletText: { fontSize: moderateScale(11), fontWeight: '600', color: C.info },
-  fssaiBadge: { flexDirection: 'row', alignItems: 'center', gap: scale(4), marginTop: scale(8), paddingHorizontal: scale(10), paddingVertical: scale(5), backgroundColor: C.successLight, borderRadius: scale(8), alignSelf: 'flex-start' },
-  fssaiText: { fontSize: moderateScale(11), fontWeight: '600', color: C.success },
-  cardActions: { flexDirection: 'row', alignItems: 'center', gap: scale(8), padding: scale(14), paddingTop: 0 },
-  viewBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: scale(6), paddingVertical: scale(10), backgroundColor: C.primary, borderRadius: scale(10) },
-  viewBtnText: { fontSize: moderateScale(13), fontWeight: '700', color: '#fff' },
-  iconBtn: { width: scale(40), height: scale(40), borderRadius: scale(10), backgroundColor: C.infoLight, alignItems: 'center', justifyContent: 'center' },
+  statusBadge: { position: 'absolute', top: scale(9), left: scale(9), flexDirection: 'row', alignItems: 'center', gap: scale(4), paddingHorizontal: scale(9), paddingVertical: scale(5), borderRadius: scale(20) },
+  statusBadgeText: { fontSize: moderateScale(9.5), fontWeight: '700' },
+  cardInfo: { flexDirection: 'row', paddingHorizontal: scale(10), paddingVertical: scale(8) },
+  infoCol: { flex: 1, minWidth: 0 },
+  infoColDivider: { paddingLeft: scale(8), marginLeft: scale(8), borderLeftWidth: 1, borderLeftColor: C.border },
+  infoColLabel: { fontSize: moderateScale(8), fontWeight: '700', color: C.muted, letterSpacing: 0.4, marginBottom: scale(2) },
+  infoRow: { flexDirection: 'row', alignItems: 'center', gap: scale(4) },
+  cardTitle: { fontSize: moderateScale(13), fontWeight: '800', color: C.ink, flexShrink: 1 },
+  infoText: { fontSize: moderateScale(11), color: C.text },
+  cardActions: { flexDirection: 'row', alignItems: 'center', gap: scale(6), paddingHorizontal: scale(10), paddingVertical: scale(7), borderTopWidth: 1, borderTopColor: C.border },
+  viewBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: scale(5), paddingVertical: scale(7), backgroundColor: C.primary, borderRadius: scale(9) },
+  viewBtnText: { fontSize: moderateScale(11.5), fontWeight: '700', color: '#fff' },
+  iconBtn: { width: scale(30), height: scale(30), borderRadius: scale(9), backgroundColor: C.infoLight, alignItems: 'center', justifyContent: 'center' },
 
   // Loading & Empty
-  loadingHero: { paddingVertical: scale(24), paddingHorizontal: scale(20), borderBottomLeftRadius: scale(20), borderBottomRightRadius: scale(20) },
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+
+  // Skeleton loading
+  skelFilterRow: { marginHorizontal: 0 },
+  skelChip: { flex: 1, height: scale(24), borderRadius: scale(8), backgroundColor: '#E2E8F0' },
+  skelFill: { backgroundColor: '#E2E8F0' },
+  skelLine: { height: scale(9), width: '75%', borderRadius: scale(4), backgroundColor: '#E2E8F0' },
+  skelActionBar: { flex: 1, height: scale(28), borderRadius: scale(9), backgroundColor: '#E2E8F0' },
   loadingText: { marginTop: scale(16), fontSize: moderateScale(15), color: C.muted },
   emptyState: { alignItems: 'center', paddingTop: scale(60), paddingHorizontal: scale(40) },
   emptyIconContainer: { width: scale(120), height: scale(120), borderRadius: scale(60), backgroundColor: C.border, alignItems: 'center', justifyContent: 'center', marginBottom: scale(20) },

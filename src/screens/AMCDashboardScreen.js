@@ -4,12 +4,12 @@
  * ============================================================================
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  RefreshControl, ActivityIndicator, StatusBar, useWindowDimensions,
+  RefreshControl, StatusBar, useWindowDimensions, Animated,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { api } from '../api/client';
@@ -61,8 +61,53 @@ const STATS = [
   { key: 'activeBreakdowns', icon: 'construct-outline', color: C.danger, label: 'Active Breakdowns' },
 ];
 
+/* ─── Skeleton ─── */
+function SkeletonDashboard({ pulse }) {
+  return (
+    <View style={styles.scrollContent}>
+      {/* Stats Strip */}
+      <View style={styles.statsStrip}>
+        {[1, 2, 3, 4].map((i) => (
+          <React.Fragment key={i}>
+            {i > 1 && <View style={styles.statTileDivider} />}
+            <View style={styles.statTile}>
+              <Animated.View style={[styles.skelStatIcon, { opacity: pulse }]} />
+              <Animated.View style={[styles.skelStatValue, { opacity: pulse }]} />
+            </View>
+          </React.Fragment>
+        ))}
+      </View>
+
+      {/* Quick Actions */}
+      <Animated.View style={[styles.skelSectionTitle, { opacity: pulse }]} />
+      <View style={styles.qaRow}>
+        {[1, 2, 3].map(i => (
+          <View key={i} style={styles.qaItem}>
+            <Animated.View style={[styles.skelQaIcon, { opacity: pulse }]} />
+            <Animated.View style={[styles.skelQaLabel, { opacity: pulse }]} />
+          </View>
+        ))}
+      </View>
+
+      {/* Upcoming Visits */}
+      <Animated.View style={[styles.skelSectionTitle, { opacity: pulse }]} />
+      {[1, 2, 3].map(i => (
+        <View key={i} style={styles.visitCard}>
+          <Animated.View style={[styles.skelVisitIcon, { opacity: pulse }]} />
+          <View style={styles.visitInfo}>
+            <Animated.View style={[styles.skelLine, { opacity: pulse, width: '50%' }]} />
+            <Animated.View style={[styles.skelLine, { opacity: pulse, width: '70%', marginTop: scale(6) }]} />
+          </View>
+          <Animated.View style={[styles.skelPill, { opacity: pulse }]} />
+        </View>
+      ))}
+    </View>
+  );
+}
+
 export default function AMCDashboardScreen({ navigation }) {
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const { can } = usePermissions();
   const {
     selectedRestaurantId: selectedRestaurant,
@@ -76,6 +121,16 @@ export default function AMCDashboardScreen({ navigation }) {
   const [data, setData] = useState(null);
   const [breakdowns, setBreakdowns] = useState([]);
   const [menuVisible, setMenuVisible] = useState(false);
+
+  const pulse = useRef(new Animated.Value(0.4)).current;
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
+      Animated.timing(pulse, { toValue: 0.4, duration: 800, useNativeDriver: false }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
 
   const loadData = useCallback(async () => {
     try {
@@ -124,9 +179,11 @@ export default function AMCDashboardScreen({ navigation }) {
   // Loading state
   if ((loading || restaurantsLoading) && !refreshing && !data) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView style={styles.container} edges={['left', 'right']}>
         <StatusBar barStyle="light-content" backgroundColor={C.purple} />
-        <LinearGradient colors={[C.purple, C.purpleDark]} style={styles.heroHeader}>
+        <LinearGradient colors={[C.purple, C.purpleDark]} style={[styles.heroHeader, { paddingTop: insets.top + scale(6) }]}>
+          <View style={styles.heroBlobA} pointerEvents="none" />
+          <View style={styles.heroBlobB} pointerEvents="none" />
           <View style={styles.heroContent}>
             <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
               <Icon name="arrow-back" size={scale(18)} color="#fff" />
@@ -140,10 +197,9 @@ export default function AMCDashboardScreen({ navigation }) {
             </TouchableOpacity>
           </View>
         </LinearGradient>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={C.purple} />
-          <Text style={styles.loadingText}>Loading AMC dashboard...</Text>
-        </View>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <SkeletonDashboard pulse={pulse} />
+        </ScrollView>
         <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
         <KniBottomNav navigation={navigation} />
       </SafeAreaView>
@@ -151,7 +207,7 @@ export default function AMCDashboardScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <StatusBar barStyle="light-content" backgroundColor={C.purple} />
 
       {/* Hero Header */}
@@ -159,8 +215,10 @@ export default function AMCDashboardScreen({ navigation }) {
         colors={[C.purple, C.purpleDark]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={styles.heroHeader}
+        style={[styles.heroHeader, { paddingTop: insets.top + scale(6) }]}
       >
+        <View style={styles.heroBlobA} pointerEvents="none" />
+        <View style={styles.heroBlobB} pointerEvents="none" />
         <View style={styles.heroContent}>
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
             <Icon name="arrow-back" size={scale(18)} color="#fff" />
@@ -328,14 +386,18 @@ const styles = StyleSheet.create({
     paddingBottom: scale(6),
     borderBottomLeftRadius: scale(20),
     borderBottomRightRadius: scale(20),
+    overflow: 'hidden',
+    position: 'relative',
   },
+  heroBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
+  heroBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
   heroContent: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: scale(16), paddingTop: scale(8), paddingBottom: scale(4),
   },
   backBtn: {
-    width: scale(34), height: scale(34), borderRadius: scale(10),
-    backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center',
+    width: scale(34), height: scale(34), borderRadius: scale(11),
+    backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center',
   },
   heroTextContainer: {
     flex: 1, marginHorizontal: scale(12),
@@ -350,8 +412,8 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start', marginTop: scale(4),
   },
   menuBtn: {
-    width: scale(34), height: scale(34), borderRadius: scale(10),
-    backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center',
+    width: scale(34), height: scale(34), borderRadius: scale(11),
+    backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center',
   },
 
   // Scroll
@@ -466,4 +528,14 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink, marginBottom: scale(8) },
   emptySubtitle: { fontSize: moderateScale(14), color: C.muted, textAlign: 'center' },
+
+  // ═══ Skeleton ═══
+  skelStatIcon: { width: scale(30), height: scale(30), borderRadius: scale(9), backgroundColor: '#E2E8F0', marginBottom: scale(5) },
+  skelStatValue: { width: scale(28), height: scale(12), borderRadius: scale(4), backgroundColor: '#E2E8F0' },
+  skelSectionTitle: { width: scale(120), height: scale(16), borderRadius: scale(4), backgroundColor: '#E2E8F0', marginBottom: scale(12), marginTop: scale(8) },
+  skelQaIcon: { width: scale(48), height: scale(48), borderRadius: scale(14), backgroundColor: '#E2E8F0', marginBottom: scale(8) },
+  skelQaLabel: { width: scale(50), height: scale(10), borderRadius: scale(4), backgroundColor: '#E2E8F0' },
+  skelVisitIcon: { width: scale(40), height: scale(40), borderRadius: scale(12), backgroundColor: '#E2E8F0' },
+  skelLine: { height: scale(12), backgroundColor: '#E2E8F0', borderRadius: scale(4) },
+  skelPill: { width: scale(60), height: scale(20), borderRadius: scale(10), backgroundColor: '#E2E8F0' },
 });

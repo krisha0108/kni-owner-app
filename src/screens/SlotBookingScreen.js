@@ -1,9 +1,10 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, FlatList,
-  ActivityIndicator, TextInput, useWindowDimensions
+  ActivityIndicator, TextInput, useWindowDimensions, StatusBar, Animated
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api } from '../api/client';
@@ -17,6 +18,7 @@ import OfferSelector from '../components/OfferSelector';
 
 const C = {
   primary: '#EF3A3A',
+  primaryDark: '#DC2626',
   ink: '#1D2254',
   text: '#0F172A',
   muted: '#6B7280',
@@ -39,7 +41,27 @@ const GST_RATE = 0.18;
 const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
 const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
 
+/* ─── Skeleton ─── */
+function SkeletonSlotBooking({ pulse }) {
+  return (
+    <View style={{ paddingHorizontal: scale(20), paddingTop: scale(24) }}>
+      <Animated.View style={[st.skelStepTitle, { opacity: pulse }]} />
+      <Animated.View style={[st.skelStepSubtitle, { opacity: pulse }]} />
+      {[1, 2, 3].map(i => (
+        <View key={i} style={st.skelOptionCard}>
+          <Animated.View style={[st.skelOptionIcon, { opacity: pulse }]} />
+          <View style={{ flex: 1 }}>
+            <Animated.View style={[st.skelLine, { opacity: pulse, width: '70%' }]} />
+            <Animated.View style={[st.skelLineSm, { opacity: pulse, width: '45%' }]} />
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 export default function SlotBookingScreen({ navigation, route }) {
+  const insets = useSafeAreaInsets();
   // Global restaurant context
   const {
     restaurants: allRestaurants,
@@ -66,6 +88,17 @@ export default function SlotBookingScreen({ navigation, route }) {
   const [step, setStep] = useState(1); // 1: Restaurant, 2: Equipment, 3: Date/Time, 4: Confirm
   const [cartSummary, setCartSummary] = useState(null);
   const [cartLoading, setCartLoading] = useState(false);
+
+  const pulse = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
+      Animated.timing(pulse, { toValue: 0.4, duration: 800, useNativeDriver: false }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
   const keyboardHeight = useKeyboardHeight();
 
   const today = startOfDay(new Date());
@@ -393,30 +426,34 @@ export default function SlotBookingScreen({ navigation, route }) {
 
   if (restaurantsLoading) {
     return (
-      <SafeAreaView style={st.container}>
-        <View style={st.header}>
+      <SafeAreaView style={st.container} edges={['left', 'right']}>
+        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
+          <View style={st.headerBlobA} pointerEvents="none" />
+          <View style={st.headerBlobB} pointerEvents="none" />
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
-            <Icon name="arrow-back" size={22} color={C.ink} />
+            <Icon name="arrow-back" size={22} color="#fff" />
           </TouchableOpacity>
           <Text style={st.headerTitle}>Book a Slot</Text>
           <View style={{ width: scale(40) }} />
-        </View>
-        <View style={st.loadingContainer}>
-          <ActivityIndicator size="large" color={C.primary} />
-        </View>
+        </LinearGradient>
+        <SkeletonSlotBooking pulse={pulse} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={st.container}>
-      <View style={st.header}>
+    <SafeAreaView style={st.container} edges={['left', 'right']}>
+      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+      <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
+        <View style={st.headerBlobA} pointerEvents="none" />
+        <View style={st.headerBlobB} pointerEvents="none" />
         <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
-          <Icon name="arrow-back" size={22} color={C.ink} />
+          <Icon name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
         <Text style={st.headerTitle}>Book a Slot</Text>
         <View style={{ width: scale(40) }} />
-      </View>
+      </LinearGradient>
 
       {/* Progress Indicator */}
       <View style={st.progressRow}>
@@ -863,12 +900,48 @@ const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: scale(16), paddingVertical: scale(12), backgroundColor: C.card,
-    borderBottomWidth: 1, borderBottomColor: C.border
+    paddingHorizontal: scale(16), paddingBottom: scale(12), overflow: 'hidden'
   },
-  backBtn: { width: scale(40), height: scale(40), borderRadius: scale(12), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink },
+  headerBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
+  headerBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
+  backBtn: { width: scale(40), height: scale(40), borderRadius: scale(14), backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { fontSize: moderateScale(18), fontWeight: '700', color: '#fff' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+
+  // ─── Skeleton ───
+  skelStepTitle: {
+    width: '55%',
+    height: scale(20),
+    borderRadius: scale(6),
+    backgroundColor: '#E2E8F0',
+  },
+  skelStepSubtitle: {
+    width: '80%',
+    height: scale(13),
+    borderRadius: scale(6),
+    backgroundColor: '#E2E8F0',
+    marginTop: scale(10),
+    marginBottom: scale(20),
+  },
+  skelOptionCard: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: C.card,
+    borderRadius: scale(16), padding: scale(16), marginBottom: scale(12),
+  },
+  skelOptionIcon: {
+    width: scale(48), height: scale(48), borderRadius: scale(12),
+    backgroundColor: '#E2E8F0', marginRight: scale(12),
+  },
+  skelLine: {
+    height: scale(14),
+    borderRadius: scale(6),
+    backgroundColor: '#E2E8F0',
+  },
+  skelLineSm: {
+    height: scale(11),
+    borderRadius: scale(6),
+    backgroundColor: '#E2E8F0',
+    marginTop: scale(6),
+  },
 
   progressRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: scale(16), paddingHorizontal: scale(32) },
   progressItem: { flexDirection: 'row', alignItems: 'center' },

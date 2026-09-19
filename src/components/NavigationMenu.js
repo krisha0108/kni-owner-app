@@ -27,7 +27,6 @@ const MENU_SECTIONS = [
   {
     title: 'Overview',
     items: [
-      { icon: 'grid-outline', label: 'Dashboard', screen: 'Dashboard', permission: 'analytics:read' },
       { icon: 'bar-chart-outline', label: 'Analytics', screen: 'Analytics', permission: 'analytics:read' },
     ],
   },

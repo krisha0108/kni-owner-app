@@ -8,9 +8,9 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   ActivityIndicator, RefreshControl, Image, TextInput,
-  StatusBar, Modal,
+  StatusBar, Modal, Animated,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import Clipboard from '@react-native-clipboard/clipboard';
@@ -62,7 +62,42 @@ const PLAN_BADGE = {
 const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
 const formatPrice = (amount) => '₹' + (parseFloat(amount) || 0).toLocaleString('en-IN');
 
+/* ─── Skeleton ─── */
+function SkeletonRequestDetail({ pulse }) {
+  return (
+    <View style={styles.scrollContent}>
+      {/* Timeline */}
+      <View style={styles.timelineCard}>
+        <Animated.View style={[styles.skelSectionTitle, { opacity: pulse }]} />
+        <View style={styles.timeline}>
+          {[1, 2, 3, 4, 5].map(i => (
+            <View key={i} style={styles.timelineStep}>
+              <Animated.View style={[styles.skelTimelineCircle, { opacity: pulse }]} />
+              <Animated.View style={[styles.skelTimelineLabel, { opacity: pulse }]} />
+            </View>
+          ))}
+        </View>
+      </View>
+      {/* Cards */}
+      {[1, 2].map(i => (
+        <View key={i} style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Animated.View style={[styles.skelCardIcon, { opacity: pulse }]} />
+            <Animated.View style={[styles.skelCardTitle, { opacity: pulse }]} />
+          </View>
+          <View style={styles.cardBody}>
+            <Animated.View style={[styles.skelDetailLine, { opacity: pulse }]} />
+            <Animated.View style={[styles.skelDetailLine, { opacity: pulse, width: '65%' }]} />
+            <Animated.View style={[styles.skelDetailLine, { opacity: pulse, width: '80%' }]} />
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 export default function AMCRequestDetailScreen({ navigation, route }) {
+  const insets = useSafeAreaInsets();
   const { requestId } = route.params || {};
 
   const keyboardHeight = useKeyboardHeight();
@@ -78,6 +113,16 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
   const [rejectModalVisible, setRejectModalVisible] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [isCounterOfferOpen, setIsCounterOfferOpen] = useState(false);
+
+  const pulse = useRef(new Animated.Value(0.4)).current;
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
+      Animated.timing(pulse, { toValue: 0.4, duration: 800, useNativeDriver: false }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
 
   const loadRequest = useCallback(async () => {
     try {
@@ -282,9 +327,11 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
   // Loading
   if (loading && !refreshing) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView style={styles.container} edges={['left', 'right']}>
         <StatusBar barStyle="light-content" backgroundColor={C.purple} />
-        <LinearGradient colors={[C.purple, C.purpleDark]} style={styles.heroHeader}>
+        <LinearGradient colors={[C.purple, C.purpleDark]} style={[styles.heroHeader, { paddingTop: insets.top }]}>
+          <View style={styles.heroBlobA} pointerEvents="none" />
+          <View style={styles.heroBlobB} pointerEvents="none" />
           <View style={styles.heroContent}>
             <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
               <Icon name="arrow-back" size={24} color="#fff" />
@@ -295,9 +342,9 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
             </TouchableOpacity>
           </View>
         </LinearGradient>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={C.purple} />
-        </View>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <SkeletonRequestDetail pulse={pulse} />
+        </ScrollView>
         <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
       </SafeAreaView>
     );
@@ -305,9 +352,11 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
 
   if (!request) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView style={styles.container} edges={['left', 'right']}>
         <StatusBar barStyle="light-content" backgroundColor={C.purple} />
-        <LinearGradient colors={[C.purple, C.purpleDark]} style={styles.heroHeader}>
+        <LinearGradient colors={[C.purple, C.purpleDark]} style={[styles.heroHeader, { paddingTop: insets.top }]}>
+          <View style={styles.heroBlobA} pointerEvents="none" />
+          <View style={styles.heroBlobB} pointerEvents="none" />
           <View style={styles.heroContent}>
             <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
               <Icon name="arrow-back" size={24} color="#fff" />
@@ -337,11 +386,13 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
   const canPayNow = request.status === 'PAYMENT_PENDING' || isPaymentRejected;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <StatusBar barStyle="light-content" backgroundColor={C.purple} />
 
       {/* Hero */}
-      <LinearGradient colors={[C.purple, C.purpleDark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroHeader}>
+      <LinearGradient colors={[C.purple, C.purpleDark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.heroHeader, { paddingTop: insets.top }]}>
+        <View style={styles.heroBlobA} pointerEvents="none" />
+        <View style={styles.heroBlobB} pointerEvents="none" />
         <View style={styles.heroContent}>
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
             <Icon name="arrow-back" size={24} color="#fff" />
@@ -844,19 +895,21 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
 
   // Hero
-  heroHeader: { paddingBottom: scale(20), borderBottomLeftRadius: scale(24), borderBottomRightRadius: scale(24) },
+  heroHeader: { paddingBottom: scale(20), borderBottomLeftRadius: scale(24), borderBottomRightRadius: scale(24), overflow: 'hidden', position: 'relative' },
+  heroBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
+  heroBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
   heroContent: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: scale(16), paddingTop: scale(8), paddingBottom: scale(12),
   },
   backBtn: {
-    width: scale(40), height: scale(40), borderRadius: scale(12),
-    backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center',
+    width: scale(40), height: scale(40), borderRadius: scale(14),
+    backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center',
   },
   heroTitle: { fontSize: moderateScale(18), fontWeight: '700', color: '#fff' },
   menuBtn: {
-    width: scale(40), height: scale(40), borderRadius: scale(12),
-    backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center',
+    width: scale(40), height: scale(40), borderRadius: scale(14),
+    backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center',
   },
   heroStatusRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: scale(16),
@@ -1017,4 +1070,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: scale(8),
     backgroundColor: C.danger, paddingVertical: scale(14), borderRadius: scale(12),
   },
+
+  // ═══ Skeleton ═══
+  skelSectionTitle: { width: scale(140), height: scale(14), borderRadius: scale(4), backgroundColor: '#E2E8F0', marginBottom: scale(16) },
+  skelTimelineCircle: { width: scale(32), height: scale(32), borderRadius: scale(16), backgroundColor: '#E2E8F0', marginBottom: scale(6) },
+  skelTimelineLabel: { width: scale(36), height: scale(8), borderRadius: scale(3), backgroundColor: '#E2E8F0' },
+  skelCardIcon: { width: scale(40), height: scale(40), borderRadius: scale(12), backgroundColor: '#E2E8F0' },
+  skelCardTitle: { flex: 1, height: scale(16), borderRadius: scale(4), backgroundColor: '#E2E8F0' },
+  skelDetailLine: { height: scale(12), width: '100%', backgroundColor: '#E2E8F0', borderRadius: scale(4), marginTop: scale(12) },
 });

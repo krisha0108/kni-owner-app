@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,10 +6,12 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  ActivityIndicator,
+  Animated,
   Alert,
+  StatusBar,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { api } from '../api/client';
 import LineChartCard from '../components/charts/LineChartCard';
@@ -22,6 +24,7 @@ import NavigationMenu from '../components/NavigationMenu';
 import { scale, moderateScale } from '../utils/responsive';
 const C = {
   primary: '#EF3A3A',
+  primaryDark: '#DC2626',
   ink: '#1D2254',
   text: '#0F172A',
   muted: '#6B7280',
@@ -68,7 +71,68 @@ const MONTH_NAMES = [
 
 const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+/* ─── Skeleton ─── */
+function SkeletonExpenseReports({ pulse }) {
+  return (
+    <View style={{ paddingHorizontal: scale(16), paddingTop: scale(16) }}>
+      <Animated.View style={[styles.skelMonthNav, { opacity: pulse }]} />
+      <Animated.View style={[styles.skelSummaryCard, { opacity: pulse }]} />
+      <View style={{ flexDirection: 'row', gap: scale(12), marginTop: scale(12) }}>
+        <Animated.View style={[styles.skelComparisonCard, { opacity: pulse }]} />
+        <Animated.View style={[styles.skelComparisonCard, { opacity: pulse }]} />
+      </View>
+
+      {/* Trend line chart + category pie chart — real screen shows both */}
+      <Animated.View style={[styles.skelChart, { opacity: pulse }]} />
+      <Animated.View style={[styles.skelChart, { opacity: pulse }]} />
+
+      {/* Top Expense Categories card — matches real categoryItem (header+dot+icon+name+amount+percent, progress bar) */}
+      <View style={styles.skelCard}>
+        <Animated.View style={[styles.skelCardTitle, { opacity: pulse }]} />
+        {[1, 2, 3].map(i => (
+          <View key={i} style={styles.categoryItem}>
+            <View style={styles.categoryHeader}>
+              <View style={styles.categoryLeft}>
+                <Animated.View style={[styles.categoryDot, { backgroundColor: '#E2E8F0', opacity: pulse }]} />
+                <Animated.View style={[styles.skelIconBox, { opacity: pulse }]} />
+                <Animated.View style={[styles.skelLine, { width: scale(90), opacity: pulse }]} />
+              </View>
+              <View style={styles.categoryRight}>
+                <Animated.View style={[styles.skelLine, { width: scale(50), opacity: pulse }]} />
+                <Animated.View style={[styles.skelLine, { width: scale(30), height: scale(10), marginTop: scale(4), opacity: pulse }]} />
+              </View>
+            </View>
+            <View style={styles.progressBar}>
+              <Animated.View style={[styles.progressFill, { width: '55%', backgroundColor: '#CBD5E1', opacity: pulse }]} />
+            </View>
+          </View>
+        ))}
+      </View>
+
+      {/* All Categories grid card — matches real categoryGrid/categoryGridItem */}
+      <View style={styles.skelCard}>
+        <Animated.View style={[styles.skelCardTitle, { opacity: pulse }]} />
+        <View style={styles.categoryGrid}>
+          {[1, 2, 3, 4].map(i => (
+            <View key={i} style={styles.categoryGridItem}>
+              <View style={styles.categoryGridHeader}>
+                <Animated.View style={[styles.categoryDotSmall, { backgroundColor: '#E2E8F0', opacity: pulse }]} />
+                <Animated.View style={[styles.skelLine, { flex: 1, height: scale(12), opacity: pulse }]} />
+              </View>
+              <Animated.View style={[styles.skelLine, { width: scale(70), height: scale(16), marginBottom: scale(4), opacity: pulse }]} />
+              <View style={styles.categoryGridBadge}>
+                <Animated.View style={[styles.skelLine, { width: scale(28), height: scale(10), opacity: pulse }]} />
+              </View>
+            </View>
+          ))}
+        </View>
+      </View>
+    </View>
+  );
+}
+
 export default function ExpenseReportsScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   // Global restaurant context
   const {
     selectedRestaurantId,
@@ -83,6 +147,17 @@ export default function ExpenseReportsScreen({ navigation }) {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [menuVisible, setMenuVisible] = useState(false);
+
+  const pulse = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
+      Animated.timing(pulse, { toValue: 0.4, duration: 800, useNativeDriver: false }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
 
   const fetchReport = useCallback(async () => {
     if (!selectedRestaurantId) { setLoading(false); return; }
@@ -211,30 +286,40 @@ export default function ExpenseReportsScreen({ navigation }) {
 
   if (loading && !refreshing) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
-        <View style={styles.header}>
+      <SafeAreaView style={styles.container} edges={['left', 'right']}>
+        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <LinearGradient colors={[C.primary, C.primaryDark]} style={[styles.header, { paddingTop: insets.top + scale(12) }]}>
+          <View style={styles.headerBlobA} pointerEvents="none" />
+          <View style={styles.headerBlobB} pointerEvents="none" />
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
+            <Icon name="arrow-back" size={scale(22)} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Expense Reports</Text>
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
-            <Icon name="menu" size={scale(22)} color="#1D2254" />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.loadingBox}>
-          <ActivityIndicator size="large" color={C.primary} />
-          <Text style={styles.loadingText}>Loading report...</Text>
-        </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={styles.backBtn}>
+              <Icon name="list-outline" size={scale(22)} color="rgba(255,255,255,0.5)" />
+            </View>
+            <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
+              <Icon name="menu" size={scale(22)} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <SkeletonExpenseReports pulse={pulse} />
+        </ScrollView>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
+      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
       {/* Header */}
-      <View style={styles.header}>
+      <LinearGradient colors={[C.primary, C.primaryDark]} style={[styles.header, { paddingTop: insets.top + scale(12) }]}>
+        <View style={styles.headerBlobA} pointerEvents="none" />
+        <View style={styles.headerBlobB} pointerEvents="none" />
         <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-          <Icon name="arrow-back" size={scale(22)} color={C.ink} />
+          <Icon name="arrow-back" size={scale(22)} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Expense Reports</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -242,13 +327,13 @@ export default function ExpenseReportsScreen({ navigation }) {
             onPress={() => navigation.navigate('Expenses')}
             style={styles.backBtn}
           >
-            <Icon name="list-outline" size={scale(22)} color={C.primary} />
+            <Icon name="list-outline" size={scale(22)} color="#fff" />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
-            <Icon name="menu" size={scale(22)} color="#1D2254" />
+            <Icon name="menu" size={scale(22)} color="#fff" />
           </TouchableOpacity>
         </View>
-      </View>
+      </LinearGradient>
 
       {/* Global Restaurant Selector */}
       <RestaurantSelectorBar />
@@ -443,20 +528,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: scale(16),
-    paddingVertical: scale(12),
-    backgroundColor: C.card,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
+    paddingBottom: scale(12),
+    overflow: 'hidden',
   },
+  headerBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
+  headerBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
   backBtn: {
     width: scale(40),
     height: scale(40),
-    borderRadius: scale(12),
-    backgroundColor: C.bg,
+    borderRadius: scale(14),
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerTitle: { fontSize: moderateScale(18), fontWeight: '900', color: C.ink },
+  headerTitle: { fontSize: moderateScale(18), fontWeight: '900', color: '#fff' },
 
   scrollContent: { paddingBottom: scale(32) },
 
@@ -599,4 +684,14 @@ const styles = StyleSheet.create({
     borderColor: C.border,
   },
   categoryGridPercent: { fontSize: moderateScale(11), fontWeight: '600', color: C.muted },
+
+  // Skeleton
+  skelMonthNav: { height: scale(64), backgroundColor: '#E2E8F0', borderRadius: scale(16), marginTop: scale(0) },
+  skelSummaryCard: { height: scale(110), backgroundColor: '#E2E8F0', borderRadius: scale(16), marginTop: scale(16) },
+  skelComparisonCard: { flex: 1, height: scale(90), backgroundColor: '#E2E8F0', borderRadius: scale(16) },
+  skelChart: { height: scale(180), backgroundColor: '#E2E8F0', borderRadius: scale(16), marginTop: scale(16) },
+  skelCard: { backgroundColor: C.card, borderRadius: scale(16), padding: scale(16), marginTop: scale(16), borderWidth: 1, borderColor: C.border },
+  skelCardTitle: { height: scale(16), width: scale(150), backgroundColor: '#E2E8F0', borderRadius: scale(4), marginBottom: scale(16) },
+  skelIconBox: { width: scale(18), height: scale(18), borderRadius: scale(4), backgroundColor: '#E2E8F0' },
+  skelLine: { height: scale(14), backgroundColor: '#E2E8F0', borderRadius: scale(4) },
 });

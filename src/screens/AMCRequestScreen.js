@@ -8,9 +8,10 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList,
   TextInput, ActivityIndicator, Modal, StatusBar,
-  useWindowDimensions, Dimensions,
+  useWindowDimensions, Dimensions, Animated,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 // Custom date picker - no external dependency needed
 import { api } from '../api/client';
@@ -24,7 +25,7 @@ import AppAlert from '../utils/AppAlert';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const C = {
-  primary: '#EF3A3A', ink: '#1D2254', text: '#0F172A', muted: '#6B7280',
+  primary: '#EF3A3A', primaryDark: '#DC2626', ink: '#1D2254', text: '#0F172A', muted: '#6B7280',
   bg: '#F5F7FA', card: '#FFFFFF', border: '#E5E7EB', ok: '#10B981',
   warn: '#F59E0B', danger: '#EF4444', info: '#3B82F6', purple: '#7C3AED',
 };
@@ -53,6 +54,17 @@ const KITCHEN_TYPES = [
   { key: 'INSTITUTE', label: 'Institute' },
 ];
 
+/* ─── Skeleton ─── */
+function SkeletonChips({ pulse }) {
+  return (
+    <View style={styles.chipsWrap}>
+      {Array.from({ length: 6 }).map((_, i) => (
+        <Animated.View key={i} style={[styles.skelChip, { opacity: pulse, width: scale(70 + (i % 3) * 20) }]} />
+      ))}
+    </View>
+  );
+}
+
 export default function AMCRequestScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const keyboardHeight = useKeyboardHeight();
@@ -80,6 +92,16 @@ export default function AMCRequestScreen({ navigation }) {
   // Active AMC check
   const [activeAMC, setActiveAMC] = useState(null);
   const [checkingAMC, setCheckingAMC] = useState(false);
+
+  const pulse = useRef(new Animated.Value(0.4)).current;
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
+      Animated.timing(pulse, { toValue: 0.4, duration: 800, useNativeDriver: false }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
 
   useEffect(() => {
     if (selectedRestaurantId) setRestaurantId(selectedRestaurantId);
@@ -265,7 +287,7 @@ export default function AMCRequestScreen({ navigation }) {
           <Text style={styles.sectionTitle}>Equipment Categories</Text>
         </View>
         {categoriesLoading ? (
-          <ActivityIndicator color={C.purple} style={{ padding: scale(20) }} />
+          <SkeletonChips pulse={pulse} />
         ) : (
           <View style={styles.chipsWrap}>
             {categories.map(cat => {
@@ -474,19 +496,21 @@ export default function AMCRequestScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <StatusBar barStyle="light-content" backgroundColor={C.primary} />
 
       {/* Header */}
-      <View style={styles.header}>
+      <LinearGradient colors={[C.primary, C.primaryDark]} style={[styles.header, { paddingTop: insets.top + scale(12) }]}>
+        <View style={styles.headerBlobA} pointerEvents="none" />
+        <View style={styles.headerBlobB} pointerEvents="none" />
         <TouchableOpacity onPress={() => step > 1 ? setStep(step - 1) : (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.headerBackBtn}>
-          <Icon name="arrow-back" size={scale(22)} color={C.ink} />
+          <Icon name="arrow-back" size={scale(22)} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>New AMC Request</Text>
         <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
-          <Icon name="menu" size={scale(22)} color={C.ink} />
+          <Icon name="menu" size={scale(22)} color="#fff" />
         </TouchableOpacity>
-      </View>
+      </LinearGradient>
 
       {/* Progress Steps */}
       <View style={styles.progressRow}>
@@ -682,14 +706,15 @@ const styles = StyleSheet.create({
   // Header
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: scale(16), paddingVertical: scale(12), backgroundColor: C.card,
-    borderBottomWidth: 1, borderBottomColor: C.border,
+    paddingHorizontal: scale(16), paddingBottom: scale(12), overflow: 'hidden',
   },
+  headerBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
+  headerBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
   headerBackBtn: {
-    width: scale(40), height: scale(40), borderRadius: scale(12), backgroundColor: C.bg,
+    width: scale(40), height: scale(40), borderRadius: scale(14), backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center', justifyContent: 'center',
   },
-  headerTitle: { fontSize: moderateScale(18), fontWeight: '800', color: C.ink },
+  headerTitle: { fontSize: moderateScale(18), fontWeight: '800', color: '#fff' },
 
   // Progress
   progressRow: {
@@ -747,6 +772,7 @@ const styles = StyleSheet.create({
   },
   chipActive: { backgroundColor: C.purple, borderColor: C.purple },
   chipText: { fontSize: moderateScale(13), fontWeight: '600', color: C.ink },
+  skelChip: { height: scale(36), borderRadius: scale(20), backgroundColor: '#E2E8F0' },
   chipTextActive: { color: '#fff' },
 
   // Plan cards

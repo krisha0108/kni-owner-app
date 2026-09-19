@@ -4,7 +4,7 @@
  * ============================================================================
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -17,8 +17,11 @@ import {
   TextInput,
   FlatList,
   useWindowDimensions,
+  StatusBar,
+  Animated,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { api } from '../api/client';
 import { useRestaurant } from '../context/RestaurantContext';
@@ -32,6 +35,7 @@ import AppAlert from '../utils/AppAlert';
 // Premium Color Palette
 const C = {
   primary: '#EF3A3A',
+  primaryDark: '#DC2626',
   primaryLight: '#FEE2E2',
   ink: '#1D2254',
   text: '#334155',
@@ -68,7 +72,34 @@ const formatTime = (dateTimeStr) => {
   return date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 };
 
+/* ─── Skeleton ─── */
+function SkeletonAttendance({ pulse }) {
+  return (
+    <View style={{ paddingBottom: scale(16) }}>
+      <Animated.View style={[st.skelDateSelector, { opacity: pulse }]} />
+      <View style={st.statsRow}>
+        {[1, 2, 3, 4].map(i => (
+          <Animated.View key={i} style={[st.skelStatCard, { opacity: pulse }]} />
+        ))}
+      </View>
+      <View style={{ paddingHorizontal: scale(16), paddingTop: scale(16) }}>
+        {[1, 2, 3, 4].map(i => (
+          <View key={i} style={st.skelStaffCard}>
+            <Animated.View style={[st.skelAvatar, { opacity: pulse }]} />
+            <View style={{ flex: 1, marginLeft: scale(10) }}>
+              <Animated.View style={[st.skelLine, { opacity: pulse, width: '55%' }]} />
+              <Animated.View style={[st.skelLineSm, { opacity: pulse, width: '35%' }]} />
+            </View>
+            <Animated.View style={[st.skelBadge, { opacity: pulse }]} />
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 export default function StaffAttendanceScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
 
@@ -94,6 +125,17 @@ export default function StaffAttendanceScreen({ navigation }) {
   // Time input modal
   const [timeModal, setTimeModal] = useState(null);
   const [checkInTime, setCheckInTime] = useState('09:00');
+
+  const pulse = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
+      Animated.timing(pulse, { toValue: 0.4, duration: 800, useNativeDriver: false }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
   const [checkOutTime, setCheckOutTime] = useState('18:00');
 
   const loadData = useCallback(async () => {
@@ -298,10 +340,13 @@ export default function StaffAttendanceScreen({ navigation }) {
   // ==================== LOADING STATE ====================
   if (loading && !refreshing) {
     return (
-      <SafeAreaView style={st.container}>
-        <View style={st.header}>
+      <SafeAreaView style={st.container} edges={['left', 'right']}>
+        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
+          <View style={st.headerBlobA} pointerEvents="none" />
+          <View style={st.headerBlobB} pointerEvents="none" />
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
-            <Icon name="arrow-back" size={scale(22)} color={C.ink} />
+            <Icon name="arrow-back" size={scale(22)} color="#fff" />
           </TouchableOpacity>
           <View style={st.headerCenter}>
             <Text style={st.headerTitle}>Staff Attendance</Text>
@@ -309,14 +354,13 @@ export default function StaffAttendanceScreen({ navigation }) {
           </View>
           <View style={st.headerActions}>
             <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
-              <Icon name="menu" size={scale(20)} color={C.ink} />
+              <Icon name="menu" size={scale(20)} color="#fff" />
             </TouchableOpacity>
           </View>
-        </View>
-        <View style={st.loadingBox}>
-          <ActivityIndicator size="large" color={C.primary} />
-          <Text style={st.loadingText}>Loading attendance...</Text>
-        </View>
+        </LinearGradient>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <SkeletonAttendance pulse={pulse} />
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -386,11 +430,14 @@ export default function StaffAttendanceScreen({ navigation }) {
 
   // ==================== MAIN RENDER ====================
   return (
-    <SafeAreaView style={st.container}>
+    <SafeAreaView style={st.container} edges={['left', 'right']}>
+      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
       {/* Header */}
-      <View style={st.header}>
+      <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
+        <View style={st.headerBlobA} pointerEvents="none" />
+        <View style={st.headerBlobB} pointerEvents="none" />
         <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
-          <Icon name="arrow-back" size={scale(22)} color={C.ink} />
+          <Icon name="arrow-back" size={scale(22)} color="#fff" />
         </TouchableOpacity>
         <View style={st.headerCenter}>
           <Text style={st.headerTitle}>Staff Attendance</Text>
@@ -398,10 +445,10 @@ export default function StaffAttendanceScreen({ navigation }) {
         </View>
         <View style={st.headerActions}>
           <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
-            <Icon name="menu" size={scale(20)} color={C.ink} />
+            <Icon name="menu" size={scale(20)} color="#fff" />
           </TouchableOpacity>
         </View>
-      </View>
+      </LinearGradient>
 
       {/* Restaurant Selector */}
       <RestaurantSelectorBar />
@@ -633,17 +680,68 @@ const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
 
   // Header
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(16), paddingVertical: scale(12), backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border },
-  backBtn: { width: scale(40), height: scale(40), borderRadius: scale(10), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(16), paddingBottom: scale(12), overflow: 'hidden' },
+  headerBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
+  headerBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
+  backBtn: { width: scale(40), height: scale(40), borderRadius: scale(14), backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
   headerCenter: { flex: 1, marginLeft: scale(12) },
-  headerTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink },
-  headerSubtitle: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(2) },
+  headerTitle: { fontSize: moderateScale(18), fontWeight: '700', color: '#fff' },
+  headerSubtitle: { fontSize: moderateScale(12), color: 'rgba(255,255,255,0.8)', marginTop: scale(2) },
   headerActions: { flexDirection: 'row' },
-  headerIconBtn: { width: scale(40), height: scale(40), borderRadius: scale(10), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', marginLeft: scale(8) },
+  headerIconBtn: { width: scale(40), height: scale(40), borderRadius: scale(14), backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', marginLeft: scale(8) },
 
   content: { flex: 1 },
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   loadingText: { marginTop: scale(16), fontSize: moderateScale(15), color: C.muted },
+
+  // ─── Skeleton ───
+  skelDateSelector: {
+    height: scale(68),
+    marginHorizontal: scale(16),
+    marginTop: scale(16),
+    borderRadius: scale(14),
+    backgroundColor: '#E2E8F0',
+  },
+  skelStatCard: {
+    flex: 1,
+    height: scale(72),
+    borderRadius: scale(12),
+    marginHorizontal: scale(3),
+    backgroundColor: '#E2E8F0',
+  },
+  skelStaffCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: C.card,
+    padding: scale(14),
+    borderRadius: scale(12),
+    marginBottom: scale(10),
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  skelAvatar: {
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(10),
+    backgroundColor: '#E2E8F0',
+  },
+  skelLine: {
+    height: scale(13),
+    borderRadius: scale(6),
+    backgroundColor: '#E2E8F0',
+  },
+  skelLineSm: {
+    height: scale(10),
+    borderRadius: scale(6),
+    backgroundColor: '#E2E8F0',
+    marginTop: scale(6),
+  },
+  skelBadge: {
+    width: scale(64),
+    height: scale(28),
+    borderRadius: scale(10),
+    backgroundColor: '#E2E8F0',
+  },
 
   // Date Selector
   dateSelector: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: scale(16), paddingVertical: scale(14), backgroundColor: C.card, marginHorizontal: scale(16), marginTop: scale(16), borderRadius: scale(14), borderWidth: 1, borderColor: C.border },

@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, SectionList, TouchableOpacity, Animated,
-  RefreshControl, ScrollView, Dimensions, ActivityIndicator
+  RefreshControl, ScrollView, Dimensions, ActivityIndicator, StatusBar
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -43,7 +43,6 @@ const TYPE_CONFIG = {
 const DEFAULT_TYPE = { ic: 'notifications-outline', gradient: ['#94A3B8', '#64748B'], label: 'Notification', color: '#64748B', lightBg: '#F1F5F9' };
 
 const TMAP = TYPE_CONFIG;
-const CAT_CONFIG = TYPE_CONFIG;
 
 const FILTER_TABS = [
   { key: 'all', label: 'All', icon: 'apps' },
@@ -279,60 +278,36 @@ export default function Notifications({ navigation }) {
 
   const unreadCount = realUnreadCount;
 
-  /* ───── RENDER NOTIFICATION CARD ───── */
+  /* ───── RENDER NOTIFICATION CARD (Compact Row) ───── */
   const renderCard = ({ item }) => {
     const tm = TMAP[item.type] || DEFAULT_TYPE;
-    const catKey = getCatKey(item.type);
-    const cat = CAT_CONFIG[catKey] || CAT_CONFIG.orders;
 
     return (
-      <TouchableOpacity activeOpacity={0.92} onPress={() => openItem(item)} style={[st.itemCard, item.unread && st.itemCardUnread]}>
-        <LinearGradient colors={tm.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={st.itemAccent} />
-        <View style={st.itemBody}>
-          {/* Header Row */}
-          <View style={st.itemHeaderRow}>
-            <LinearGradient colors={tm.gradient} style={st.typeIconBox}>
-              <Icon name={tm.ic} size={scale(18)} color="#fff" />
-            </LinearGradient>
-            <View style={st.itemHeaderInfo}>
-              <View style={st.itemTitleRow}>
-                <Text style={st.itemTitle} numberOfLines={1}>{item.title}</Text>
-                {item.unread && <View style={st.unreadDotSmall} />}
-              </View>
-              <View style={st.itemMetaRow}>
-                <View style={[st.typePill, { backgroundColor: cat.lightBg }]}>
-                  <Text style={[st.typePillText, { color: cat.color }]}>{cat.label}</Text>
-                </View>
-                <Text style={st.timeAgoText}>{timeAgo(item.ts)}</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Body */}
-          <Text style={st.itemDesc} numberOfLines={2}>{item.body}</Text>
-
-          {/* Footer */}
-          <View style={st.itemFooter}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(4) }}>
-              <Icon name="time-outline" size={scale(12)} color={C.muted} />
-              <Text style={st.footerMeta}>
-                {new Date(item.ts).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
-              </Text>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(4) }}>
-              <Text style={st.footerMeta}>View</Text>
-              <Icon name="chevron-forward" size={scale(14)} color={C.muted} />
-            </View>
-          </View>
+      <TouchableOpacity activeOpacity={0.85} onPress={() => openItem(item)} style={st.itemRow}>
+        <LinearGradient colors={tm.gradient} style={st.rowIconBox}>
+          <Icon name={tm.ic} size={scale(14)} color="#fff" />
+        </LinearGradient>
+        <View style={st.rowInfo}>
+          <Text style={st.rowText} numberOfLines={1}>
+            <Text style={st.rowTitle}>{item.title}</Text>
+            <Text style={st.rowDesc}> · {item.body}</Text>
+          </Text>
+        </View>
+        <View style={st.rowRight}>
+          <Text style={st.rowTime}>{timeAgo(item.ts)}</Text>
+          {item.unread && <View style={st.unreadDotSmall} />}
         </View>
       </TouchableOpacity>
     );
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['left', 'right']}>
+      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
       {/* ─── Gradient Header ─── */}
-      <LinearGradient colors={[C.primary, C.primaryDark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.header}>
+      <LinearGradient colors={[C.primary, C.primaryDark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[st.header, { paddingTop: insets.top + scale(10) }]}>
+        <View style={st.headerBlobA} pointerEvents="none" />
+        <View style={st.headerBlobB} pointerEvents="none" />
         <TouchableOpacity onPress={() => navigation.goBack?.()} style={st.backBtn}>
           <Icon name="arrow-back" size={scale(18)} color="#fff" />
         </TouchableOpacity>
@@ -372,7 +347,7 @@ export default function Notifications({ navigation }) {
                 activeOpacity={0.7}
               >
                 <View style={[st.summaryTileIcon, { backgroundColor: s.color + '20' }, filter === s.key && { borderWidth: 1.5, borderColor: s.color }]}>
-                  <Icon name={s.icon} size={scale(14)} color={s.color} />
+                  <Icon name={s.icon} size={scale(11)} color={s.color} />
                 </View>
                 <Text style={st.summaryTileValue} numberOfLines={1}>{s.value}</Text>
                 <Text style={st.summaryTileLabel} numberOfLines={1}>{s.label}</Text>
@@ -470,13 +445,16 @@ const st = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: scale(16),
-    paddingVertical: scale(9),
+    paddingBottom: scale(16),
+    overflow: 'hidden',
   },
+  headerBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
+  headerBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
   backBtn: {
     width: scale(32),
     height: scale(32),
-    borderRadius: scale(10),
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: scale(11),
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -486,8 +464,8 @@ const st = StyleSheet.create({
     gap: scale(7),
   },
   headerTitle: {
-    fontSize: moderateScale(16),
-    fontWeight: '800',
+    fontSize: moderateScale(18),
+    fontWeight: '900',
     color: '#fff',
   },
   countBadge: {
@@ -505,20 +483,20 @@ const st = StyleSheet.create({
   // ─── Summary Strip ───
   summarySection: {
     paddingHorizontal: scale(12),
-    paddingTop: scale(10),
-    paddingBottom: scale(4),
+    paddingTop: scale(8),
+    paddingBottom: scale(3),
   },
   summaryStrip: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: C.card,
-    borderRadius: scale(14),
-    paddingVertical: scale(10),
+    borderRadius: scale(12),
+    paddingVertical: scale(7),
     paddingHorizontal: scale(2),
     shadowColor: '#000',
     shadowOffset: { width: 0, height: scale(2) },
     shadowOpacity: 0.05,
-    shadowRadius: scale(6),
+    shadowRadius: scale(5),
     elevation: 2,
   },
   summaryTile: {
@@ -528,24 +506,24 @@ const st = StyleSheet.create({
   },
   summaryDivider: {
     width: 1,
-    height: scale(30),
+    height: scale(22),
     backgroundColor: C.border,
   },
   summaryTileIcon: {
-    width: scale(26),
-    height: scale(26),
-    borderRadius: scale(8),
+    width: scale(20),
+    height: scale(20),
+    borderRadius: scale(7),
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: scale(4),
+    marginBottom: scale(3),
   },
   summaryTileValue: {
-    fontSize: moderateScale(12.5),
+    fontSize: moderateScale(10.5),
     fontWeight: '800',
     color: C.ink,
   },
   summaryTileLabel: {
-    fontSize: moderateScale(8.5),
+    fontSize: moderateScale(7.5),
     fontWeight: '600',
     color: C.muted,
     marginTop: scale(1),
@@ -642,101 +620,40 @@ const st = StyleSheet.create({
     backgroundColor: '#E5E7EB',
   },
 
-  // ─── Notification Card ───
-  itemCard: {
+  // ─── Notification Card (Compact Row) ───
+  itemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(9),
     marginHorizontal: scale(16),
-    marginBottom: scale(10),
+    marginBottom: scale(7),
     backgroundColor: C.card,
-    borderRadius: scale(16),
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: C.border,
+    borderRadius: scale(12),
+    padding: scale(9),
     shadowColor: '#000',
     shadowOffset: { width: 0, height: scale(2) },
     shadowOpacity: 0.05,
-    shadowRadius: scale(8),
+    shadowRadius: scale(6),
     elevation: 2,
   },
-  itemCardUnread: {
-    borderColor: '#FED7AA',
-    backgroundColor: '#FFFBF5',
-  },
-  itemAccent: {
-    height: scale(3),
-  },
-  itemBody: {
-    padding: scale(14),
-  },
-  itemHeaderRow: {
-    flexDirection: 'row',
-    gap: scale(12),
-    alignItems: 'flex-start',
-  },
-  typeIconBox: {
-    width: scale(40),
-    height: scale(40),
-    borderRadius: scale(12),
+  rowIconBox: {
+    width: scale(32),
+    height: scale(32),
+    borderRadius: scale(10),
     alignItems: 'center',
     justifyContent: 'center',
   },
-  itemHeaderInfo: {
-    flex: 1,
-  },
-  itemTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: scale(8),
-  },
-  itemTitle: {
-    fontSize: moderateScale(15),
-    fontWeight: '700',
-    color: C.ink,
-    flex: 1,
-    marginBottom: scale(4),
-  },
+  rowInfo: { flex: 1, minWidth: 0 },
+  rowText: { fontSize: moderateScale(11) },
+  rowTitle: { fontWeight: '700', color: C.ink },
+  rowDesc: { fontWeight: '500', color: C.muted },
+  rowRight: { alignItems: 'flex-end', gap: scale(4) },
+  rowTime: { fontSize: moderateScale(9), color: C.muted },
   unreadDotSmall: {
-    width: scale(8),
-    height: scale(8),
-    borderRadius: scale(4),
+    width: scale(6),
+    height: scale(6),
+    borderRadius: scale(3),
     backgroundColor: C.primary,
-  },
-  itemMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: scale(8),
-  },
-  typePill: {
-    paddingHorizontal: scale(8),
-    paddingVertical: scale(2),
-    borderRadius: scale(6),
-  },
-  typePillText: {
-    fontSize: moderateScale(10),
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-  },
-  timeAgoText: {
-    fontSize: moderateScale(11),
-    color: C.muted,
-  },
-  itemDesc: {
-    fontSize: moderateScale(13),
-    color: C.muted,
-    lineHeight: moderateScale(19),
-    marginTop: scale(10),
-    paddingLeft: scale(52),
-  },
-  itemFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: scale(12),
-    paddingLeft: scale(52),
-  },
-  footerMeta: {
-    fontSize: moderateScale(11),
-    color: C.muted,
   },
 
   // ─── Empty State ───
@@ -783,9 +700,9 @@ const st = StyleSheet.create({
 
   // ─── Skeleton ───
   skelItem: {
-    height: scale(90),
+    height: scale(50),
     backgroundColor: '#E9EEF5',
-    borderRadius: scale(16),
-    marginTop: scale(10),
+    borderRadius: scale(12),
+    marginTop: scale(8),
   },
 });

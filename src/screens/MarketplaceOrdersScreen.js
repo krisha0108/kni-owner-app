@@ -4,7 +4,7 @@
  * ============================================================================
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -19,10 +19,11 @@ import {
   StatusBar,
   Dimensions,
   Image,
-  Share,
   Platform,
+  Animated,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import Share from 'react-native-share';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import RazorpayCheckout from 'react-native-razorpay';
@@ -105,7 +106,36 @@ const formatTime = (dateString) => {
 
 const formatPrice = (price) => `₹${(price || 0).toLocaleString('en-IN')}`;
 
+function SkeletonOrders({ pulse }) {
+  return (
+    <View style={{ paddingHorizontal: scale(16), paddingTop: scale(12) }}>
+      {Array.from({ length: 4 }).map((_, i) => (
+        <View key={i} style={styles.skelOrderCard}>
+          <Animated.View style={[styles.skelStatusStrip, { opacity: pulse }]} />
+          <View style={styles.skelOrderContent}>
+            <View style={styles.skelOrderHeaderRow}>
+              <Animated.View style={[styles.skelLineWide, { opacity: pulse }]} />
+              <Animated.View style={[styles.skelLineNarrow, { opacity: pulse }]} />
+            </View>
+            <View style={styles.skelVendorRow}>
+              <Animated.View style={[styles.skelVendorIcon, { opacity: pulse }]} />
+              <Animated.View style={[styles.skelLineMed, { opacity: pulse }]} />
+            </View>
+            <Animated.View style={[styles.skelLineFull, { opacity: pulse }]} />
+            <Animated.View style={[styles.skelLineFull, { opacity: pulse, width: '70%' }]} />
+            <View style={styles.skelOrderFooterRow}>
+              <Animated.View style={[styles.skelLineNarrow, { opacity: pulse }]} />
+              <Animated.View style={[styles.skelPill, { opacity: pulse }]} />
+            </View>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 export default function MarketplaceOrdersScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   // Global restaurant context
   const {
     selectedRestaurant: currentRestaurant,
@@ -120,6 +150,16 @@ export default function MarketplaceOrdersScreen({ navigation }) {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const pulse = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
+      Animated.timing(pulse, { toValue: 0.4, duration: 800, useNativeDriver: false }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
   const [totalCount, setTotalCount] = useState(0);
 
   // Order Detail Modal
@@ -399,7 +439,7 @@ export default function MarketplaceOrdersScreen({ navigation }) {
         `/owner/marketplace/orders/${order.id}/invoice`,
         `invoice-${order.id}.pdf`
       );
-      await Share.share({ url: Platform.OS === 'ios' ? path : `file://${path}`, title: 'Order Invoice' });
+      await Share.open({ url: Platform.OS === 'ios' ? path : `file://${path}`, title: 'Order Invoice', type: 'application/pdf', failOnCancel: false });
     } catch (error) {
       AppAlert.alert('Error', 'Failed to download invoice. Please try again.');
       console.error('Invoice download error:', error);
@@ -667,22 +707,52 @@ export default function MarketplaceOrdersScreen({ navigation }) {
 
   if ((loading || restaurantsLoading) && !refreshing) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView style={styles.container} edges={['left', 'right']}>
         <StatusBar barStyle="light-content" backgroundColor={C.primary} />
-        <LinearGradient colors={[C.gradient1, C.gradient2]} style={styles.loadingHero}>
-          <Text style={styles.heroTitle}>My Orders</Text>
+        <LinearGradient
+          colors={[C.gradient1, C.gradient2]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[styles.heroSection, { paddingTop: insets.top + scale(8) }]}
+        >
+          <View style={styles.heroBlobA} pointerEvents="none" />
+          <View style={styles.heroBlobB} pointerEvents="none" />
+          <View style={styles.heroContent}>
+            <View style={styles.heroLeft}>
+              <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
+                <Icon name="arrow-back" size={scale(18)} color="#fff" />
+              </TouchableOpacity>
+              <View>
+                <Text style={styles.heroTitle}>My Orders</Text>
+                <RestaurantSelectorCompact dark style={styles.heroRestaurantPill} />
+              </View>
+            </View>
+            <View style={styles.heroActions}>
+              <TouchableOpacity style={styles.heroIconBtn} onPress={() => setMenuVisible(true)}>
+                <Icon name="menu-outline" size={scale(18)} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          </View>
+          <View style={styles.statsRow}>
+            {['Total', 'Delivered', 'Active'].map((label, i) => (
+              <React.Fragment key={label}>
+                {i > 0 && <View style={styles.statDivider} />}
+                <View style={styles.statItem}>
+                  <Animated.View style={[styles.skelStatNumber, { opacity: pulse }]} />
+                  <Text style={styles.statLabel}>{label}</Text>
+                </View>
+              </React.Fragment>
+            ))}
+          </View>
         </LinearGradient>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={C.primary} />
-          <Text style={styles.loadingText}>Loading your orders...</Text>
-        </View>
+        <SkeletonOrders pulse={pulse} />
         <KniBottomNav navigation={navigation} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <StatusBar barStyle="light-content" backgroundColor={C.primary} />
 
       {/* Premium Hero Header */}
@@ -690,8 +760,10 @@ export default function MarketplaceOrdersScreen({ navigation }) {
         colors={[C.gradient1, C.gradient2]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={styles.heroSection}
+        style={[styles.heroSection, { paddingTop: insets.top + scale(8) }]}
       >
+        <View style={styles.heroBlobA} pointerEvents="none" />
+        <View style={styles.heroBlobB} pointerEvents="none" />
         <View style={styles.heroContent}>
           <View style={styles.heroLeft}>
             <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
@@ -857,10 +929,7 @@ export default function MarketplaceOrdersScreen({ navigation }) {
       ) : (
         /* ===== PAYMENTS TAB ===== */
         loadingPayments && !refreshing ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={C.primary} />
-            <Text style={styles.loadingText}>Loading payments...</Text>
-          </View>
+          <SkeletonOrders pulse={pulse} />
         ) : (
           <FlatList
             data={payments}
@@ -1621,7 +1690,10 @@ const styles = StyleSheet.create({
   heroSection: {
     paddingTop: scale(8),
     paddingBottom: scale(10),
+    overflow: 'hidden',
   },
+  heroBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
+  heroBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
   heroContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1636,8 +1708,8 @@ const styles = StyleSheet.create({
   backBtn: {
     width: scale(34),
     height: scale(34),
-    borderRadius: scale(10),
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: scale(11),
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1658,8 +1730,8 @@ const styles = StyleSheet.create({
   heroIconBtn: {
     width: scale(34),
     height: scale(34),
-    borderRadius: scale(10),
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: scale(11),
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1693,10 +1765,6 @@ const styles = StyleSheet.create({
   },
 
   // Loading State
-  loadingHero: {
-    paddingVertical: scale(24),
-    paddingHorizontal: scale(20),
-  },
   loadingContainer: {
     flex: 1,
     alignItems: 'center',
@@ -1707,6 +1775,21 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(16),
     color: C.muted,
   },
+
+  // Skeleton
+  skelOrderCard: { backgroundColor: C.card, borderRadius: scale(14), marginBottom: scale(10), overflow: 'hidden' },
+  skelStatusStrip: { height: scale(24), backgroundColor: '#E2E8F0' },
+  skelOrderContent: { padding: scale(12) },
+  skelOrderHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: scale(10) },
+  skelVendorRow: { flexDirection: 'row', alignItems: 'center', gap: scale(8), marginBottom: scale(10) },
+  skelVendorIcon: { width: scale(28), height: scale(28), borderRadius: scale(8), backgroundColor: '#E2E8F0' },
+  skelLineWide: { height: scale(12), width: '35%', backgroundColor: '#E2E8F0', borderRadius: scale(6) },
+  skelLineMed: { height: scale(11), width: '40%', backgroundColor: '#E2E8F0', borderRadius: scale(6) },
+  skelLineNarrow: { height: scale(11), width: '25%', backgroundColor: '#E2E8F0', borderRadius: scale(6) },
+  skelLineFull: { height: scale(10), width: '90%', backgroundColor: '#E2E8F0', borderRadius: scale(6), marginBottom: scale(6) },
+  skelOrderFooterRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: scale(8) },
+  skelPill: { width: scale(70), height: scale(24), backgroundColor: '#E2E8F0', borderRadius: scale(12) },
+  skelStatNumber: { width: scale(28), height: scale(18), borderRadius: scale(5), backgroundColor: 'rgba(255,255,255,0.35)' },
 
   // Filter Tabs - Premium Style
   filterWrapper: {

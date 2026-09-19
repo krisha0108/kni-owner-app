@@ -1,10 +1,11 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  RefreshControl, ActivityIndicator, Modal, TextInput, Image, Switch, Platform, KeyboardAvoidingView
+  RefreshControl, ActivityIndicator, Animated, Modal, TextInput, Image, ImageBackground, Switch, Platform, KeyboardAvoidingView, StatusBar
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { api, getImageUrl, uploadDocument } from '../api/client';
@@ -145,6 +146,24 @@ const formatDate = (dateString) => {
   });
 };
 
+/* ─── Skeleton ─── */
+function SkeletonEquipmentProfile({ pulse }) {
+  return (
+    <View style={{ flex: 1 }}>
+      <Animated.View style={[st.skelHero, { opacity: pulse }]} />
+      <View style={{ paddingHorizontal: scale(16) }}>
+        <Animated.View style={[st.skelStatsCard, { opacity: pulse }]} />
+        <Animated.View style={[st.skelTabBar, { opacity: pulse }]} />
+        <View style={st.skelDetailsCard}>
+          {[1, 2, 3, 4].map(i => (
+            <Animated.View key={i} style={[st.skelDetailRow, { opacity: pulse }]} />
+          ))}
+        </View>
+      </View>
+    </View>
+  );
+}
+
 export default function EquipmentProfileScreen({ navigation, route }) {
   const { can } = usePermissions();
   const { equipmentId } = route.params || {};
@@ -203,6 +222,17 @@ export default function EquipmentProfileScreen({ navigation, route }) {
   // Service booking state
   const [showServiceModal, setShowServiceModal] = useState(false);
   const [serviceSaving, setServiceSaving] = useState(false);
+
+  const pulse = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: false }),
+      Animated.timing(pulse, { toValue: 0.4, duration: 800, useNativeDriver: false }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
   const [selectedServices, setSelectedServices] = useState([]);
   const [serviceForm, setServiceForm] = useState({
     slotDate: '',
@@ -523,9 +553,10 @@ export default function EquipmentProfileScreen({ navigation, route }) {
   if (loading) {
     return (
       <SafeAreaView style={st.container} edges={['top']}>
-        <View style={st.loadingBox}>
-          <ActivityIndicator size="large" color={C.primary} />
-        </View>
+        <StatusBar barStyle="dark-content" backgroundColor="transparent" />
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <SkeletonEquipmentProfile pulse={pulse} />
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -533,6 +564,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
   if (!equipment) {
     return (
       <SafeAreaView style={st.container} edges={['top']}>
+        <StatusBar barStyle="dark-content" backgroundColor="transparent" />
         <View style={st.header}>
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
             <Icon name="arrow-back" size={scale(22)} color={C.ink} />
@@ -554,43 +586,76 @@ export default function EquipmentProfileScreen({ navigation, route }) {
   const activeAmcCount = amcSubscriptions.filter(amc => amc.status === 'ACTIVE').length;
   const photoUrls = Array.isArray(equipment.photoUrls) ? equipment.photoUrls : [];
   const serviceHistory = equipment.serviceBookings || [];
+  const categoryName = equipment.equipmentType?.category?.name ||
+    (typeof equipment.category === 'object' ? equipment.category?.name : equipment.category);
+
+  const goToServiceRequest = () => {
+    // Navigate to ServiceRequest screen (same flow as owner web /owner/request-service)
+    const categoryObj = typeof equipment.category === 'object' ? equipment.category : null;
+    const subCategoryObj = typeof equipment.subCategory === 'object' ? equipment.subCategory : null;
+    // Also check equipmentType for category/subCategory (nested structure)
+    const typeCategory = equipment.equipmentType?.category;
+    const typeSubCategory = equipment.equipmentType?.subCategory;
+
+    navigation.navigate('ServiceRequest', {
+      equipmentId: equipment.id,
+      equipmentName: equipment.name,
+      categoryId: categoryObj?.id || typeCategory?.id || equipment.categoryId || null,
+      categoryName: categoryObj?.name || typeCategory?.name || (typeof equipment.category === 'string' ? equipment.category : null),
+      subCategoryId: subCategoryObj?.id || typeSubCategory?.id || equipment.subCategoryId || null,
+      subCategoryName: subCategoryObj?.name || typeSubCategory?.name || (typeof equipment.subCategory === 'string' ? equipment.subCategory : null),
+    });
+  };
+
+  const heroOverlay = (
+    <>
+      <View style={st.heroTopRow}>
+        <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.heroBtn}>
+          <Icon name="arrow-back" size={scale(17)} color="#fff" />
+        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: scale(8) }}>
+          {can('service:create') && (
+            <TouchableOpacity onPress={goToServiceRequest} style={st.heroBtn}>
+              <Icon name="construct" size={scale(15)} color="#fff" />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={st.heroBtn}>
+            <Icon name="menu" size={scale(17)} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <LinearGradient colors={['transparent', 'rgba(0,0,0,0.75)']} style={st.heroFade} />
+
+      <View style={st.heroBottom}>
+        <View style={st.badgeRow}>
+          <View style={[st.badge, { backgroundColor: 'rgba(255,255,255,0.22)' }]}>
+            <Text style={[st.badgeText, { color: '#fff' }]}>{statusStyle.label}</Text>
+          </View>
+          <View style={[st.badge, { backgroundColor: 'rgba(255,255,255,0.22)' }]}>
+            <Text style={[st.badgeText, { color: '#fff' }]}>{warrantyStatus.label}</Text>
+          </View>
+        </View>
+        <Text style={st.heroName} numberOfLines={1}>{equipment.name}</Text>
+        {!!categoryName && <Text style={st.heroCategory} numberOfLines={1}>{categoryName}</Text>}
+      </View>
+    </>
+  );
 
   return (
-    <SafeAreaView style={st.container} edges={['top']}>
-      {/* Header */}
-      <View style={st.header}>
-        <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
-          <Icon name="arrow-back" size={scale(22)} color={C.ink} />
-        </TouchableOpacity>
-        <Text style={st.headerTitle} numberOfLines={1}>{equipment.name}</Text>
-        {can('service:create') && (
-        <TouchableOpacity
-          onPress={() => {
-            // Navigate to ServiceRequest screen (same flow as owner web /owner/request-service)
-            const categoryObj = typeof equipment.category === 'object' ? equipment.category : null;
-            const subCategoryObj = typeof equipment.subCategory === 'object' ? equipment.subCategory : null;
-            // Also check equipmentType for category/subCategory (nested structure)
-            const typeCategory = equipment.equipmentType?.category;
-            const typeSubCategory = equipment.equipmentType?.subCategory;
+    <SafeAreaView style={st.container} edges={['top', 'left', 'right']}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" />
 
-            navigation.navigate('ServiceRequest', {
-              equipmentId: equipment.id,
-              equipmentName: equipment.name,
-              categoryId: categoryObj?.id || typeCategory?.id || equipment.categoryId || null,
-              categoryName: categoryObj?.name || typeCategory?.name || (typeof equipment.category === 'string' ? equipment.category : null),
-              subCategoryId: subCategoryObj?.id || typeSubCategory?.id || equipment.subCategoryId || null,
-              subCategoryName: subCategoryObj?.name || typeSubCategory?.name || (typeof equipment.subCategory === 'string' ? equipment.subCategory : null),
-            });
-          }}
-          style={st.serviceBtn}
-        >
-          <Icon name="construct" size={scale(20)} color="#fff" />
-        </TouchableOpacity>
-        )}
-        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
-          <Icon name="menu" size={scale(22)} color="#1D2254" />
-        </TouchableOpacity>
-      </View>
+      {/* Hero Header */}
+      {photoUrls.length > 0 ? (
+        <ImageBackground source={{ uri: getImageUrl(photoUrls[0]) }} style={st.hero} resizeMode="cover">
+          {heroOverlay}
+        </ImageBackground>
+      ) : (
+        <LinearGradient colors={['#334155', '#0F172A']} style={st.hero}>
+          {heroOverlay}
+        </LinearGradient>
+      )}
 
       <ScrollView
         style={{ flex: 1 }}
@@ -602,60 +667,25 @@ export default function EquipmentProfileScreen({ navigation, route }) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator
       >
-        {/* Equipment Info Card */}
-        <View style={st.infoCard}>
-          <View style={st.infoHeader}>
-            <View style={st.iconBox}>
-              {photoUrls.length > 0 ? (
-                <Image source={{ uri: getImageUrl(photoUrls[0]) }} style={st.equipImage} />
-              ) : (
-                <Icon name="hardware-chip-outline" size={scale(32)} color={C.primary} />
-              )}
-            </View>
-            <View style={st.infoMain}>
-              <Text style={st.equipName}>{equipment.name}</Text>
-              <Text style={st.equipCategory}>
-                {equipment.equipmentType?.category?.name ||
-                 (typeof equipment.category === 'object' ? equipment.category?.name : equipment.category)}
-              </Text>
-              <View style={st.badgeRow}>
-                <View style={[st.badge, { backgroundColor: statusStyle.bg }]}>
-                  <Text style={[st.badgeText, { color: statusStyle.text }]}>{statusStyle.label}</Text>
-                </View>
-                <View style={[st.badge, { backgroundColor: warrantyStyle.bg }]}>
-                  <Text style={[st.badgeText, { color: warrantyStyle.text }]}>{warrantyStatus.label}</Text>
-                </View>
-              </View>
-            </View>
-          </View>
-
-          {/* Quick Stats */}
+        {/* Quick Stats — dark "at a glance" strip */}
+        <LinearGradient colors={[C.ink, '#2E3470']} style={st.statsCard}>
           <View style={st.statsGrid}>
             <View style={st.statCard}>
-              <View style={[st.statIcon, { backgroundColor: '#EFF6FF' }]}>
-                <Icon name="time-outline" size={scale(20)} color={C.info} />
-              </View>
+              <Text style={st.statLabel}>SERVICES</Text>
               <Text style={st.statValue}>{serviceHistory.length}</Text>
-              <Text style={st.statLabel}>Total Services</Text>
             </View>
             <View style={st.statCard}>
-              <View style={[st.statIcon, { backgroundColor: '#ECFDF5' }]}>
-                <Icon name="checkmark-circle-outline" size={scale(20)} color={C.ok} />
-              </View>
+              <Text style={st.statLabel}>COMPLETED</Text>
               <Text style={st.statValue}>{equipment.completedServicesCount || 0}</Text>
-              <Text style={st.statLabel}>Completed</Text>
             </View>
             <View style={st.statCard}>
-              <View style={[st.statIcon, { backgroundColor: '#FFF7ED' }]}>
-                <Icon name="cash-outline" size={scale(20)} color="#F97316" />
-              </View>
-              <Text style={st.statValue}>
+              <Text style={st.statLabel}>SPEND</Text>
+              <Text style={st.statValue} numberOfLines={1}>
                 {equipment.totalSpend > 0 ? `₹${equipment.totalSpend.toLocaleString()}` : '₹0'}
               </Text>
-              <Text style={st.statLabel}>Total Spend</Text>
             </View>
           </View>
-        </View>
+        </LinearGradient>
 
         {/* Tabs */}
         <View style={st.tabBar}>
@@ -814,22 +844,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
                 {can('service:create') && (
                 <TouchableOpacity
                   style={st.emptyBtn}
-                  onPress={() => {
-                    // Navigate to ServiceRequest screen (same flow as owner web /owner/request-service)
-                    const categoryObj = typeof equipment.category === 'object' ? equipment.category : null;
-                    const subCategoryObj = typeof equipment.subCategory === 'object' ? equipment.subCategory : null;
-                    const typeCategory = equipment.equipmentType?.category;
-                    const typeSubCategory = equipment.equipmentType?.subCategory;
-
-                    navigation.navigate('ServiceRequest', {
-                      equipmentId: equipment.id,
-                      equipmentName: equipment.name,
-                      categoryId: categoryObj?.id || typeCategory?.id || equipment.categoryId || null,
-                      categoryName: categoryObj?.name || typeCategory?.name || (typeof equipment.category === 'string' ? equipment.category : null),
-                      subCategoryId: subCategoryObj?.id || typeSubCategory?.id || equipment.subCategoryId || null,
-                      subCategoryName: subCategoryObj?.name || typeSubCategory?.name || (typeof equipment.subCategory === 'string' ? equipment.subCategory : null),
-                    });
-                  }}
+                  onPress={goToServiceRequest}
                 >
                   <Icon name="add" size={scale(18)} color="#fff" />
                   <Text style={st.emptyBtnText}>Request First Service</Text>
@@ -1561,30 +1576,36 @@ const st = StyleSheet.create({
 
   scrollContent: { paddingBottom: scale(100) },
 
-  infoCard: {
-    backgroundColor: C.card, margin: scale(16), borderRadius: scale(16),
-    padding: scale(16), borderWidth: 1, borderColor: C.border
+  /* ── Hero header ── */
+  hero: {
+    height: scale(140), justifyContent: 'space-between',
+    marginHorizontal: scale(16), marginTop: scale(10), borderRadius: scale(18), overflow: 'hidden',
   },
-  infoHeader: { flexDirection: 'row', gap: scale(12) },
-  iconBox: {
-    width: scale(64), height: scale(64), borderRadius: scale(16), backgroundColor: '#FFE8E8',
-    alignItems: 'center', justifyContent: 'center', overflow: 'hidden'
+  heroTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: scale(12), paddingTop: scale(10) },
+  heroBtn: {
+    width: scale(32), height: scale(32), borderRadius: scale(11), backgroundColor: 'rgba(255,255,255,0.22)',
+    alignItems: 'center', justifyContent: 'center'
   },
-  equipImage: { width: scale(64), height: scale(64), borderRadius: scale(16) },
-  infoMain: { flex: 1 },
-  equipName: { fontSize: moderateScale(20), fontWeight: '900', color: C.ink },
-  equipCategory: { fontSize: moderateScale(14), color: C.muted, marginTop: scale(2) },
-  badgeRow: { flexDirection: 'row', gap: scale(8), marginTop: scale(8) },
+  heroFade: { position: 'absolute', left: 0, right: 0, bottom: 0, height: scale(76) },
+  heroBottom: { paddingHorizontal: scale(14), paddingBottom: scale(12) },
+  heroName: { fontSize: moderateScale(16), fontWeight: '900', color: '#fff', marginTop: scale(5) },
+  heroCategory: { fontSize: moderateScale(11.5), color: 'rgba(255,255,255,0.8)', marginTop: scale(1) },
+
+  badgeRow: { flexDirection: 'row', gap: scale(8) },
   badge: { paddingHorizontal: scale(10), paddingVertical: scale(4), borderRadius: scale(8) },
   badgeText: { fontSize: moderateScale(11), fontWeight: '700' },
 
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: scale(8), marginTop: scale(16) },
-  statCard: { flex: 1, minWidth: '45%', alignItems: 'center', padding: scale(12), backgroundColor: C.bg, borderRadius: scale(12) },
-  statIcon: { width: scale(40), height: scale(40), borderRadius: scale(12), alignItems: 'center', justifyContent: 'center', marginBottom: scale(8) },
-  statValue: { fontSize: moderateScale(16), fontWeight: '900', color: C.ink },
-  statLabel: { fontSize: moderateScale(11), color: C.muted, marginTop: scale(2) },
+  statsCard: {
+    marginHorizontal: scale(16), marginTop: scale(14), borderRadius: scale(16),
+    padding: scale(16),
+    shadowColor: '#000', shadowOffset: { width: 0, height: scale(6) }, shadowOpacity: 0.18, shadowRadius: scale(12), elevation: 6,
+  },
+  statsGrid: { flexDirection: 'row' },
+  statCard: { flex: 1, alignItems: 'flex-start' },
+  statValue: { fontSize: moderateScale(16), fontWeight: '900', color: '#fff', marginTop: scale(3) },
+  statLabel: { fontSize: moderateScale(9.5), fontWeight: '700', color: 'rgba(255,255,255,0.6)', letterSpacing: 0.3 },
 
-  tabBar: { flexDirection: 'row', marginHorizontal: scale(16), backgroundColor: C.card, borderRadius: scale(12), padding: scale(4) },
+  tabBar: { flexDirection: 'row', marginHorizontal: scale(16), marginTop: scale(14), backgroundColor: C.card, borderRadius: scale(12), padding: scale(4) },
   tab: { flex: 1, paddingVertical: scale(10), alignItems: 'center', borderRadius: scale(10) },
   tabActive: { backgroundColor: C.bg },
   tabText: { fontSize: moderateScale(13), fontWeight: '600', color: C.muted },
@@ -1816,4 +1837,23 @@ const st = StyleSheet.create({
   quickTimeChipActive: { backgroundColor: C.info, borderColor: C.info },
   quickTimeText: { fontSize: moderateScale(12), fontWeight: '600', color: C.ink },
   quickTimeTextActive: { color: '#fff' },
+
+  /* ── Skeleton ── */
+  skelHero: {
+    height: scale(140), marginHorizontal: scale(16), marginTop: scale(10),
+    borderRadius: scale(18), backgroundColor: '#CBD5E1',
+  },
+  skelStatsCard: {
+    height: scale(70), marginTop: scale(14), borderRadius: scale(16), backgroundColor: '#E2E8F0',
+  },
+  skelTabBar: {
+    height: scale(48), marginTop: scale(14), borderRadius: scale(12), backgroundColor: '#E2E8F0',
+  },
+  skelDetailsCard: {
+    marginTop: scale(16), backgroundColor: C.card, borderRadius: scale(12),
+    padding: scale(12), borderWidth: 1, borderColor: C.border,
+  },
+  skelDetailRow: {
+    height: scale(18), backgroundColor: '#E2E8F0', borderRadius: scale(6), marginVertical: scale(9),
+  },
 });

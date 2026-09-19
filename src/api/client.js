@@ -188,10 +188,18 @@ const uploadDocument = async (formData) => {
  * attached instead, and returns a local file:// path the caller can pass to
  * Share.share().
  * `apiPath` is relative to API_BASE_URL, e.g. `/owner/amc-contracts/{id}/document`.
+ *
+ * Saved under CachesDirectoryPath, not DocumentDirectoryPath - react-native-share's
+ * bundled Android FileProvider (share_download_paths.xml) only exposes the cache
+ * dir and external Download/, not the app's files dir. A file saved outside those
+ * paths makes FileProvider.getUriForFile() throw for every configured authority,
+ * which silently resolves to a null Uri and crashes deeper in ClipData.newUri()
+ * with "Attempt to invoke virtual method '...Uri.getScheme()' on a null object
+ * reference" - a very indirect symptom of the real (wrong directory) cause.
  */
 const downloadAuthenticatedFile = async (apiPath, filename) => {
   const token = await AsyncStorage.getItem('userToken');
-  const toFile = `${RNFS.DocumentDirectoryPath}/${filename}`;
+  const toFile = `${RNFS.CachesDirectoryPath}/${filename}`;
 
   const result = await RNFS.downloadFile({
     fromUrl: `${API_BASE_URL}${apiPath}`,
