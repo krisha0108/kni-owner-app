@@ -445,7 +445,7 @@ export default function BookingDetailScreen({ navigation, route }) {
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
             <Icon name="arrow-back" size={18} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.heroTitle}>#{booking.id.slice(0, 8).toUpperCase()}</Text>
+          <Text style={styles.heroTitle}>#{booking.bookingNumber ?? booking.id.slice(0, 8).toUpperCase()}</Text>
           <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
             <Icon name="menu" size={18} color="#fff" />
           </TouchableOpacity>

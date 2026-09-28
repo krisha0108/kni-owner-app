@@ -373,7 +373,7 @@ export default function MarketplaceOrdersScreen({ navigation }) {
           amount,
           currency,
           name: 'KNI Official Store',
-          description: `Final payment - Order #${order.id.substring(0, 8)}`,
+          description: `Final payment - Order #${order.orderNumber ?? order.id.substring(0, 8)}`,
           order_id: orderId,
           prefill: prefill || {},
           theme: { color: C.primary },
@@ -572,7 +572,7 @@ export default function MarketplaceOrdersScreen({ navigation }) {
             <View style={[styles.paymentStatusMsg, { backgroundColor: C.successLight }]}>
               <Icon name="checkmark-circle" size={scale(14)} color={C.success} />
               <Text style={[styles.paymentStatusMsgText, { color: C.success }]}>
-                Order #{item.orderId?.slice(0, 8).toUpperCase()} placed
+                Order #{orders.find(o => o.id === item.orderId)?.orderNumber ?? item.orderId?.slice(0, 8).toUpperCase()} placed
               </Text>
             </View>
           )}
@@ -629,7 +629,7 @@ export default function MarketplaceOrdersScreen({ navigation }) {
           <View style={styles.orderHeader}>
             <View style={styles.orderIdSection}>
               <Text style={styles.orderIdLabel}>ORDER ID</Text>
-              <Text style={styles.orderId}>#{item.id?.slice(0, 8).toUpperCase()}</Text>
+              <Text style={styles.orderId}>#{item.orderNumber ?? item.id?.slice(0, 8).toUpperCase()}</Text>
             </View>
             <View style={styles.orderDateSection}>
               <Text style={styles.orderDateText}>{formatDate(item.createdAt)}</Text>
@@ -992,7 +992,7 @@ export default function MarketplaceOrdersScreen({ navigation }) {
                 <View style={styles.detailModalHeaderContent}>
                   <View>
                     <Text style={styles.detailModalOrderId}>
-                      #{selectedOrder.id?.slice(0, 8).toUpperCase()}
+                      #{selectedOrder.orderNumber ?? selectedOrder.id?.slice(0, 8).toUpperCase()}
                     </Text>
                     <View style={styles.detailModalStatusRow}>
                       <Icon name={getStatusStyle(selectedOrder.status).icon} size={scale(16)} color="#fff" />
@@ -1564,7 +1564,7 @@ export default function MarketplaceOrdersScreen({ navigation }) {
                   <View style={[styles.detailStatusMsg, { backgroundColor: C.successLight }]}>
                     <Icon name="checkmark-circle" size={scale(18)} color={C.success} />
                     <Text style={[styles.detailStatusMsgText, { color: C.success }]}>
-                      Payment verified! Order #{selectedPayment.orderId?.slice(0, 8).toUpperCase()} created.
+                      Payment verified! Order #{orders.find(o => o.id === selectedPayment.orderId)?.orderNumber ?? selectedPayment.orderId?.slice(0, 8).toUpperCase()} created.
                     </Text>
                   </View>
                 )}

@@ -139,15 +139,18 @@ export default function Notifications({ navigation }) {
 
       let arr = [];
       let total = 0;
+      let typeCounts = null;
       if (json?.data?.items) {
         arr = json.data.items;
         total = json.data.total || json.total || 0;
+        typeCounts = json.data.typeCounts || null;
       } else {
         arr = json?.data || (Array.isArray(json) ? json : []);
         total = json?.total || arr.length;
       }
 
       setTotalNotifCount(total);
+      if (typeCounts) setServerTypeCounts(typeCounts);
 
       if (arr && Array.isArray(arr) && arr.length > 0) {
         const mapped = arr.map(mapNotification);
@@ -197,12 +200,24 @@ export default function Notifications({ navigation }) {
     return () => { loop.stop(); };
   }, [pulse, initializeUserData]);
 
+  // Category counts (Booking/Payment/Order/...) come from the server's
+  // typeCounts breakdown across ALL matching notifications, not just what's
+  // loaded so far via pagination - counting only `items` here would make
+  // every tab badge silently understate its true total until the user has
+  // scrolled through every page (same bug class as My Bookings' status tabs).
   const filterCounts = useMemo(() => {
     const c = { all: totalNotifCount || items.length };
     Object.keys(TYPE_CONFIG).forEach(key => { c[key] = 0; });
-    items.forEach(x => { c[getCatKey(x.type)]++; });
+    if (serverTypeCounts) {
+      Object.entries(serverTypeCounts).forEach(([type, count]) => {
+        const key = getCatKey(type);
+        c[key] = (c[key] || 0) + count;
+      });
+    } else {
+      items.forEach(x => { c[getCatKey(x.type)]++; });
+    }
     return c;
-  }, [items]);
+  }, [items, serverTypeCounts, totalNotifCount]);
 
   const filtered = useMemo(() => {
     if (filter === 'all') return items;
@@ -259,21 +274,24 @@ export default function Notifications({ navigation }) {
 
   const [realUnreadCount, setRealUnreadCount] = useState(0);
   const [totalNotifCount, setTotalNotifCount] = useState(0);
+  const [serverTypeCounts, setServerTypeCounts] = useState(null);
 
+  // Total count comes solely from fetchNotifications' own /owner/notifications
+  // response (see setTotalNotifCount above) - this used to also fetch it a
+  // second time from /notifications?page=1&pageSize=1 (a different endpoint),
+  // racing with the first and showing a different number in the header badge
+  // vs the "Total" summary tile whenever the two calls landed at different
+  // moments. Only the unread badge needs its own endpoint.
   useEffect(() => {
-    const fetchCounts = async () => {
+    const fetchUnreadCount = async () => {
       try {
         const response = await api.get('/notifications/unread-count');
         if (response.data?.ok) {
           setRealUnreadCount(response.data.data?.count || 0);
         }
-        const allResponse = await api.get('/notifications?page=1&pageSize=1');
-        if (allResponse.data?.ok) {
-          setTotalNotifCount(allResponse.data.data?.total || allResponse.data.total || items.length);
-        }
       } catch (e) {}
     };
-    fetchCounts();
+    fetchUnreadCount();
   }, [items]);
 
   const unreadCount = realUnreadCount;

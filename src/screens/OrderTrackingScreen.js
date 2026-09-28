@@ -487,7 +487,7 @@ export default function OrderTrackingScreen({ navigation }) {
               {itemNames ? (
                 <Text style={s.cardItemNames} numberOfLines={1}>{itemNames}</Text>
               ) : null}
-              <Text style={s.cardId}>#{item.id?.slice(0, 8)}</Text>
+              <Text style={s.cardId}>#{item.bookingNumber ?? item.id?.slice(0, 8)}</Text>
             </View>
             <Icon name="chevron-forward" size={scale(15)} color={C.muted} />
           </View>
@@ -537,7 +537,7 @@ export default function OrderTrackingScreen({ navigation }) {
               {item.itemNames ? (
                 <Text style={s.cardItemNames} numberOfLines={1}>{item.itemNames}</Text>
               ) : null}
-              <Text style={s.cardId}>#{item.id?.slice(0, 8)}</Text>
+              <Text style={s.cardId}>#{item.order?.orderNumber ?? item.id?.slice(0, 8)}</Text>
             </View>
             <Icon name="chevron-forward" size={scale(15)} color={C.muted} />
           </View>

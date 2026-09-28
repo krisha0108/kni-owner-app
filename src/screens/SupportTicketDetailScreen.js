@@ -326,7 +326,7 @@ export default function SupportTicketDetailScreen({ navigation, route }) {
                 <Icon name={dSt.icon} size={scale(13)} color={dSt.color} />
                 <Text style={[st.statusChipText, { color: dSt.color }]}>{dSt.label}</Text>
               </View>
-              <Text style={st.footerMeta}>#{ticket.id?.slice(0, 8)}</Text>
+              <Text style={st.footerMeta}>#{ticket.ticketNumber ?? ticket.id?.slice(0, 8)}</Text>
             </View>
           </View>
         </View>

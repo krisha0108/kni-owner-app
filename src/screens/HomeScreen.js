@@ -773,7 +773,7 @@ export default function HomeScreen({ navigation }) {
                           <Icon name="calendar-outline" size={scale(16)} color={C.primary} />
                         </LinearGradient>
                         <View style={{ flex: 1, marginLeft: scale(12) }}>
-                          <Text style={st.recentName}>Booking #{b.id.slice(0, 8)}</Text>
+                          <Text style={st.recentName}>Booking #{b.bookingNumber ?? b.id.slice(0, 8)}</Text>
                           <Text style={st.recentDate}>
                             {new Date(b.createdAt).toLocaleDateString()}
                           </Text>

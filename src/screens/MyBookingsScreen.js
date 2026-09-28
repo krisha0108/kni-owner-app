@@ -114,6 +114,7 @@ export default function MyBookingsScreen({ navigation }) {
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
+  const [serverStatusCounts, setServerStatusCounts] = useState({});
   const pulse = useRef(new Animated.Value(0.4)).current;
 
   useEffect(() => {
@@ -125,15 +126,15 @@ export default function MyBookingsScreen({ navigation }) {
     return () => loop.stop();
   }, [pulse]);
 
-  // Calculate status counts
-  const statusCounts = useMemo(() => {
-    const counts = { all: bookings.length };
-    bookings.forEach((b) => {
-      const status = b.status || 'SLOT_SELECTED';
-      counts[status] = (counts[status] || 0) + 1;
-    });
-    return counts;
-  }, [bookings]);
+  // Status counts across ALL matching bookings, from the server - not just
+  // whatever page has loaded so far via infinite scroll. Using a client-side
+  // count over `bookings` here would make the header "Active"/"Completed"
+  // stats and tab-pill counts silently grow as the user scrolls, understating
+  // the true numbers until every page has loaded.
+  const statusCounts = useMemo(
+    () => ({ all: totalCount, ...serverStatusCounts }),
+    [totalCount, serverStatusCounts]
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -160,8 +161,9 @@ export default function MyBookingsScreen({ navigation }) {
       if (response.data.ok) {
         const responseData = response.data.data;
         if (responseData && responseData.items) {
-          const { items, total, page: currentPage, pageSize } = responseData;
+          const { items, total, page: currentPage, pageSize, statusCounts: newStatusCounts } = responseData;
           setTotalCount(total);
+          setServerStatusCounts(newStatusCounts || {});
           if (append) {
             setBookings(prev => {
               const existingIds = new Set(prev.map(b => b.id));
@@ -266,7 +268,7 @@ export default function MyBookingsScreen({ navigation }) {
           <Icon name={config.icon} size={15} color={config.color} />
         </View>
         <View style={styles.rowInfo}>
-          <Text style={styles.rowId} numberOfLines={1}>#{item.id.slice(0, 8).toUpperCase()}</Text>
+          <Text style={styles.rowId} numberOfLines={1}>#{item.bookingNumber ?? item.id.slice(0, 8).toUpperCase()}</Text>
           <Text style={styles.rowMeta} numberOfLines={1}>{dateLabel} · {itemCount} item{itemCount !== 1 ? 's' : ''}</Text>
         </View>
         <View style={styles.rowRight}>

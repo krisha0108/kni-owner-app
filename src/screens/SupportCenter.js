@@ -348,7 +348,7 @@ export default function SupportCenter({ navigation }) {
                 <Icon name="chatbubble-outline" size={scale(12)} color={C.muted} />
                 <Text style={st.footerMeta}>{replies}</Text>
               </View>
-              <Text style={st.footerMeta}>#{item.id?.slice(0, 8)}</Text>
+              <Text style={st.footerMeta}>#{item.ticketNumber ?? item.id?.slice(0, 8)}</Text>
             </View>
           </View>
 
