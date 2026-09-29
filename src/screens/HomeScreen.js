@@ -11,7 +11,8 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
-import { RestaurantSelectorBar, RestaurantSelectorChips } from '../components/RestaurantSelector';
+import SearchOverlay from '../components/SearchOverlay';
+import { RestaurantSelectorCard, RestaurantSelectorCompact } from '../components/RestaurantSelector';
 import { useRestaurant } from '../context/RestaurantContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
@@ -59,10 +60,10 @@ const getStatusColor = (s) =>
 
 /* ──────── QUICK ACTION DATA ──────── */
 const QA = [
-  { icon: 'calendar-outline', label: 'Bookings', grad: ['#FF6B6B', '#EF3A3A'], screen: 'MyBookings', permission: 'bookings:read' },
-  { icon: 'storefront-outline', label: 'Restaurants', grad: ['#818CF8', '#6366F1'], screen: 'MyRestaurants', permission: 'restaurant:read' },
-  { icon: 'cash-outline', label: 'Expenses', grad: ['#34D399', '#10B981'], screen: 'Expenses', permission: 'expenses:read' },
-  { icon: 'headset-outline', label: 'Support', grad: ['#FBBF24', '#F59E0B'], screen: 'SupportCenter', permission: 'support:read' },
+  { icon: 'calendar-outline', label: 'Bookings', desc: 'Manage bookings & reservations', tint: '#EF3A3A', tintBg: '#FDEAEA', screen: 'MyBookings', permission: 'bookings:read' },
+  { icon: 'receipt-outline', label: 'Expenses', desc: 'Track & manage expenses', tint: '#4F63D2', tintBg: '#E7ECFB', screen: 'Expenses', permission: 'expenses:read' },
+  { icon: 'shield-checkmark-outline', label: 'AMC', desc: 'Maintenance & service', tint: '#EF3A3A', tintBg: '#FDEAEA', screen: 'AMCDashboard', permission: 'amc:read' },
+  { icon: 'headset-outline', label: 'Support', desc: 'Get help & raise tickets', tint: '#4F63D2', tintBg: '#E7ECFB', screen: 'SupportCenter', permission: 'support:read' },
 ];
 
 /* ======================================================================= */
@@ -76,7 +77,6 @@ export default function HomeScreen({ navigation }) {
     selectedRestaurantId: restaurantId,
     loading: restaurantsLoading,
     loadRestaurants,
-    hasMultipleRestaurants,
   } = useRestaurant();
 
   /* ─── State ─── */
@@ -91,14 +91,20 @@ export default function HomeScreen({ navigation }) {
   const [marketplaceCartCount, setMarketplaceCartCount] = useState(0);
   const [notifCount, setNotifCount] = useState(0);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [searchVisible, setSearchVisible] = useState(false);
+  const [headerHeight, setHeaderHeight] = useState(0);
 
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState(30);
   const [analyticsData, setAnalyticsData] = useState(null);
   const [exporting, setExporting] = useState(false);
+  const [amcUpcomingCount, setAmcUpcomingCount] = useState(0);
 
   const isFirstLoad = useRef(true);
   const showSkel = loading || refreshing;
+
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
 
   const PERIOD_OPTIONS = [
     { label: '7D', value: 7 },
@@ -106,11 +112,6 @@ export default function HomeScreen({ navigation }) {
     { label: '90D', value: 90 },
     { label: '1Y', value: 365 },
   ];
-
-  /* ─── Greeting ─── */
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
-  const greetIcon = hour < 12 ? 'sunny' : hour < 17 ? 'partly-sunny' : 'moon';
 
   const selectedRest = restaurants?.find(r => r.id === restaurantId);
 
@@ -275,6 +276,19 @@ export default function HomeScreen({ navigation }) {
     }
   }, [restaurantId, selectedPeriod]);
 
+  /* ═══════════ AMC UPCOMING VISITS (for the Home banner's count tag) ═══════════ */
+  const fetchAmcUpcoming = useCallback(async () => {
+    if (!restaurantId || !can('amc:read')) { setAmcUpcomingCount(0); return; }
+    try {
+      const response = await api.get(`/owner/amc-dashboard?restaurantId=${restaurantId}`);
+      if (response.data.ok) {
+        setAmcUpcomingCount(response.data.data?.upcomingVisits?.length || 0);
+      }
+    } catch (error) {
+      setAmcUpcomingCount(0);
+    }
+  }, [restaurantId, can]);
+
   /* ═══════════ MARKETPLACE CART COUNT ═══════════ */
   const loadMarketplaceCartCount = useCallback(async () => {
     try {
@@ -324,13 +338,21 @@ export default function HomeScreen({ navigation }) {
 
       const analyticsKey = `Home-analytics-${restaurantId}-${selectedPeriod}`;
       if (isStale(analyticsKey)) { loadAnalytics(); markFetched(analyticsKey); }
-    }, [loadRestaurants, fetchOffers, fetchFeed, fetchSponsored, fetchGuides, calculateCartCount, loadMarketplaceCartCount, restaurantId, loadAnalytics, fetchNotifCount, selectedPeriod])
+
+      const amcKey = `Home-amcUpcoming-${restaurantId}`;
+      if (isStale(amcKey)) { fetchAmcUpcoming(); markFetched(amcKey); }
+    }, [loadRestaurants, fetchOffers, fetchFeed, fetchSponsored, fetchGuides, calculateCartCount, loadMarketplaceCartCount, restaurantId, loadAnalytics, fetchNotifCount, selectedPeriod, fetchAmcUpcoming])
   );
 
   // Reload analytics when restaurant or period changes
   useEffect(() => {
     loadAnalytics();
   }, [restaurantId, selectedPeriod, loadAnalytics]);
+
+  // Reload AMC upcoming-visits count when restaurant changes
+  useEffect(() => {
+    fetchAmcUpcoming();
+  }, [restaurantId, fetchAmcUpcoming]);
 
   /* ═══════════ BANNER ANIMATION ═══════════ */
   const pulse = useRef(new Animated.Value(0.5)).current;
@@ -380,16 +402,18 @@ export default function HomeScreen({ navigation }) {
         loadAnalytics(),
         calculateCartCount(),
         loadMarketplaceCartCount(),
+        fetchAmcUpcoming(),
       ]);
       markFetched('Home-content');
       markFetched('Home-notifCount');
       if (restaurantId) {
         markFetched(`Home-marketplaceCart-${restaurantId}`);
         markFetched(`Home-analytics-${restaurantId}-${selectedPeriod}`);
+        markFetched(`Home-amcUpcoming-${restaurantId}`);
       }
       setTimeout(() => setRefreshing(false), 300);
     })();
-  }, [fetchOffers, fetchFeed, fetchSponsored, fetchGuides, loadRestaurants, loadAnalytics, calculateCartCount, loadMarketplaceCartCount, restaurantId, selectedPeriod]);
+  }, [fetchOffers, fetchFeed, fetchSponsored, fetchGuides, loadRestaurants, loadAnalytics, calculateCartCount, loadMarketplaceCartCount, restaurantId, selectedPeriod, fetchAmcUpcoming]);
 
   const handleExportPDF = async () => {
     if (!restaurantId) {
@@ -426,63 +450,59 @@ export default function HomeScreen({ navigation }) {
       {/* ══════ GRADIENT HEADER ══════ */}
       <LinearGradient
         colors={[C.primary, C.primaryDark]}
-        style={[st.headerGrad, { paddingTop: insets.top + scale(10) }]}
+        style={[st.headerGrad, { paddingTop: insets.top + scale(8) }]}
+        onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
       >
         {/* Decorative blobs */}
         <View style={st.headerBlobA} pointerEvents="none" />
         <View style={st.headerBlobB} pointerEvents="none" />
 
         <View style={st.headerRow}>
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={st.headerBtn}>
-            <Icon name="menu" size={scale(22)} color="#fff" />
-          </TouchableOpacity>
-
-          <View style={{ flex: 1, marginLeft: scale(14) }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(6) }}>
-              <Icon name={greetIcon} size={scale(15)} color="#FFD700" />
-              <Text style={st.greetText}>{greeting}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: scale(8) }}>
+            <View style={st.headerIconBadge}>
+              <Icon name="restaurant" size={scale(14)} color="#fff" />
             </View>
-            <Text style={st.headerRestName} numberOfLines={1}>
-              {selectedRest?.name || 'KNI Super App'}
-            </Text>
+            <View style={{ flex: 1 }}>
+              <Text style={st.headerGreet}>{greeting}</Text>
+              <Text style={st.headerRestName} numberOfLines={1}>
+                {selectedRest?.name || 'KNI Super App'}
+              </Text>
+            </View>
           </View>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(6) }}>
-            <TouchableOpacity onPress={() => navigation.navigate('Search')} style={st.headerBtnSm}>
-              <Icon name="search" size={scale(15)} color="#fff" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleExportPDF}
-              disabled={exporting || !restaurantId}
-              style={st.headerBtnSm}
-            >
-              {exporting ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Icon name="download-outline" size={scale(15)} color={restaurantId ? '#fff' : 'rgba(255,255,255,0.35)'} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(7) }}>
+            <View style={st.headerIconPill}>
+              <TouchableOpacity
+                onPress={() => setSearchVisible((v) => !v)}
+                style={[st.headerBtnSm, searchVisible && st.headerBtnSmActive]}
+              >
+                <Icon name="search" size={scale(15)} color={searchVisible ? C.primary : '#fff'} />
+              </TouchableOpacity>
+              {can('marketplace:create') && (
+              <TouchableOpacity
+                onPress={() => restaurantId && navigation.navigate('MarketplaceCart', { restaurantId })}
+                disabled={!restaurantId}
+                style={st.headerBtnSm}
+              >
+                <Icon name="cart-outline" size={scale(15)} color={restaurantId ? '#fff' : 'rgba(255,255,255,0.35)'} />
+                {marketplaceCartCount > 0 && (
+                  <View style={st.headerCartBadge}>
+                    <Text style={st.headerCartBadgeText}>{marketplaceCartCount}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
               )}
-            </TouchableOpacity>
-            {can('marketplace:create') && (
-            <TouchableOpacity
-              onPress={() => restaurantId && navigation.navigate('MarketplaceCart', { restaurantId })}
-              disabled={!restaurantId}
-              style={st.headerBtnSm}
-            >
-              <Icon name="cart-outline" size={scale(15)} color={restaurantId ? '#fff' : 'rgba(255,255,255,0.35)'} />
-              {marketplaceCartCount > 0 && (
-                <View style={st.headerCartBadge}>
-                  <Text style={st.headerCartBadgeText}>{marketplaceCartCount}</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-            )}
-            <TouchableOpacity onPress={() => navigation.navigate?.('Notifications')} style={st.headerBtnSm}>
-              <Icon name="notifications-outline" size={scale(15)} color="#fff" />
-              {notifCount > 0 && (
-                <View style={{position:'absolute',top:-4,right:-4,backgroundColor:'#FF3B30',borderRadius:10,minWidth:18,height:18,justifyContent:'center',alignItems:'center',paddingHorizontal:4}}>
-                  <Text style={{color:'#fff',fontSize:10,fontWeight:'700'}}>{notifCount > 99 ? '99+' : notifCount}</Text>
-                </View>
-              )}
+              <TouchableOpacity onPress={() => navigation.navigate?.('Notifications')} style={st.headerBtnSm}>
+                <Icon name="notifications-outline" size={scale(15)} color="#fff" />
+                {notifCount > 0 && (
+                  <View style={{position:'absolute',top:-4,right:-4,backgroundColor:'#FF3B30',borderRadius:10,minWidth:18,height:18,justifyContent:'center',alignItems:'center',paddingHorizontal:4}}>
+                    <Text style={{color:'#fff',fontSize:10,fontWeight:'700'}}>{notifCount > 99 ? '99+' : notifCount}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity onPress={() => setMenuVisible(true)} style={st.headerBtnMenu}>
+              <Icon name="menu" size={scale(17)} color={C.primary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -500,9 +520,11 @@ export default function HomeScreen({ navigation }) {
           <SkeletonHome pulse={pulse} />
         ) : (
           <>
-            {/* Restaurant Selector -- shared component, shared AsyncStorage
-                "seen" flag for the first-time coach mark. */}
-            <RestaurantSelectorBar />
+            {/* Current Restaurant -- light/compact card instead of the
+                bolder full-width bar, per the client's redesign brief. */}
+            <View style={{ paddingHorizontal: scale(16), marginTop: scale(14) }}>
+              <RestaurantSelectorCard />
+            </View>
 
             {/* ══════ HERO OFFER ══════ */}
             {offers.length > 0 && (
@@ -613,6 +635,12 @@ export default function HomeScreen({ navigation }) {
             )}
 
             {/* ══════ QUICK ACTIONS ══════ */}
+            <View style={st.sectionHdr}>
+              <Text style={st.sectionTitle}>Quick Actions</Text>
+              <TouchableOpacity onPress={() => setMenuVisible(true)}>
+                <Text style={st.link}>View All</Text>
+              </TouchableOpacity>
+            </View>
             <View style={st.qaRow}>
               {QA.filter(q => !q.permission || can(q.permission)).map((q, i) => (
                 <TouchableOpacity
@@ -621,10 +649,11 @@ export default function HomeScreen({ navigation }) {
                   activeOpacity={0.8}
                   onPress={() => navigation.navigate(q.screen)}
                 >
-                  <LinearGradient colors={q.grad} style={st.qaIcon}>
-                    <Icon name={q.icon} size={scale(20)} color="#fff" />
-                  </LinearGradient>
+                  <View style={[st.qaIcon, { backgroundColor: q.tintBg }]}>
+                    <Icon name={q.icon} size={scale(14)} color={q.tint} />
+                  </View>
                   <Text style={st.qaLabel}>{q.label}</Text>
+                  <Text style={st.qaDesc}>{q.desc}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -637,114 +666,145 @@ export default function HomeScreen({ navigation }) {
               style={{ paddingHorizontal: scale(16), marginTop: scale(14) }}
             >
               <LinearGradient
-                colors={['#A855F7', '#9333EA', '#7E22CE']}
+                colors={['#FDEAEA', '#FFF4F0']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0.5 }}
                 style={st.amcBanner}
               >
                 <View style={st.amcBannerLeft}>
                   <View style={st.amcIconBg}>
-                    <Icon name="shield-checkmark" size={scale(22)} color="#9333EA" />
+                    <Icon name="shield-checkmark" size={scale(20)} color="#fff" />
                   </View>
                   <View style={{ flex: 1, marginLeft: scale(12) }}>
                     <Text style={st.amcBannerTitle}>AMC Management</Text>
                     <Text style={st.amcBannerSub}>Annual maintenance contracts, visits & breakdowns</Text>
+                    {amcUpcomingCount > 0 && (
+                      <View style={st.amcTag}>
+                        <Text style={st.amcTagTxt}>{amcUpcomingCount} Upcoming Visit{amcUpcomingCount !== 1 ? 's' : ''}</Text>
+                      </View>
+                    )}
                   </View>
                 </View>
-                <View style={st.amcArrowBg}>
-                  <Icon name="chevron-forward" size={scale(16)} color="#fff" />
-                </View>
+                <Icon name="chevron-forward" size={scale(18)} color={C.primary} />
               </LinearGradient>
             </TouchableOpacity>
             )}
 
-            {/* ══════ MONEY CARD (Net Revenue + Analytics, tabs lead) ══════ */}
+            {/* ══════ BUSINESS OVERVIEW ══════ */}
             <View style={{ paddingHorizontal: scale(16), marginTop: scale(16) }}>
-              <LinearGradient
-                colors={[C.ink, '#2E3470']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={st.moneyCard}
-              >
-                <View style={st.moneyTabRow}>
-                  {PERIOD_OPTIONS.map(opt => (
-                    <TouchableOpacity
-                      key={opt.value}
-                      style={[st.moneyTab, selectedPeriod === opt.value && st.moneyTabOn]}
-                      onPress={() => setSelectedPeriod(opt.value)}
-                    >
-                      <Text style={[st.moneyTabTxt, selectedPeriod === opt.value && st.moneyTabTxtOn]}>
-                        {opt.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+            <View style={st.boCard}>
+              <View style={st.sectionHead}>
+                <Text style={st.sectionTitle}>Business Overview</Text>
+                <RestaurantSelectorCompact />
+              </View>
 
-                {hasMultipleRestaurants && (
-                  <RestaurantSelectorChips style={{ marginBottom: scale(10) }} />
-                )}
+              {/* Period selector - its own light track, sitting above the
+                  dark stats card instead of inside it. */}
+              <View style={[st.periodTrack, { marginTop: scale(12) }]}>
+                {PERIOD_OPTIONS.map(opt => (
+                  <TouchableOpacity
+                    key={opt.value}
+                    style={[st.periodTab, selectedPeriod === opt.value && st.periodTabOn]}
+                    onPress={() => setSelectedPeriod(opt.value)}
+                  >
+                    <Text style={[st.periodTabTxt, selectedPeriod === opt.value && st.periodTabTxtOn]}>
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
 
+              <View style={{ marginTop: scale(14) }}>
                 {analyticsLoading ? (
                   <View style={{ paddingVertical: scale(24), alignItems: 'center' }}>
-                    <ActivityIndicator color="#fff" />
+                    <ActivityIndicator color={C.ink} />
                   </View>
                 ) : !restaurantId ? (
                   <View style={st.moneyEmpty}>
-                    <Icon name="restaurant-outline" size={scale(26)} color="rgba(255,255,255,0.5)" />
+                    <Icon name="restaurant-outline" size={scale(26)} color={C.muted} />
                     <Text style={st.moneyEmptyTitle}>No Restaurant Selected</Text>
                     <Text style={st.moneyEmptySub}>Add a restaurant to view analytics</Text>
                     <TouchableOpacity activeOpacity={0.85} onPress={() => navigation.navigate('MyRestaurants')} style={st.moneyEmptyBtn}>
-                      <Icon name="add" size={scale(15)} color={C.ink} />
+                      <Icon name="add" size={scale(15)} color="#fff" />
                       <Text style={st.moneyEmptyBtnTxt}>Add Restaurant</Text>
                     </TouchableOpacity>
                   </View>
                 ) : (
                   <>
-                    <Text style={st.moneyLabel}>NET REVENUE · {selectedPeriod} DAYS</Text>
+                    <View style={st.moneyLabelRow}>
+                      <Text style={st.moneyLabel}>NET REVENUE · {selectedPeriod} DAYS</Text>
+                      <Icon name="information-circle-outline" size={scale(13)} color={C.muted} />
+                    </View>
                     <Text style={st.moneyValue}>₹{Math.abs(summary.netRevenue || 0).toLocaleString()}</Text>
                     <View style={st.moneyTrendRow}>
                       <Icon
                         name={summary.netRevenue >= 0 ? 'trending-up' : 'trending-down'}
                         size={scale(13)}
-                        color={summary.netRevenue >= 0 ? '#6EE7B7' : '#FCA5A5'}
+                        color={summary.netRevenue >= 0 ? '#10B981' : '#EF4444'}
                       />
-                      <Text style={[st.moneyTrendTxt, { color: summary.netRevenue >= 0 ? '#6EE7B7' : '#FCA5A5' }]}>
+                      <Text style={[st.moneyTrendTxt, { color: summary.netRevenue >= 0 ? '#10B981' : '#EF4444' }]}>
                         {summary.netRevenue >= 0 ? 'Profit' : 'Loss'} for {selectedPeriod} days
                       </Text>
                     </View>
 
+                    <View style={st.moneyDivider} />
+
                     <View style={st.moneyStatsRow}>
                       <View style={st.moneyStat}>
-                        <Text style={st.moneyStatLabel}>BOOKINGS</Text>
+                        <View style={st.moneyStatIcon}>
+                          <Icon name="calendar-outline" size={scale(12)} color={C.primary} />
+                        </View>
                         <Text style={st.moneyStatValue}>{summary.bookings?.count || 0}</Text>
+                        <Text style={st.moneyStatLabel}>Booking{summary.bookings?.count === 1 ? '' : 's'}</Text>
                       </View>
                       <View style={st.moneyStat}>
-                        <Text style={st.moneyStatLabel}>EXPENSES</Text>
+                        <View style={st.moneyStatIcon}>
+                          <Icon name="cash-outline" size={scale(12)} color={C.primary} />
+                        </View>
                         <Text style={st.moneyStatValue}>₹{(summary.expenses?.total || 0).toLocaleString()}</Text>
+                        <Text style={st.moneyStatLabel}>Expenses</Text>
                       </View>
                       <View style={st.moneyStat}>
-                        <Text style={st.moneyStatLabel}>EQUIPMENT</Text>
+                        <View style={st.moneyStatIcon}>
+                          <Icon name="hardware-chip-outline" size={scale(12)} color={C.primary} />
+                        </View>
                         <Text style={st.moneyStatValue}>{summary.equipment?.count || 0}</Text>
+                        <Text style={st.moneyStatLabel}>Equipment</Text>
                       </View>
                     </View>
 
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(8), marginTop: scale(14) }}>
                     <TouchableOpacity
-                      style={st.moneyViewAnalyticsBtn}
+                      style={[st.moneyViewAnalyticsBtn, { flex: 1, marginTop: 0 }]}
                       onPress={() => navigation.navigate('Analytics')}
                       activeOpacity={0.7}
                     >
-                      <Icon name="stats-chart" size={scale(14)} color="rgba(255,255,255,0.85)" />
+                      <Icon name="stats-chart" size={scale(14)} color={C.ink} />
                       <Text style={st.moneyChartsToggleTxt}>View Full Analytics</Text>
                       <Icon
                         name="arrow-forward"
                         size={scale(14)}
-                        color="rgba(255,255,255,0.6)"
+                        color={C.ink}
                         style={{ marginLeft: 'auto' }}
                       />
                     </TouchableOpacity>
+                    <TouchableOpacity
+                      style={st.exportIconBtn}
+                      onPress={handleExportPDF}
+                      disabled={exporting || !restaurantId}
+                      activeOpacity={0.7}
+                    >
+                      {exporting ? (
+                        <ActivityIndicator size="small" color={C.ink} />
+                      ) : (
+                        <Icon name="download-outline" size={scale(16)} color={restaurantId ? C.ink : C.muted} />
+                      )}
+                    </TouchableOpacity>
+                    </View>
                   </>
                 )}
-              </LinearGradient>
+              </View>
+            </View>
             </View>
 
             {/* ══════ RECENT ACTIVITY ══════ */}
@@ -918,6 +978,13 @@ export default function HomeScreen({ navigation }) {
 
       <KniBottomNav navigation={navigation} active="home" cartCount={cartCount} notifCount={notifCount} />
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
+      <SearchOverlay
+        visible={searchVisible}
+        onClose={() => setSearchVisible(false)}
+        navigation={navigation}
+        restaurantId={restaurantId}
+        topOffset={headerHeight}
+      />
     </SafeAreaView>
   );
 }
@@ -927,6 +994,18 @@ function SkeletonHome({ pulse }) {
   const Bone = ({ style }) => <Animated.View style={[stSK.bone, style, { opacity: pulse }]} />;
   return (
     <>
+      {/* Current Restaurant card skeleton */}
+      <View style={{ paddingHorizontal: scale(16), marginTop: scale(14) }}>
+        <View style={stSK.cardShell}>
+          <Bone style={{ width: scale(32), height: scale(32), borderRadius: scale(9) }} />
+          <View style={{ flex: 1, marginLeft: scale(10) }}>
+            <Bone style={{ width: scale(90), height: scale(8), borderRadius: scale(4) }} />
+            <Bone style={{ width: scale(130), height: scale(13), borderRadius: scale(6), marginTop: scale(6) }} />
+          </View>
+          <Bone style={{ width: scale(72), height: scale(28), borderRadius: scale(20) }} />
+        </View>
+      </View>
+
       {/* Offer banner skeleton */}
       <View style={{ paddingHorizontal: scale(16), marginTop: scale(14) }}>
         <Bone style={{ height: scale(190), borderRadius: scale(20) }} />
@@ -939,36 +1018,55 @@ function SkeletonHome({ pulse }) {
         ))}
       </View>
 
+      {/* Quick Actions heading skeleton */}
+      <View style={[st.sectionHdr, { marginTop: scale(20) }]}>
+        <Bone style={{ width: scale(110), height: scale(16), borderRadius: scale(8) }} />
+        <Bone style={{ width: scale(50), height: scale(12), borderRadius: scale(6) }} />
+      </View>
+
       {/* Quick actions skeleton */}
       <View style={st.qaRow}>
         {[0, 1, 2, 3].map(i => (
           <View key={i} style={st.qaItem}>
-            <Bone style={{ width: scale(48), height: scale(48), borderRadius: scale(16) }} />
-            <Bone style={{ width: scale(50), height: scale(10), borderRadius: scale(5), marginTop: scale(8) }} />
+            <Bone style={{ width: scale(32), height: scale(32), borderRadius: scale(10) }} />
+            <Bone style={{ width: scale(44), height: scale(10), borderRadius: scale(5), marginTop: scale(8) }} />
+            <Bone style={{ width: scale(56), height: scale(8), borderRadius: scale(4), marginTop: scale(4) }} />
           </View>
         ))}
       </View>
 
       {/* AMC banner skeleton */}
       <View style={{ paddingHorizontal: scale(16), marginTop: scale(14) }}>
-        <Bone style={{ height: scale(76), borderRadius: scale(16) }} />
+        <View style={stSK.amcShell}>
+          <Bone style={{ width: scale(44), height: scale(44), borderRadius: scale(14) }} />
+          <View style={{ flex: 1, marginLeft: scale(12) }}>
+            <Bone style={{ width: scale(120), height: scale(14), borderRadius: scale(6) }} />
+            <Bone style={{ width: '85%', height: scale(10), borderRadius: scale(5), marginTop: scale(7) }} />
+            <Bone style={{ width: scale(100), height: scale(18), borderRadius: scale(20), marginTop: scale(8) }} />
+          </View>
+        </View>
       </View>
 
-      {/* Money card skeleton (period tabs + revenue + stats) */}
+      {/* Business Overview card skeleton (light card, matches the white stats redesign) */}
       <View style={{ paddingHorizontal: scale(16), marginTop: scale(16) }}>
-        <View style={[stSK.moneyCardShell]}>
-          <View style={{ flexDirection: 'row', gap: scale(6) }}>
+        <View style={st.boCard}>
+          <View style={st.sectionHead}>
+            <Bone style={{ width: scale(130), height: scale(16), borderRadius: scale(8) }} />
+            <Bone style={{ width: scale(90), height: scale(24), borderRadius: scale(20) }} />
+          </View>
+          <View style={{ flexDirection: 'row', gap: scale(6), marginTop: scale(12) }}>
             {[0, 1, 2, 3].map(i => (
-              <Bone key={i} style={{ flex: 1, height: scale(28), borderRadius: scale(9), backgroundColor: 'rgba(255,255,255,0.15)' }} />
+              <Bone key={i} style={{ flex: 1, height: scale(28), borderRadius: scale(9) }} />
             ))}
           </View>
-          <Bone style={{ width: scale(120), height: scale(10), borderRadius: scale(5), marginTop: scale(14), backgroundColor: 'rgba(255,255,255,0.15)' }} />
-          <Bone style={{ width: scale(150), height: scale(22), borderRadius: scale(6), marginTop: scale(6), backgroundColor: 'rgba(255,255,255,0.15)' }} />
-          <View style={{ flexDirection: 'row', gap: scale(8), marginTop: scale(14) }}>
+          <Bone style={{ width: scale(120), height: scale(10), borderRadius: scale(5), marginTop: scale(16) }} />
+          <Bone style={{ width: scale(150), height: scale(24), borderRadius: scale(6), marginTop: scale(7) }} />
+          <View style={{ flexDirection: 'row', gap: scale(8), marginTop: scale(16) }}>
             {[0, 1, 2].map(i => (
-              <Bone key={i} style={{ flex: 1, height: scale(44), borderRadius: scale(10), backgroundColor: 'rgba(255,255,255,0.15)' }} />
+              <Bone key={i} style={{ flex: 1, height: scale(44), borderRadius: scale(10) }} />
             ))}
           </View>
+          <Bone style={{ height: scale(40), borderRadius: scale(12), marginTop: scale(14) }} />
         </View>
       </View>
 
@@ -1010,7 +1108,7 @@ const st = StyleSheet.create({
   /* ── Header ── */
   headerGrad: {
     paddingHorizontal: scale(16),
-    paddingBottom: scale(16),
+    paddingBottom: scale(10),
     overflow: 'hidden',
   },
   headerBlobA: {
@@ -1035,19 +1133,37 @@ const st = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  headerBtn: {
-    width: scale(40),
-    height: scale(40),
-    borderRadius: scale(14),
-    backgroundColor: 'rgba(255,255,255,0.15)',
+  headerIconBadge: {
+    width: scale(30),
+    height: scale(30),
+    borderRadius: scale(10),
+    backgroundColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerBtnSm: {
-    width: scale(32),
-    height: scale(32),
-    borderRadius: scale(11),
+  headerIconPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(2),
     backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: scale(12),
+    padding: scale(3),
+  },
+  headerBtnSm: {
+    width: scale(28),
+    height: scale(28),
+    borderRadius: scale(9),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerBtnSmActive: {
+    backgroundColor: '#fff',
+  },
+  headerBtnMenu: {
+    width: scale(30),
+    height: scale(30),
+    borderRadius: scale(10),
+    backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1068,16 +1184,16 @@ const st = StyleSheet.create({
     fontWeight: '700',
     color: '#fff',
   },
-  greetText: {
-    color: 'rgba(255,255,255,0.85)',
-    fontSize: moderateScale(12),
+  headerGreet: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: moderateScale(9.5),
     fontWeight: '600',
   },
   headerRestName: {
     color: '#fff',
-    fontSize: moderateScale(16),
+    fontSize: moderateScale(15),
     fontWeight: '900',
-    marginTop: scale(2),
+    marginTop: scale(1),
   },
   cartBadge: {
     position: 'absolute',
@@ -1200,14 +1316,14 @@ const st = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: scale(16),
-    marginTop: scale(18),
     gap: scale(10),
   },
   qaItem: {
     flex: 1,
     backgroundColor: C.card,
-    borderRadius: scale(16),
-    paddingVertical: scale(14),
+    borderRadius: scale(14),
+    paddingVertical: scale(10),
+    paddingHorizontal: scale(5),
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#EEF2F7',
@@ -1218,52 +1334,74 @@ const st = StyleSheet.create({
     elevation: 2,
   },
   qaIcon: {
-    width: scale(48),
-    height: scale(48),
-    borderRadius: scale(16),
+    width: scale(32),
+    height: scale(32),
+    borderRadius: scale(10),
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: scale(8),
+    marginBottom: scale(6),
   },
   qaLabel: {
     color: C.ink,
     fontWeight: '700',
     fontSize: moderateScale(11),
   },
+  qaDesc: {
+    color: C.muted,
+    fontSize: moderateScale(8.5),
+    marginTop: scale(1),
+    lineHeight: moderateScale(11),
+    textAlign: 'center',
+  },
 
   /* ── AMC Banner ── */
   amcBanner: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     borderRadius: scale(16),
-    padding: scale(16),
-    shadowColor: '#9333EA',
-    shadowOffset: { width: 0, height: scale(4) },
-    shadowOpacity: 0.25,
-    shadowRadius: scale(10),
-    elevation: 6,
+    padding: scale(14),
+    borderWidth: 1,
+    borderColor: '#FBDADA',
+    shadowColor: '#141432',
+    shadowOffset: { width: 0, height: scale(2) },
+    shadowOpacity: 0.05,
+    shadowRadius: scale(8),
+    elevation: 2,
   },
   amcBannerLeft: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     flex: 1,
   },
+  amcTag: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#FBD9D9',
+    borderRadius: 20,
+    paddingHorizontal: scale(9),
+    paddingVertical: scale(3),
+    marginTop: scale(7),
+  },
+  amcTagTxt: {
+    color: '#C21F1F',
+    fontWeight: '700',
+    fontSize: moderateScale(10),
+  },
   amcIconBg: {
-    width: scale(44),
-    height: scale(44),
-    borderRadius: scale(14),
-    backgroundColor: 'rgba(255,255,255,0.95)',
+    width: scale(38),
+    height: scale(38),
+    borderRadius: scale(12),
+    backgroundColor: C.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   amcBannerTitle: {
-    color: '#fff',
+    color: C.ink,
     fontWeight: '900',
-    fontSize: moderateScale(15),
+    fontSize: moderateScale(14.5),
   },
   amcBannerSub: {
-    color: 'rgba(255,255,255,0.75)',
+    color: C.muted,
     fontSize: moderateScale(11),
     fontWeight: '500',
     marginTop: scale(2),
@@ -1279,50 +1417,43 @@ const st = StyleSheet.create({
   },
 
   /* ── Money Card (Net Revenue + Analytics, tabs lead) ── */
-  moneyCard: {
-    borderRadius: scale(18),
-    padding: scale(14),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: scale(6) },
-    shadowOpacity: 0.18,
-    shadowRadius: scale(14),
-    elevation: 6,
-  },
-  moneyTabRow: {
+  /* Period selector - light track above the dark card, not inside it. */
+  periodTrack: {
     flexDirection: 'row',
-    gap: scale(6),
-    marginBottom: scale(4),
+    backgroundColor: '#E7ECFB',
+    borderRadius: scale(12),
+    padding: scale(4),
+    gap: scale(4),
   },
-  moneyTab: {
+  periodTab: {
     flex: 1,
     paddingVertical: scale(7),
     borderRadius: scale(9),
-    backgroundColor: 'rgba(255,255,255,0.12)',
     alignItems: 'center',
   },
-  moneyTabOn: {
-    backgroundColor: '#fff',
+  periodTabOn: {
+    backgroundColor: C.ink,
   },
-  moneyTabTxt: {
+  periodTabTxt: {
     fontSize: moderateScale(11.5),
     fontWeight: '700',
-    color: 'rgba(255,255,255,0.65)',
+    color: '#5B5E80',
   },
-  moneyTabTxtOn: {
-    color: C.ink,
+  periodTabTxtOn: {
+    color: '#fff',
   },
   moneyEmpty: {
     alignItems: 'center',
     paddingVertical: scale(24),
   },
   moneyEmptyTitle: {
-    color: '#fff',
+    color: C.ink,
     fontWeight: '800',
     fontSize: moderateScale(15),
     marginTop: scale(10),
   },
   moneyEmptySub: {
-    color: 'rgba(255,255,255,0.65)',
+    color: C.muted,
     fontSize: moderateScale(12.5),
     marginTop: scale(4),
     marginBottom: scale(14),
@@ -1334,24 +1465,28 @@ const st = StyleSheet.create({
     paddingHorizontal: scale(16),
     paddingVertical: scale(9),
     borderRadius: scale(10),
-    backgroundColor: '#fff',
+    backgroundColor: C.primary,
   },
   moneyEmptyBtnTxt: {
-    color: C.ink,
+    color: '#fff',
     fontWeight: '700',
     fontSize: moderateScale(13),
   },
+  moneyLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(5),
+  },
   moneyLabel: {
     fontSize: moderateScale(11),
-    color: 'rgba(255,255,255,0.6)',
+    color: C.muted,
     fontWeight: '700',
     letterSpacing: 0.4,
-    marginTop: scale(10),
   },
   moneyValue: {
     fontSize: moderateScale(26),
     fontWeight: '900',
-    color: '#fff',
+    color: C.ink,
     marginTop: scale(2),
   },
   moneyTrendRow: {
@@ -1364,41 +1499,58 @@ const st = StyleSheet.create({
     fontSize: moderateScale(12),
     fontWeight: '700',
   },
+  moneyDivider: {
+    height: 1,
+    backgroundColor: C.border,
+    marginVertical: scale(12),
+  },
   moneyStatsRow: {
     flexDirection: 'row',
-    gap: scale(8),
-    marginTop: scale(14),
   },
   moneyStat: {
     flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: scale(10),
-    padding: scale(8),
+  },
+  moneyStatIcon: {
+    width: scale(24),
+    height: scale(24),
+    borderRadius: scale(8),
+    backgroundColor: '#FDEAEA',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: scale(6),
   },
   moneyStatLabel: {
     fontSize: moderateScale(9),
-    color: 'rgba(255,255,255,0.6)',
-    fontWeight: '700',
+    color: C.muted,
+    fontWeight: '600',
   },
   moneyStatValue: {
-    fontSize: moderateScale(14),
-    color: '#fff',
+    fontSize: moderateScale(14.5),
+    color: C.ink,
     fontWeight: '800',
-    marginTop: scale(2),
   },
   moneyChartsToggleTxt: {
     fontSize: moderateScale(12.5),
     fontWeight: '700',
-    color: 'rgba(255,255,255,0.9)',
+    color: C.ink,
   },
   moneyViewAnalyticsBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: scale(7),
-    marginTop: scale(12),
-    paddingTop: scale(12),
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.15)',
+    marginTop: scale(14),
+    backgroundColor: '#E7ECFB',
+    borderRadius: scale(12),
+    paddingVertical: scale(11),
+    paddingHorizontal: scale(12),
+  },
+  exportIconBtn: {
+    width: scale(42),
+    height: scale(42),
+    borderRadius: scale(12),
+    backgroundColor: '#E7ECFB',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   /* ── Feed Pills ── */
@@ -1416,6 +1568,20 @@ const st = StyleSheet.create({
     color: C.ink,
     fontWeight: '600',
     fontSize: moderateScale(12),
+  },
+
+  /* ── Business Overview (outer white card wrapping heading + tabs + dark stats card) ── */
+  boCard: {
+    backgroundColor: C.card,
+    borderRadius: scale(20),
+    padding: scale(14),
+    borderWidth: 1,
+    borderColor: '#EEF2F7',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: scale(3) },
+    shadowOpacity: 0.05,
+    shadowRadius: scale(10),
+    elevation: 3,
   },
 
   /* ── Sections ── */
@@ -1629,9 +1795,21 @@ const stSK = StyleSheet.create({
   bone: {
     backgroundColor: '#E2E8F0',
   },
-  moneyCardShell: {
-    backgroundColor: '#1D2254',
-    borderRadius: scale(18),
+  cardShell: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: C.card,
+    borderRadius: scale(14),
+    padding: scale(12),
+    borderWidth: 1,
+    borderColor: '#EEF2F7',
+  },
+  amcShell: {
+    flexDirection: 'row',
+    backgroundColor: C.card,
+    borderRadius: scale(20),
     padding: scale(14),
+    borderWidth: 1,
+    borderColor: '#EEF2F7',
   },
 });

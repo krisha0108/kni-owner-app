@@ -44,16 +44,16 @@ export default function KniBottomNav({
 
   // Responsive sizing
   const isTabletDevice = isTablet(width);
-  const barHeight = isTabletDevice ? scale(80) : scale(74);
-  const barRadius = isTabletDevice ? scale(24) : scale(22);
-  const fabSize = isTabletDevice ? scale(60) : scale(56);
-  const fabRadius = isTabletDevice ? scale(20) : scale(18);
-  const fabRaise = isTabletDevice ? scale(18) : scale(16);
+  const barHeight = isTabletDevice ? scale(68) : scale(62);
+  const barRadius = isTabletDevice ? scale(20) : scale(18);
+  const fabSize = isTabletDevice ? scale(50) : scale(46);
+  const fabRadius = isTabletDevice ? scale(16) : scale(14);
+  const fabRaise = isTabletDevice ? scale(13) : scale(11);
   const tabMinWidth = isTabletDevice ? scale(60) : scale(50);
-  const horizontalPadding = isTabletDevice ? scale(20) : scale(12);
-  const iconSize = isTabletDevice ? scale(24) : scale(20);
-  const fabIconSize = isTabletDevice ? scale(28) : scale(26);
-  const labelSize = isTabletDevice ? moderateScale(11) : moderateScale(10);
+  const horizontalPadding = isTabletDevice ? scale(18) : scale(10);
+  const iconSize = isTabletDevice ? scale(21) : scale(18);
+  const fabIconSize = isTabletDevice ? scale(24) : scale(22);
+  const labelSize = isTabletDevice ? moderateScale(10) : moderateScale(9);
 
   // Calculate max width for centering on larger screens
   const maxWidth = getContainerMaxWidth(width);
@@ -82,7 +82,7 @@ export default function KniBottomNav({
 
   return (
     <View pointerEvents="box-none" style={[StyleSheet.absoluteFill, { justifyContent:'flex-end' }]}>
-      <View style={[styles.wrap, { paddingBottom: Math.max(scale(12), insets.bottom) }]}>
+      <View style={[styles.wrap, { paddingBottom: Math.max(scale(8), insets.bottom) }]}>
         <View style={styles.bar}>
 
           {/* LEFT SIDE */}
@@ -244,15 +244,15 @@ const st = StyleSheet.create({
   },
 
   icWrap: {
-    width: scale(28),
-    height: scale(28),
+    width: scale(24),
+    height: scale(24),
     alignItems: 'center',
     justifyContent: 'center'
   },
 
   lbl: {
     color: C.ink,
-    marginTop: scale(3),
+    marginTop: scale(1),
     fontWeight: '700'
   },
 

@@ -209,10 +209,22 @@ export default function SupportCenter({ navigation }) {
   useFocusEffect(useCallback(() => {
     const key = `SupportCenter-${currentRestaurant?.id}`;
     if (isStale(key) || tickets.length === 0) {
-      loadData();
+      // Pass the currently-selected restaurant through explicitly - loadData()
+      // called with no id falls back to the FIRST restaurant in the owner's
+      // list, which was silently reverting the user's restaurant selection
+      // back to the default one on every re-focus/re-fetch.
+      loadData(currentRestaurant?.id);
       markFetched(key);
     }
-  }, [loadData, currentRestaurant, tickets.length]));
+    // Depend on currentRestaurant?.id, not the currentRestaurant object itself -
+    // loadData() sets a freshly-built restaurant object on every call (new
+    // reference even for the same restaurant), so depending on the object
+    // re-triggers this effect after every fetch. Combined with the
+    // tickets.length === 0 check (which never becomes false when there's
+    // genuinely no data), that produced an infinite fetch loop - the
+    // loading/content flip on every cycle showed up as continuous blinking
+    // whenever a restaurant had zero support tickets.
+  }, [loadData, currentRestaurant?.id, tickets.length]));
 
   const selectRestaurant = (r) => {
     setRestaurantPickerVisible(false);
