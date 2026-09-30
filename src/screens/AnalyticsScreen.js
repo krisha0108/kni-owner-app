@@ -176,8 +176,15 @@ export default function AnalyticsScreen({ navigation }) {
         <LinearGradient colors={[C.primary, C.primaryDark]} style={[styles.header, { paddingTop: insets.top + scale(12) }]}>
           <View style={styles.headerBlobA} pointerEvents="none" />
           <View style={styles.headerBlobB} pointerEvents="none" />
-          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-            <Icon name="arrow-back" size={scale(22)} color="#fff" />
+          <TouchableOpacity
+            onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+            style={styles.backBtnPlain}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Icon name="chevron-back" size={scale(20)} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.headerIconBtn} onPress={() => setMenuVisible(true)}>
+            <Icon name="menu" size={scale(18)} color="#fff" />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>Analytics</Text>
@@ -187,9 +194,6 @@ export default function AnalyticsScreen({ navigation }) {
             <View style={styles.headerIconBtn}>
               <Icon name="download-outline" size={scale(20)} color="rgba(255,255,255,0.5)" />
             </View>
-            <TouchableOpacity style={styles.headerIconBtn} onPress={() => setMenuVisible(true)}>
-              <Icon name="menu" size={scale(20)} color="#fff" />
-            </TouchableOpacity>
           </View>
         </LinearGradient>
         <SkeletonAnalytics pulse={pulse} />
@@ -233,8 +237,15 @@ export default function AnalyticsScreen({ navigation }) {
       <LinearGradient colors={[C.primary, C.primaryDark]} style={[styles.header, { paddingTop: insets.top + scale(12) }]}>
         <View style={styles.headerBlobA} pointerEvents="none" />
         <View style={styles.headerBlobB} pointerEvents="none" />
-        <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-          <Icon name="arrow-back" size={scale(22)} color="#fff" />
+        <TouchableOpacity
+          onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+          style={styles.backBtnPlain}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Icon name="chevron-back" size={scale(20)} color="#fff" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.headerIconBtn} onPress={() => setMenuVisible(true)}>
+          <Icon name="menu" size={scale(18)} color="#fff" />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>Analytics</Text>
@@ -251,9 +262,6 @@ export default function AnalyticsScreen({ navigation }) {
             ) : (
               <Icon name="download-outline" size={scale(20)} color="#fff" />
             )}
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.headerIconBtn} onPress={() => setMenuVisible(true)}>
-            <Icon name="menu" size={scale(20)} color="#fff" />
           </TouchableOpacity>
         </View>
       </LinearGradient>
@@ -441,7 +449,7 @@ export default function AnalyticsScreen({ navigation }) {
 
         <View style={{ height: scale(100) }} />
       </ScrollView>
-      <KniBottomNav navigation={navigation} />
+      <KniBottomNav navigation={navigation} active="home" />
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
     </SafeAreaView>
   );
@@ -482,6 +490,7 @@ const styles = StyleSheet.create({
   headerBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
   headerBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
   backBtn: { width: scale(40), height: scale(40), borderRadius: scale(14), backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
+  backBtnPlain: { width: scale(26), height: scale(40), alignItems: 'center', justifyContent: 'center', marginRight: scale(4) },
   headerCenter: { flex: 1, marginLeft: scale(12) },
   headerTitle: { fontSize: moderateScale(18), fontWeight: '700', color: '#fff' },
   headerSubtitle: { fontSize: moderateScale(12), color: 'rgba(255,255,255,0.8)', marginTop: scale(2) },

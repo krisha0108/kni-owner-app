@@ -257,8 +257,15 @@ export default function MarketplaceCartScreen({ navigation, route }) {
         <LinearGradient colors={[C.gradient1, C.gradient2]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
           <View style={st.headerBlobA} pointerEvents="none" />
           <View style={st.headerBlobB} pointerEvents="none" />
-          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
-            <Icon name="arrow-back" size={scale(22)} color="#fff" />
+          <TouchableOpacity
+            onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+            style={st.backBtnPlain}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Icon name="chevron-back" size={scale(20)} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={st.menuBtn}>
+            <Icon name="menu" size={scale(18)} color="#fff" />
           </TouchableOpacity>
           <View style={st.headerCenter}>
             <Text style={st.headerTitle}>Your Cart</Text>
@@ -267,9 +274,6 @@ export default function MarketplaceCartScreen({ navigation, route }) {
           <View style={st.headerRight}>
             <TouchableOpacity onPress={handleClearCart} style={{ padding: scale(8) }}>
               <Icon name="trash-outline" size={scale(20)} color={C.danger} />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
-              <Icon name="menu" size={scale(22)} color="#fff" />
             </TouchableOpacity>
           </View>
         </LinearGradient>
@@ -286,13 +290,17 @@ export default function MarketplaceCartScreen({ navigation, route }) {
         <LinearGradient colors={[C.gradient1, C.gradient2]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
           <View style={st.headerBlobA} pointerEvents="none" />
           <View style={st.headerBlobB} pointerEvents="none" />
-          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
-            <Icon name="arrow-back" size={scale(22)} color="#fff" />
+          <TouchableOpacity
+            onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+            style={st.backBtnPlain}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Icon name="chevron-back" size={scale(20)} color="#fff" />
           </TouchableOpacity>
-          <Text style={st.headerTitle}>Your Cart</Text>
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
-            <Icon name="menu" size={scale(22)} color="#fff" />
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={[st.menuBtn, { marginRight: scale(10) }]}>
+            <Icon name="menu" size={scale(18)} color="#fff" />
           </TouchableOpacity>
+          <Text style={[st.headerTitle, { flex: 1 }]}>Your Cart</Text>
         </LinearGradient>
         <View style={st.emptyState}>
           <View style={st.emptyIconWrap}>
@@ -308,7 +316,7 @@ export default function MarketplaceCartScreen({ navigation, route }) {
           </TouchableOpacity>
         </View>
         <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
-        <KniBottomNav navigation={navigation} />
+        <KniBottomNav navigation={navigation} active="request" />
       </SafeAreaView>
     );
   }
@@ -320,8 +328,15 @@ export default function MarketplaceCartScreen({ navigation, route }) {
       <LinearGradient colors={[C.gradient1, C.gradient2]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
         <View style={st.headerBlobA} pointerEvents="none" />
         <View style={st.headerBlobB} pointerEvents="none" />
-        <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
-          <Icon name="arrow-back" size={scale(22)} color="#fff" />
+        <TouchableOpacity
+          onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+          style={st.backBtnPlain}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Icon name="chevron-back" size={scale(20)} color="#fff" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => setMenuVisible(true)} style={st.menuBtn}>
+          <Icon name="menu" size={scale(18)} color="#fff" />
         </TouchableOpacity>
         <View style={st.headerCenter}>
           <Text style={st.headerTitle}>Your Cart</Text>
@@ -332,9 +347,6 @@ export default function MarketplaceCartScreen({ navigation, route }) {
         <View style={st.headerRight}>
           <TouchableOpacity onPress={handleClearCart} style={{ padding: scale(8) }}>
             <Icon name="trash-outline" size={scale(20)} color={C.danger} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
-            <Icon name="menu" size={scale(22)} color="#fff" />
           </TouchableOpacity>
         </View>
       </LinearGradient>
@@ -489,7 +501,7 @@ export default function MarketplaceCartScreen({ navigation, route }) {
       </View>
 
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
-      <KniBottomNav navigation={navigation} />
+      <KniBottomNav navigation={navigation} active="request" />
     </SafeAreaView>
   );
 }
@@ -516,6 +528,15 @@ const st = StyleSheet.create({
     width: scale(40),
     height: scale(40),
     borderRadius: scale(14),
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backBtnPlain: { width: scale(26), height: scale(40), alignItems: 'center', justifyContent: 'center', marginRight: scale(4) },
+  menuBtn: {
+    width: scale(34),
+    height: scale(34),
+    borderRadius: scale(11),
     backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',

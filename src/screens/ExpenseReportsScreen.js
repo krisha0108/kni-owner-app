@@ -291,17 +291,21 @@ export default function ExpenseReportsScreen({ navigation }) {
         <LinearGradient colors={[C.primary, C.primaryDark]} style={[styles.header, { paddingTop: insets.top + scale(12) }]}>
           <View style={styles.headerBlobA} pointerEvents="none" />
           <View style={styles.headerBlobB} pointerEvents="none" />
-          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-            <Icon name="arrow-back" size={scale(22)} color="#fff" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Expense Reports</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <View style={styles.backBtn}>
-              <Icon name="list-outline" size={scale(22)} color="rgba(255,255,255,0.5)" />
-            </View>
-            <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
-              <Icon name="menu" size={scale(22)} color="#fff" />
+            <TouchableOpacity
+              onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+              style={styles.backBtnPlain}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Icon name="chevron-back" size={scale(22)} color="#fff" />
             </TouchableOpacity>
+            <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.backBtn}>
+              <Icon name="menu" size={scale(18)} color="#fff" />
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.headerTitle}>Expense Reports</Text>
+          <View style={styles.backBtn}>
+            <Icon name="list-outline" size={scale(22)} color="rgba(255,255,255,0.5)" />
           </View>
         </LinearGradient>
         <ScrollView showsVerticalScrollIndicator={false}>
@@ -318,21 +322,25 @@ export default function ExpenseReportsScreen({ navigation }) {
       <LinearGradient colors={[C.primary, C.primaryDark]} style={[styles.header, { paddingTop: insets.top + scale(12) }]}>
         <View style={styles.headerBlobA} pointerEvents="none" />
         <View style={styles.headerBlobB} pointerEvents="none" />
-        <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-          <Icon name="arrow-back" size={scale(22)} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Expense Reports</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <TouchableOpacity
-            onPress={() => navigation.navigate('Expenses')}
-            style={styles.backBtn}
+            onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+            style={styles.backBtnPlain}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Icon name="list-outline" size={scale(22)} color="#fff" />
+            <Icon name="chevron-back" size={scale(22)} color="#fff" />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
-            <Icon name="menu" size={scale(22)} color="#fff" />
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.backBtn}>
+            <Icon name="menu" size={scale(18)} color="#fff" />
           </TouchableOpacity>
         </View>
+        <Text style={styles.headerTitle}>Expense Reports</Text>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('Expenses')}
+          style={styles.backBtn}
+        >
+          <Icon name="list-outline" size={scale(22)} color="#fff" />
+        </TouchableOpacity>
       </LinearGradient>
 
       {/* Global Restaurant Selector */}
@@ -513,7 +521,7 @@ export default function ExpenseReportsScreen({ navigation }) {
         <View style={{ height: scale(100) }} />
       </ScrollView>
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
-      <KniBottomNav navigation={navigation} />
+      <KniBottomNav navigation={navigation} active="khatabook" />
     </SafeAreaView>
   );
 }
@@ -533,6 +541,7 @@ const styles = StyleSheet.create({
   },
   headerBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
   headerBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
+  backBtnPlain: { width: scale(22), height: scale(32), alignItems: 'center', justifyContent: 'center', marginRight: scale(4) },
   backBtn: {
     width: scale(40),
     height: scale(40),

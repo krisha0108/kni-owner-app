@@ -553,17 +553,19 @@ export default function StaffScreen({ navigation }) {
         <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
           <View style={st.headerBlobA} pointerEvents="none" />
           <View style={st.headerBlobB} pointerEvents="none" />
-          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
-            <Icon name="arrow-back" size={scale(22)} color="#fff" />
+          <TouchableOpacity
+            onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+            style={st.backBtnPlain}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Icon name="chevron-back" size={scale(20)} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
+            <Icon name="menu" size={scale(18)} color="#fff" />
           </TouchableOpacity>
           <View style={st.headerCenter}>
             <Text style={st.headerTitle}>Staff Management</Text>
             <Text style={st.headerSubtitle}>Manage your team</Text>
-          </View>
-          <View style={st.headerActions}>
-            <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
-              <Icon name="menu" size={scale(20)} color="#fff" />
-            </TouchableOpacity>
           </View>
         </LinearGradient>
         <ScrollView showsVerticalScrollIndicator={false}>
@@ -581,17 +583,19 @@ export default function StaffScreen({ navigation }) {
         <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
           <View style={st.headerBlobA} pointerEvents="none" />
           <View style={st.headerBlobB} pointerEvents="none" />
-          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
-            <Icon name="arrow-back" size={scale(22)} color="#fff" />
+          <TouchableOpacity
+            onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+            style={st.backBtnPlain}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Icon name="chevron-back" size={scale(20)} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
+            <Icon name="menu" size={scale(18)} color="#fff" />
           </TouchableOpacity>
           <View style={st.headerCenter}>
             <Text style={st.headerTitle}>Staff Management</Text>
             <Text style={st.headerSubtitle}>Manage your team</Text>
-          </View>
-          <View style={st.headerActions}>
-            <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
-              <Icon name="menu" size={scale(20)} color="#fff" />
-            </TouchableOpacity>
           </View>
         </LinearGradient>
         <View style={st.emptyState}>
@@ -613,8 +617,15 @@ export default function StaffScreen({ navigation }) {
       <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
         <View style={st.headerBlobA} pointerEvents="none" />
         <View style={st.headerBlobB} pointerEvents="none" />
-        <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
-          <Icon name="arrow-back" size={scale(22)} color="#fff" />
+        <TouchableOpacity
+          onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+          style={st.backBtnPlain}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Icon name="chevron-back" size={scale(20)} color="#fff" />
+        </TouchableOpacity>
+        <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
+          <Icon name="menu" size={scale(18)} color="#fff" />
         </TouchableOpacity>
         <View style={st.headerCenter}>
           <Text style={st.headerTitle}>Staff Management</Text>
@@ -626,9 +637,6 @@ export default function StaffScreen({ navigation }) {
             <Icon name="person-add" size={scale(20)} color="#fff" />
           </TouchableOpacity>
           )}
-          <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
-            <Icon name="menu" size={scale(20)} color="#fff" />
-          </TouchableOpacity>
         </View>
       </LinearGradient>
 
@@ -888,7 +896,7 @@ export default function StaffScreen({ navigation }) {
       </Modal>
 
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
-      <KniBottomNav navigation={navigation} />
+      <KniBottomNav navigation={navigation} active="home" />
     </SafeAreaView>
   );
 }
@@ -902,6 +910,7 @@ const st = StyleSheet.create({
   headerBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
   headerBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
   backBtn: { width: scale(40), height: scale(40), borderRadius: scale(14), backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
+  backBtnPlain: { width: scale(26), height: scale(40), alignItems: 'center', justifyContent: 'center', marginRight: scale(4) },
   headerCenter: { flex: 1, marginLeft: scale(12) },
   headerTitle: { fontSize: moderateScale(18), fontWeight: '700', color: '#fff' },
   headerSubtitle: { fontSize: moderateScale(12), color: 'rgba(255,255,255,0.8)', marginTop: scale(2) },

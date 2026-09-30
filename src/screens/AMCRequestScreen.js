@@ -503,13 +503,17 @@ export default function AMCRequestScreen({ navigation }) {
       <LinearGradient colors={[C.primary, C.primaryDark]} style={[styles.header, { paddingTop: insets.top + scale(12) }]}>
         <View style={styles.headerBlobA} pointerEvents="none" />
         <View style={styles.headerBlobB} pointerEvents="none" />
-        <TouchableOpacity onPress={() => step > 1 ? setStep(step - 1) : (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.headerBackBtn}>
-          <Icon name="arrow-back" size={scale(22)} color="#fff" />
+        <TouchableOpacity
+          onPress={() => step > 1 ? setStep(step - 1) : (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+          style={styles.backBtnPlain}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Icon name="chevron-back" size={scale(22)} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>New AMC Request</Text>
-        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
-          <Icon name="menu" size={scale(22)} color="#fff" />
+        <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
+          <Icon name="menu" size={scale(18)} color="#fff" />
         </TouchableOpacity>
+        <Text style={[styles.headerTitle, { flex: 1, marginLeft: scale(4) }]}>New AMC Request</Text>
       </LinearGradient>
 
       {/* Progress Steps */}
@@ -673,7 +677,7 @@ export default function AMCRequestScreen({ navigation }) {
       </Modal>
 
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
-      <KniBottomNav navigation={navigation} />
+      <KniBottomNav navigation={navigation} active="equipment" />
     </SafeAreaView>
   );
 }
@@ -705,13 +709,18 @@ const styles = StyleSheet.create({
 
   // Header
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: scale(16), paddingBottom: scale(12), overflow: 'hidden',
   },
   headerBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
   headerBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
   headerBackBtn: {
     width: scale(40), height: scale(40), borderRadius: scale(14), backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  backBtnPlain: { width: scale(22), height: scale(32), alignItems: 'center', justifyContent: 'center', marginRight: scale(4) },
+  menuBtn: {
+    width: scale(34), height: scale(34), borderRadius: scale(12), backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center', justifyContent: 'center',
   },
   headerTitle: { fontSize: moderateScale(18), fontWeight: '800', color: '#fff' },

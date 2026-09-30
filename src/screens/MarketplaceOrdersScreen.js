@@ -719,18 +719,20 @@ export default function MarketplaceOrdersScreen({ navigation }) {
           <View style={styles.heroBlobB} pointerEvents="none" />
           <View style={styles.heroContent}>
             <View style={styles.heroLeft}>
-              <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-                <Icon name="arrow-back" size={scale(18)} color="#fff" />
+              <TouchableOpacity
+                onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+                style={styles.backBtnPlain}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Icon name="chevron-back" size={scale(18)} color="#fff" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.heroIconBtn} onPress={() => setMenuVisible(true)}>
+                <Icon name="menu-outline" size={scale(18)} color="#fff" />
               </TouchableOpacity>
               <View>
                 <Text style={styles.heroTitle}>My Orders</Text>
                 <RestaurantSelectorCompact dark style={styles.heroRestaurantPill} />
               </View>
-            </View>
-            <View style={styles.heroActions}>
-              <TouchableOpacity style={styles.heroIconBtn} onPress={() => setMenuVisible(true)}>
-                <Icon name="menu-outline" size={scale(18)} color="#fff" />
-              </TouchableOpacity>
             </View>
           </View>
           <View style={styles.statsRow}>
@@ -746,7 +748,7 @@ export default function MarketplaceOrdersScreen({ navigation }) {
           </View>
         </LinearGradient>
         <SkeletonOrders pulse={pulse} />
-        <KniBottomNav navigation={navigation} />
+        <KniBottomNav navigation={navigation} active="request" />
       </SafeAreaView>
     );
   }
@@ -766,8 +768,18 @@ export default function MarketplaceOrdersScreen({ navigation }) {
         <View style={styles.heroBlobB} pointerEvents="none" />
         <View style={styles.heroContent}>
           <View style={styles.heroLeft}>
-            <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-              <Icon name="arrow-back" size={scale(18)} color="#fff" />
+            <TouchableOpacity
+              onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+              style={styles.backBtnPlain}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Icon name="chevron-back" size={scale(18)} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.heroIconBtn}
+              onPress={() => setMenuVisible(true)}
+            >
+              <Icon name="menu-outline" size={scale(18)} color="#fff" />
             </TouchableOpacity>
             <View>
               <Text style={styles.heroTitle}>My Orders</Text>
@@ -780,12 +792,6 @@ export default function MarketplaceOrdersScreen({ navigation }) {
               onPress={() => navigation.navigate('Marketplace')}
             >
               <Icon name="bag-add-outline" size={scale(18)} color="#fff" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.heroIconBtn}
-              onPress={() => setMenuVisible(true)}
-            >
-              <Icon name="menu-outline" size={scale(18)} color="#fff" />
             </TouchableOpacity>
           </View>
         </View>
@@ -1678,7 +1684,7 @@ export default function MarketplaceOrdersScreen({ navigation }) {
       </Modal>
 
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
-      <KniBottomNav navigation={navigation} />
+      <KniBottomNav navigation={navigation} active="request" />
     </SafeAreaView>
   );
 }
@@ -1713,6 +1719,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  backBtnPlain: { width: scale(20), height: scale(30), alignItems: 'center', justifyContent: 'center', marginRight: scale(4) },
   heroTitle: {
     fontSize: moderateScale(19),
     fontWeight: '800',

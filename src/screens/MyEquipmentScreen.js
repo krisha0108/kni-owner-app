@@ -18,7 +18,6 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { api, getImageUrl, uploadFile } from '../api/client';
 import { useRestaurant } from '../context/RestaurantContext';
 import { RestaurantSelectorCompact } from '../components/RestaurantSelector';
-import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 import AppAlert from '../utils/AppAlert';
 
@@ -66,6 +65,21 @@ const warrantyFilters = [
   { key: 'expired', label: 'Expired', icon: 'close-circle', color: C.danger },
 ];
 
+const getCategoryIcon = (categoryName) => {
+  const name = (categoryName || '').toLowerCase();
+  if (/fridge|refriger|freez|cold|chill|ice/.test(name)) return 'snow-outline';
+  if (/oven|grill|fry|cook|stove|range|burner|tandoor|kitchen/.test(name)) return 'flame-outline';
+  if (/dish|wash|clean|sanit/.test(name)) return 'water-outline';
+  if (/beverage|drink|juice|coffee|tea|bar/.test(name)) return 'cafe-outline';
+  if (/exhaust|vent|hood|hvac|air\b/.test(name)) return 'thermometer-outline';
+  if (/electric|wiring|panel|generator|power/.test(name)) return 'flash-outline';
+  if (/furniture|table|chair|seating/.test(name)) return 'grid-outline';
+  if (/pos|computer|printer|software|billing/.test(name)) return 'desktop-outline';
+  if (/safety|fire|extinguish|alarm/.test(name)) return 'shield-checkmark-outline';
+  if (/storage|shelf|rack|cabinet/.test(name)) return 'archive-outline';
+  return 'hardware-chip-outline';
+};
+
 const getWarrantyStatus = (warrantyEndDate) => {
   if (!warrantyEndDate) return { color: 'gray', label: 'No Warranty' };
   const endDate = new Date(warrantyEndDate);
@@ -106,7 +120,7 @@ const DELIVERY_OPTIONS = [
 
 function SkeletonEquipment({ pulse }) {
   return (
-    <View style={{ paddingHorizontal: scale(12), paddingTop: scale(10) }}>
+    <View style={st.skelGrid}>
       {Array.from({ length: 4 }).map((_, i) => (
         <View key={i} style={st.skelCard}>
           <Animated.View style={[st.skelImage, { opacity: pulse }]} />
@@ -125,12 +139,146 @@ function SkeletonEquipment({ pulse }) {
   );
 }
 
+// ==================== EQUIPMENT CARD (auto-cycles its photos) ====================
+const PHOTO_CYCLE_INTERVAL = 3000;
+
+function EquipmentCard({ item, navigation, can, onEdit, onDelete }) {
+  const ws = getWarrantyStatus(item.warrantyEndDate);
+  const wStyle = getWarrantyStyle(ws);
+  const sStyle = getStatusStyle(item.status);
+  const photoUrls = item.photoUrls || [];
+  const photoCount = photoUrls.length;
+  const categoryName = typeof item.category === 'object' ? item.category?.name : item.category;
+
+  const [photoIndex, setPhotoIndex] = useState(0);
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (photoCount <= 1) return undefined;
+    const timer = setInterval(() => {
+      Animated.timing(fadeAnim, { toValue: 0, duration: 250, useNativeDriver: true }).start(() => {
+        setPhotoIndex((i) => (i + 1) % photoCount);
+        Animated.timing(fadeAnim, { toValue: 1, duration: 250, useNativeDriver: true }).start();
+      });
+    }, PHOTO_CYCLE_INTERVAL);
+    return () => clearInterval(timer);
+  }, [photoCount, fadeAnim]);
+
+  return (
+    <TouchableOpacity
+      style={st.card}
+      activeOpacity={0.9}
+      onPress={() => navigation.navigate('EquipmentProfile', { equipmentId: item.id })}
+    >
+      {/* Card Header with Image */}
+      <View style={st.cardImageContainer}>
+        {photoCount > 0 ? (
+          <Animated.Image
+            source={{ uri: getImageUrl(photoUrls[photoIndex]) }}
+            style={[st.cardImage, { opacity: fadeAnim }]}
+          />
+        ) : (
+          <View style={st.cardImagePlaceholder}>
+            <Icon name={getCategoryIcon(categoryName)} size={scale(40)} color={C.muted} />
+          </View>
+        )}
+        {/* Status Badge */}
+        <View style={[st.statusBadge, { backgroundColor: sStyle.bg }]}>
+          <Icon name={sStyle.icon} size={scale(12)} color={sStyle.text} />
+          <Text style={[st.statusBadgeText, { color: sStyle.text }]}>{sStyle.label}</Text>
+        </View>
+        {/* Photo Count Badge */}
+        {photoCount > 1 && (
+          <View style={st.photoCountBadge}>
+            <Icon name="images" size={scale(12)} color="#fff" />
+            <Text style={st.photoCountText}>{photoIndex + 1}/{photoCount}</Text>
+          </View>
+        )}
+      </View>
+
+      {/* Card Info */}
+      <View style={st.cardInfo}>
+        <Text style={st.cardTitle} numberOfLines={2}>{item.name}</Text>
+        {categoryName && (
+          <View style={st.categoryRow}>
+            <Icon name="folder-outline" size={scale(12)} color={C.muted} />
+            <Text style={st.categoryText} numberOfLines={1}>{categoryName}</Text>
+          </View>
+        )}
+        {item.serialNumber && (
+          <Text style={st.serialText}>SN: {item.serialNumber}</Text>
+        )}
+
+        {/* Warranty Row */}
+        <View style={[st.warrantyRow, { backgroundColor: wStyle.bg }]}>
+          <Icon name={wStyle.icon} size={scale(14)} color={wStyle.text} />
+          <Text style={[st.warrantyText, { color: wStyle.text }]}>{ws.label}</Text>
+        </View>
+
+        {/* Documents */}
+        {(item.billImageUrl || item.warrantyCardUrl) && (
+          <View style={st.docsRow}>
+            {item.billImageUrl && (
+              <View style={st.docBadge}>
+                <Icon name="document-text" size={scale(10)} color={C.info} />
+                <Text style={st.docText}>Bill</Text>
+              </View>
+            )}
+            {item.warrantyCardUrl && (
+              <View style={st.docBadge}>
+                <Icon name="card" size={scale(10)} color={C.success} />
+                <Text style={st.docText}>Card</Text>
+              </View>
+            )}
+          </View>
+        )}
+      </View>
+
+      {/* Card Actions */}
+      <View style={st.cardActions}>
+        {can('service:create') && (
+        <TouchableOpacity
+          style={st.serviceBtn}
+          onPress={() => {
+            const categoryObj = typeof item.category === 'object' ? item.category : null;
+            const subCategoryObj = typeof item.subCategory === 'object' ? item.subCategory : null;
+            navigation.navigate('ServiceRequest', {
+              equipmentId: item.id, equipmentName: item.name,
+              categoryId: categoryObj?.id || item.categoryId || null,
+              categoryName: categoryObj?.name || (typeof item.category === 'string' ? item.category : null),
+              subCategoryId: subCategoryObj?.id || item.subCategoryId || null,
+              subCategoryName: subCategoryObj?.name || (typeof item.subCategory === 'string' ? item.subCategory : null),
+            });
+          }}
+        >
+          <Icon name="construct" size={scale(13)} color="#fff" />
+          <Text style={st.serviceBtnText}>Service</Text>
+        </TouchableOpacity>
+        )}
+        {(can('equipment:update') || can('equipment:delete')) && (
+        <View style={st.cardActionsRow2}>
+          {can('equipment:update') && (
+          <TouchableOpacity style={st.iconBtn} onPress={() => onEdit(item)}>
+            <Icon name="pencil" size={scale(14)} color={C.info} />
+          </TouchableOpacity>
+          )}
+          {can('equipment:delete') && (
+          <TouchableOpacity style={[st.iconBtn, { backgroundColor: C.dangerLight }]} onPress={() => onDelete(item)}>
+            <Icon name="trash" size={scale(14)} color={C.danger} />
+          </TouchableOpacity>
+          )}
+        </View>
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+}
+
 export default function MyEquipmentScreen({ navigation }) {
-  const { width, height: winHeight } = useWindowDimensions();
+  const { height: winHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const isTablet = width >= 768;
   const { can } = usePermissions();
-  const gridColumns = isTablet ? 2 : 1;
+  const gridColumns = 2;
 
   const {
     selectedRestaurant,
@@ -160,6 +308,8 @@ export default function MyEquipmentScreen({ navigation }) {
   const [categories, setCategories] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [searchVisible, setSearchVisible] = useState(false);
+  const [filterPanelVisible, setFilterPanelVisible] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -270,6 +420,8 @@ export default function MyEquipmentScreen({ navigation }) {
     }
     return okQ && okStatus && okWarranty;
   });
+
+  const hasActiveFilters = statusFilter !== 'all' || warrantyFilter !== 'all';
 
   const openForm = (equipment = null) => {
     if (equipment) {
@@ -399,115 +551,9 @@ export default function MyEquipmentScreen({ navigation }) {
   };
 
   // ==================== RENDER EQUIPMENT CARD ====================
-  const renderEquipmentCard = ({ item, index }) => {
-    const ws = getWarrantyStatus(item.warrantyEndDate);
-    const wStyle = getWarrantyStyle(ws);
-    const sStyle = getStatusStyle(item.status);
-    const photoCount = item.photoUrls?.length || 0;
-    const categoryName = typeof item.category === 'object' ? item.category?.name : item.category;
-
-    return (
-      <TouchableOpacity
-        style={st.card}
-        activeOpacity={0.9}
-        onPress={() => navigation.navigate('EquipmentProfile', { equipmentId: item.id })}
-      >
-        {/* Card Header with Image */}
-        <View style={st.cardImageContainer}>
-          {photoCount > 0 ? (
-            <Image source={{ uri: getImageUrl(item.photoUrls[0]) }} style={st.cardImage} />
-          ) : (
-            <View style={st.cardImagePlaceholder}>
-              <Icon name="hardware-chip-outline" size={scale(40)} color={C.muted} />
-            </View>
-          )}
-          {/* Status Badge */}
-          <View style={[st.statusBadge, { backgroundColor: sStyle.bg }]}>
-            <Icon name={sStyle.icon} size={scale(12)} color={sStyle.text} />
-            <Text style={[st.statusBadgeText, { color: sStyle.text }]}>{sStyle.label}</Text>
-          </View>
-          {/* Photo Count Badge */}
-          {photoCount > 1 && (
-            <View style={st.photoCountBadge}>
-              <Icon name="images" size={scale(12)} color="#fff" />
-              <Text style={st.photoCountText}>{photoCount}</Text>
-            </View>
-          )}
-        </View>
-
-        {/* Card Info */}
-        <View style={st.cardInfo}>
-          <Text style={st.cardTitle} numberOfLines={1}>{item.name}</Text>
-          {categoryName && (
-            <View style={st.categoryRow}>
-              <Icon name="folder-outline" size={scale(12)} color={C.muted} />
-              <Text style={st.categoryText} numberOfLines={1}>{categoryName}</Text>
-            </View>
-          )}
-          {item.serialNumber && (
-            <Text style={st.serialText}>SN: {item.serialNumber}</Text>
-          )}
-
-          {/* Warranty Row */}
-          <View style={[st.warrantyRow, { backgroundColor: wStyle.bg }]}>
-            <Icon name={wStyle.icon} size={scale(14)} color={wStyle.text} />
-            <Text style={[st.warrantyText, { color: wStyle.text }]}>{ws.label}</Text>
-          </View>
-
-          {/* Documents */}
-          {(item.billImageUrl || item.warrantyCardUrl) && (
-            <View style={st.docsRow}>
-              {item.billImageUrl && (
-                <View style={st.docBadge}>
-                  <Icon name="document-text" size={scale(10)} color={C.info} />
-                  <Text style={st.docText}>Bill</Text>
-                </View>
-              )}
-              {item.warrantyCardUrl && (
-                <View style={st.docBadge}>
-                  <Icon name="card" size={scale(10)} color={C.success} />
-                  <Text style={st.docText}>Card</Text>
-                </View>
-              )}
-            </View>
-          )}
-        </View>
-
-        {/* Card Actions */}
-        <View style={st.cardActions}>
-          {can('service:create') && (
-          <TouchableOpacity
-            style={st.serviceBtn}
-            onPress={() => {
-              const categoryObj = typeof item.category === 'object' ? item.category : null;
-              const subCategoryObj = typeof item.subCategory === 'object' ? item.subCategory : null;
-              navigation.navigate('ServiceRequest', {
-                equipmentId: item.id, equipmentName: item.name,
-                categoryId: categoryObj?.id || item.categoryId || null,
-                categoryName: categoryObj?.name || (typeof item.category === 'string' ? item.category : null),
-                subCategoryId: subCategoryObj?.id || item.subCategoryId || null,
-                subCategoryName: subCategoryObj?.name || (typeof item.subCategory === 'string' ? item.subCategory : null),
-              });
-            }}
-          >
-            <Icon name="construct" size={scale(14)} color="#fff" />
-            <Text style={st.serviceBtnText}>Service</Text>
-          </TouchableOpacity>
-          )}
-          {can('equipment:update') && (
-          <TouchableOpacity style={st.iconBtn} onPress={() => openForm(item)}>
-            <Icon name="pencil" size={scale(16)} color={C.info} />
-          </TouchableOpacity>
-          )}
-          {can('equipment:delete') && (
-          <TouchableOpacity style={[st.iconBtn, { backgroundColor: C.dangerLight }]} onPress={() => deleteEquipment(item)}>
-            <Icon name="trash" size={scale(16)} color={C.danger} />
-          </TouchableOpacity>
-          )}
-        </View>
-      </TouchableOpacity>
-    );
-  };
+  const renderEquipmentCard = ({ item }) => (
+    <EquipmentCard item={item} navigation={navigation} can={can} onEdit={openForm} onDelete={deleteEquipment} />
+  );
 
   // ==================== LOADING STATE ====================
   if ((loading || restaurantsLoading) && !refreshing) {
@@ -523,28 +569,24 @@ export default function MyEquipmentScreen({ navigation }) {
           <View style={st.heroBlobA} pointerEvents="none" />
           <View style={st.heroBlobB} pointerEvents="none" />
           <View style={st.heroContent}>
-            <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
-              <Icon name="arrow-back" size={scale(18)} color="#fff" />
+            <TouchableOpacity style={st.heroIconBtn} onPress={() => setMenuVisible(true)}>
+              <Icon name="menu" size={scale(18)} color="#fff" />
             </TouchableOpacity>
             <View style={st.heroTextContainer}>
               <Text style={st.heroTitle}>My Equipment</Text>
               <RestaurantSelectorCompact dark style={st.heroRestaurantPill} />
             </View>
             <View style={st.heroActions}>
-              <TouchableOpacity style={st.heroIconBtn} onPress={() => setMenuVisible(true)}>
-                <Icon name="menu" size={scale(18)} color="#fff" />
-              </TouchableOpacity>
-            </View>
-          </View>
-          <View style={st.searchContainer}>
-            <View style={st.searchBar}>
-              <Icon name="search" size={scale(14)} color={C.muted} />
-              <TextInput style={st.searchInput} placeholder="Search equipment..." placeholderTextColor={C.muted} editable={false} />
+              <View style={[st.heroIconBtn, st.heroIconBtnDisabled]}>
+                <Icon name="search" size={scale(16)} color="#fff" />
+              </View>
+              <View style={[st.heroIconBtn, st.heroIconBtnDisabled]}>
+                <Icon name="options-outline" size={scale(16)} color="#fff" />
+              </View>
             </View>
           </View>
         </LinearGradient>
         <SkeletonEquipment pulse={pulse} />
-        <KniBottomNav navigation={navigation} active="equipment" />
       </SafeAreaView>
     );
   }
@@ -564,26 +606,38 @@ export default function MyEquipmentScreen({ navigation }) {
         <View style={st.heroBlobA} pointerEvents="none" />
         <View style={st.heroBlobB} pointerEvents="none" />
         <View style={st.heroContent}>
-          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
-            <Icon name="arrow-back" size={scale(18)} color="#fff" />
+          <TouchableOpacity style={st.heroIconBtn} onPress={() => setMenuVisible(true)}>
+            <Icon name="menu" size={scale(18)} color="#fff" />
           </TouchableOpacity>
           <View style={st.heroTextContainer}>
             <Text style={st.heroTitle}>My Equipment</Text>
             <RestaurantSelectorCompact dark style={st.heroRestaurantPill} />
           </View>
           <View style={st.heroActions}>
+            <TouchableOpacity
+              style={[st.heroIconBtn, searchVisible && st.heroIconBtnActive]}
+              onPress={() => setSearchVisible((v) => !v)}
+            >
+              <Icon name="search" size={scale(16)} color={searchVisible ? C.primary : '#fff'} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[st.heroIconBtn, filterPanelVisible && st.heroIconBtnActive]}
+              onPress={() => setFilterPanelVisible((v) => !v)}
+            >
+              <Icon name="options-outline" size={scale(16)} color={filterPanelVisible ? C.primary : '#fff'} />
+              {hasActiveFilters && !filterPanelVisible && <View style={st.filterDot} />}
+            </TouchableOpacity>
             {can('equipment:create') && (
             <TouchableOpacity style={st.heroIconBtn} onPress={() => openForm()}>
               <Icon name="add" size={scale(18)} color="#fff" />
             </TouchableOpacity>
             )}
-            <TouchableOpacity style={st.heroIconBtn} onPress={() => setMenuVisible(true)}>
-              <Icon name="menu" size={scale(18)} color="#fff" />
-            </TouchableOpacity>
           </View>
         </View>
+      </LinearGradient>
 
-        {/* Search Bar */}
+      {/* Search — collapsed by default, toggled from the header */}
+      {searchVisible && (
         <View style={st.searchContainer}>
           <View style={st.searchBar}>
             <Icon name="search" size={scale(14)} color={C.muted} />
@@ -594,6 +648,7 @@ export default function MyEquipmentScreen({ navigation }) {
               value={search}
               onChangeText={setSearch}
               returnKeyType="search"
+              autoFocus
             />
             {search.length > 0 && (
               <TouchableOpacity onPress={() => setSearch('')} style={st.clearBtn}>
@@ -602,51 +657,47 @@ export default function MyEquipmentScreen({ navigation }) {
             )}
           </View>
         </View>
-      </LinearGradient>
+      )}
 
-      {/* Status Filter Chips */}
-      <View style={st.filterSection}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.filterScroll}>
-          {statusFilters.map((filter) => {
-            const isActive = statusFilter === filter.key;
-            return (
-              <TouchableOpacity
-                key={filter.key}
-                style={[st.filterChip, isActive && st.filterChipActive]}
-                onPress={() => setStatusFilter(isActive && filter.key !== 'all' ? 'all' : filter.key)}
-              >
-                <Icon name={filter.icon} size={scale(13)} color={isActive ? '#fff' : filter.color} />
-                <Text style={[st.filterChipText, isActive && st.filterChipTextActive]}>
-                  {filter.label} ({statusCounts[filter.key] || 0})
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      </View>
-
-      {/* Warranty Filter Chips */}
-      <View style={st.warrantyFilterSection}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={[st.filterScroll, st.warrantyFilterScroll, { minWidth: width }]}
-        >
-          {warrantyFilters.map((filter) => {
-            const isActive = warrantyFilter === filter.key;
-            return (
-              <TouchableOpacity
-                key={filter.key}
-                style={[st.warrantyChip, isActive && st.warrantyChipActive]}
-                onPress={() => setWarrantyFilter(isActive && filter.key !== 'all' ? 'all' : filter.key)}
-              >
-                <Icon name={filter.icon} size={scale(12)} color={isActive ? '#fff' : (filter.color || C.muted)} />
-                <Text style={[st.warrantyChipText, isActive && st.warrantyChipTextActive]}>{filter.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      </View>
+      {/* Filters — Status + Warranty together in one panel, collapsed by default */}
+      {filterPanelVisible && (
+        <View style={st.filterPanel}>
+          <Text style={st.filterGroupLabel}>Status</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.filterScroll}>
+            {statusFilters.map((filter) => {
+              const isActive = statusFilter === filter.key;
+              return (
+                <TouchableOpacity
+                  key={filter.key}
+                  style={[st.filterChip, isActive && st.filterChipActive]}
+                  onPress={() => setStatusFilter(isActive && filter.key !== 'all' ? 'all' : filter.key)}
+                >
+                  <Icon name={filter.icon} size={scale(13)} color={isActive ? '#fff' : filter.color} />
+                  <Text style={[st.filterChipText, isActive && st.filterChipTextActive]}>
+                    {filter.label} ({statusCounts[filter.key] || 0})
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+          <Text style={[st.filterGroupLabel, { marginTop: scale(8) }]}>Warranty</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.filterScroll}>
+            {warrantyFilters.map((filter) => {
+              const isActive = warrantyFilter === filter.key;
+              return (
+                <TouchableOpacity
+                  key={filter.key}
+                  style={[st.warrantyChip, isActive && st.warrantyChipActive]}
+                  onPress={() => setWarrantyFilter(isActive && filter.key !== 'all' ? 'all' : filter.key)}
+                >
+                  <Icon name={filter.icon} size={scale(12)} color={isActive ? '#fff' : (filter.color || C.muted)} />
+                  <Text style={[st.warrantyChipText, isActive && st.warrantyChipTextActive]}>{filter.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
 
       {/* Equipment List */}
       <FlatList
@@ -683,10 +734,10 @@ export default function MyEquipmentScreen({ navigation }) {
         maxToRenderPerBatch={10}
       />
 
-      {/* Add/Edit Modal */}
-      <Modal visible={modalVisible} animationType="slide" transparent>
-        <View style={st.modalOverlay}>
-          <View style={[st.modalContainer, { maxHeight: winHeight * 0.9 }]}>
+      {/* Add/Edit Modal — centered popup, not a bottom sheet */}
+      <Modal visible={modalVisible} animationType="fade" transparent>
+        <View style={st.popupOverlay}>
+          <View style={[st.modalContainer, { maxHeight: winHeight * 0.82 }]}>
             <LinearGradient colors={[C.gradient1, C.gradient2]} style={st.modalHeader}>
               <Text style={st.modalTitle}>{form.id ? 'Edit Equipment' : 'Add Equipment'}</Text>
               <TouchableOpacity onPress={() => setModalVisible(false)} style={st.modalCloseBtn}>
@@ -910,7 +961,6 @@ export default function MyEquipmentScreen({ navigation }) {
       </Modal>
 
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
-      <KniBottomNav navigation={navigation} active="equipment" />
     </SafeAreaView>
   );
 }
@@ -919,78 +969,81 @@ export default function MyEquipmentScreen({ navigation }) {
 const st = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
 
-  // Hero Section (Compact)
-  heroSection: { paddingTop: scale(6), paddingBottom: scale(10), borderBottomLeftRadius: scale(16), borderBottomRightRadius: scale(16), overflow: 'hidden' },
+  // Hero Section (Compact — single row, no back button)
+  heroSection: { paddingTop: scale(6), paddingBottom: scale(8), borderBottomLeftRadius: scale(16), borderBottomRightRadius: scale(16), overflow: 'hidden' },
   heroBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
   heroBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
-  heroContent: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(16), marginBottom: scale(8) },
-  backBtn: { width: scale(32), height: scale(32), borderRadius: scale(11), backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', marginRight: scale(10) },
+  heroContent: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(16), gap: scale(8) },
   heroTextContainer: { flex: 1 },
-  heroTitle: { fontSize: moderateScale(18), fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
-  heroRestaurantPill: { alignSelf: 'flex-start', marginTop: scale(4) },
+  heroTitle: { fontSize: moderateScale(17), fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
+  heroRestaurantPill: { alignSelf: 'flex-start', marginTop: scale(3) },
   heroActions: { flexDirection: 'row', gap: scale(6) },
   heroIconBtn: { width: scale(32), height: scale(32), borderRadius: scale(11), backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
+  heroIconBtnActive: { backgroundColor: '#fff' },
+  heroIconBtnDisabled: { opacity: 0.6 },
+  filterDot: { position: 'absolute', top: scale(4), right: scale(4), width: scale(7), height: scale(7), borderRadius: scale(4), backgroundColor: '#FFD166', borderWidth: 1.2, borderColor: C.primaryDark },
 
-  // Search
-  searchContainer: { paddingHorizontal: scale(16) },
-  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: scale(10), paddingHorizontal: scale(12), height: scale(34), shadowColor: '#000', shadowOffset: { width: 0, height: scale(2) }, shadowOpacity: 0.08, shadowRadius: scale(8), elevation: 3 },
+  // Search — collapsible, shown below the gradient header
+  searchContainer: { paddingHorizontal: scale(16), paddingTop: scale(10), paddingBottom: scale(4), backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border },
+  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.bg, borderRadius: scale(10), paddingHorizontal: scale(12), height: scale(36) },
   searchInput: { flex: 1, marginLeft: scale(8), fontSize: moderateScale(12.5), color: C.ink },
   clearBtn: { padding: scale(4) },
 
-  // Filters
-  filterSection: { paddingVertical: scale(6), borderBottomWidth: 1, borderBottomColor: C.border, backgroundColor: C.card },
-  warrantyFilterSection: { paddingVertical: scale(5), backgroundColor: C.bg },
-  filterScroll: { paddingHorizontal: scale(16) },
-  warrantyFilterScroll: { gap: scale(10), justifyContent: 'center' },
+  // Filters — Status + Warranty share one collapsible panel behind the filter icon
+  filterPanel: { paddingHorizontal: scale(16), paddingTop: scale(10), paddingBottom: scale(4), backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.border },
+  filterGroupLabel: { fontSize: moderateScale(10), fontWeight: '800', letterSpacing: 0.4, textTransform: 'uppercase', color: C.muted, marginBottom: scale(6) },
+  filterScroll: { paddingBottom: scale(6) },
   filterChip: { flexDirection: 'row', alignItems: 'center', gap: scale(5), paddingHorizontal: scale(10), paddingVertical: scale(6), marginRight: scale(8), backgroundColor: C.card, borderRadius: scale(16), borderWidth: 1.5, borderColor: C.border },
   filterChipActive: { backgroundColor: C.primary, borderColor: C.primary },
   filterChipText: { fontSize: moderateScale(11.5), fontWeight: '600', color: C.ink },
   filterChipTextActive: { color: '#fff' },
-  warrantyChip: { flexDirection: 'row', alignItems: 'center', gap: scale(5), paddingHorizontal: scale(9), paddingVertical: scale(5), backgroundColor: C.card, borderRadius: scale(13), borderWidth: 1, borderColor: C.border },
+  warrantyChip: { flexDirection: 'row', alignItems: 'center', gap: scale(5), paddingHorizontal: scale(9), paddingVertical: scale(5), marginRight: scale(8), backgroundColor: C.card, borderRadius: scale(13), borderWidth: 1, borderColor: C.border },
   warrantyChipActive: { backgroundColor: C.info, borderColor: C.info },
   warrantyChipText: { fontSize: moderateScale(10.5), fontWeight: '600', color: C.muted },
   warrantyChipTextActive: { color: '#fff' },
 
-  // List
+  // List (2 cards per row)
   listContent: { paddingHorizontal: scale(16), paddingTop: scale(10), paddingBottom: scale(120) },
   columnWrapper: { justifyContent: 'space-between' },
 
   // Card
-  card: { flex: 1, backgroundColor: C.card, borderRadius: scale(16), marginBottom: scale(12), marginHorizontal: scale(4), shadowColor: C.shadow, shadowOffset: { width: 0, height: scale(2) }, shadowOpacity: 0.08, shadowRadius: scale(8), elevation: 3, overflow: 'hidden' },
-  cardImageContainer: { height: scale(120), backgroundColor: C.bg, position: 'relative' },
+  card: { flex: 1, backgroundColor: C.card, borderRadius: scale(14), marginBottom: scale(12), marginHorizontal: scale(4), shadowColor: C.shadow, shadowOffset: { width: 0, height: scale(2) }, shadowOpacity: 0.08, shadowRadius: scale(8), elevation: 3, overflow: 'hidden' },
+  cardImageContainer: { height: scale(88), backgroundColor: C.bg, position: 'relative' },
   cardImage: { width: '100%', height: '100%' },
   cardImagePlaceholder: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
-  statusBadge: { position: 'absolute', top: scale(8), left: scale(8), flexDirection: 'row', alignItems: 'center', gap: scale(4), paddingHorizontal: scale(8), paddingVertical: scale(4), borderRadius: scale(8) },
-  statusBadgeText: { fontSize: moderateScale(10), fontWeight: '700' },
-  photoCountBadge: { position: 'absolute', top: scale(8), right: scale(8), flexDirection: 'row', alignItems: 'center', gap: scale(4), paddingHorizontal: scale(8), paddingVertical: scale(4), backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: scale(8) },
-  photoCountText: { fontSize: moderateScale(10), fontWeight: '700', color: '#fff' },
-  cardInfo: { padding: scale(12) },
-  cardTitle: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink },
+  statusBadge: { position: 'absolute', top: scale(6), left: scale(6), flexDirection: 'row', alignItems: 'center', gap: scale(3), paddingHorizontal: scale(6), paddingVertical: scale(3), borderRadius: scale(7) },
+  statusBadgeText: { fontSize: moderateScale(9), fontWeight: '700' },
+  photoCountBadge: { position: 'absolute', top: scale(6), right: scale(6), flexDirection: 'row', alignItems: 'center', gap: scale(3), paddingHorizontal: scale(6), paddingVertical: scale(3), backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: scale(7) },
+  photoCountText: { fontSize: moderateScale(9), fontWeight: '700', color: '#fff' },
+  cardInfo: { padding: scale(10) },
+  cardTitle: { fontSize: moderateScale(12.5), fontWeight: '700', color: C.ink, lineHeight: moderateScale(16) },
   categoryRow: { flexDirection: 'row', alignItems: 'center', gap: scale(4), marginTop: scale(4) },
-  categoryText: { fontSize: moderateScale(12), color: C.muted },
-  serialText: { fontSize: moderateScale(10), color: C.muted, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', marginTop: scale(4) },
-  warrantyRow: { flexDirection: 'row', alignItems: 'center', gap: scale(6), marginTop: scale(8), paddingHorizontal: scale(10), paddingVertical: scale(6), borderRadius: scale(8) },
-  warrantyText: { fontSize: moderateScale(11), fontWeight: '600' },
-  docsRow: { flexDirection: 'row', gap: scale(8), marginTop: scale(8) },
-  docBadge: { flexDirection: 'row', alignItems: 'center', gap: scale(4), paddingHorizontal: scale(8), paddingVertical: scale(4), backgroundColor: C.bg, borderRadius: scale(6) },
-  docText: { fontSize: moderateScale(10), fontWeight: '600', color: C.muted },
-  cardActions: { flexDirection: 'row', alignItems: 'center', gap: scale(8), padding: scale(12), paddingTop: 0 },
-  serviceBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: scale(6), paddingVertical: scale(10), backgroundColor: C.primary, borderRadius: scale(10) },
-  serviceBtnText: { fontSize: moderateScale(12), fontWeight: '700', color: '#fff' },
-  iconBtn: { width: scale(36), height: scale(36), borderRadius: scale(10), backgroundColor: C.infoLight, alignItems: 'center', justifyContent: 'center' },
+  categoryText: { fontSize: moderateScale(10.5), color: C.muted, flexShrink: 1 },
+  serialText: { fontSize: moderateScale(9.5), color: C.muted, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', marginTop: scale(3) },
+  warrantyRow: { flexDirection: 'row', alignItems: 'center', gap: scale(5), marginTop: scale(7), paddingHorizontal: scale(8), paddingVertical: scale(5), borderRadius: scale(7) },
+  warrantyText: { fontSize: moderateScale(9.5), fontWeight: '600' },
+  docsRow: { flexDirection: 'row', gap: scale(6), marginTop: scale(6), flexWrap: 'wrap' },
+  docBadge: { flexDirection: 'row', alignItems: 'center', gap: scale(3), paddingHorizontal: scale(6), paddingVertical: scale(3), backgroundColor: C.bg, borderRadius: scale(6) },
+  docText: { fontSize: moderateScale(9), fontWeight: '600', color: C.muted },
+  cardActions: { gap: scale(6), padding: scale(10), paddingTop: 0 },
+  cardActionsRow2: { flexDirection: 'row', gap: scale(6) },
+  serviceBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: scale(5), paddingVertical: scale(8), backgroundColor: C.primary, borderRadius: scale(9) },
+  serviceBtnText: { fontSize: moderateScale(11), fontWeight: '700', color: '#fff' },
+  iconBtn: { flex: 1, height: scale(30), borderRadius: scale(9), backgroundColor: C.infoLight, alignItems: 'center', justifyContent: 'center' },
 
   // Loading & Empty
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   loadingText: { marginTop: scale(16), fontSize: moderateScale(15), color: C.muted },
 
   // Skeleton
-  skelCard: { backgroundColor: C.card, borderRadius: scale(16), marginBottom: scale(12), marginHorizontal: scale(4), overflow: 'hidden' },
-  skelImage: { height: scale(120), backgroundColor: '#E2E8F0' },
-  skelLineWide: { height: scale(13), width: '60%', backgroundColor: '#E2E8F0', borderRadius: scale(6), marginTop: scale(2) },
-  skelLineNarrow: { height: scale(11), width: '40%', backgroundColor: '#E2E8F0', borderRadius: scale(6), marginTop: scale(8) },
-  skelWarrantyPill: { height: scale(24), width: '55%', backgroundColor: '#E2E8F0', borderRadius: scale(8), marginTop: scale(10) },
-  skelActionBtn: { flex: 1, height: scale(36), backgroundColor: '#E2E8F0', borderRadius: scale(10) },
-  skelIconBtn: { width: scale(36), height: scale(36), backgroundColor: '#E2E8F0', borderRadius: scale(10) },
+  skelGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', paddingHorizontal: scale(12), paddingTop: scale(10) },
+  skelCard: { width: '48%', backgroundColor: C.card, borderRadius: scale(14), marginBottom: scale(12), overflow: 'hidden' },
+  skelImage: { height: scale(88), backgroundColor: '#E2E8F0' },
+  skelLineWide: { height: scale(12), width: '75%', backgroundColor: '#E2E8F0', borderRadius: scale(6), marginTop: scale(2) },
+  skelLineNarrow: { height: scale(10), width: '45%', backgroundColor: '#E2E8F0', borderRadius: scale(6), marginTop: scale(7) },
+  skelWarrantyPill: { height: scale(20), width: '65%', backgroundColor: '#E2E8F0', borderRadius: scale(7), marginTop: scale(8) },
+  skelActionBtn: { height: scale(28), backgroundColor: '#E2E8F0', borderRadius: scale(9) },
+  skelIconBtn: { height: scale(26), backgroundColor: '#E2E8F0', borderRadius: scale(9) },
   emptyState: { alignItems: 'center', paddingTop: scale(60), paddingHorizontal: scale(40) },
   emptyIconContainer: { width: scale(120), height: scale(120), borderRadius: scale(60), backgroundColor: C.border, alignItems: 'center', justifyContent: 'center', marginBottom: scale(20) },
   emptyTitle: { fontSize: moderateScale(20), fontWeight: '700', color: C.ink, marginBottom: scale(8) },
@@ -1000,8 +1053,10 @@ const st = StyleSheet.create({
 
   // Modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContainer: { backgroundColor: C.card, borderTopLeftRadius: scale(24), borderTopRightRadius: scale(24), maxHeight: SCREEN_HEIGHT * 0.9 },
-  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: scale(20), paddingVertical: scale(16), borderTopLeftRadius: scale(24), borderTopRightRadius: scale(24) },
+  // Add/Edit popup — centered card, not a bottom sheet
+  popupOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: scale(20) },
+  modalContainer: { width: '100%', maxWidth: scale(420), backgroundColor: C.card, borderRadius: scale(20), overflow: 'hidden' },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: scale(20), paddingVertical: scale(16) },
   modalTitle: { fontSize: moderateScale(18), fontWeight: '700', color: '#fff' },
   modalCloseBtn: { width: scale(36), height: scale(36), borderRadius: scale(10), backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
   modalBody: { flexGrow: 1, flexShrink: 1 },

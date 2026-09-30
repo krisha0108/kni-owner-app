@@ -278,13 +278,17 @@ export default function AMCRequestsListScreen({ navigation }) {
           <View style={styles.heroBlobA} pointerEvents="none" />
           <View style={styles.heroBlobB} pointerEvents="none" />
           <View style={styles.heroContent}>
-            <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-              <Icon name="arrow-back" size={18} color="#fff" />
+            <TouchableOpacity
+              onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+              style={styles.backBtnPlain}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Icon name="chevron-back" size={18} color="#fff" />
             </TouchableOpacity>
-            <Text style={styles.heroTitle}>AMC Requests</Text>
             <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
               <Icon name="menu" size={18} color="#fff" />
             </TouchableOpacity>
+            <Text style={[styles.heroTitle, { flex: 1, marginLeft: scale(10) }]}>AMC Requests</Text>
           </View>
         </LinearGradient>
         <ScrollView showsVerticalScrollIndicator={false}>
@@ -307,16 +311,20 @@ export default function AMCRequestsListScreen({ navigation }) {
         <View style={styles.heroBlobA} pointerEvents="none" />
         <View style={styles.heroBlobB} pointerEvents="none" />
         <View style={styles.heroContent}>
-          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-            <Icon name="arrow-back" size={24} color="#fff" />
+          <TouchableOpacity
+            onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+            style={styles.backBtnPlain}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Icon name="chevron-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
+            <Icon name="menu" size={24} color="#fff" />
           </TouchableOpacity>
           <View style={styles.heroTextContainer}>
             <Text style={styles.heroTitle}>AMC Requests</Text>
             <RestaurantSelectorCompact dark style={styles.heroRestaurantPill} />
           </View>
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
-            <Icon name="menu" size={24} color="#fff" />
-          </TouchableOpacity>
         </View>
 
         <View style={styles.statsRow}>
@@ -381,7 +389,7 @@ export default function AMCRequestsListScreen({ navigation }) {
       </TouchableOpacity>
 
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
-      <KniBottomNav navigation={navigation} />
+      <KniBottomNav navigation={navigation} active="equipment" />
     </SafeAreaView>
   );
 }
@@ -397,13 +405,14 @@ const styles = StyleSheet.create({
   heroBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
   heroBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
   heroContent: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: scale(16), paddingTop: scale(8), paddingBottom: scale(8),
   },
   backBtn: {
     width: scale(34), height: scale(34), borderRadius: scale(11),
     backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center',
   },
+  backBtnPlain: { width: scale(20), height: scale(30), alignItems: 'center', justifyContent: 'center', marginRight: scale(4) },
   heroTextContainer: { flex: 1, marginHorizontal: scale(12) },
   heroTitle: { fontSize: moderateScale(18), fontWeight: '700', color: '#fff' },
   heroRestaurantPill: { alignSelf: 'flex-start', marginTop: scale(4) },

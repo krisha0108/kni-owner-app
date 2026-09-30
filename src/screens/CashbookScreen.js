@@ -550,23 +550,26 @@ export default function CashbookScreen({ navigation }) {
         <LinearGradient colors={[C.gradient1, C.gradient2]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
           <View style={st.headerBlobA} pointerEvents="none" />
           <View style={st.headerBlobB} pointerEvents="none" />
-          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.headerBackBtn}>
-            <Icon name="arrow-back" size={scale(22)} color="#fff" />
+          <TouchableOpacity
+            onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+            style={st.backBtnPlain}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Icon name="chevron-back" size={scale(20)} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
+            <Icon name="menu" size={scale(20)} color="#fff" />
           </TouchableOpacity>
           <View style={st.headerCenter}>
             <Text style={st.headerTitle}>Daily Cashbook</Text>
             <Text style={st.headerSubtitle}>Track cash & bank transactions</Text>
           </View>
-          <View style={st.headerActions}>
-            <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
-              <Icon name="menu" size={scale(20)} color="#fff" />
-            </TouchableOpacity>
-          </View>
+          <View style={st.headerActions} />
         </LinearGradient>
         <ScrollView showsVerticalScrollIndicator={false}>
           <SkeletonCashbook pulse={pulse} />
         </ScrollView>
-        <KniBottomNav navigation={navigation} />
+        <KniBottomNav navigation={navigation} active="khatabook" />
       </SafeAreaView>
     );
   }
@@ -579,18 +582,21 @@ export default function CashbookScreen({ navigation }) {
         <LinearGradient colors={[C.gradient1, C.gradient2]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
           <View style={st.headerBlobA} pointerEvents="none" />
           <View style={st.headerBlobB} pointerEvents="none" />
-          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.headerBackBtn}>
-            <Icon name="arrow-back" size={scale(22)} color="#fff" />
+          <TouchableOpacity
+            onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+            style={st.backBtnPlain}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Icon name="chevron-back" size={scale(20)} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
+            <Icon name="menu" size={scale(20)} color="#fff" />
           </TouchableOpacity>
           <View style={st.headerCenter}>
             <Text style={st.headerTitle}>Daily Cashbook</Text>
             <Text style={st.headerSubtitle}>Track cash & bank transactions</Text>
           </View>
-          <View style={st.headerActions}>
-            <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
-              <Icon name="menu" size={scale(20)} color="#fff" />
-            </TouchableOpacity>
-          </View>
+          <View style={st.headerActions} />
         </LinearGradient>
         <View style={st.emptyState}>
           <View style={st.emptyIcon}>
@@ -599,7 +605,7 @@ export default function CashbookScreen({ navigation }) {
           <Text style={st.emptyTitle}>No Restaurant Found</Text>
           <Text style={st.emptySubtitle}>Please add a restaurant first</Text>
         </View>
-        <KniBottomNav navigation={navigation} />
+        <KniBottomNav navigation={navigation} active="khatabook" />
       </SafeAreaView>
     );
   }
@@ -613,8 +619,15 @@ export default function CashbookScreen({ navigation }) {
       <LinearGradient colors={[C.gradient1, C.gradient2]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
         <View style={st.headerBlobA} pointerEvents="none" />
         <View style={st.headerBlobB} pointerEvents="none" />
-        <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.headerBackBtn}>
-          <Icon name="arrow-back" size={scale(22)} color="#fff" />
+        <TouchableOpacity
+          onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+          style={st.backBtnPlain}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Icon name="chevron-back" size={scale(20)} color="#fff" />
+        </TouchableOpacity>
+        <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
+          <Icon name="menu" size={scale(20)} color="#fff" />
         </TouchableOpacity>
         <View style={st.headerCenter}>
           <Text style={st.headerTitle}>Daily Cashbook</Text>
@@ -626,9 +639,6 @@ export default function CashbookScreen({ navigation }) {
             <Icon name="add" size={scale(20)} color="#fff" />
           </TouchableOpacity>
           )}
-          <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
-            <Icon name="menu" size={scale(20)} color="#fff" />
-          </TouchableOpacity>
         </View>
       </LinearGradient>
 
@@ -664,7 +674,7 @@ export default function CashbookScreen({ navigation }) {
       />
 
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
-      <KniBottomNav navigation={navigation} />
+      <KniBottomNav navigation={navigation} active="khatabook" />
 
       {/* Add/Edit Modal - Fixed Scroll */}
       <Modal visible={modalVisible} animationType="slide" transparent onRequestClose={() => setModalVisible(false)}>
@@ -838,6 +848,7 @@ const st = StyleSheet.create({
   headerBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
   headerBackBtn: { width: scale(40), height: scale(40), borderRadius: scale(14), backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
   headerCenter: { flex: 1, marginLeft: scale(12) },
+  backBtnPlain: { width: scale(22), height: scale(32), alignItems: 'center', justifyContent: 'center', marginRight: scale(4) },
   headerTitle: { fontSize: moderateScale(18), fontWeight: '700', color: '#fff' },
   headerSubtitle: { fontSize: moderateScale(12), color: 'rgba(255,255,255,0.8)', marginTop: scale(2) },
   headerActions: { flexDirection: 'row' },

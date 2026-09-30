@@ -14,7 +14,6 @@ import LinearGradient from 'react-native-linear-gradient';
 import { api } from '../api/client';
 import { useRestaurant } from '../context/RestaurantContext';
 import { RestaurantSelectorCompact } from '../components/RestaurantSelector';
-import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 
 import { scale, moderateScale } from '../utils/responsive';
@@ -277,24 +276,18 @@ export default function KhatabookScreen({ navigation }) {
           <View style={st.heroBlobA} pointerEvents="none" />
           <View style={st.heroBlobB} pointerEvents="none" />
           <View style={st.heroContent}>
-            <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
-              <Icon name="arrow-back" size={scale(18)} color="#fff" />
+            <TouchableOpacity style={[st.heroIconBtn, { marginRight: scale(10) }]} onPress={() => setMenuVisible(true)}>
+              <Icon name="menu" size={scale(16)} color="#fff" />
             </TouchableOpacity>
             <View style={st.heroTextContainer}>
               <Text style={st.heroTitle}>Khatabook</Text>
               <RestaurantSelectorCompact dark style={st.heroRestaurantPill} />
-            </View>
-            <View style={st.heroActions}>
-              <TouchableOpacity style={st.heroIconBtn} onPress={() => setMenuVisible(true)}>
-                <Icon name="menu" size={scale(16)} color="#fff" />
-              </TouchableOpacity>
             </View>
           </View>
         </LinearGradient>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom + scale(100) }}>
           <SkeletonLoader pulse={pulse} />
         </ScrollView>
-        <KniBottomNav navigation={navigation} active="khatabook" />
       </SafeAreaView>
     );
   }
@@ -314,8 +307,8 @@ export default function KhatabookScreen({ navigation }) {
         <View style={st.heroBlobA} pointerEvents="none" />
         <View style={st.heroBlobB} pointerEvents="none" />
         <View style={st.heroContent}>
-          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
-            <Icon name="arrow-back" size={scale(18)} color="#fff" />
+          <TouchableOpacity style={[st.heroIconBtn, { marginRight: scale(10) }]} onPress={() => setMenuVisible(true)}>
+            <Icon name="menu" size={scale(16)} color="#fff" />
           </TouchableOpacity>
           <View style={st.heroTextContainer}>
             <Text style={st.heroTitle}>Khatabook</Text>
@@ -328,9 +321,6 @@ export default function KhatabookScreen({ navigation }) {
               disabled={refreshing}
             >
               <Icon name="refresh" size={scale(16)} color="#fff" />
-            </TouchableOpacity>
-            <TouchableOpacity style={st.heroIconBtn} onPress={() => setMenuVisible(true)}>
-              <Icon name="menu" size={scale(16)} color="#fff" />
             </TouchableOpacity>
           </View>
         </View>
@@ -564,7 +554,6 @@ export default function KhatabookScreen({ navigation }) {
       </ScrollView>
 
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
-      <KniBottomNav navigation={navigation} active="khatabook" />
     </SafeAreaView>
   );
 }

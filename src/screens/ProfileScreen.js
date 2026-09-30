@@ -8,7 +8,6 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
-import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 import auth from '@react-native-firebase/auth';
 import axios from 'axios';
@@ -17,6 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRestaurant } from '../context/RestaurantContext';
+import { exportAnalyticsPDF, openPDF } from '../services/analyticsService';
 
 import { scale, moderateScale } from '../utils/responsive';
 import useKeyboardHeight from '../utils/useKeyboardHeight';
@@ -195,7 +195,27 @@ const PasswordChangeModal = ({ visible, onClose }) => {
    ========================================================= */
 export default function ProfileScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const { selectedRestaurant } = useRestaurant();
+  const { selectedRestaurant, selectedRestaurantId } = useRestaurant();
+  const [exporting, setExporting] = useState(false);
+
+  const handleExportPDF = async () => {
+    if (!selectedRestaurantId) {
+      AppAlert.alert('Error', 'Please select a restaurant first');
+      return;
+    }
+    setExporting(true);
+    try {
+      const filePath = await exportAnalyticsPDF(selectedRestaurantId);
+      AppAlert.alert('Export Successful', 'Analytics report has been exported', [
+        { text: 'Open', onPress: () => openPDF(filePath) },
+        { text: 'OK', style: 'cancel' }
+      ]);
+    } catch (error) {
+      AppAlert.alert('Export Failed', error.message || 'Could not export analytics');
+    } finally {
+      setExporting(false);
+    }
+  };
   const scrollY = useRef(new Animated.Value(0)).current;
   // The profile card overlaps the hero photo at rest (negative marginTop),
   // but once stickyHeaderIndices docks it at the top of the screen during
@@ -442,18 +462,18 @@ export default function ProfileScreen({ navigation }) {
 
           {/* Top buttons INSIDE hero (scrolls with image) */}
           <View style={[st.heroTopBar, { paddingTop: insets.top + scale(8) }]}>
-            <View style={st.heroBrand}>
-              <Icon name="person" size={scale(14)} color="#fff" />
-              <Text style={st.heroBrandText}>Profile</Text>
-            </View>
-            <View style={{ flexDirection: 'row', gap: scale(8) }}>
-              <TouchableOpacity activeOpacity={0.7} onPress={navigateEdit} style={st.heroBtn}>
-                <Icon name="create-outline" size={scale(18)} color="#fff" />
-              </TouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(10) }}>
               <TouchableOpacity activeOpacity={0.7} onPress={() => setMenuVisible(true)} style={st.heroBtn}>
                 <Icon name="menu" size={scale(18)} color="#fff" />
               </TouchableOpacity>
+              <View style={st.heroBrand}>
+                <Icon name="person" size={scale(14)} color="#fff" />
+                <Text style={st.heroBrandText}>Profile</Text>
+              </View>
             </View>
+            <TouchableOpacity activeOpacity={0.7} onPress={navigateEdit} style={st.heroBtn}>
+              <Icon name="create-outline" size={scale(18)} color="#fff" />
+            </TouchableOpacity>
           </View>
 
           {/* Bottom gradient fade */}
@@ -676,7 +696,11 @@ export default function ProfileScreen({ navigation }) {
         <View style={st.settingsCard}>
           <SettingRow icon="construct" iconColor="#3B82F6" iconBg={['#EFF6FF', '#DBEAFE']}
             title="My Equipment" subtitle="Manage kitchen equipment"
-            onPress={() => navigation.navigate('MyEquipment')} />
+            onPress={() => navigation.navigate('Home', { screen: 'EquipmentTab' })} />
+          <SettingRow icon="download" iconColor="#059669" iconBg={['#ECFDF5', '#D1FAE5']}
+            title="Download Analytics Report" subtitle="Export your business report as PDF"
+            onPress={handleExportPDF}
+            right={exporting ? <ActivityIndicator size="small" color="#059669" /> : undefined} />
           <SettingRow icon="people" iconColor="#8B5CF6" iconBg={['#F3E8FF', '#EDE9FE']}
             title="Team Management" subtitle="Invite & manage members"
             onPress={() => navigation.navigate('TeamManagement')} />
@@ -711,7 +735,6 @@ export default function ProfileScreen({ navigation }) {
       <PasswordChangeModal visible={passwordModalVisible} onClose={() => setPasswordModalVisible(false)} />
 
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
-      <KniBottomNav navigation={navigation} active="profile" cartCount={cartCount} notifCount={0} />
     </SafeAreaView>
   );
 }
@@ -775,7 +798,6 @@ function SkeletonProfileView({ insetsBottom = 0 }) {
           </View>
         ))}
       </ScrollView>
-      <KniBottomNav navigation={{}} active="profile" cartCount={0} notifCount={0} />
     </SafeAreaView>
   );
 }

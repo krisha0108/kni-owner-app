@@ -439,8 +439,15 @@ export default function TeamManagementScreen({ navigation }) {
         <LinearGradient colors={[C.primary, C.primaryDark]} style={[styles.header, { paddingTop: insets.top + scale(12) }]}>
           <View style={styles.headerBlobA} pointerEvents="none" />
           <View style={styles.headerBlobB} pointerEvents="none" />
-          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-            <Icon name="arrow-back" size={scale(22)} color="#fff" />
+          <TouchableOpacity
+            onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+            style={styles.backBtnPlain}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Icon name="chevron-back" size={scale(20)} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.headerIconBtn} onPress={() => setMenuVisible(true)}>
+            <Icon name="menu" size={scale(18)} color="#fff" />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>Team Management</Text>
@@ -452,9 +459,6 @@ export default function TeamManagementScreen({ navigation }) {
               <Icon name="person-add" size={scale(20)} color="#fff" />
             </TouchableOpacity>
             )}
-            <TouchableOpacity style={styles.headerIconBtn} onPress={() => setMenuVisible(true)}>
-              <Icon name="menu" size={scale(20)} color="#fff" />
-            </TouchableOpacity>
           </View>
         </LinearGradient>
         <ScrollView showsVerticalScrollIndicator={false}>
@@ -471,8 +475,15 @@ export default function TeamManagementScreen({ navigation }) {
       <LinearGradient colors={[C.primary, C.primaryDark]} style={[styles.header, { paddingTop: insets.top + scale(12) }]}>
         <View style={styles.headerBlobA} pointerEvents="none" />
         <View style={styles.headerBlobB} pointerEvents="none" />
-        <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-          <Icon name="arrow-back" size={scale(22)} color="#fff" />
+        <TouchableOpacity
+          onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+          style={styles.backBtnPlain}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Icon name="chevron-back" size={scale(20)} color="#fff" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.headerIconBtn}>
+          <Icon name="menu" size={scale(18)} color="#fff" />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>Team Management</Text>
@@ -484,9 +495,6 @@ export default function TeamManagementScreen({ navigation }) {
             <Icon name="person-add" size={scale(20)} color="#fff" />
           </TouchableOpacity>
           )}
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.headerIconBtn}>
-            <Icon name="menu" size={scale(20)} color="#fff" />
-          </TouchableOpacity>
         </View>
       </LinearGradient>
 
@@ -731,7 +739,7 @@ export default function TeamManagementScreen({ navigation }) {
       </Modal>
 
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
-      <KniBottomNav navigation={navigation} />
+      <KniBottomNav navigation={navigation} active="home" />
     </SafeAreaView>
   );
 }
@@ -758,6 +766,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  backBtnPlain: { width: scale(26), height: scale(40), alignItems: 'center', justifyContent: 'center', marginRight: scale(4) },
   headerCenter: {
     flex: 1,
     marginLeft: scale(12),

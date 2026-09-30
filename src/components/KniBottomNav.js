@@ -20,8 +20,10 @@ export default function KniBottomNav({
   cartCount = 0,
   notifCount: notifCountProp = 0,
   onFabPress,
+  navigation: navigationProp,
 }) {
-  const navigation = useNavigation();
+  const navigationFromHook = useNavigation();
+  const navigation = navigationProp || navigationFromHook;
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { can } = usePermissions();
@@ -60,11 +62,11 @@ export default function KniBottomNav({
 
   const go = (key) => {
     if (!navigation?.navigate) return;
-    if (key==='home') navigation.navigate('Home');
-    if (key==='equipment') navigation.navigate('MyEquipment');
+    if (key==='home') navigation.navigate('Home', { screen: 'HomeTab' });
+    if (key==='equipment') navigation.navigate('Home', { screen: 'EquipmentTab' });
     if (key==='request') navigation.navigate('Marketplace');
-    if (key==='khatabook') navigation.navigate('Khatabook');
-    if (key==='profile') navigation.navigate('Profile');
+    if (key==='khatabook') navigation.navigate('Home', { screen: 'KhatabookTab' });
+    if (key==='profile') navigation.navigate('Home', { screen: 'ProfileTab' });
   };
 
   const styles = createStyles({

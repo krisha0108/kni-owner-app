@@ -50,6 +50,21 @@ const getDurationLabel = (duration) => {
   return durationOptions.find(d => d.key === duration)?.label || duration;
 };
 
+const getCategoryIcon = (categoryName) => {
+  const name = (categoryName || '').toLowerCase();
+  if (/fridge|refriger|freez|cold|chill|ice/.test(name)) return 'snow-outline';
+  if (/oven|grill|fry|cook|stove|range|burner|tandoor|kitchen/.test(name)) return 'flame-outline';
+  if (/dish|wash|clean|sanit/.test(name)) return 'water-outline';
+  if (/beverage|drink|juice|coffee|tea|bar/.test(name)) return 'cafe-outline';
+  if (/exhaust|vent|hood|hvac|air\b/.test(name)) return 'thermometer-outline';
+  if (/electric|wiring|panel|generator|power/.test(name)) return 'flash-outline';
+  if (/furniture|table|chair|seating/.test(name)) return 'grid-outline';
+  if (/pos|computer|printer|software|billing/.test(name)) return 'desktop-outline';
+  if (/safety|fire|extinguish|alarm/.test(name)) return 'shield-checkmark-outline';
+  if (/storage|shelf|rack|cabinet/.test(name)) return 'archive-outline';
+  return 'hardware-chip-outline';
+};
+
 const getWarrantyStatus = (warrantyEndDate) => {
   if (!warrantyEndDate) {
     return { color: 'gray', label: 'No Warranty' };
@@ -170,6 +185,19 @@ export default function EquipmentProfileScreen({ navigation, route }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [equipment, setEquipment] = useState(null);
+  const [heroPhotoIndex, setHeroPhotoIndex] = useState(0);
+  const heroFade = useRef(new Animated.Value(1)).current;
+  const heroPhotoCount = equipment?.photoUrls?.length || 0;
+  useEffect(() => {
+    if (heroPhotoCount <= 1) { setHeroPhotoIndex(0); return undefined; }
+    const timer = setInterval(() => {
+      Animated.timing(heroFade, { toValue: 0, duration: 300, useNativeDriver: true }).start(() => {
+        setHeroPhotoIndex((i) => (i + 1) % heroPhotoCount);
+        Animated.timing(heroFade, { toValue: 1, duration: 300, useNativeDriver: true }).start();
+      });
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [heroPhotoCount, heroFade]);
   const [amcSubscriptions, setAmcSubscriptions] = useState([]);
   const [activeTab, setActiveTab] = useState('details');
   const [selectedImage, setSelectedImage] = useState(null);
@@ -610,34 +638,48 @@ export default function EquipmentProfileScreen({ navigation, route }) {
   const heroOverlay = (
     <>
       <View style={st.heroTopRow}>
-        <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.heroBtn}>
-          <Icon name="arrow-back" size={scale(17)} color="#fff" />
-        </TouchableOpacity>
-        <View style={{ flexDirection: 'row', gap: scale(8) }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(8) }}>
+          <TouchableOpacity
+            onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+            style={st.backBtnPlain}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Icon name="chevron-back" size={scale(17)} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={st.heroBtn}>
+            <Icon name="menu" size={scale(17)} color="#fff" />
+          </TouchableOpacity>
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(8) }}>
+          {photoUrls.length > 1 && (
+            <View style={st.heroPhotoCounter}>
+              <Icon name="images" size={scale(12)} color="#fff" />
+              <Text style={st.heroPhotoCounterText}>{heroPhotoIndex + 1}/{photoUrls.length}</Text>
+            </View>
+          )}
           {can('service:create') && (
             <TouchableOpacity onPress={goToServiceRequest} style={st.heroBtn}>
               <Icon name="construct" size={scale(15)} color="#fff" />
             </TouchableOpacity>
           )}
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={st.heroBtn}>
-            <Icon name="menu" size={scale(17)} color="#fff" />
-          </TouchableOpacity>
         </View>
       </View>
 
-      <LinearGradient colors={['transparent', 'rgba(0,0,0,0.75)']} style={st.heroFade} />
-
       <View style={st.heroBottom}>
-        <View style={st.badgeRow}>
-          <View style={[st.badge, { backgroundColor: 'rgba(255,255,255,0.22)' }]}>
-            <Text style={[st.badgeText, { color: '#fff' }]}>{statusStyle.label}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ flex: 1, marginRight: scale(8) }}>
+            <Text style={st.heroName} numberOfLines={1}>{equipment.name}</Text>
+            {!!categoryName && <Text style={st.heroCategory} numberOfLines={1}>{categoryName}</Text>}
           </View>
-          <View style={[st.badge, { backgroundColor: 'rgba(255,255,255,0.22)' }]}>
-            <Text style={[st.badgeText, { color: '#fff' }]}>{warrantyStatus.label}</Text>
+          <View style={[st.badgeRow, { flexShrink: 0 }]}>
+            <View style={[st.badge, { backgroundColor: 'rgba(0,0,0,0.45)' }]}>
+              <Text style={[st.badgeText, { color: '#fff' }]}>{statusStyle.label}</Text>
+            </View>
+            <View style={[st.badge, { backgroundColor: 'rgba(0,0,0,0.45)' }]}>
+              <Text style={[st.badgeText, { color: '#fff' }]}>{warrantyStatus.label}</Text>
+            </View>
           </View>
         </View>
-        <Text style={st.heroName} numberOfLines={1}>{equipment.name}</Text>
-        {!!categoryName && <Text style={st.heroCategory} numberOfLines={1}>{categoryName}</Text>}
       </View>
     </>
   );
@@ -648,11 +690,32 @@ export default function EquipmentProfileScreen({ navigation, route }) {
 
       {/* Hero Header */}
       {photoUrls.length > 0 ? (
-        <ImageBackground source={{ uri: getImageUrl(photoUrls[0]) }} style={st.hero} resizeMode="cover">
+        <View style={[st.hero, { position: 'relative' }]}>
+          <Animated.View style={[StyleSheet.absoluteFill, { opacity: heroFade }]}>
+            <ImageBackground
+              source={{ uri: getImageUrl(photoUrls[heroPhotoIndex] || photoUrls[0]) }}
+              style={{ flex: 1 }}
+              resizeMode="cover"
+            />
+          </Animated.View>
+          <LinearGradient
+            colors={['rgba(0,0,0,0.4)', 'rgba(0,0,0,0.05)', 'rgba(0,0,0,0.05)', 'rgba(0,0,0,0.8)']}
+            locations={[0, 0.3, 0.55, 1]}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          />
           {heroOverlay}
-        </ImageBackground>
+        </View>
       ) : (
-        <LinearGradient colors={['#334155', '#0F172A']} style={st.hero}>
+        <LinearGradient colors={['#334155', '#0F172A']} style={[st.hero, { position: 'relative' }]}>
+          <View style={StyleSheet.absoluteFill} pointerEvents="none">
+            <Icon
+              name={getCategoryIcon(categoryName)}
+              size={scale(64)}
+              color="rgba(255,255,255,0.18)"
+              style={{ position: 'absolute', top: '50%', left: '50%', marginTop: -scale(32), marginLeft: -scale(32) }}
+            />
+          </View>
           {heroOverlay}
         </LinearGradient>
       )}
@@ -1554,7 +1617,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
       </Modal>
 
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
-      <KniBottomNav navigation={navigation} />
+      <KniBottomNav navigation={navigation} active="equipment" />
     </SafeAreaView>
   );
 }
@@ -1578,17 +1641,22 @@ const st = StyleSheet.create({
 
   /* ── Hero header ── */
   hero: {
-    height: scale(140), justifyContent: 'space-between',
+    height: scale(190), justifyContent: 'space-between',
     marginHorizontal: scale(16), marginTop: scale(10), borderRadius: scale(18), overflow: 'hidden',
   },
   heroTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: scale(12), paddingTop: scale(10) },
+  backBtnPlain: { width: scale(20), height: scale(30), alignItems: 'center', justifyContent: 'center', marginRight: scale(4) },
   heroBtn: {
-    width: scale(32), height: scale(32), borderRadius: scale(11), backgroundColor: 'rgba(255,255,255,0.22)',
+    width: scale(32), height: scale(32), borderRadius: scale(11), backgroundColor: 'rgba(0,0,0,0.4)',
     alignItems: 'center', justifyContent: 'center'
   },
-  heroFade: { position: 'absolute', left: 0, right: 0, bottom: 0, height: scale(76) },
+  heroPhotoCounter: {
+    flexDirection: 'row', alignItems: 'center', gap: scale(4),
+    height: scale(32), paddingHorizontal: scale(9), borderRadius: scale(11), backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  heroPhotoCounterText: { color: '#fff', fontSize: moderateScale(10.5), fontWeight: '700' },
   heroBottom: { paddingHorizontal: scale(14), paddingBottom: scale(12) },
-  heroName: { fontSize: moderateScale(16), fontWeight: '900', color: '#fff', marginTop: scale(5) },
+  heroName: { fontSize: moderateScale(16), fontWeight: '900', color: '#fff' },
   heroCategory: { fontSize: moderateScale(11.5), color: 'rgba(255,255,255,0.8)', marginTop: scale(1) },
 
   badgeRow: { flexDirection: 'row', gap: scale(8) },

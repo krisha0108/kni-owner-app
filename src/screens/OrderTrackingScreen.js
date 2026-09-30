@@ -587,15 +587,19 @@ export default function OrderTrackingScreen({ navigation }) {
         <LinearGradient colors={[C.primary, C.primaryDark]} style={[s.header, { paddingTop: insets.top + scale(10) }]}>
           <View style={s.headerBlobA} pointerEvents="none" />
           <View style={s.headerBlobB} pointerEvents="none" />
-          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={s.headerBtn}>
-            <Icon name="arrow-back" size={scale(18)} color="#fff" />
+          <TouchableOpacity
+            onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+            style={s.headerBtnPlain}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Icon name="chevron-back" size={scale(18)} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={[s.headerBtn, { marginRight: scale(10) }]}>
+            <Icon name="menu" size={scale(18)} color="#fff" />
           </TouchableOpacity>
           <View style={s.headerCenter}>
             <Text style={s.headerTitle}>Order Tracking</Text>
           </View>
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={s.headerBtn}>
-            <Icon name="menu" size={scale(18)} color="#fff" />
-          </TouchableOpacity>
         </LinearGradient>
         <SkeletonOrderTracking pulse={pulse} />
       </SafeAreaView>
@@ -614,8 +618,15 @@ export default function OrderTrackingScreen({ navigation }) {
       >
         <View style={s.headerBlobA} pointerEvents="none" />
         <View style={s.headerBlobB} pointerEvents="none" />
-        <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={s.headerBtn}>
-          <Icon name="arrow-back" size={scale(18)} color="#fff" />
+        <TouchableOpacity
+          onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+          style={s.headerBtnPlain}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Icon name="chevron-back" size={scale(18)} color="#fff" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => setMenuVisible(true)} style={[s.headerBtn, { marginRight: scale(10) }]}>
+          <Icon name="menu" size={scale(18)} color="#fff" />
         </TouchableOpacity>
         <View style={s.headerCenter}>
           <Text style={s.headerTitle}>Order Tracking</Text>
@@ -625,9 +636,6 @@ export default function OrderTrackingScreen({ navigation }) {
             </View>
           )}
         </View>
-        <TouchableOpacity onPress={() => setMenuVisible(true)} style={s.headerBtn}>
-          <Icon name="menu" size={scale(18)} color="#fff" />
-        </TouchableOpacity>
       </LinearGradient>
 
       {/* Restaurant Banner - Fixed */}
@@ -1088,7 +1096,7 @@ export default function OrderTrackingScreen({ navigation }) {
       </Modal>
 
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
-      <KniBottomNav navigation={navigation} />
+      <KniBottomNav navigation={navigation} active="request" />
     </SafeAreaView>
   );
 }
@@ -1115,6 +1123,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  headerBtnPlain: { width: scale(22), height: scale(32), alignItems: 'center', justifyContent: 'center' },
   headerCenter: {
     flexDirection: 'row',
     alignItems: 'center',

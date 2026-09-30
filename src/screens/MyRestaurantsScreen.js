@@ -347,22 +347,24 @@ export default function MyRestaurantsScreen({ navigation }) {
           <View style={st.heroBlobA} pointerEvents="none" />
           <View style={st.heroBlobB} pointerEvents="none" />
           <View style={st.heroContent}>
-            <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
-              <Icon name="arrow-back" size={scale(18)} color="#fff" />
+            <TouchableOpacity
+              onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+              style={st.backBtnPlain}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Icon name="chevron-back" size={scale(18)} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity style={[st.heroIconBtn, { marginRight: scale(10) }]} onPress={() => setMenuVisible(true)}>
+              <Icon name="menu" size={scale(18)} color="#fff" />
             </TouchableOpacity>
             <View style={st.heroTextContainer}>
               <Text style={st.heroTitle}>My Restaurants</Text>
               <Text style={st.heroSubtitle}>Loading...</Text>
             </View>
-            <View style={st.heroActions}>
-              <TouchableOpacity style={st.heroIconBtn} onPress={() => setMenuVisible(true)}>
-                <Icon name="menu" size={scale(18)} color="#fff" />
-              </TouchableOpacity>
-            </View>
           </View>
         </LinearGradient>
         <SkeletonMyRestaurants pulse={pulse} />
-        <KniBottomNav navigation={navigation} />
+        <KniBottomNav navigation={navigation} active="home" />
       </SafeAreaView>
     );
   }
@@ -386,9 +388,13 @@ export default function MyRestaurantsScreen({ navigation }) {
         <View style={st.heroContent}>
           <TouchableOpacity
             onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
-            style={st.backBtn}
+            style={st.backBtnPlain}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Icon name="arrow-back" size={scale(18)} color="#fff" />
+            <Icon name="chevron-back" size={scale(18)} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity style={[st.heroIconBtn, { marginRight: scale(10) }]} onPress={() => setMenuVisible(true)}>
+            <Icon name="menu" size={scale(18)} color="#fff" />
           </TouchableOpacity>
           <View style={st.heroTextContainer}>
             <Text style={st.heroTitle}>My Restaurants</Text>
@@ -403,9 +409,6 @@ export default function MyRestaurantsScreen({ navigation }) {
               <Icon name="add" size={scale(18)} color="#fff" />
             </TouchableOpacity>
             )}
-            <TouchableOpacity style={st.heroIconBtn} onPress={() => setMenuVisible(true)}>
-              <Icon name="menu" size={scale(18)} color="#fff" />
-            </TouchableOpacity>
           </View>
         </View>
       </LinearGradient>
@@ -478,7 +481,7 @@ export default function MyRestaurantsScreen({ navigation }) {
       />
 
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
-      <KniBottomNav navigation={navigation} />
+      <KniBottomNav navigation={navigation} active="home" />
 
       {/* Request Deletion Modal - approved restaurants require admin approval */}
       <Modal
@@ -547,6 +550,7 @@ const st = StyleSheet.create({
   heroBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
   heroContent: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(16) },
   backBtn: { width: scale(32), height: scale(32), borderRadius: scale(11), backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', marginRight: scale(10) },
+  backBtnPlain: { width: scale(22), height: scale(32), alignItems: 'center', justifyContent: 'center', marginRight: scale(4) },
   heroTextContainer: { flex: 1 },
   heroTitle: { fontSize: moderateScale(18), fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
   heroSubtitle: { fontSize: moderateScale(11), color: 'rgba(255,255,255,0.8)', marginTop: scale(1) },

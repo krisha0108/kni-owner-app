@@ -370,13 +370,13 @@ export default function RestaurantView({ navigation, route }) {
           <View style={st.actionsCard}>
             <Text style={st.sectionTitle}>Quick Actions</Text>
             <View style={st.actionsGrid}>
-              <TouchableOpacity style={st.actionItem} onPress={() => navigation.navigate('MyEquipment')}>
+              <TouchableOpacity style={st.actionItem} onPress={() => navigation.navigate('Home', { screen: 'EquipmentTab' })}>
                 <View style={[st.actionIconBox, { backgroundColor: '#FEE2E2' }]}>
                   <Icon name="construct" size={scale(17)} color={C.primary} />
                 </View>
                 <Text style={st.actionLabel}>Book Service</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={st.actionItem} onPress={() => navigation.navigate('MyEquipment')}>
+              <TouchableOpacity style={st.actionItem} onPress={() => navigation.navigate('Home', { screen: 'EquipmentTab' })}>
                 <View style={[st.actionIconBox, { backgroundColor: '#EFF6FF' }]}>
                   <Icon name="hardware-chip" size={scale(17)} color={C.info} />
                 </View>

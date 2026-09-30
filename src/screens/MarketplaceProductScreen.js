@@ -290,13 +290,17 @@ export default function MarketplaceProductScreen({ navigation, route }) {
         <LinearGradient colors={[C.primary, C.primaryDark]} style={[styles.header, { paddingTop: insets.top + scale(12) }]}>
           <View style={styles.headerBlobA} pointerEvents="none" />
           <View style={styles.headerBlobB} pointerEvents="none" />
-          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-            <Icon name="arrow-back" size={scale(22)} color="#fff" />
+          <TouchableOpacity
+            onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+            style={styles.backBtnPlain}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Icon name="chevron-back" size={scale(20)} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Product Details</Text>
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
-            <Icon name="menu" size={scale(22)} color="#fff" />
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={[styles.menuBtn, { marginRight: scale(10) }]}>
+            <Icon name="menu" size={scale(18)} color="#fff" />
           </TouchableOpacity>
+          <Text style={[styles.headerTitle, { flex: 1 }]}>Product Details</Text>
         </LinearGradient>
         <View style={styles.emptyContainer}>
           <Icon name="cube-outline" size={scale(64)} color={C.muted} />
@@ -321,16 +325,20 @@ export default function MarketplaceProductScreen({ navigation, route }) {
       <LinearGradient colors={[C.primary, C.primaryDark]} style={[styles.header, { paddingTop: insets.top + scale(12) }]}>
         <View style={styles.headerBlobA} pointerEvents="none" />
         <View style={styles.headerBlobB} pointerEvents="none" />
-        <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-          <Icon name="arrow-back" size={scale(22)} color="#fff" />
+        <TouchableOpacity
+          onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+          style={styles.backBtnPlain}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Icon name="chevron-back" size={scale(20)} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Product Details</Text>
+        <TouchableOpacity onPress={() => setMenuVisible(true)} style={[styles.menuBtn, { marginRight: scale(10) }]}>
+          <Icon name="menu" size={scale(18)} color="#fff" />
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { flex: 1 }]}>Product Details</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <TouchableOpacity onPress={() => navigation.navigate('MarketplaceCart', { restaurantId })} style={styles.cartBtn}>
             <Icon name="cart-outline" size={scale(22)} color="#fff" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
-            <Icon name="menu" size={scale(22)} color="#fff" />
           </TouchableOpacity>
         </View>
       </LinearGradient>
@@ -655,7 +663,7 @@ export default function MarketplaceProductScreen({ navigation, route }) {
         }}
       />
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
-      <KniBottomNav navigation={navigation} />
+      <KniBottomNav navigation={navigation} active="request" />
     </SafeAreaView>
   );
 }
@@ -665,10 +673,18 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: scale(16),
     paddingBottom: scale(12),
     overflow: 'hidden',
+  },
+  backBtnPlain: { width: scale(26), height: scale(40), alignItems: 'center', justifyContent: 'center', marginRight: scale(4) },
+  menuBtn: {
+    width: scale(34),
+    height: scale(34),
+    borderRadius: scale(11),
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
   headerBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },

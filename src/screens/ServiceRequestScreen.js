@@ -1061,7 +1061,7 @@ export default function ServiceRequestScreen({ navigation, route }) {
           </Text>
           <TouchableOpacity
             style={st.errorBtn}
-            onPress={() => navigation.navigate('MyEquipment')}
+            onPress={() => navigation.navigate('Home', { screen: 'EquipmentTab' })}
           >
             <Text style={st.errorBtnText}>Go to My Equipment</Text>
           </TouchableOpacity>
@@ -1077,13 +1077,20 @@ export default function ServiceRequestScreen({ navigation, route }) {
       <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
         <View style={st.headerBlobA} pointerEvents="none" />
         <View style={st.headerBlobB} pointerEvents="none" />
-        <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.headerBackBtn}>
-          <Icon name="arrow-back" size={22} color="#fff" />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity
+            onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+            style={st.backBtnPlain}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Icon name="chevron-back" size={22} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={st.menuBtn}>
+            <Icon name="menu" size={18} color="#fff" />
+          </TouchableOpacity>
+        </View>
         <Text style={st.headerTitle}>Request Service</Text>
-        <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
-          <Icon name="menu" size={22} color="#fff" />
-        </TouchableOpacity>
+        <View style={{ width: scale(64) }} />
       </LinearGradient>
 
       {/* Progress Steps */}
@@ -1209,7 +1216,7 @@ export default function ServiceRequestScreen({ navigation, route }) {
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
       {/* Hidden while the keyboard is open so it doesn't sit on top of/behind
           the keyboard and overlap the focused input (e.g. Problem Description). */}
-      {keyboardHeight === 0 && <KniBottomNav navigation={navigation} />}
+      {keyboardHeight === 0 && <KniBottomNav navigation={navigation} active="equipment" />}
     </SafeAreaView>
   );
 }
@@ -1227,6 +1234,11 @@ const st = StyleSheet.create({
   headerBackBtn: {
     width: scale(40), height: scale(40), borderRadius: scale(14), backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center', justifyContent: 'center'
+  },
+  backBtnPlain: { width: scale(22), height: scale(32), alignItems: 'center', justifyContent: 'center', marginRight: scale(4) },
+  menuBtn: {
+    width: scale(34), height: scale(34), borderRadius: scale(12), backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center', justifyContent: 'center',
   },
   headerTitle: { fontSize: moderateScale(18), fontWeight: '800', color: '#fff' },
 

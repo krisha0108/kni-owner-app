@@ -333,13 +333,20 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
           <View style={styles.heroBlobA} pointerEvents="none" />
           <View style={styles.heroBlobB} pointerEvents="none" />
           <View style={styles.heroContent}>
-            <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-              <Icon name="arrow-back" size={24} color="#fff" />
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <TouchableOpacity
+                onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+                style={styles.backBtnPlain}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Icon name="chevron-back" size={24} color="#fff" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
+                <Icon name="menu" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
             <Text style={styles.heroTitle}>AMC Request</Text>
-            <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
-              <Icon name="menu" size={24} color="#fff" />
-            </TouchableOpacity>
+            <View style={{ width: scale(64) }} />
           </View>
         </LinearGradient>
         <ScrollView showsVerticalScrollIndicator={false}>
@@ -369,7 +376,7 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
           <Icon name="alert-circle-outline" size={48} color={C.muted} />
           <Text style={styles.emptyTitle}>Request Not Found</Text>
         </View>
-        <KniBottomNav navigation={navigation} />
+        <KniBottomNav navigation={navigation} active="equipment" />
       </SafeAreaView>
     );
   }
@@ -394,13 +401,20 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
         <View style={styles.heroBlobA} pointerEvents="none" />
         <View style={styles.heroBlobB} pointerEvents="none" />
         <View style={styles.heroContent}>
-          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-            <Icon name="arrow-back" size={24} color="#fff" />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TouchableOpacity
+              onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+              style={styles.backBtnPlain}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Icon name="chevron-back" size={24} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
+              <Icon name="menu" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
           <Text style={styles.heroTitle}>AMC Request</Text>
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
-            <Icon name="menu" size={24} color="#fff" />
-          </TouchableOpacity>
+          <View style={{ width: scale(64) }} />
         </View>
         <View style={styles.heroStatusRow}>
           <View style={[styles.heroBadge, { backgroundColor: statusConfig.bg }]}>
@@ -886,7 +900,7 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
       />
 
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
-      <KniBottomNav navigation={navigation} />
+      <KniBottomNav navigation={navigation} active="equipment" />
     </SafeAreaView>
   );
 }
@@ -906,6 +920,7 @@ const styles = StyleSheet.create({
     width: scale(40), height: scale(40), borderRadius: scale(14),
     backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center',
   },
+  backBtnPlain: { width: scale(22), height: scale(32), alignItems: 'center', justifyContent: 'center', marginRight: scale(4) },
   heroTitle: { fontSize: moderateScale(18), fontWeight: '700', color: '#fff' },
   menuBtn: {
     width: scale(40), height: scale(40), borderRadius: scale(14),

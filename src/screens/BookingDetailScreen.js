@@ -350,13 +350,17 @@ export default function BookingDetailScreen({ navigation, route }) {
         <StatusBar barStyle="light-content" backgroundColor={C.primary} />
         <LinearGradient colors={[C.primary, C.primaryDark]} style={[styles.heroHeader, { paddingTop: insets.top }]}>
           <View style={styles.heroContent}>
-            <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-              <Icon name="arrow-back" size={18} color="#fff" />
+            <TouchableOpacity
+              onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+              style={styles.backBtnPlain}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Icon name="chevron-back" size={18} color="#fff" />
             </TouchableOpacity>
-            <Text style={styles.heroTitle}>Booking Details</Text>
-            <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
-              <Icon name="menu" size={18} color="#fff" />
+            <TouchableOpacity onPress={() => setMenuVisible(true)} style={[styles.menuBtn, { marginRight: scale(10) }]}>
+              <Icon name="menu" size={16} color="#fff" />
             </TouchableOpacity>
+            <Text style={[styles.heroTitle, { flex: 1 }]}>Booking Details</Text>
           </View>
         </LinearGradient>
         <ScrollView showsVerticalScrollIndicator={false}>
@@ -374,13 +378,17 @@ export default function BookingDetailScreen({ navigation, route }) {
         <StatusBar barStyle="light-content" backgroundColor={C.primary} />
         <LinearGradient colors={[C.primary, C.primaryDark]} style={[styles.heroHeader, { paddingTop: insets.top }]}>
           <View style={styles.heroContent}>
-            <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-              <Icon name="arrow-back" size={18} color="#fff" />
+            <TouchableOpacity
+              onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+              style={styles.backBtnPlain}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Icon name="chevron-back" size={18} color="#fff" />
             </TouchableOpacity>
-            <Text style={styles.heroTitle}>Booking Details</Text>
-            <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
-              <Icon name="menu" size={18} color="#fff" />
+            <TouchableOpacity onPress={() => setMenuVisible(true)} style={[styles.menuBtn, { marginRight: scale(10) }]}>
+              <Icon name="menu" size={16} color="#fff" />
             </TouchableOpacity>
+            <Text style={[styles.heroTitle, { flex: 1 }]}>Booking Details</Text>
           </View>
         </LinearGradient>
         <View style={styles.emptyContainer}>
@@ -390,7 +398,7 @@ export default function BookingDetailScreen({ navigation, route }) {
           <Text style={styles.emptyTitle}>Booking Not Found</Text>
         </View>
         <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
-        <KniBottomNav navigation={navigation} />
+        <KniBottomNav navigation={navigation} active="home" />
       </SafeAreaView>
     );
   }
@@ -442,13 +450,17 @@ export default function BookingDetailScreen({ navigation, route }) {
         style={[styles.heroHeader, { paddingTop: insets.top }]}
       >
         <View style={styles.heroContent}>
-          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-            <Icon name="arrow-back" size={18} color="#fff" />
+          <TouchableOpacity
+            onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+            style={styles.backBtnPlain}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Icon name="chevron-back" size={18} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.heroTitle}>#{booking.bookingNumber ?? booking.id.slice(0, 8).toUpperCase()}</Text>
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
-            <Icon name="menu" size={18} color="#fff" />
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={[styles.menuBtn, { marginRight: scale(10) }]}>
+            <Icon name="menu" size={16} color="#fff" />
           </TouchableOpacity>
+          <Text style={[styles.heroTitle, { flex: 1 }]}>#{booking.bookingNumber ?? booking.id.slice(0, 8).toUpperCase()}</Text>
         </View>
       </LinearGradient>
 
@@ -926,7 +938,7 @@ export default function BookingDetailScreen({ navigation, route }) {
       </ScrollView>
 
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
-      <KniBottomNav navigation={navigation} />
+      <KniBottomNav navigation={navigation} active="home" />
 
       {/* Rate Engineer Modal */}
       <Modal visible={rateModalVisible} animationType="slide" transparent onRequestClose={() => setRateModalVisible(false)}>
@@ -993,7 +1005,6 @@ const styles = StyleSheet.create({
   heroContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: scale(16),
     paddingTop: scale(6),
     paddingBottom: scale(8),
@@ -1006,6 +1017,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  backBtnPlain: { width: scale(22), height: scale(32), alignItems: 'center', justifyContent: 'center', marginRight: scale(4) },
   heroTitle: {
     fontSize: moderateScale(14.5),
     fontWeight: '700',

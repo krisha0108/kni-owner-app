@@ -291,8 +291,15 @@ export default function CategoryRequestScreen({ navigation }) {
       <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
         <View style={st.headerBlobA} pointerEvents="none" />
         <View style={st.headerBlobB} pointerEvents="none" />
-        <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
-          <Icon name="arrow-back" size={scale(22)} color="#fff" />
+        <TouchableOpacity
+          onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+          style={st.backBtnPlain}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Icon name="chevron-back" size={scale(20)} color="#fff" />
+        </TouchableOpacity>
+        <TouchableOpacity style={st.menuBtn} onPress={() => setMenuVisible(true)}>
+          <Icon name="menu" size={scale(18)} color="#fff" />
         </TouchableOpacity>
         <View style={st.headerCenter}>
           <Text style={st.headerTitle}>Category Requests</Text>
@@ -304,9 +311,6 @@ export default function CategoryRequestScreen({ navigation }) {
           <Text style={st.newReqBtnText}>New</Text>
         </TouchableOpacity>
         )}
-        <TouchableOpacity style={st.menuBtn} onPress={() => setMenuVisible(true)}>
-          <Icon name="menu" size={scale(20)} color="#fff" />
-        </TouchableOpacity>
       </LinearGradient>
 
       <ScrollView
@@ -473,7 +477,7 @@ export default function CategoryRequestScreen({ navigation }) {
       </Modal>
 
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
-      <KniBottomNav navigation={navigation} />
+      <KniBottomNav navigation={navigation} active="home" />
     </SafeAreaView>
   );
 }
@@ -499,6 +503,7 @@ const st = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  backBtnPlain: { width: scale(26), height: scale(40), alignItems: 'center', justifyContent: 'center', marginRight: scale(4) },
   headerCenter: { flex: 1, marginLeft: scale(12) },
   headerTitle: { fontSize: moderateScale(18), fontWeight: '700', color: '#fff' },
   newReqBtn: {

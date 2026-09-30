@@ -9,7 +9,6 @@ import AppAlert from '../utils/AppAlert';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
-import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 import SearchOverlay from '../components/SearchOverlay';
 import { RestaurantSelectorCard, RestaurantSelectorCompact } from '../components/RestaurantSelector';
@@ -18,7 +17,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { api, IMAGE_BASE_URL } from '../api/client';
 
-import { exportAnalyticsPDF, openPDF } from '../services/analyticsService';
 import { scale, moderateScale } from '../utils/responsive';
 import { usePermissions } from '../utils/usePermissions';
 import { isStale, markFetched } from '../utils/focusCache';
@@ -88,7 +86,6 @@ export default function HomeScreen({ navigation }) {
   const [guides, setGuides] = useState([]);
   const [feed, setFeed] = useState([]);
   const [cartCount, setCartCount] = useState(0);
-  const [marketplaceCartCount, setMarketplaceCartCount] = useState(0);
   const [notifCount, setNotifCount] = useState(0);
   const [menuVisible, setMenuVisible] = useState(false);
   const [searchVisible, setSearchVisible] = useState(false);
@@ -97,7 +94,6 @@ export default function HomeScreen({ navigation }) {
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState(30);
   const [analyticsData, setAnalyticsData] = useState(null);
-  const [exporting, setExporting] = useState(false);
   const [amcUpcomingCount, setAmcUpcomingCount] = useState(0);
 
   const isFirstLoad = useRef(true);
@@ -289,16 +285,6 @@ export default function HomeScreen({ navigation }) {
     }
   }, [restaurantId, can]);
 
-  /* ═══════════ MARKETPLACE CART COUNT ═══════════ */
-  const loadMarketplaceCartCount = useCallback(async () => {
-    try {
-      if (!restaurantId) { setMarketplaceCartCount(0); return; }
-      const cartService = require('../services/marketplaceCartService').default;
-      const items = await cartService.getCart(restaurantId);
-      setMarketplaceCartCount(items.length || 0);
-    } catch { setMarketplaceCartCount(0); }
-  }, [restaurantId]);
-
   const fetchNotifCount = useCallback(async () => {
     try {
       const response = await api.get('/notifications/unread-count');
@@ -333,15 +319,12 @@ export default function HomeScreen({ navigation }) {
       const notifKey = 'Home-notifCount';
       if (isStale(notifKey)) { fetchNotifCount(); markFetched(notifKey); }
 
-      const cartKey = `Home-marketplaceCart-${restaurantId}`;
-      if (isStale(cartKey)) { loadMarketplaceCartCount(); markFetched(cartKey); }
-
       const analyticsKey = `Home-analytics-${restaurantId}-${selectedPeriod}`;
       if (isStale(analyticsKey)) { loadAnalytics(); markFetched(analyticsKey); }
 
       const amcKey = `Home-amcUpcoming-${restaurantId}`;
       if (isStale(amcKey)) { fetchAmcUpcoming(); markFetched(amcKey); }
-    }, [loadRestaurants, fetchOffers, fetchFeed, fetchSponsored, fetchGuides, calculateCartCount, loadMarketplaceCartCount, restaurantId, loadAnalytics, fetchNotifCount, selectedPeriod, fetchAmcUpcoming])
+    }, [loadRestaurants, fetchOffers, fetchFeed, fetchSponsored, fetchGuides, calculateCartCount, restaurantId, loadAnalytics, fetchNotifCount, selectedPeriod, fetchAmcUpcoming])
   );
 
   // Reload analytics when restaurant or period changes
@@ -401,38 +384,17 @@ export default function HomeScreen({ navigation }) {
         loadRestaurants({ force: true }),
         loadAnalytics(),
         calculateCartCount(),
-        loadMarketplaceCartCount(),
         fetchAmcUpcoming(),
       ]);
       markFetched('Home-content');
       markFetched('Home-notifCount');
       if (restaurantId) {
-        markFetched(`Home-marketplaceCart-${restaurantId}`);
         markFetched(`Home-analytics-${restaurantId}-${selectedPeriod}`);
         markFetched(`Home-amcUpcoming-${restaurantId}`);
       }
       setTimeout(() => setRefreshing(false), 300);
     })();
-  }, [fetchOffers, fetchFeed, fetchSponsored, fetchGuides, loadRestaurants, loadAnalytics, calculateCartCount, loadMarketplaceCartCount, restaurantId, selectedPeriod, fetchAmcUpcoming]);
-
-  const handleExportPDF = async () => {
-    if (!restaurantId) {
-      AppAlert.alert('Error', 'Please select a restaurant first');
-      return;
-    }
-    setExporting(true);
-    try {
-      const filePath = await exportAnalyticsPDF(restaurantId);
-      AppAlert.alert('Export Successful', 'Analytics report has been exported', [
-        { text: 'Open', onPress: () => openPDF(filePath) },
-        { text: 'OK', style: 'cancel' }
-      ]);
-    } catch (error) {
-      AppAlert.alert('Export Failed', error.message || 'Could not export analytics');
-    } finally {
-      setExporting(false);
-    }
-  };
+  }, [fetchOffers, fetchFeed, fetchSponsored, fetchGuides, loadRestaurants, loadAnalytics, calculateCartCount, restaurantId, selectedPeriod, fetchAmcUpcoming]);
 
   const goGuide = () => open(guides?.[0]?.link);
 
@@ -458,10 +420,11 @@ export default function HomeScreen({ navigation }) {
         <View style={st.headerBlobB} pointerEvents="none" />
 
         <View style={st.headerRow}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: scale(8) }}>
-            <View style={st.headerIconBadge}>
-              <Icon name="restaurant" size={scale(14)} color="#fff" />
-            </View>
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={st.headerBtnMenu}>
+            <Icon name="menu" size={scale(17)} color={C.primary} />
+          </TouchableOpacity>
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginLeft: scale(8) }}>
             <View style={{ flex: 1 }}>
               <Text style={st.headerGreet}>{greeting}</Text>
               <Text style={st.headerRestName} numberOfLines={1}>
@@ -470,39 +433,20 @@ export default function HomeScreen({ navigation }) {
             </View>
           </View>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(7) }}>
-            <View style={st.headerIconPill}>
-              <TouchableOpacity
-                onPress={() => setSearchVisible((v) => !v)}
-                style={[st.headerBtnSm, searchVisible && st.headerBtnSmActive]}
-              >
-                <Icon name="search" size={scale(15)} color={searchVisible ? C.primary : '#fff'} />
-              </TouchableOpacity>
-              {can('marketplace:create') && (
-              <TouchableOpacity
-                onPress={() => restaurantId && navigation.navigate('MarketplaceCart', { restaurantId })}
-                disabled={!restaurantId}
-                style={st.headerBtnSm}
-              >
-                <Icon name="cart-outline" size={scale(15)} color={restaurantId ? '#fff' : 'rgba(255,255,255,0.35)'} />
-                {marketplaceCartCount > 0 && (
-                  <View style={st.headerCartBadge}>
-                    <Text style={st.headerCartBadgeText}>{marketplaceCartCount}</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
+          <View style={st.headerIconPill}>
+            <TouchableOpacity
+              onPress={() => setSearchVisible((v) => !v)}
+              style={[st.headerBtnSm, searchVisible && st.headerBtnSmActive]}
+            >
+              <Icon name="search" size={scale(15)} color={searchVisible ? C.primary : '#fff'} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation.navigate?.('Notifications')} style={st.headerBtnSm}>
+              <Icon name="notifications-outline" size={scale(15)} color="#fff" />
+              {notifCount > 0 && (
+                <View style={{position:'absolute',top:-4,right:-4,backgroundColor:'#FF3B30',borderRadius:10,minWidth:18,height:18,justifyContent:'center',alignItems:'center',paddingHorizontal:4}}>
+                  <Text style={{color:'#fff',fontSize:10,fontWeight:'700'}}>{notifCount > 99 ? '99+' : notifCount}</Text>
+                </View>
               )}
-              <TouchableOpacity onPress={() => navigation.navigate?.('Notifications')} style={st.headerBtnSm}>
-                <Icon name="notifications-outline" size={scale(15)} color="#fff" />
-                {notifCount > 0 && (
-                  <View style={{position:'absolute',top:-4,right:-4,backgroundColor:'#FF3B30',borderRadius:10,minWidth:18,height:18,justifyContent:'center',alignItems:'center',paddingHorizontal:4}}>
-                    <Text style={{color:'#fff',fontSize:10,fontWeight:'700'}}>{notifCount > 99 ? '99+' : notifCount}</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            </View>
-            <TouchableOpacity onPress={() => setMenuVisible(true)} style={st.headerBtnMenu}>
-              <Icon name="menu" size={scale(17)} color={C.primary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -750,32 +694,43 @@ export default function HomeScreen({ navigation }) {
                     <View style={st.moneyDivider} />
 
                     <View style={st.moneyStatsRow}>
-                      <View style={st.moneyStat}>
+                      <TouchableOpacity
+                        style={st.moneyStat}
+                        activeOpacity={0.7}
+                        onPress={() => navigation.navigate('MyBookings')}
+                      >
                         <View style={st.moneyStatIcon}>
                           <Icon name="calendar-outline" size={scale(12)} color={C.primary} />
                         </View>
                         <Text style={st.moneyStatValue}>{summary.bookings?.count || 0}</Text>
                         <Text style={st.moneyStatLabel}>Booking{summary.bookings?.count === 1 ? '' : 's'}</Text>
-                      </View>
-                      <View style={st.moneyStat}>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={st.moneyStat}
+                        activeOpacity={0.7}
+                        onPress={() => navigation.navigate('Expenses')}
+                      >
                         <View style={st.moneyStatIcon}>
                           <Icon name="cash-outline" size={scale(12)} color={C.primary} />
                         </View>
                         <Text style={st.moneyStatValue}>₹{(summary.expenses?.total || 0).toLocaleString()}</Text>
                         <Text style={st.moneyStatLabel}>Expenses</Text>
-                      </View>
-                      <View style={st.moneyStat}>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={st.moneyStat}
+                        activeOpacity={0.7}
+                        onPress={() => navigation.navigate('Home', { screen: 'EquipmentTab' })}
+                      >
                         <View style={st.moneyStatIcon}>
                           <Icon name="hardware-chip-outline" size={scale(12)} color={C.primary} />
                         </View>
                         <Text style={st.moneyStatValue}>{summary.equipment?.count || 0}</Text>
                         <Text style={st.moneyStatLabel}>Equipment</Text>
-                      </View>
+                      </TouchableOpacity>
                     </View>
 
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(8), marginTop: scale(14) }}>
                     <TouchableOpacity
-                      style={[st.moneyViewAnalyticsBtn, { flex: 1, marginTop: 0 }]}
+                      style={st.moneyViewAnalyticsBtn}
                       onPress={() => navigation.navigate('Analytics')}
                       activeOpacity={0.7}
                     >
@@ -788,19 +743,6 @@ export default function HomeScreen({ navigation }) {
                         style={{ marginLeft: 'auto' }}
                       />
                     </TouchableOpacity>
-                    <TouchableOpacity
-                      style={st.exportIconBtn}
-                      onPress={handleExportPDF}
-                      disabled={exporting || !restaurantId}
-                      activeOpacity={0.7}
-                    >
-                      {exporting ? (
-                        <ActivityIndicator size="small" color={C.ink} />
-                      ) : (
-                        <Icon name="download-outline" size={scale(16)} color={restaurantId ? C.ink : C.muted} />
-                      )}
-                    </TouchableOpacity>
-                    </View>
                   </>
                 )}
               </View>
@@ -828,7 +770,12 @@ export default function HomeScreen({ navigation }) {
                       </TouchableOpacity>
                     </View>
                     {recent.bookings.slice(0, 3).map(b => (
-                      <View key={b.id} style={st.recentItem}>
+                      <TouchableOpacity
+                        key={b.id}
+                        style={st.recentItem}
+                        activeOpacity={0.7}
+                        onPress={() => navigation.navigate('BookingDetail', { bookingId: b.id })}
+                      >
                         <LinearGradient colors={['#FEF2F2', '#FFE4E6']} style={st.recentIconBg}>
                           <Icon name="calendar-outline" size={scale(16)} color={C.primary} />
                         </LinearGradient>
@@ -846,7 +793,7 @@ export default function HomeScreen({ navigation }) {
                             </Text>
                           </View>
                         </View>
-                      </View>
+                      </TouchableOpacity>
                     ))}
                   </View>
                 )}
@@ -860,7 +807,12 @@ export default function HomeScreen({ navigation }) {
                       </TouchableOpacity>
                     </View>
                     {recent.expenses.slice(0, 3).map(e => (
-                      <View key={e.id} style={st.recentItem}>
+                      <TouchableOpacity
+                        key={e.id}
+                        style={st.recentItem}
+                        activeOpacity={0.7}
+                        onPress={() => navigation.navigate('AddExpense', { restaurantId, expense: e })}
+                      >
                         <LinearGradient colors={['#FFFBEB', '#FEF3C7']} style={st.recentIconBg}>
                           <Icon name="cash-outline" size={scale(16)} color={C.warn} />
                         </LinearGradient>
@@ -871,7 +823,7 @@ export default function HomeScreen({ navigation }) {
                           </Text>
                         </View>
                         <Text style={st.recentAmt}>₹{e.amount}</Text>
-                      </View>
+                      </TouchableOpacity>
                     ))}
                   </View>
                 )}
@@ -976,7 +928,6 @@ export default function HomeScreen({ navigation }) {
         )}
       </ScrollView>
 
-      <KniBottomNav navigation={navigation} active="home" cartCount={cartCount} notifCount={notifCount} />
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
       <SearchOverlay
         visible={searchVisible}
@@ -1133,14 +1084,6 @@ const st = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  headerIconBadge: {
-    width: scale(30),
-    height: scale(30),
-    borderRadius: scale(10),
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   headerIconPill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1166,23 +1109,6 @@ const st = StyleSheet.create({
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  headerCartBadge: {
-    position: 'absolute',
-    top: scale(-4),
-    right: scale(-4),
-    backgroundColor: C.primary,
-    borderRadius: scale(10),
-    minWidth: scale(18),
-    height: scale(18),
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: scale(4),
-  },
-  headerCartBadgeText: {
-    fontSize: moderateScale(10),
-    fontWeight: '700',
-    color: '#fff',
   },
   headerGreet: {
     color: 'rgba(255,255,255,0.8)',
@@ -1544,15 +1470,6 @@ const st = StyleSheet.create({
     paddingVertical: scale(11),
     paddingHorizontal: scale(12),
   },
-  exportIconBtn: {
-    width: scale(42),
-    height: scale(42),
-    borderRadius: scale(12),
-    backgroundColor: '#E7ECFB',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
   /* ── Feed Pills ── */
   pill: {
     flexDirection: 'row',

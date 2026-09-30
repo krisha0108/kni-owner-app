@@ -692,11 +692,19 @@ export default function MarketplaceScreen({ navigation }) {
         <View style={st.heroBlobA} pointerEvents="none" />
         <View style={st.heroBlobB} pointerEvents="none" />
         <View style={st.heroContent}>
-          <View style={st.heroTextContainer}>
-            <Text style={st.heroTitle}>Marketplace</Text>
-            <Text style={st.heroSubtitle}>
-              {currentRestaurant?.name || 'Select Restaurant'}
-            </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(8) }}>
+            <TouchableOpacity
+              style={st.heroIconBtn}
+              onPress={() => setMenuVisible(true)}
+            >
+              <Icon name="menu-outline" size={scale(17)} color="#fff" />
+            </TouchableOpacity>
+            <View style={st.heroTextContainer}>
+              <Text style={st.heroTitle}>Marketplace</Text>
+              <Text style={st.heroSubtitle}>
+                {currentRestaurant?.name || 'Select Restaurant'}
+              </Text>
+            </View>
           </View>
           <View style={st.heroActions}>
             <TouchableOpacity
@@ -718,12 +726,6 @@ export default function MarketplaceScreen({ navigation }) {
               onPress={() => navigation.navigate('MarketplaceOrders')}
             >
               <Icon name="receipt-outline" size={scale(17)} color="#fff" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={st.heroIconBtn}
-              onPress={() => setMenuVisible(true)}
-            >
-              <Icon name="menu-outline" size={scale(17)} color="#fff" />
             </TouchableOpacity>
           </View>
         </View>

@@ -364,13 +364,19 @@ export default function CartScreen({ navigation }) {
         <LinearGradient colors={[C.primary, C.primaryDark]} style={[styles.header, { paddingTop: insets.top + scale(12) }]}>
           <View style={styles.headerBlobA} pointerEvents="none" />
           <View style={styles.headerBlobB} pointerEvents="none" />
-          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-            <Icon name="arrow-back" size={scale(24)} color="#fff" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Cart</Text>
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
-            <Icon name="menu" size={scale(22)} color="#fff" />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TouchableOpacity
+              onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+              style={styles.backBtnPlain}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Icon name="chevron-back" size={scale(20)} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
+              <Icon name="menu" size={scale(18)} color="#fff" />
+            </TouchableOpacity>
+          </View>
+          <Text style={[styles.headerTitle, { flex: 1, marginLeft: scale(10) }]}>Cart</Text>
         </LinearGradient>
         <ScrollView showsVerticalScrollIndicator={false}>
           <SkeletonCart pulse={pulse} />
@@ -387,10 +393,17 @@ export default function CartScreen({ navigation }) {
       <LinearGradient colors={[C.primary, C.primaryDark]} style={[styles.header, { paddingTop: insets.top + scale(12) }]}>
         <View style={styles.headerBlobA} pointerEvents="none" />
         <View style={styles.headerBlobB} pointerEvents="none" />
-        <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-          <Icon name="arrow-back" size={scale(24)} color="#fff" />
+        <TouchableOpacity
+          onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+          style={styles.backBtnPlain}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Icon name="chevron-back" size={scale(20)} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Cart ({totalItems})</Text>
+        <TouchableOpacity onPress={() => setMenuVisible(true)} style={[styles.menuBtn, { marginRight: scale(10) }]}>
+          <Icon name="menu" size={scale(18)} color="#fff" />
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { flex: 1 }]}>Cart ({totalItems})</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <TouchableOpacity
             onPress={() => {
@@ -418,8 +431,8 @@ export default function CartScreen({ navigation }) {
           >
             <Icon name="trash-outline" size={scale(20)} color={cart.length > 0 ? C.danger : C.muted} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={{ padding: scale(8) }}>
-            <Icon name="menu" size={scale(22)} color="#fff" />
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
+            <Icon name="menu" size={scale(18)} color="#fff" />
           </TouchableOpacity>
         </View>
       </LinearGradient>
@@ -463,7 +476,7 @@ export default function CartScreen({ navigation }) {
         </View>
       )}
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
-      <KniBottomNav navigation={navigation} />
+      <KniBottomNav navigation={navigation} active="request" />
     </SafeAreaView>
   );
 }
@@ -476,7 +489,6 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: scale(16),
     paddingBottom: scale(12),
     overflow: 'hidden',
@@ -487,6 +499,15 @@ const styles = StyleSheet.create({
     width: scale(40),
     height: scale(40),
     borderRadius: scale(14),
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backBtnPlain: { width: scale(26), height: scale(40), alignItems: 'center', justifyContent: 'center', marginRight: scale(4) },
+  menuBtn: {
+    width: scale(34),
+    height: scale(34),
+    borderRadius: scale(11),
     backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',

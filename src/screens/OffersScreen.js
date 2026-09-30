@@ -155,13 +155,17 @@ export default function OffersScreen({ navigation }) {
           <View style={styles.heroBlobA} pointerEvents="none" />
           <View style={styles.heroBlobB} pointerEvents="none" />
           <View style={[styles.heroContent, { paddingTop: insets.top + scale(8) }]}>
-            <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-              <Icon name="arrow-back" size={24} color="#fff" />
+            <TouchableOpacity
+              onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+              style={styles.backBtnPlain}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Icon name="chevron-back" size={22} color="#fff" />
             </TouchableOpacity>
-            <Text style={styles.heroTitle}>Offers</Text>
-            <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
-              <Icon name="menu" size={24} color="#fff" />
+            <TouchableOpacity onPress={() => setMenuVisible(true)} style={[styles.menuBtn, { marginRight: scale(10) }]}>
+              <Icon name="menu" size={20} color="#fff" />
             </TouchableOpacity>
+            <Text style={[styles.heroTitle, { flex: 1 }]}>Offers</Text>
           </View>
           <Text style={styles.heroSubtitle}>Discounts on service &amp; parts bookings — best one applies automatically</Text>
         </LinearGradient>
@@ -179,13 +183,17 @@ export default function OffersScreen({ navigation }) {
         <View style={styles.heroBlobA} pointerEvents="none" />
         <View style={styles.heroBlobB} pointerEvents="none" />
         <View style={[styles.heroContent, { paddingTop: insets.top + scale(8) }]}>
-          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-            <Icon name="arrow-back" size={24} color="#fff" />
+          <TouchableOpacity
+            onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+            style={styles.backBtnPlain}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Icon name="chevron-back" size={22} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.heroTitle}>Offers</Text>
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
-            <Icon name="menu" size={24} color="#fff" />
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={[styles.menuBtn, { marginRight: scale(10) }]}>
+            <Icon name="menu" size={20} color="#fff" />
           </TouchableOpacity>
+          <Text style={[styles.heroTitle, { flex: 1 }]}>Offers</Text>
         </View>
         <Text style={styles.heroSubtitle}>Discounts on service &amp; parts bookings — best one applies automatically</Text>
       </LinearGradient>
@@ -209,7 +217,7 @@ export default function OffersScreen({ navigation }) {
       />
 
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
-      <KniBottomNav navigation={navigation} />
+      <KniBottomNav navigation={navigation} active="home" />
     </SafeAreaView>
   );
 }
@@ -221,13 +229,14 @@ const styles = StyleSheet.create({
   heroBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
   heroBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
   heroContent: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: scale(16), paddingTop: scale(8), paddingBottom: scale(8),
   },
   backBtn: {
     width: scale(40), height: scale(40), borderRadius: scale(14),
     backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center',
   },
+  backBtnPlain: { width: scale(26), height: scale(40), alignItems: 'center', justifyContent: 'center', marginRight: scale(4) },
   heroTitle: { fontSize: moderateScale(20), fontWeight: '700', color: '#fff' },
   menuBtn: {
     width: scale(40), height: scale(40), borderRadius: scale(14),

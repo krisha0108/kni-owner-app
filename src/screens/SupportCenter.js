@@ -14,6 +14,7 @@ import { scale, moderateScale } from '../utils/responsive';
 import { usePermissions } from '../utils/usePermissions';
 import { isStale, markFetched } from '../utils/focusCache';
 import AppAlert from '../utils/AppAlert';
+import NavigationMenu from '../components/NavigationMenu';
 const { width: W, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const C = {
@@ -127,6 +128,7 @@ export default function SupportCenter({ navigation }) {
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   const pulse = useRef(new Animated.Value(0.4)).current;
 
@@ -434,8 +436,15 @@ export default function SupportCenter({ navigation }) {
         <LinearGradient colors={[C.primary, C.primaryDark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[st.header, { paddingTop: insets.top + scale(10) }]}>
           <View style={st.headerBlobA} pointerEvents="none" />
           <View style={st.headerBlobB} pointerEvents="none" />
-          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
-            <Icon name="arrow-back" size={scale(18)} color="#fff" />
+          <TouchableOpacity
+            onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+            style={st.backBtnPlain}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Icon name="chevron-back" size={scale(20)} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity style={st.backBtn} onPress={() => setMenuVisible(true)}>
+            <Icon name="menu" size={scale(16)} color="#fff" />
           </TouchableOpacity>
           <View style={st.headerCenter}>
             <Text style={st.headerTitle}>Support Center</Text>
@@ -447,6 +456,7 @@ export default function SupportCenter({ navigation }) {
         <ScrollView showsVerticalScrollIndicator={false}>
           <SkeletonTickets pulse={pulse} />
         </ScrollView>
+        <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
       </SafeAreaView>
     );
   }
@@ -461,8 +471,15 @@ export default function SupportCenter({ navigation }) {
       <LinearGradient colors={[C.primary, C.primaryDark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[st.header, { paddingTop: insets.top + scale(10) }]}>
         <View style={st.headerBlobA} pointerEvents="none" />
         <View style={st.headerBlobB} pointerEvents="none" />
-        <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
-          <Icon name="arrow-back" size={scale(18)} color="#fff" />
+        <TouchableOpacity
+          onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+          style={st.backBtnPlain}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Icon name="chevron-back" size={scale(20)} color="#fff" />
+        </TouchableOpacity>
+        <TouchableOpacity style={st.backBtn} onPress={() => setMenuVisible(true)}>
+          <Icon name="menu" size={scale(16)} color="#fff" />
         </TouchableOpacity>
         <View style={st.headerCenter}>
           <Text style={st.headerTitle}>Support Center</Text>
@@ -601,7 +618,7 @@ export default function SupportCenter({ navigation }) {
 
       {/* ─── FAB (hide when empty state shows its own button) ─── */}
       {filteredTickets.length > 0 && can('support:create') && (
-        <TouchableOpacity style={st.fabWrap} activeOpacity={0.85} onPress={() => navigation.navigate('CreateSupportTicket', { restaurantId: currentRestaurant?.id })}>
+        <TouchableOpacity style={[st.fabWrap, { bottom: insets.bottom + scale(20) }]} activeOpacity={0.85} onPress={() => navigation.navigate('CreateSupportTicket', { restaurantId: currentRestaurant?.id })}>
           <LinearGradient colors={[C.primary, C.primaryDark]} style={st.fab}>
             <Icon name="add" size={scale(28)} color="#fff" />
           </LinearGradient>
@@ -654,6 +671,7 @@ export default function SupportCenter({ navigation }) {
           </View>
         </View>
       </Modal>
+      <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
     </SafeAreaView>
   );
 }
@@ -668,7 +686,6 @@ const st = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: scale(16),
     paddingBottom: scale(16),
     overflow: 'hidden',
@@ -683,10 +700,14 @@ const st = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  backBtnPlain: { width: scale(20), height: scale(30), alignItems: 'center', justifyContent: 'center', marginRight: scale(4) },
   headerCenter: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: scale(7),
+    marginLeft: scale(8),
+    marginRight: scale(8),
   },
   headerTitle: {
     fontSize: moderateScale(18),
@@ -1138,7 +1159,6 @@ const st = StyleSheet.create({
   // ─── FAB ───
   fabWrap: {
     position: 'absolute',
-    bottom: scale(90),
     right: scale(20),
     shadowColor: C.primary,
     shadowOffset: { width: 0, height: scale(4) },

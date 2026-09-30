@@ -386,11 +386,20 @@ export default function RestaurantStatusScreen({ navigation, route }) {
         >
           <View style={styles.headerBlobA} pointerEvents="none" />
           <View style={styles.headerBlobB} pointerEvents="none" />
-          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-            <Icon name="arrow-back" size={scale(22)} color="#fff" />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TouchableOpacity
+              onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+              style={styles.backBtnPlain}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Icon name="chevron-back" size={scale(20)} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.backBtn}>
+              <Icon name="menu" size={scale(18)} color="#fff" />
+            </TouchableOpacity>
+          </View>
           <Text style={styles.headerTitle}>Restaurant Status</Text>
-          <View style={{ width: scale(40) }} />
+          <View style={{ width: scale(64) }} />
         </LinearGradient>
         <ScrollView style={styles.skelScroll} showsVerticalScrollIndicator={false} contentContainerStyle={styles.skelScrollContent}>
           <SkeletonRestaurantStatus pulse={pulse} />
@@ -457,13 +466,20 @@ export default function RestaurantStatusScreen({ navigation, route }) {
       >
         <View style={styles.headerBlobA} pointerEvents="none" />
         <View style={styles.headerBlobB} pointerEvents="none" />
-        <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={styles.backBtn}>
-          <Icon name="arrow-back" size={scale(22)} color="#fff" />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity
+            onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+            style={styles.backBtnPlain}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Icon name="chevron-back" size={scale(20)} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.backBtn}>
+            <Icon name="menu" size={scale(18)} color="#fff" />
+          </TouchableOpacity>
+        </View>
         <Text style={styles.headerTitle}>Restaurant Status</Text>
-        <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.backBtn}>
-          <Icon name="menu" size={scale(22)} color="#fff" />
-        </TouchableOpacity>
+        <View style={{ width: scale(64) }} />
       </LinearGradient>
 
       <ScrollView
@@ -696,7 +712,7 @@ export default function RestaurantStatusScreen({ navigation, route }) {
       </ScrollView>
 
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
-      <KniBottomNav navigation={navigation} />
+      <KniBottomNav navigation={navigation} active="home" />
     </SafeAreaView>
   );
 }
@@ -727,6 +743,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  backBtnPlain: { width: scale(26), height: scale(38), alignItems: 'center', justifyContent: 'center', marginRight: scale(4) },
   headerTitle: {
     fontSize: moderateScale(18),
     fontWeight: '900',

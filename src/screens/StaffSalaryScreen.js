@@ -349,18 +349,21 @@ export default function StaffSalaryScreen({ navigation }) {
         <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
           <View style={st.headerBlobA} pointerEvents="none" />
           <View style={st.headerBlobB} pointerEvents="none" />
-          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
-            <Icon name="arrow-back" size={scale(22)} color="#fff" />
+          <TouchableOpacity
+            onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+            style={st.backBtnPlain}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Icon name="chevron-back" size={scale(20)} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
+            <Icon name="menu" size={scale(20)} color="#fff" />
           </TouchableOpacity>
           <View style={st.headerCenter}>
             <Text style={st.headerTitle}>Staff Salary</Text>
             <Text style={st.headerSubtitle}>Manage monthly payments</Text>
           </View>
-          <View style={st.headerActions}>
-            <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
-              <Icon name="menu" size={scale(20)} color="#fff" />
-            </TouchableOpacity>
-          </View>
+          <View style={st.headerActions} />
         </LinearGradient>
         <ScrollView showsVerticalScrollIndicator={false}>
           <SkeletonSalary pulse={pulse} />
@@ -482,8 +485,15 @@ export default function StaffSalaryScreen({ navigation }) {
       <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
         <View style={st.headerBlobA} pointerEvents="none" />
         <View style={st.headerBlobB} pointerEvents="none" />
-        <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
-          <Icon name="arrow-back" size={scale(22)} color="#fff" />
+        <TouchableOpacity
+          onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+          style={st.backBtnPlain}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Icon name="chevron-back" size={scale(20)} color="#fff" />
+        </TouchableOpacity>
+        <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
+          <Icon name="menu" size={scale(20)} color="#fff" />
         </TouchableOpacity>
         <View style={st.headerCenter}>
           <Text style={st.headerTitle}>Staff Salary</Text>
@@ -503,9 +513,6 @@ export default function StaffSalaryScreen({ navigation }) {
               )}
             </TouchableOpacity>
           )}
-          <TouchableOpacity style={st.headerIconBtn} onPress={() => setMenuVisible(true)}>
-            <Icon name="menu" size={scale(20)} color="#fff" />
-          </TouchableOpacity>
         </View>
       </LinearGradient>
 
@@ -776,7 +783,7 @@ export default function StaffSalaryScreen({ navigation }) {
       </Modal>
 
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
-      <KniBottomNav navigation={navigation} />
+      <KniBottomNav navigation={navigation} active="khatabook" />
     </SafeAreaView>
   );
 }
@@ -804,6 +811,7 @@ const st = StyleSheet.create({
     justifyContent: 'center',
   },
   headerCenter: { flex: 1, marginLeft: scale(12) },
+  backBtnPlain: { width: scale(22), height: scale(32), alignItems: 'center', justifyContent: 'center', marginRight: scale(4) },
   headerTitle: { fontSize: moderateScale(18), fontWeight: '700', color: '#fff' },
   headerSubtitle: { fontSize: moderateScale(12), color: 'rgba(255,255,255,0.8)', marginTop: scale(2) },
   headerActions: { flexDirection: 'row' },

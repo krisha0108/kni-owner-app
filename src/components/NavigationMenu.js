@@ -46,7 +46,7 @@ const MENU_SECTIONS = [
   {
     title: 'Equipment',
     items: [
-      { icon: 'hardware-chip-outline', label: 'My Equipment', screen: 'MyEquipment', permission: 'equipment:read' },
+      { icon: 'hardware-chip-outline', label: 'My Equipment', screen: 'Home', params: { screen: 'EquipmentTab' }, permission: 'equipment:read' },
     ],
   },
   {
@@ -54,7 +54,7 @@ const MENU_SECTIONS = [
     items: [
       { icon: 'cash-outline', label: 'My Expenses', screen: 'Expenses', permission: 'expenses:read' },
       { icon: 'pie-chart-outline', label: 'Spending Reports', screen: 'SpendingReports', permission: 'expenses:read' },
-      { icon: 'book-outline', label: 'Khatabook', screen: 'Khatabook', permission: 'vendor-ledger:read' },
+      { icon: 'book-outline', label: 'Khatabook', screen: 'Home', params: { screen: 'KhatabookTab' }, permission: 'vendor-ledger:read' },
     ],
   },
   {
@@ -151,9 +151,9 @@ export default function NavigationMenu({ visible, onClose, navigation }) {
   const labelSize = isTabletDevice ? moderateScale(14.5) : moderateScale(13.5);
   const sectionTitleSize = isTabletDevice ? moderateScale(11) : moderateScale(10);
 
-  const handleNavigate = (screen) => {
+  const handleNavigate = (screen, params) => {
     handleClose();
-    navigation.navigate(screen);
+    navigation.navigate(screen, params);
   };
 
   const translateX = progress.interpolate({
@@ -256,7 +256,7 @@ export default function NavigationMenu({ visible, onClose, navigation }) {
                     key={itemIndex}
                     activeOpacity={0.6}
                     style={[styles.menuItem, { paddingVertical: scale(8), paddingHorizontal: scale(8), borderRadius: scale(10) }]}
-                    onPress={() => handleNavigate(item.screen)}
+                    onPress={() => handleNavigate(item.screen, item.params)}
                   >
                     <Icon name={item.icon} size={iconSize} color={C.ink} style={{ width: iconSize }} />
                     <Text style={[styles.menuItemText, { fontSize: labelSize, marginLeft: scale(11) }]}>{item.label}</Text>
@@ -274,7 +274,7 @@ export default function NavigationMenu({ visible, onClose, navigation }) {
               scrolling list, so it's reachable without scrolling down. */}
           <TouchableOpacity
             activeOpacity={0.7}
-            onPress={() => handleNavigate('Profile')}
+            onPress={() => handleNavigate('Home', { screen: 'ProfileTab' })}
             style={[styles.footer, { paddingBottom: Math.max(scale(10), insets.bottom), paddingHorizontal: scale(14) }]}
           >
             <View style={[styles.avatar, { width: scale(32), height: scale(32), borderRadius: scale(16) }]}>

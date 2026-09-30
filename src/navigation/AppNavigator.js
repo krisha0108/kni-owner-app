@@ -24,7 +24,6 @@ import RestaurantEditScreen from '../screens/RestaurantEditScreen';
 import RestaurantStatusScreen from '../screens/RestaurantStatusScreen';
 
 // Equipment
-import MyEquipmentScreen from '../screens/MyEquipmentScreen';
 import EquipmentProfileScreen from '../screens/EquipmentProfileScreen';
 
 // Service Bookings
@@ -37,7 +36,6 @@ import OffersScreen from '../screens/OffersScreen';
 import ExpensesScreen from '../screens/ExpensesScreen';
 import AddExpenseScreen from '../screens/AddExpenseScreen';
 import ExpenseReportsScreen from '../screens/ExpenseReportsScreen';
-import KhatabookScreen from '../screens/KhatabookScreen';
 import CashbookScreen from '../screens/CashbookScreen';
 import VendorLedgerScreen from '../screens/VendorLedgerScreen';
 
@@ -58,7 +56,6 @@ import MarketplaceCartScreen from '../screens/MarketplaceCartScreen';
 import MarketplacePaymentScreen from '../screens/MarketplacePaymentScreen';
 
 // Profile & Support
-import ProfileScreen from '../screens/ProfileScreen';
 import EditOwnerProfile from '../screens/EditOwnerProfile';
 import SupportCenter from '../screens/SupportCenter';
 import SupportTicketDetailScreen from '../screens/SupportTicketDetailScreen';
@@ -91,7 +88,7 @@ import AMCContractDetailScreen from '../screens/AMCContractDetailScreen';
 // removed - unreachable dead code with stale/nonexistent API endpoints (audited 2026-07-10)
 import RestaurantView from '../screens/RestaurantView';
 import BookingDetailScreen from '../screens/BookingDetailScreen';
-import Home from '../screens/HomeScreen';
+import MainTabs from './MainTabs';
 import SpendingReportsScreen from '../screens/SpendingReportsScreen';
 
 const Stack = createNativeStackNavigator();
@@ -145,7 +142,7 @@ export default function AppNavigator() {
         <Stack.Screen name="TeamAccept" component={TeamAcceptScreen} />
 
         {/* Main App Screens */}
-        <Stack.Screen name="Home" component={Home} />
+        <Stack.Screen name="Home" component={MainTabs} />
         <Stack.Screen name="Analytics" component={AnalyticsScreen} />
         <Stack.Screen name="MyRestaurants" component={MyRestaurantsScreen} />
         <Stack.Screen name="RestaurantEdit" component={RestaurantEditScreen} />
@@ -156,7 +153,6 @@ export default function AppNavigator() {
         <Stack.Screen name="Expenses" component={ExpensesScreen} />
         <Stack.Screen name="AddExpense" component={AddExpenseScreen} />
         <Stack.Screen name="ExpenseReports" component={ExpenseReportsScreen} />
-        <Stack.Screen name="Khatabook" component={KhatabookScreen} />
         <Stack.Screen name="Cashbook" component={CashbookScreen} />
         <Stack.Screen name="VendorLedger" component={VendorLedgerScreen} />
         <Stack.Screen name="SpendingReports" component={SpendingReportsScreen} />
@@ -173,7 +169,6 @@ export default function AppNavigator() {
         <Stack.Screen name="Search" component={SearchScreen} />
 
         {/* Equipment & Service Screens */}
-        <Stack.Screen name="MyEquipment" component={MyEquipmentScreen} />
         <Stack.Screen name="EquipmentProfile" component={EquipmentProfileScreen} />
         <Stack.Screen name="ServiceRequest" component={ServiceRequestScreen} />
         <Stack.Screen name="SupportCenter" component={SupportCenter} />
@@ -181,7 +176,6 @@ export default function AppNavigator() {
         <Stack.Screen name="CreateSupportTicket" component={CreateSupportTicketScreen} />
 
         {/* Profile Screens */}
-        <Stack.Screen name="Profile" component={ProfileScreen} />
         <Stack.Screen name="EditOwnerProfile" component={EditOwnerProfile} />
         <Stack.Screen name="Notifications" component={Notifications} />
         <Stack.Screen name="NotificationDetail" component={NotificationDetail} />
