@@ -4,11 +4,13 @@ import { Modal, View, Text, ScrollView, TouchableOpacity, TextInput, Image, Styl
 import Icon from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { scale, moderateScale } from '../utils/responsive';
+import useKeyboardHeight from '../utils/useKeyboardHeight';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 function NewTicketModal({ visible, onClose, onSubmit, theme }) {
   const { C, R, W } = theme;
+  const keyboardHeight = useKeyboardHeight();
 
   // ✅ Hooks are always at the top, never conditional
   const [title, setTitle] = useState('');
@@ -54,7 +56,7 @@ useEffect(() => {
             <TouchableOpacity onPress={onClose} style={st.close}><Icon name="close" size={scale(18)} color={C.ink}/></TouchableOpacity>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false}>
+          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: scale(24) + keyboardHeight }}>
             <Field C={C} label="Title" icon="document-text-outline" placeholder="Write a short summary…" value={title} onChange={setTitle}/>
             <View style={{marginBottom: scale(12)}}>
               <Text style={[st.inputLbl, {color:C.muted}]}>Category</Text>

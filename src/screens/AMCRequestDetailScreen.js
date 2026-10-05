@@ -855,7 +855,7 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
             <Text style={styles.rejectModalTitle}>Reject Proposal</Text>
             <View style={{ width: scale(40) }} />
           </View>
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: scale(16) }} keyboardShouldPersistTaps="handled">
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: scale(16), paddingBottom: scale(16) + keyboardHeight }} keyboardShouldPersistTaps="handled">
             <Text style={{ fontSize: moderateScale(14), color: C.text, marginBottom: scale(12) }}>
               Please provide a reason for rejecting this proposal. This helps the admin understand your concerns.
             </Text>

@@ -23,6 +23,7 @@ import AppAlert from '../utils/AppAlert';
 
 import { scale, moderateScale } from '../utils/responsive';
 import { usePermissions } from '../utils/usePermissions';
+import useKeyboardHeight from '../utils/useKeyboardHeight';
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const CARD_WIDTH = (SCREEN_WIDTH - 48) / 2;
 
@@ -276,6 +277,7 @@ function EquipmentCard({ item, navigation, can, onEdit, onDelete }) {
 
 export default function MyEquipmentScreen({ navigation }) {
   const { height: winHeight } = useWindowDimensions();
+  const keyboardHeight = useKeyboardHeight();
   const insets = useSafeAreaInsets();
   const { can } = usePermissions();
   const gridColumns = 2;
@@ -737,7 +739,7 @@ export default function MyEquipmentScreen({ navigation }) {
       {/* Add/Edit Modal — centered popup, not a bottom sheet */}
       <Modal visible={modalVisible} animationType="fade" transparent>
         <View style={st.popupOverlay}>
-          <View style={[st.modalContainer, { maxHeight: winHeight * 0.82 }]}>
+          <View style={[st.modalContainer, { maxHeight: keyboardHeight > 0 ? winHeight - keyboardHeight - scale(24) : winHeight * 0.82 }]}>
             <LinearGradient colors={[C.gradient1, C.gradient2]} style={st.modalHeader}>
               <Text style={st.modalTitle}>{form.id ? 'Edit Equipment' : 'Add Equipment'}</Text>
               <TouchableOpacity onPress={() => setModalVisible(false)} style={st.modalCloseBtn}>

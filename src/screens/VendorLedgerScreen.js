@@ -23,6 +23,7 @@ import NavigationMenu from '../components/NavigationMenu';
 import { scale, moderateScale } from '../utils/responsive';
 import { usePermissions } from '../utils/usePermissions';
 import AppAlert from '../utils/AppAlert';
+import useKeyboardHeight from '../utils/useKeyboardHeight';
 // Keep original colors - not flashy
 const C = {
   primary: '#EF3A3A',
@@ -102,6 +103,7 @@ export default function VendorLedgerScreen({ navigation }) {
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
   const { can } = usePermissions();
+  const keyboardHeight = useKeyboardHeight();
 
   const { selectedRestaurantId, loading: restaurantsLoading, loadRestaurants, hasRestaurants } = useRestaurant();
 
@@ -581,7 +583,7 @@ export default function VendorLedgerScreen({ navigation }) {
             {/* Modal Body - Scrollable */}
             <ScrollView
               style={st.modalBody}
-              contentContainerStyle={st.modalBodyContent}
+              contentContainerStyle={[st.modalBodyContent, { paddingBottom: scale(30) }]}
               showsVerticalScrollIndicator={true}
               keyboardShouldPersistTaps="handled"
             >
@@ -754,26 +756,28 @@ export default function VendorLedgerScreen({ navigation }) {
                 </>
               )}
 
-                <View style={{ height: scale(60) }} />
+              {/* Footer -- part of the scrollable content (not a fixed
+                  sibling) so it scrolls above the keyboard the same way
+                  every other field does, instead of needing its own
+                  keyboard-tracking logic. */}
+              <View style={st.modalFooter}>
+                <TouchableOpacity style={st.cancelBtn} onPress={() => setEntryModal(false)}>
+                  <Text style={st.cancelBtnText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[st.saveBtn, saving && { opacity: 0.7 }]} onPress={saveEntry} disabled={saving}>
+                  {saving ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <>
+                      <Icon name="checkmark" size={scale(18)} color="#fff" />
+                      <Text style={st.saveBtnText}>Save</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+
               </View>
             </ScrollView>
-
-            {/* Modal Footer */}
-            <View style={st.modalFooter}>
-              <TouchableOpacity style={st.cancelBtn} onPress={() => setEntryModal(false)}>
-                <Text style={st.cancelBtnText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[st.saveBtn, saving && { opacity: 0.7 }]} onPress={saveEntry} disabled={saving}>
-                {saving ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <>
-                    <Icon name="checkmark" size={scale(18)} color="#fff" />
-                    <Text style={st.saveBtnText}>Save</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
         </SafeAreaView>
       </Modal>
     </SafeAreaView>

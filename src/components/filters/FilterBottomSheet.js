@@ -13,6 +13,7 @@ import {
 import Icon from 'react-native-vector-icons/Ionicons';
 import DateRangePicker from './DateRangePicker';
 import { scale, moderateScale } from '../../utils/responsive';
+import useKeyboardHeight from '../../utils/useKeyboardHeight';
 
 const { height, width } = Dimensions.get('window');
 
@@ -77,6 +78,7 @@ const getStatusColor = (value) => {
 
 export default function FilterBottomSheet({ visible, onClose, filters, onApply, config }) {
   const [localFilters, setLocalFilters] = useState(filters);
+  const keyboardHeight = useKeyboardHeight();
   const slideAnim = useState(new Animated.Value(height))[0];
   const backdropAnim = useState(new Animated.Value(0))[0];
 
@@ -183,8 +185,10 @@ export default function FilterBottomSheet({ visible, onClose, filters, onApply, 
 
           <ScrollView
             style={styles.content}
+            contentContainerStyle={{ paddingBottom: scale(20) + keyboardHeight }}
             showsVerticalScrollIndicator={false}
             bounces={false}
+            keyboardShouldPersistTaps="handled"
           >
             {/* Status Filter */}
             {config?.showStatus && (

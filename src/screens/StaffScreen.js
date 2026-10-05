@@ -35,6 +35,7 @@ import AppAlert from '../utils/AppAlert';
 
 import { scale, moderateScale } from '../utils/responsive';
 import { usePermissions } from '../utils/usePermissions';
+import useKeyboardHeight from '../utils/useKeyboardHeight';
 import { isStale, markFetched } from '../utils/focusCache';
 // Premium Color Palette
 const C = {
@@ -127,10 +128,12 @@ function SkeletonStaff({ pulse }) {
 
 export default function StaffScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
+  const { width, height: winHeight } = useWindowDimensions();
   const isTablet = width >= 768;
+  const keyboardHeight = useKeyboardHeight();
   const { can } = usePermissions();
   const isLargePhone = width >= 400;
+  const formScrollRef = useRef(null);
 
   const {
     selectedRestaurantId: selectedRestaurant,
@@ -669,9 +672,24 @@ export default function StaffScreen({ navigation }) {
       />
 
       {/* ========== ADD/EDIT MODAL ========== */}
-      <Modal visible={modalVisible} animationType="slide" transparent>
+      <Modal
+        visible={modalVisible}
+        animationType="slide"
+        transparent
+        onShow={() => {
+          // The ScrollView's scrollable height can be measured against a
+          // stale/transient size while the Modal is still sliding in,
+          // leaving it unable to scroll to the bottom of the form until
+          // something forces a fresh layout pass. Nudging the scroll
+          // position once the modal has fully shown forces that remeasure.
+          requestAnimationFrame(() => {
+            formScrollRef.current?.scrollTo({ y: 1, animated: false });
+            requestAnimationFrame(() => formScrollRef.current?.scrollTo({ y: 0, animated: false }));
+          });
+        }}
+      >
         <View style={st.modalOverlay}>
-          <View style={st.modalContent}>
+          <View style={[st.modalContent, { height: Math.round(keyboardHeight > 0 ? winHeight - keyboardHeight - scale(24) : winHeight * 0.9) }]}>
             <View style={st.modalHeader}>
               <Text style={st.modalTitle}>{isEditMode ? 'Edit Staff' : 'Add Staff'}</Text>
               <TouchableOpacity onPress={() => setModalVisible(false)} style={st.modalClose}>
@@ -680,15 +698,12 @@ export default function StaffScreen({ navigation }) {
             </View>
 
             <ScrollView
-              key={`modal-scroll-${modalKey}`}
+              ref={formScrollRef}
               style={st.modalBody}
               contentContainerStyle={st.modalBodyContent}
               showsVerticalScrollIndicator={true}
               keyboardShouldPersistTaps="handled"
-              nestedScrollEnabled={true}
-              bounces={true}
             >
-              <View style={{ minHeight: scale(650) }}>
               {/* Name */}
               <Text style={st.label}>Full Name *</Text>
               <TextInput
@@ -802,7 +817,6 @@ export default function StaffScreen({ navigation }) {
               </View>
 
               <View style={{ height: scale(30) }} />
-              </View>
             </ScrollView>
 
             <View style={st.modalFooter}>
@@ -988,7 +1002,7 @@ const st = StyleSheet.create({
 
   // Modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: C.card, borderTopLeftRadius: scale(24), borderTopRightRadius: scale(24), height: '90%' },
+  modalContent: { backgroundColor: C.card, borderTopLeftRadius: scale(24), borderTopRightRadius: scale(24) },
   modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: scale(20), borderBottomWidth: 1, borderBottomColor: C.border },
   modalTitle: { fontSize: moderateScale(20), fontWeight: '800', color: C.ink },
   modalClose: { width: scale(40), height: scale(40), borderRadius: scale(20), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },

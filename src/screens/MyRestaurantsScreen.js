@@ -6,7 +6,7 @@
 
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl,
+  View, Text, StyleSheet, FlatList, ScrollView, TouchableOpacity, RefreshControl,
   ActivityIndicator, Image, StatusBar, useWindowDimensions, Platform, Modal, TextInput, Animated,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,6 +23,7 @@ import { scale, moderateScale } from '../utils/responsive';
 import { usePermissions } from '../utils/usePermissions';
 import { isStale, markFetched } from '../utils/focusCache';
 import AppAlert from '../utils/AppAlert';
+import useKeyboardHeight from '../utils/useKeyboardHeight';
 // Premium Color Palette (Consistent with other screens)
 const C = {
   primary: '#EF3A3A',
@@ -106,6 +107,7 @@ export default function MyRestaurantsScreen({ navigation }) {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const isTablet = width >= 768;
+  const keyboardHeight = useKeyboardHeight();
   const { can } = usePermissions();
   const { loadRestaurants: refreshContextRestaurants } = useRestaurant();
   const gridColumns = isTablet ? 2 : 1;
@@ -492,6 +494,7 @@ export default function MyRestaurantsScreen({ navigation }) {
       >
         <View style={st.modalOverlay}>
           <View style={st.modalCard}>
+          <ScrollView contentContainerStyle={{ padding: scale(20), paddingBottom: scale(20) }} keyboardShouldPersistTaps="handled">
             <View style={st.modalHeader}>
               <Text style={st.modalTitle}>Request Deletion</Text>
               <TouchableOpacity onPress={() => setDeletionRequestTarget(null)}>
@@ -533,6 +536,7 @@ export default function MyRestaurantsScreen({ navigation }) {
                 )}
               </TouchableOpacity>
             </View>
+          </ScrollView>
           </View>
         </View>
       </Modal>
@@ -615,7 +619,7 @@ const st = StyleSheet.create({
 
   // Request Deletion Modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalCard: { backgroundColor: C.card, borderTopLeftRadius: scale(20), borderTopRightRadius: scale(20), padding: scale(20) },
+  modalCard: { backgroundColor: C.card, borderTopLeftRadius: scale(20), borderTopRightRadius: scale(20), maxHeight: '85%' },
   modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: scale(8) },
   modalTitle: { fontSize: moderateScale(18), fontWeight: '800', color: C.ink },
   modalSubtitle: { fontSize: moderateScale(13), color: C.text, marginBottom: scale(14), lineHeight: moderateScale(19) },

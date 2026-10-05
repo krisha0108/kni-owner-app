@@ -24,6 +24,7 @@ import NavigationMenu from '../components/NavigationMenu';
 import { scale, moderateScale } from '../utils/responsive';
 import { usePermissions } from '../utils/usePermissions';
 import AppAlert from '../utils/AppAlert';
+import useKeyboardHeight from '../utils/useKeyboardHeight';
 // Premium Color Palette
 const C = {
   primary: '#EF3A3A',
@@ -105,10 +106,12 @@ function SkeletonCashbook({ pulse }) {
 
 export default function CashbookScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
+  const { width, height: winHeight } = useWindowDimensions();
   const isTablet = width >= 768;
   const { can } = usePermissions();
   const gridColumns = isTablet ? 2 : 1;
+  const keyboardHeight = useKeyboardHeight();
+  const formScrollRef = useRef(null);
 
   const {
     restaurants, selectedRestaurantId, loading: restaurantsLoading,
@@ -677,9 +680,23 @@ export default function CashbookScreen({ navigation }) {
       <KniBottomNav navigation={navigation} active="khatabook" />
 
       {/* Add/Edit Modal - Fixed Scroll */}
-      <Modal visible={modalVisible} animationType="slide" transparent onRequestClose={() => setModalVisible(false)}>
+      <Modal
+        visible={modalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setModalVisible(false)}
+        onShow={() => {
+          // Same stale-measurement issue as StaffScreen's modal: nudge the
+          // scroll position once the modal has fully shown so the
+          // ScrollView remeasures against its final layout.
+          requestAnimationFrame(() => {
+            formScrollRef.current?.scrollTo({ y: 1, animated: false });
+            requestAnimationFrame(() => formScrollRef.current?.scrollTo({ y: 0, animated: false }));
+          });
+        }}
+      >
         <View style={st.modalOverlay}>
-          <View style={st.modalContent}>
+          <View style={[st.modalContent, { height: Math.round(keyboardHeight > 0 ? winHeight - keyboardHeight - scale(24) : winHeight * 0.85) }]}>
             {/* Modal Header */}
             <LinearGradient colors={[C.gradient1, C.gradient2]} style={st.modalHeader}>
               <Text style={st.modalTitle}>{form.id ? 'Edit Entry' : 'Add Entry'}</Text>
@@ -690,6 +707,7 @@ export default function CashbookScreen({ navigation }) {
 
             {/* Scrollable Form Body */}
             <ScrollView
+              ref={formScrollRef}
               style={st.modalBody}
               contentContainerStyle={st.modalBodyContent}
               showsVerticalScrollIndicator={true}
@@ -939,7 +957,7 @@ const st = StyleSheet.create({
 
   // Modal - Fixed Scroll
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: C.card, borderTopLeftRadius: scale(24), borderTopRightRadius: scale(24), height: '85%' },
+  modalContent: { backgroundColor: C.card, borderTopLeftRadius: scale(24), borderTopRightRadius: scale(24) },
   modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: scale(16), borderTopLeftRadius: scale(24), borderTopRightRadius: scale(24) },
   modalTitle: { fontSize: moderateScale(18), fontWeight: '800', color: '#fff' },
   modalClose: { width: scale(36), height: scale(36), borderRadius: scale(18), backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },

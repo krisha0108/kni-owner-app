@@ -122,6 +122,10 @@ export default function AMCContractDetailScreen({ navigation, route }) {
   const [breakdownDescription, setBreakdownDescription] = useState('');
   const [breakdownUrgency, setBreakdownUrgency] = useState('MEDIUM');
   const [breakdownSubmitting, setBreakdownSubmitting] = useState(false);
+  const breakdownScrollRef = useRef(null);
+  const scrollBreakdownInputIntoView = (event) => {
+    breakdownScrollRef.current?.scrollResponderScrollNativeHandleToKeyboard(event.target, scale(80), true);
+  };
 
   const pulse = useRef(new Animated.Value(0.4)).current;
   useEffect(() => {
@@ -603,6 +607,7 @@ export default function AMCContractDetailScreen({ navigation, route }) {
           </View>
 
           <ScrollView
+            ref={breakdownScrollRef}
             style={{ flex: 1, padding: scale(16) }}
             contentContainerStyle={{ paddingBottom: scale(40) + keyboardHeight }}
             keyboardShouldPersistTaps="handled"
@@ -668,8 +673,6 @@ export default function AMCContractDetailScreen({ navigation, route }) {
                 </>
               )}
             </TouchableOpacity>
-
-            <View style={{ height: scale(40) }} />
           </ScrollView>
         </SafeAreaView>
       </Modal>

@@ -14,6 +14,7 @@ import { invalidate } from '../utils/focusCache';
 
 import { scale, moderateScale } from '../utils/responsive';
 import AppAlert from '../utils/AppAlert';
+import useKeyboardHeight from '../utils/useKeyboardHeight';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const C = {
   primary: '#EF3A3A',
@@ -70,6 +71,11 @@ export default function RestaurantEditScreen({ navigation, route }) {
   const { loadRestaurants } = useRestaurant();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const keyboardHeight = useKeyboardHeight();
+  const scrollRef = useRef(null);
+  const scrollToInput = (event) => {
+    scrollRef.current?.scrollResponderScrollNativeHandleToKeyboard(event.target, scale(80), true);
+  };
 
   const pulse = useRef(new Animated.Value(0.4)).current;
 
@@ -363,8 +369,9 @@ export default function RestaurantEditScreen({ navigation, route }) {
       </LinearGradient>
 
       <ScrollView
+        ref={scrollRef}
         style={styles.content}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: scale(16) + keyboardHeight }]}
         keyboardShouldPersistTaps="handled"
       >
         {/* Restaurant Image */}

@@ -23,8 +23,8 @@
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList,
-  TextInput, ActivityIndicator, Modal, Image, Animated,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView,
+  TextInput, ActivityIndicator, Image, Animated,
   useWindowDimensions, Dimensions, StatusBar,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -35,8 +35,6 @@ import Clipboard from '@react-native-clipboard/clipboard';
 import RazorpayCheckout from 'react-native-razorpay';
 import { api, uploadFile } from '../api/client';
 import { useRestaurant } from '../context/RestaurantContext';
-import KniBottomNav from '../components/KniBottomNav';
-import NavigationMenu from '../components/NavigationMenu';
 import OfferSelector from '../components/OfferSelector';
 import { scale, moderateScale, getContainerMaxWidth } from '../utils/responsive';
 import useKeyboardHeight from '../utils/useKeyboardHeight';
@@ -138,7 +136,6 @@ export default function ServiceRequestScreen({ navigation, route }) {
   const [isUploading, setIsUploading] = useState(false);
 
   // UI state
-  const [menuVisible, setMenuVisible] = useState(false);
   const [dateModalVisible, setDateModalVisible] = useState(false);
   const [breakdownExpanded, setBreakdownExpanded] = useState(false);
 
@@ -148,8 +145,6 @@ export default function ServiceRequestScreen({ navigation, route }) {
   const [pickerDay, setPickerDay] = useState(() => new Date().getDate());
   const [pickerMonth, setPickerMonth] = useState(() => new Date().getMonth());
   const [pickerYear, setPickerYear] = useState(() => new Date().getFullYear());
-  const dayListRef = useRef(null);
-  const monthListRef = useRef(null);
 
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const minYear = today.getFullYear();
@@ -160,6 +155,7 @@ export default function ServiceRequestScreen({ navigation, route }) {
   const daysInPickerMonth = getDaysInMonth(pickerMonth, pickerYear);
   const isMonthDisabled = (m) => pickerYear === minYear && m < minMonth;
   const isDayDisabled = (d) => pickerYear === minYear && pickerMonth === minMonth && d < minDay;
+  const isYearDisabled = (y) => y < minYear;
   const handleMonthChange = (m) => {
     if (isMonthDisabled(m)) return;
     const mx = getDaysInMonth(m, pickerYear);
@@ -179,14 +175,54 @@ export default function ServiceRequestScreen({ navigation, route }) {
     setPickerDay(newDay);
   };
 
+  // Drill-down calendar: 'days' (default) -> tap the header to zoom out to
+  // 'months' -> tap again for 'years'; picking a month/year zooms back in.
+  const [pickerView, setPickerView] = useState('days');
+  const decadeStart = Math.floor(pickerYear / 10) * 10;
+  const calHeaderLabel =
+    pickerView === 'days' ? `${MONTHS_F[pickerMonth]} ${pickerYear}`
+    : pickerView === 'months' ? `${pickerYear}`
+    : `${decadeStart} - ${decadeStart + 9}`;
+  const calPrevDisabled =
+    pickerView === 'days' ? (pickerYear === minYear && pickerMonth === minMonth)
+    : pickerView === 'months' ? pickerYear <= minYear
+    : decadeStart <= Math.floor(minYear / 10) * 10;
+  const goPrevMonth = () => {
+    let m = pickerMonth - 1, y = pickerYear;
+    if (m < 0) { m = 11; y -= 1; }
+    if (y < minYear || (y === minYear && m < minMonth)) return;
+    const mx = getDaysInMonth(m, y);
+    let newDay = pickerDay > mx ? mx : pickerDay;
+    if (y === minYear && m === minMonth && newDay < minDay) newDay = minDay;
+    setPickerYear(y); setPickerMonth(m); setPickerDay(newDay);
+  };
+  const goNextMonth = () => {
+    let m = pickerMonth + 1, y = pickerYear;
+    if (m > 11) { m = 0; y += 1; }
+    const mx = getDaysInMonth(m, y);
+    const newDay = pickerDay > mx ? mx : pickerDay;
+    setPickerYear(y); setPickerMonth(m); setPickerDay(newDay);
+  };
+  const calPrev = () => {
+    if (pickerView === 'days') goPrevMonth();
+    else if (pickerView === 'months') { if (pickerYear > minYear) handleYearChange(pickerYear - 1); }
+    else if (decadeStart - 10 + 9 >= minYear) setPickerYear(decadeStart - 10);
+  };
+  const calNext = () => {
+    if (pickerView === 'days') goNextMonth();
+    else if (pickerView === 'months') handleYearChange(pickerYear + 1);
+    else setPickerYear(decadeStart + 10);
+  };
+  const calZoomOut = () => {
+    if (pickerView === 'days') setPickerView('months');
+    else if (pickerView === 'months') setPickerView('years');
+  };
+
   const openDateModal = () => {
     const d = selectedDate && selectedDate >= today ? selectedDate : today;
     setPickerDay(d.getDate()); setPickerMonth(d.getMonth()); setPickerYear(d.getFullYear());
+    setPickerView('days');
     setDateModalVisible(true);
-    setTimeout(() => {
-      dayListRef.current?.scrollToIndex?.({ index: Math.max(0, d.getDate() - 3), animated: false });
-      monthListRef.current?.scrollToIndex?.({ index: Math.max(0, d.getMonth() - 2), animated: false });
-    }, 150);
   };
   const confirmDatePicker = () => {
     let d = new Date(pickerYear, pickerMonth, pickerDay); d.setHours(0, 0, 0, 0);
@@ -201,10 +237,35 @@ export default function ServiceRequestScreen({ navigation, route }) {
   const [pickerHour, setPickerHour] = useState(9);
   const [pickerMinute, setPickerMinute] = useState(0);
   const [pickerAmPm, setPickerAmPm] = useState('AM');
-  const hourListRef = useRef(null);
+
+  // A selected date only needs past-time blocking when it IS today — any
+  // future date has no "already happened" hours to rule out.
+  const isSelectedDateToday = !!selectedDate && selectedDate.getTime() === today.getTime();
+  const to24Hour = (h12, ampm) => {
+    let h24 = h12;
+    if (ampm === 'PM' && h24 !== 12) h24 += 12;
+    if (ampm === 'AM' && h24 === 12) h24 = 0;
+    return h24;
+  };
+  // Mirrors isDayDisabled/isMonthDisabled above: true only when picking this
+  // value, combined with whatever else is currently picked, would land
+  // before right now today.
+  const isPastTimeOption = (h12, m, ampm) => {
+    if (!isSelectedDateToday) return false;
+    const candidate = new Date();
+    candidate.setHours(to24Hour(h12, ampm), m, 0, 0);
+    return candidate < new Date();
+  };
+  const isHourDisabled = (h) => isPastTimeOption(h, pickerMinute, pickerAmPm);
+  const isMinuteDisabled = (m) => isPastTimeOption(pickerHour, m, pickerAmPm);
+  const isAmPmDisabled = (ampm) => {
+    if (!isSelectedDateToday) return false;
+    // Whole half-day is gone once even its last possible slot (11:55) is past.
+    return isPastTimeOption(11, 55, ampm);
+  };
 
   const openTimeModal = () => {
-    if (selectedSlot) {
+    if (selectedSlot && selectedSlot !== 'custom') {
       const slot = TIME_SLOTS.find(s => s.id === selectedSlot);
       if (slot) {
         const [h, m] = slot.start.split(':').map(Number);
@@ -212,10 +273,26 @@ export default function ServiceRequestScreen({ navigation, route }) {
         setPickerMinute(m);
         setPickerAmPm(h >= 12 ? 'PM' : 'AM');
       }
+    } else if (selectedSlot === 'custom' && customSlot) {
+      const [h, m] = customSlot.start.split(':').map(Number);
+      setPickerHour(h > 12 ? h - 12 : h === 0 ? 12 : h);
+      setPickerMinute(m);
+      setPickerAmPm(h >= 12 ? 'PM' : 'AM');
+    } else if (isSelectedDateToday) {
+      // Default to "now", rounded up to the next 5-minute mark, so the
+      // picker never opens pre-filled on an already-past time.
+      const now = new Date();
+      let h24 = now.getHours();
+      let m = Math.ceil(now.getMinutes() / 5) * 5;
+      if (m >= 60) { m = 0; h24 = (h24 + 1) % 24; }
+      setPickerHour(h24 % 12 === 0 ? 12 : h24 % 12);
+      setPickerMinute(m);
+      setPickerAmPm(h24 >= 12 ? 'PM' : 'AM');
     } else { setPickerHour(9); setPickerMinute(0); setPickerAmPm('AM'); }
     setTimeModalVisible(true);
   };
   const confirmTimePicker = () => {
+    if (isPastTimeOption(pickerHour, pickerMinute, pickerAmPm)) return;
     let h24 = pickerHour;
     if (pickerAmPm === 'PM' && h24 !== 12) h24 += 12;
     if (pickerAmPm === 'AM' && h24 === 12) h24 = 0;
@@ -745,52 +822,211 @@ export default function ServiceRequestScreen({ navigation, route }) {
               </View>
             )}
 
-            {renderOrderSummary()}
-            {/* Reserves room only for the real bottom nav bar -- it hides
-                itself while the keyboard is open, so there's nothing to
-                clear then and this collapses to avoid a big empty gap
-                under the (already keyboard-safe) inline summary above. */}
-            {keyboardHeight === 0 && <View style={{ height: scale(100) }} />}
+            <View style={{ height: scale(20) }} />
           </ScrollView>
         );
 
       case 'date':
         return (
-          <ScrollView style={st.scrollContent} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: scale(40) }} keyboardShouldPersistTaps="handled">
+          <ScrollView
+            style={st.scrollContent}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: ((dateModalVisible || timeModalVisible) ? scale(380) : scale(40)) + keyboardHeight }}
+            keyboardShouldPersistTaps="handled"
+          >
             {/* Date Selection */}
-            <View style={st.section}>
+            <View style={[st.section, dateModalVisible && st.sectionRaised]}>
               <View style={st.sectionHeader}>
                 <Icon name="calendar-outline" size={20} color={C.primary} />
                 <Text style={st.sectionTitle}>Select Date</Text>
               </View>
-              <TouchableOpacity style={st.datePickerBtn} onPress={openDateModal}>
+              <View style={st.pickerAnchor}>
+              <TouchableOpacity
+                style={st.datePickerBtn}
+                onPress={() => (dateModalVisible ? setDateModalVisible(false) : openDateModal())}
+              >
                 <Icon name="calendar" size={20} color={selectedDate ? C.primary : C.muted} />
                 <Text style={[st.datePickerText, !selectedDate && { color: C.muted }]}>
                   {selectedDate ? `${selectedDate.getDate()} ${MONTHS_F[selectedDate.getMonth()]} ${selectedDate.getFullYear()}` : 'Tap to select date'}
                 </Text>
-                <Icon name="chevron-forward" size={20} color={C.muted} />
+                <Icon name={dateModalVisible ? 'chevron-up' : 'chevron-forward'} size={20} color={C.muted} />
               </TouchableOpacity>
+
+              {/* Floating dropdown, anchored right below the button --
+                  absolutely positioned so it overlaps the content below
+                  (time slot, description) instead of pushing it down. */}
+              {dateModalVisible && (
+                <View style={[st.dateDropdown, st.dateDropdownFloating]}>
+                  <View style={st.dpPreview}>
+                    <Text style={st.dpPreviewText}>{pickerDay} {MONTHS_F[pickerMonth]} {pickerYear}</Text>
+                  </View>
+                  {/* Drill-down calendar: tap the header to zoom out (day ->
+                      month -> year), tap a month/year to zoom back in. */}
+                  <View style={st.calNavRow}>
+                    <TouchableOpacity disabled={calPrevDisabled} onPress={calPrev} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={st.calNavBtn}>
+                      <Icon name="chevron-back" size={scale(20)} color={calPrevDisabled ? C.border : '#fff'} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={calZoomOut} disabled={pickerView === 'years'} style={st.calNavTitleBtn}>
+                      <Text style={st.calNavTitle}>{calHeaderLabel}</Text>
+                      {pickerView !== 'years' && <Icon name="chevron-down" size={scale(14)} color="#fff" style={{ marginLeft: scale(4) }} />}
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={calNext} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={st.calNavBtn}>
+                      <Icon name="chevron-forward" size={scale(20)} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
+
+                  {pickerView === 'days' && (
+                    <>
+                      <View style={st.calWeekRow}>
+                        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+                          <Text key={i} style={st.calWeekLabel}>{d}</Text>
+                        ))}
+                      </View>
+                      <View style={st.calGrid}>
+                        {Array.from({ length: new Date(pickerYear, pickerMonth, 1).getDay() }).map((_, i) => (
+                          <View key={`pad-${i}`} style={st.calCell} />
+                        ))}
+                        {Array.from({ length: daysInPickerMonth }, (_, i) => i + 1).map((d) => (
+                          <TouchableOpacity
+                            key={d}
+                            disabled={isDayDisabled(d)}
+                            style={st.calCell}
+                            onPress={() => setPickerDay(d)}
+                          >
+                            <View style={[st.calCellInner, pickerDay === d && st.calCellActive]}>
+                              <Text style={[st.calCellText, pickerDay === d && st.calCellTextActive, isDayDisabled(d) && st.calCellTextDisabled]}>{d}</Text>
+                            </View>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </>
+                  )}
+
+                  {pickerView === 'months' && (
+                    <View style={st.calGrid3}>
+                      {MONTHS_S.map((m, i) => (
+                        <TouchableOpacity
+                          key={m}
+                          disabled={isMonthDisabled(i)}
+                          style={st.calGrid3Cell}
+                          onPress={() => { handleMonthChange(i); setPickerView('days'); }}
+                        >
+                          <View style={[st.calGridBtn, pickerMonth === i && st.calCellActive]}>
+                            <Text style={[st.calCellText, pickerMonth === i && st.calCellTextActive, isMonthDisabled(i) && st.calCellTextDisabled]}>{m}</Text>
+                          </View>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+
+                  {pickerView === 'years' && (
+                    <View style={st.calGrid3}>
+                      {Array.from({ length: 12 }, (_, i) => decadeStart - 1 + i).map((y) => (
+                        <TouchableOpacity
+                          key={y}
+                          disabled={isYearDisabled(y)}
+                          style={st.calGrid3Cell}
+                          onPress={() => { handleYearChange(y); setPickerView('months'); }}
+                        >
+                          <View style={[st.calGridBtn, pickerYear === y && st.calCellActive]}>
+                            <Text style={[st.calCellText, pickerYear === y && st.calCellTextActive, isYearDisabled(y) && st.calCellTextDisabled]}>{y}</Text>
+                          </View>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+
+                  <TouchableOpacity style={st.dpConfirmBtn} onPress={confirmDatePicker}>
+                    <Icon name="checkmark-circle" size={scale(20)} color="#FFFFFF" /><Text style={st.dpConfirmText}>Confirm Date</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              </View>
             </View>
 
-            {/* Time Slot Selection */}
-            <View style={st.section}>
+            {/* Time Slot Selection -- touches disabled while the date
+                dropdown is open, since it can float down far enough to
+                visually cover this section; without this, a tap meant for
+                the date overlay could leak through to whatever's
+                underneath on Android (zIndex/elevation only control paint
+                order there, not touch hit-testing across sibling trees). */}
+            <View style={[st.section, timeModalVisible && st.sectionRaised]} pointerEvents={dateModalVisible ? 'none' : 'auto'}>
               <View style={st.sectionHeader}>
                 <Icon name="time-outline" size={20} color={C.primary} />
                 <Text style={st.sectionTitle}>Select Time Slot</Text>
               </View>
-              <TouchableOpacity style={st.datePickerBtn} onPress={openTimeModal}>
+              <View style={st.pickerAnchor}>
+              <TouchableOpacity
+                style={st.datePickerBtn}
+                onPress={() => (timeModalVisible ? setTimeModalVisible(false) : openTimeModal())}
+              >
                 <Icon name="time" size={20} color={selectedSlot ? C.primary : C.muted} />
                 <Text style={[st.datePickerText, !selectedSlot && { color: C.muted }]}>
                   {selectedSlot
                     ? (selectedSlot === 'custom' ? customSlot?.label : TIME_SLOTS.find(s => s.id === selectedSlot)?.label)
                     : 'Tap to select time'}
                 </Text>
-                <Icon name="chevron-forward" size={20} color={C.muted} />
+                <Icon name={timeModalVisible ? 'chevron-up' : 'chevron-forward'} size={20} color={C.muted} />
               </TouchableOpacity>
+
+              {/* Floating dropdown, same anchored-overlap pattern as the
+                  date picker. */}
+              {timeModalVisible && (
+                <View style={[st.dateDropdown, st.dateDropdownFloating]}>
+                  <View style={st.dpPreview}>
+                    <Text style={st.dpPreviewText}>{String(pickerHour).padStart(2, '0')}:{String(pickerMinute).padStart(2, '0')} {pickerAmPm}</Text>
+                  </View>
+                  <Text style={st.calSectionLabel}>HOUR</Text>
+                  <View style={st.calGrid4}>
+                    {HOURS_LIST.map((h) => (
+                      <TouchableOpacity key={h} disabled={isHourDisabled(h)} style={st.calGrid4Cell} onPress={() => setPickerHour(h)}>
+                        <View style={[st.calGridBtn, pickerHour === h && st.calCellActive]}>
+                          <Text style={[st.calCellText, pickerHour === h && st.calCellTextActive, isHourDisabled(h) && st.calCellTextDisabled]}>{String(h).padStart(2, '0')}</Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  <Text style={[st.calSectionLabel, { marginTop: scale(8) }]}>MINUTE</Text>
+                  <View style={st.calGrid4}>
+                    {MINS_LIST.map((m) => (
+                      <TouchableOpacity key={m} disabled={isMinuteDisabled(m)} style={st.calGrid4Cell} onPress={() => setPickerMinute(m)}>
+                        <View style={[st.calGridBtn, pickerMinute === m && st.calCellActive]}>
+                          <Text style={[st.calCellText, pickerMinute === m && st.calCellTextActive, isMinuteDisabled(m) && st.calCellTextDisabled]}>{String(m).padStart(2, '0')}</Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  <Text style={[st.calSectionLabel, { marginTop: scale(8) }]}>AM / PM</Text>
+                  <View style={st.dpAmPmWrap}>
+                    {['AM', 'PM'].map(v => (
+                      <TouchableOpacity key={v} disabled={isAmPmDisabled(v)} style={[st.dpAmPmBtn, pickerAmPm === v && st.dpAmPmBtnActive, isAmPmDisabled(v) && st.dpItemDisabled]} onPress={() => setPickerAmPm(v)}>
+                        <Text style={[st.dpAmPmText, pickerAmPm === v && st.dpAmPmTextActive, isAmPmDisabled(v) && st.dpItemTextDisabled]}>{v}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  {isSelectedDateToday && isPastTimeOption(pickerHour, pickerMinute, pickerAmPm) && (
+                    <Text style={st.dpPastTimeWarning}>That time has already passed today — pick a later time.</Text>
+                  )}
+                  <TouchableOpacity
+                    disabled={isPastTimeOption(pickerHour, pickerMinute, pickerAmPm)}
+                    style={[st.dpConfirmBtn, isPastTimeOption(pickerHour, pickerMinute, pickerAmPm) && { opacity: 0.5 }]}
+                    onPress={confirmTimePicker}
+                  >
+                    <Icon name="checkmark-circle" size={scale(20)} color="#FFFFFF" /><Text style={st.dpConfirmText}>Confirm Time</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              </View>
             </View>
 
-            {/* Problem Description */}
-            <View style={st.section}>
+            {/* Problem Description -- same reasoning as the Time Slot
+                section above: disabled for touch (including the TextInput
+                itself, which would otherwise pop the keyboard on a leaked
+                tap) whenever either floating dropdown is open and may be
+                covering it. */}
+            <View style={st.section} pointerEvents={(dateModalVisible || timeModalVisible) ? 'none' : 'auto'}>
               <View style={st.sectionHeader}>
                 <Icon name="document-text-outline" size={20} color={C.primary} />
                 <Text style={st.sectionTitle}>Problem Description (Optional)</Text>
@@ -807,8 +1043,7 @@ export default function ServiceRequestScreen({ navigation, route }) {
               />
             </View>
 
-            {renderOrderSummary()}
-            {keyboardHeight === 0 && <View style={{ height: scale(100) }} />}
+            <View style={{ height: scale(20) }} />
           </ScrollView>
         );
 
@@ -817,7 +1052,7 @@ export default function ServiceRequestScreen({ navigation, route }) {
           <ScrollView
             style={st.scrollContent}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: scale(40) }}
+            contentContainerStyle={{ paddingBottom: scale(40) + keyboardHeight }}
             keyboardShouldPersistTaps="handled"
           >
             {/* Tip Selection — comes before the hero so the Pay button below
@@ -987,9 +1222,10 @@ export default function ServiceRequestScreen({ navigation, route }) {
     }
   };
 
-  // Order summary + Continue action -- lives inline in the normal scroll
-  // flow at the end of the select/date steps (not a floating bar), so
-  // there's nothing that needs to reposition itself against the keyboard.
+  // Order summary + Continue action -- rendered once at the bottom of the
+  // screen (the bottom nav bar is hidden on this screen entirely, per the
+  // client's request, so there's no floating bar left to clear). Hidden
+  // while the keyboard is open so it doesn't sit on top of it.
   // The payment step has its own hero Pay button instead (see 'payment'
   // case above) rather than reusing this Continue bar.
   const renderOrderSummary = () => {
@@ -997,7 +1233,7 @@ export default function ServiceRequestScreen({ navigation, route }) {
     const canContinue = step === 'select' ? itemCount > 0 : selectedDate && selectedSlot;
 
     return (
-      <View style={st.inlineSummary}>
+      <View style={[st.inlineSummary, { marginBottom: insets.bottom + scale(16) }]}>
         <View style={st.footerSummary}>
           <View style={st.footerLeft}>
             <Text style={st.footerItems} numberOfLines={1}>{itemCount} items selected</Text>
@@ -1077,20 +1313,15 @@ export default function ServiceRequestScreen({ navigation, route }) {
       <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
         <View style={st.headerBlobA} pointerEvents="none" />
         <View style={st.headerBlobB} pointerEvents="none" />
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity
-            onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
-            style={st.backBtnPlain}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Icon name="chevron-back" size={22} color="#fff" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={st.menuBtn}>
-            <Icon name="menu" size={18} color="#fff" />
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))}
+          style={st.headerBackBtn}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Icon name="arrow-back" size={19} color="#fff" />
+        </TouchableOpacity>
         <Text style={st.headerTitle}>Request Service</Text>
-        <View style={{ width: scale(64) }} />
+        <View style={{ width: scale(40) }} />
       </LinearGradient>
 
       {/* Progress Steps */}
@@ -1137,86 +1368,10 @@ export default function ServiceRequestScreen({ navigation, route }) {
         renderStepContent()
       )}
 
-      {/* Custom Date Picker Modal */}
-      <Modal visible={dateModalVisible} transparent animationType="slide" onRequestClose={() => setDateModalVisible(false)}>
-        <View style={st.dpBackdrop}>
-          <View style={st.dpSheet}>
-            <View style={st.dpHeader}>
-              <TouchableOpacity onPress={() => setDateModalVisible(false)}><Text style={st.dpCancel}>Cancel</Text></TouchableOpacity>
-              <Text style={st.dpTitle}>Select Date</Text>
-              <TouchableOpacity onPress={confirmDatePicker}><Text style={st.dpDone}>Done</Text></TouchableOpacity>
-            </View>
-            <View style={st.dpPreview}><Text style={st.dpPreviewText}>{pickerDay} {MONTHS_F[pickerMonth]} {pickerYear}</Text></View>
-            <View style={st.dpColumns}>
-              <View style={st.dpCol}>
-                <Text style={st.dpColLabel}>DAY</Text>
-                <FlatList ref={dayListRef} data={Array.from({ length: daysInPickerMonth }, (_, i) => i + 1)} keyExtractor={i => String(i)} style={st.dpScroll} showsVerticalScrollIndicator={false} getItemLayout={(_, i) => ({ length: scale(42), offset: scale(42) * i, index: i })} onScrollToIndexFailed={() => {}} renderItem={({ item: d }) => (
-                  <TouchableOpacity disabled={isDayDisabled(d)} style={[st.dpItem, pickerDay === d && st.dpItemActive, isDayDisabled(d) && st.dpItemDisabled]} onPress={() => setPickerDay(d)}><Text style={[st.dpItemText, pickerDay === d && st.dpItemTextActive, isDayDisabled(d) && st.dpItemTextDisabled]}>{d}</Text></TouchableOpacity>
-                )} />
-              </View>
-              <View style={[st.dpCol, { flex: 1.3 }]}>
-                <Text style={st.dpColLabel}>MONTH</Text>
-                <FlatList ref={monthListRef} data={MONTHS_S} keyExtractor={i => i} style={st.dpScroll} showsVerticalScrollIndicator={false} getItemLayout={(_, i) => ({ length: scale(42), offset: scale(42) * i, index: i })} onScrollToIndexFailed={() => {}} renderItem={({ item: m, index: i }) => (
-                  <TouchableOpacity disabled={isMonthDisabled(i)} style={[st.dpItem, pickerMonth === i && st.dpItemActive, isMonthDisabled(i) && st.dpItemDisabled]} onPress={() => handleMonthChange(i)}><Text style={[st.dpItemText, pickerMonth === i && st.dpItemTextActive, isMonthDisabled(i) && st.dpItemTextDisabled]}>{m}</Text></TouchableOpacity>
-                )} />
-              </View>
-              <View style={st.dpCol}>
-                <Text style={st.dpColLabel}>YEAR</Text>
-                <View style={st.dpYearStepper}>
-                  <TouchableOpacity style={st.dpYearBtn} onPress={() => handleYearChange(pickerYear + 1)}><Icon name="chevron-up" size={scale(24)} color={C.ink} /></TouchableOpacity>
-                  <View style={st.dpYearValue}><Text style={st.dpYearText}>{pickerYear}</Text></View>
-                  <TouchableOpacity disabled={pickerYear <= minYear} style={st.dpYearBtn} onPress={() => handleYearChange(pickerYear - 1)}><Icon name="chevron-down" size={scale(24)} color={pickerYear <= minYear ? C.muted : C.ink} /></TouchableOpacity>
-                </View>
-              </View>
-            </View>
-            <TouchableOpacity style={st.dpConfirmBtn} onPress={confirmDatePicker}><Icon name="checkmark-circle" size={scale(20)} color="#FFFFFF" /><Text style={st.dpConfirmText}>Confirm Date</Text></TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Custom Time Picker Modal */}
-      <Modal visible={timeModalVisible} transparent animationType="slide" onRequestClose={() => setTimeModalVisible(false)}>
-        <View style={st.dpBackdrop}>
-          <View style={st.dpSheet}>
-            <View style={st.dpHeader}>
-              <TouchableOpacity onPress={() => setTimeModalVisible(false)}><Text style={st.dpCancel}>Cancel</Text></TouchableOpacity>
-              <Text style={st.dpTitle}>Select Time</Text>
-              <TouchableOpacity onPress={confirmTimePicker}><Text style={st.dpDone}>Done</Text></TouchableOpacity>
-            </View>
-            <View style={st.dpPreview}><Text style={st.dpPreviewText}>{String(pickerHour).padStart(2, '0')}:{String(pickerMinute).padStart(2, '0')} {pickerAmPm}</Text></View>
-            <View style={st.dpColumns}>
-              <View style={st.dpCol}>
-                <Text style={st.dpColLabel}>HOUR</Text>
-                <FlatList ref={hourListRef} data={HOURS_LIST} keyExtractor={i => String(i)} style={st.dpScroll} showsVerticalScrollIndicator={false} getItemLayout={(_, i) => ({ length: scale(42), offset: scale(42) * i, index: i })} onScrollToIndexFailed={() => {}} renderItem={({ item: h }) => (
-                  <TouchableOpacity style={[st.dpItem, pickerHour === h && st.dpItemActive]} onPress={() => setPickerHour(h)}><Text style={[st.dpItemText, pickerHour === h && st.dpItemTextActive]}>{String(h).padStart(2, '0')}</Text></TouchableOpacity>
-                )} />
-              </View>
-              <View style={st.dpCol}>
-                <Text style={st.dpColLabel}>MINUTE</Text>
-                <FlatList data={MINS_LIST} keyExtractor={i => String(i)} style={st.dpScroll} showsVerticalScrollIndicator={false} getItemLayout={(_, i) => ({ length: scale(42), offset: scale(42) * i, index: i })} onScrollToIndexFailed={() => {}} renderItem={({ item: m }) => (
-                  <TouchableOpacity style={[st.dpItem, pickerMinute === m && st.dpItemActive]} onPress={() => setPickerMinute(m)}><Text style={[st.dpItemText, pickerMinute === m && st.dpItemTextActive]}>{String(m).padStart(2, '0')}</Text></TouchableOpacity>
-                )} />
-              </View>
-              <View style={st.dpCol}>
-                <Text style={st.dpColLabel}>AM/PM</Text>
-                <View style={st.dpAmPmWrap}>
-                  {['AM', 'PM'].map(v => (
-                    <TouchableOpacity key={v} style={[st.dpAmPmBtn, pickerAmPm === v && st.dpAmPmBtnActive]} onPress={() => setPickerAmPm(v)}>
-                      <Text style={[st.dpAmPmText, pickerAmPm === v && st.dpAmPmTextActive]}>{v}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-            </View>
-            <TouchableOpacity style={st.dpConfirmBtn} onPress={confirmTimePicker}><Icon name="checkmark-circle" size={scale(20)} color="#FFFFFF" /><Text style={st.dpConfirmText}>Confirm Time</Text></TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
-      {/* Hidden while the keyboard is open so it doesn't sit on top of/behind
-          the keyboard and overlap the focused input (e.g. Problem Description). */}
-      {keyboardHeight === 0 && <KniBottomNav navigation={navigation} active="equipment" />}
+      {/* Sticky summary + Continue bar — always visible above the bottom
+          nav, no scrolling needed. Only for select/date; payment has its
+          own hero Pay button and confirm has its own CTA. */}
+      {!isLoading && (step === 'select' || step === 'date') && keyboardHeight === 0 && renderOrderSummary()}
     </SafeAreaView>
   );
 }
@@ -1232,13 +1387,9 @@ const st = StyleSheet.create({
   headerBlobA: { position: 'absolute', width: scale(140), height: scale(140), borderRadius: scale(70), backgroundColor: 'rgba(255,255,255,0.08)', top: scale(-50), right: scale(-30) },
   headerBlobB: { position: 'absolute', width: scale(90), height: scale(90), borderRadius: scale(45), backgroundColor: 'rgba(255,255,255,0.06)', bottom: scale(-40), left: scale(40) },
   headerBackBtn: {
-    width: scale(40), height: scale(40), borderRadius: scale(14), backgroundColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center', justifyContent: 'center'
-  },
-  backBtnPlain: { width: scale(22), height: scale(32), alignItems: 'center', justifyContent: 'center', marginRight: scale(4) },
-  menuBtn: {
-    width: scale(34), height: scale(34), borderRadius: scale(12), backgroundColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center', justifyContent: 'center',
+    width: scale(40), height: scale(40), borderRadius: scale(20), backgroundColor: 'rgba(255,255,255,0.18)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)', alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: scale(2) }, shadowOpacity: 0.15, shadowRadius: scale(4), elevation: 2,
   },
   headerTitle: { fontSize: moderateScale(18), fontWeight: '800', color: '#fff' },
 
@@ -1304,7 +1455,15 @@ const st = StyleSheet.create({
 
   // Sections
   section: { marginBottom: scale(20) },
+  // Bumped above sibling sections while this section's dropdown is open, so
+  // its absolutely-positioned floating panel (see dateDropdownFloating)
+  // paints over their content instead of underneath it.
+  sectionRaised: { zIndex: 30, elevation: 30 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: scale(8), marginBottom: scale(12) },
+  // Positioning context for the date/time trigger button -- its dropdown is
+  // absolutely positioned against this, so the dropdown's height doesn't
+  // affect this View's own height (the button's height still does).
+  pickerAnchor: { position: 'relative' },
   sectionTitle: { fontSize: moderateScale(16), fontWeight: '800', color: C.ink },
 
   // Item Cards
@@ -1337,6 +1496,20 @@ const st = StyleSheet.create({
     borderRadius: scale(12), padding: scale(14), borderWidth: 1, borderColor: C.border
   },
   datePickerText: { flex: 1, fontSize: moderateScale(15), fontWeight: '600', color: C.ink, marginLeft: scale(12) },
+  // Small dropdown (not a modal) -- not a full-screen sheet, just this card.
+  dateDropdown: {
+    backgroundColor: C.card, borderRadius: scale(10), borderWidth: 1, borderColor: C.border,
+    padding: scale(8), marginTop: scale(6),
+    shadowColor: '#000', shadowOffset: { width: 0, height: scale(3) }, shadowOpacity: 0.08, shadowRadius: scale(8), elevation: 3,
+  },
+  // Floats the dropdown above pickerAnchor instead of in normal flow, so it
+  // overlaps whatever comes after it on the page (time slot, description)
+  // rather than pushing that content down while it's open.
+  dateDropdownFloating: {
+    position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 40, elevation: 12,
+  },
+  dpPreview: { backgroundColor: C.ink, borderRadius: scale(7), paddingVertical: scale(5), alignItems: 'center', marginBottom: scale(6) },
+  dpPreviewText: { fontSize: moderateScale(12), fontWeight: '700', color: '#FFFFFF', letterSpacing: 0.3 },
 
   // Time slots
   slotsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: scale(10) },
@@ -1457,7 +1630,7 @@ const st = StyleSheet.create({
   // the end of each step's content (Option 6: "Inline Mini Summary"), never
   // floats over the keyboard, so it needs no keyboard-offset math at all.
   inlineSummary: {
-    marginTop: scale(20),
+    marginHorizontal: scale(16),
     backgroundColor: C.primary,
     borderRadius: scale(16),
     paddingHorizontal: scale(16), paddingVertical: scale(14),
@@ -1527,33 +1700,37 @@ const st = StyleSheet.create({
   calendarCellTextActive: { color: '#fff' },
 
   // Custom Date/Time Picker Modal
-  dpBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  dpSheet: { backgroundColor: '#fff', borderTopLeftRadius: scale(20), borderTopRightRadius: scale(20), paddingHorizontal: scale(20), paddingTop: scale(16), paddingBottom: scale(30) },
-  dpHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: scale(12), borderBottomWidth: 1, borderBottomColor: C.border, marginBottom: scale(12) },
-  dpCancel: { fontSize: moderateScale(14), color: C.muted, fontWeight: '600' },
-  dpTitle: { fontSize: moderateScale(16), fontWeight: '700', color: C.ink },
-  dpDone: { fontSize: moderateScale(14), color: C.primary, fontWeight: '700' },
-  dpPreview: { backgroundColor: C.ink, borderRadius: scale(12), paddingVertical: scale(14), paddingHorizontal: scale(20), alignItems: 'center', marginBottom: scale(16) },
-  dpPreviewText: { fontSize: moderateScale(18), fontWeight: '700', color: '#FFFFFF' },
-  dpColumns: { flexDirection: 'row', gap: scale(8), marginBottom: scale(16) },
-  dpCol: { flex: 1 },
-  dpColLabel: { fontSize: moderateScale(11), fontWeight: '700', color: C.muted, textAlign: 'center', letterSpacing: 1, marginBottom: scale(8) },
-  dpScroll: { maxHeight: scale(200) },
-  dpItem: { height: scale(38), paddingHorizontal: scale(6), borderRadius: scale(8), alignItems: 'center', justifyContent: 'center', marginBottom: scale(4) },
-  dpItemActive: { backgroundColor: C.primary },
   dpItemDisabled: { opacity: 0.35 },
-  dpItemText: { fontSize: moderateScale(14), fontWeight: '600', color: C.ink },
-  dpItemTextActive: { color: '#FFFFFF', fontWeight: '700' },
   dpItemTextDisabled: { color: C.muted },
-  dpYearStepper: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  dpYearBtn: { width: scale(52), height: scale(44), borderRadius: scale(10), backgroundColor: '#F5F7FA', alignItems: 'center', justifyContent: 'center', marginVertical: scale(6) },
-  dpYearValue: { backgroundColor: C.primary, borderRadius: scale(12), paddingVertical: scale(16), paddingHorizontal: scale(14), alignItems: 'center' },
-  dpYearText: { fontSize: moderateScale(20), fontWeight: '800', color: '#FFFFFF' },
-  dpAmPmWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: scale(10) },
-  dpAmPmBtn: { width: '100%', paddingVertical: scale(18), borderRadius: scale(12), backgroundColor: '#F5F7FA', alignItems: 'center' },
+  dpAmPmWrap: { flexDirection: 'row', gap: scale(6), marginBottom: scale(8) },
+
+  // Drill-down calendar + tap grids (date & time pickers) -- kept compact
+  // on purpose: short rows, small gaps, no decorative preview bar, so the
+  // whole dropdown stays close to the size of the button that opens it.
+  calNavRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: C.primary, borderRadius: scale(9), paddingVertical: scale(5), paddingHorizontal: scale(5), marginBottom: scale(6) },
+  calNavBtn: { width: scale(24), height: scale(24), alignItems: 'center', justifyContent: 'center' },
+  calNavTitleBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: scale(10) },
+  calNavTitle: { fontSize: moderateScale(12.5), fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.3 },
+  calWeekRow: { flexDirection: 'row', marginBottom: scale(2) },
+  calWeekLabel: { width: '14.28%', textAlign: 'center', fontSize: moderateScale(9.5), fontWeight: '700', color: C.muted },
+  calGrid: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: scale(6) },
+  calCell: { width: '14.28%', height: scale(29), alignItems: 'center', justifyContent: 'center' },
+  calCellInner: { width: scale(25), height: scale(25), borderRadius: scale(13), alignItems: 'center', justifyContent: 'center' },
+  calCellActive: { backgroundColor: C.primary },
+  calCellText: { fontSize: moderateScale(11.5), fontWeight: '600', color: C.ink },
+  calCellTextActive: { color: '#FFFFFF', fontWeight: '800' },
+  calCellTextDisabled: { color: C.border },
+  calGrid3: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: scale(6) },
+  calGrid3Cell: { width: '33.33%', padding: scale(2) },
+  calGrid4: { flexDirection: 'row', flexWrap: 'wrap' },
+  calGrid4Cell: { width: '16.66%', padding: scale(1.5) },
+  calGridBtn: { height: scale(25), borderRadius: scale(6), alignItems: 'center', justifyContent: 'center', backgroundColor: '#F5F7FA' },
+  calSectionLabel: { fontSize: moderateScale(9), fontWeight: '700', color: C.muted, letterSpacing: 1, marginBottom: scale(3) },
+  dpAmPmBtn: { flex: 1, paddingVertical: scale(7), borderRadius: scale(8), backgroundColor: '#F5F7FA', alignItems: 'center' },
   dpAmPmBtnActive: { backgroundColor: C.primary },
-  dpAmPmText: { fontSize: moderateScale(16), fontWeight: '700', color: C.ink },
+  dpAmPmText: { fontSize: moderateScale(13), fontWeight: '700', color: C.ink },
   dpAmPmTextActive: { color: '#FFFFFF' },
-  dpConfirmBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: scale(8), backgroundColor: C.primary, borderRadius: scale(12), paddingVertical: scale(14) },
-  dpConfirmText: { fontSize: moderateScale(15), fontWeight: '700', color: '#FFFFFF' },
+  dpPastTimeWarning: { fontSize: moderateScale(11), color: C.danger, textAlign: 'center', marginBottom: scale(8) },
+  dpConfirmBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: scale(6), backgroundColor: C.primary, borderRadius: scale(9), paddingVertical: scale(9) },
+  dpConfirmText: { fontSize: moderateScale(13.5), fontWeight: '700', color: '#FFFFFF' },
 });

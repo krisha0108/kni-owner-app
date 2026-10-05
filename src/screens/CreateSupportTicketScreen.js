@@ -7,7 +7,7 @@
  * navigation, consistent with the rest of the app's create/edit flows).
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   ActivityIndicator, TextInput, Image, Modal, Dimensions, StatusBar,
@@ -21,6 +21,7 @@ import { api, uploadFile } from '../api/client';
 import { scale, moderateScale } from '../utils/responsive';
 import { invalidate } from '../utils/focusCache';
 import AppAlert from '../utils/AppAlert';
+import useKeyboardHeight from '../utils/useKeyboardHeight';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const C = {
@@ -48,11 +49,16 @@ const CATEGORY_OPTIONS = ['General', 'Equipment', 'Billing', 'Service', 'Account
 
 export default function CreateSupportTicketScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
+  const keyboardHeight = useKeyboardHeight();
   const { restaurantId } = route.params || {};
   const [formData, setFormData] = useState({ title: '', equipmentName: '', category: 'General', description: '' });
   const [ticketImageUri, setTicketImageUri] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [categoryPickerVisible, setCategoryPickerVisible] = useState(false);
+  const scrollRef = useRef(null);
+  const scrollToInput = (event) => {
+    scrollRef.current?.scrollResponderScrollNativeHandleToKeyboard(event.target, scale(80), true);
+  };
 
   const goBack = () => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('SupportCenter'));
 
@@ -108,7 +114,7 @@ export default function CreateSupportTicketScreen({ navigation, route }) {
         <View style={{ width: scale(38) }} />
       </LinearGradient>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: scale(20), paddingBottom: scale(100) }} keyboardShouldPersistTaps="handled">
+      <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={{ padding: scale(20), paddingBottom: scale(100) + keyboardHeight }} keyboardShouldPersistTaps="handled">
         <Text style={st.inputLabel}>Title *</Text>
         <TextInput
           style={st.input}

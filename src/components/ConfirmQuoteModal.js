@@ -7,12 +7,14 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   TextInput,
+  ScrollView,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import RazorpayCheckout from 'react-native-razorpay';
 import { api } from '../api/client';
 import { scale, moderateScale } from '../utils/responsive';
 import AppAlert from '../utils/AppAlert';
+import useKeyboardHeight from '../utils/useKeyboardHeight';
 
 const C = {
   primary: '#7C3AED',
@@ -44,6 +46,7 @@ export default function ConfirmQuoteModal({ visible, priceUnlockId, unlockedPric
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const inProgress = useRef(false);
+  const keyboardHeight = useKeyboardHeight();
 
   const cap = Math.max(1, maxQty || 1);
   const qty = Math.max(1, Math.min(quantity, cap));
@@ -152,7 +155,11 @@ export default function ConfirmQuoteModal({ visible, priceUnlockId, unlockedPric
             </TouchableOpacity>
           </View>
 
-          <View style={st.body}>
+          <ScrollView
+            style={st.body}
+            contentContainerStyle={{ paddingBottom: scale(20) + keyboardHeight }}
+            keyboardShouldPersistTaps="handled"
+          >
             <View style={st.qtyRow}>
               <Text style={st.label}>Quantity</Text>
               <View style={st.qtyControl}>
@@ -214,7 +221,7 @@ export default function ConfirmQuoteModal({ visible, priceUnlockId, unlockedPric
             <Text style={st.hint}>
               This is a special negotiated price — pay the advance above to confirm your order directly.
             </Text>
-          </View>
+          </ScrollView>
         </View>
       </View>
     </Modal>

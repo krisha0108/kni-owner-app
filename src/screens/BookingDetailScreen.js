@@ -33,6 +33,7 @@ import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 import { scale, verticalScale, moderateScale, isTablet } from '../utils/responsive';
 import AppAlert from '../utils/AppAlert';
+import useKeyboardHeight from '../utils/useKeyboardHeight';
 
 const C = {
   primary: '#EF3A3A',
@@ -121,6 +122,7 @@ export default function BookingDetailScreen({ navigation, route }) {
   const { bookingId } = route.params || {};
   const { width } = useWindowDimensions();
   const isTabletDevice = isTablet(width);
+  const keyboardHeight = useKeyboardHeight();
 
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -943,7 +945,8 @@ export default function BookingDetailScreen({ navigation, route }) {
       {/* Rate Engineer Modal */}
       <Modal visible={rateModalVisible} animationType="slide" transparent onRequestClose={() => setRateModalVisible(false)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
-          <View style={{ backgroundColor: '#fff', borderTopLeftRadius: scale(20), borderTopRightRadius: scale(20), padding: scale(20) }}>
+          <View style={{ backgroundColor: '#fff', borderTopLeftRadius: scale(20), borderTopRightRadius: scale(20), maxHeight: '85%' }}>
+          <ScrollView contentContainerStyle={{ padding: scale(20), paddingBottom: scale(20) + keyboardHeight }} keyboardShouldPersistTaps="handled">
             <Text style={{ fontSize: moderateScale(18), fontWeight: '800', color: C.ink, marginBottom: scale(4) }}>Rate Engineer</Text>
             <Text style={{ fontSize: moderateScale(13), color: C.muted, marginBottom: scale(16) }}>
               How was the service for {booking.engineerAssignments?.[0]?.engineer?.name || 'the engineer'}?
@@ -983,6 +986,7 @@ export default function BookingDetailScreen({ navigation, route }) {
                 )}
               </TouchableOpacity>
             </View>
+          </ScrollView>
           </View>
         </View>
       </Modal>

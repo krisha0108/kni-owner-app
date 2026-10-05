@@ -13,6 +13,7 @@ import restaurantService from '../services/restaurantService';
 import { scale, moderateScale } from '../utils/responsive';
 import { usePermissions } from '../utils/usePermissions';
 import AppAlert from '../utils/AppAlert';
+import useKeyboardHeight from '../utils/useKeyboardHeight';
 const HERO_HEIGHT = 190;
 
 const C = {
@@ -111,6 +112,7 @@ function SkeletonRestaurant({ pulse }) {
 export default function RestaurantView({ navigation, route }) {
   const { can } = usePermissions();
   const { restaurantId } = route.params;
+  const keyboardHeight = useKeyboardHeight();
   const [restaurant, setRestaurant] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -547,6 +549,7 @@ export default function RestaurantView({ navigation, route }) {
       >
         <View style={st.reqModalOverlay}>
           <View style={st.reqModalCard}>
+          <ScrollView contentContainerStyle={{ padding: scale(20), paddingBottom: scale(20) }} keyboardShouldPersistTaps="handled">
             <View style={st.reqModalHeader}>
               <Text style={st.reqModalTitle}>Request Deletion</Text>
               <TouchableOpacity onPress={() => setRequestModalVisible(false)}>
@@ -588,6 +591,7 @@ export default function RestaurantView({ navigation, route }) {
                 )}
               </TouchableOpacity>
             </View>
+          </ScrollView>
           </View>
         </View>
       </Modal>
@@ -797,7 +801,7 @@ const st = StyleSheet.create({
 
   // Request Deletion Modal
   reqModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  reqModalCard: { backgroundColor: C.card, borderTopLeftRadius: scale(20), borderTopRightRadius: scale(20), padding: scale(20) },
+  reqModalCard: { backgroundColor: C.card, borderTopLeftRadius: scale(20), borderTopRightRadius: scale(20), maxHeight: '85%' },
   reqModalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: scale(8) },
   reqModalTitle: { fontSize: moderateScale(18), fontWeight: '800', color: C.ink },
   reqModalSubtitle: { fontSize: moderateScale(13), color: C.text, marginBottom: scale(14), lineHeight: moderateScale(19) },
