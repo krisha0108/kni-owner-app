@@ -384,7 +384,7 @@ export default function StaffSalaryScreen({ navigation }) {
         <View style={st.cardHeader}>
           <View style={st.staffInfo}>
             <View style={st.staffAvatar}>
-              <Icon name="person" size={scale(20)} color={C.primary} />
+              <Icon name="person" size={scale(16)} color={C.primary} />
             </View>
             <View style={st.staffDetails}>
               <Text style={st.staffName}>{item.staff?.name || 'Staff'}</Text>
@@ -416,12 +416,20 @@ export default function StaffSalaryScreen({ navigation }) {
         </View>
 
         {/* Progress Bar */}
-        <View style={st.progressContainer}>
-          <View style={st.progressBar}>
-            <View style={[st.progressFill, { width: `${Math.min(progressPercent, 100)}%` }]} />
+        <LinearGradient colors={['#ECFDF5', '#F0FDF4']} style={st.progressContainer}>
+          <View style={st.progressHeader}>
+            <Text style={st.progressPercent}>
+              {progressPercent.toFixed(0)}<Text style={st.progressPercentSign}>%</Text>
+            </Text>
+            <Text style={st.progressText}>{formatPrice(item.totalPaid)} of {formatPrice(item.totalPayable)} paid</Text>
           </View>
-          <Text style={st.progressText}>{progressPercent.toFixed(0)}% paid</Text>
-        </View>
+          <View style={st.progressTrackWrap}>
+            <View style={st.progressBar}>
+              <LinearGradient colors={['#4ADE80', '#16A34A']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[st.progressFill, { width: `${Math.min(progressPercent, 100)}%` }]} />
+            </View>
+            <View style={[st.progressKnob, { left: `${Math.min(progressPercent, 100)}%` }]} />
+          </View>
+        </LinearGradient>
 
         {/* Allowances/Deductions */}
         {(item.allowances > 0 || item.deductions > 0) && (
@@ -451,24 +459,24 @@ export default function StaffSalaryScreen({ navigation }) {
             {downloadingSlipId === item.id ? (
               <ActivityIndicator size="small" color={C.warning} />
             ) : (
-              <Icon name="document-text-outline" size={scale(16)} color={C.warning} />
+              <Icon name="document-text-outline" size={scale(13)} color={C.warning} />
             )}
           </TouchableOpacity>
           <TouchableOpacity style={st.detailBtn} onPress={() => setDetailModal(item)}>
-            <Icon name="eye-outline" size={scale(16)} color={C.info} />
+            <Icon name="eye-outline" size={scale(13)} color={C.info} />
             <Text style={[st.actionBtnText, { color: C.info }]}>Details</Text>
           </TouchableOpacity>
 
           {item.status !== 'PAID' && (
             <TouchableOpacity style={st.payBtn} onPress={() => openPaymentDialog(item)}>
-              <Icon name="cash" size={scale(16)} color="#fff" />
+              <Icon name="cash" size={scale(13)} color="#fff" />
               <Text style={st.payBtnText}>Pay {formatPrice(remaining)}</Text>
             </TouchableOpacity>
           )}
 
           {item.totalPaid === 0 && (
             <TouchableOpacity style={st.deleteBtn} onPress={() => handleDeleteRecord(item)}>
-              <Icon name="trash-outline" size={scale(16)} color={C.danger} />
+              <Icon name="trash-outline" size={scale(13)} color={C.danger} />
             </TouchableOpacity>
           )}
         </View>
@@ -528,39 +536,39 @@ export default function StaffSalaryScreen({ navigation }) {
         {/* Month Selector */}
         <View style={st.monthSelector}>
           <TouchableOpacity style={st.monthBtn} onPress={() => changeMonth(-1)}>
-            <Icon name="chevron-back" size={scale(20)} color={C.ink} />
+            <Icon name="chevron-back" size={scale(14)} color={C.ink} />
           </TouchableOpacity>
           <View style={st.monthBox}>
-            <Icon name="calendar" size={scale(20)} color={C.primary} />
+            <Icon name="calendar" size={scale(14)} color={C.primary} />
             <Text style={st.monthText}>{monthNames[selectedMonth - 1]} {selectedYear}</Text>
           </View>
           <TouchableOpacity style={st.monthBtn} onPress={() => changeMonth(1)}>
-            <Icon name="chevron-forward" size={scale(20)} color={C.ink} />
+            <Icon name="chevron-forward" size={scale(14)} color={C.ink} />
           </TouchableOpacity>
         </View>
 
         {/* Summary Stats */}
         {salaries.length > 0 && (
           <View style={st.statsRow}>
-            <View style={[st.statCard, { backgroundColor: C.infoLight }]}>
-              <Icon name="people" size={scale(20)} color={C.info} />
-              <Text style={[st.statValue, { color: C.info }]}>{staffCount}</Text>
-              <Text style={st.statLabel}>Staff</Text>
+            <View style={[st.statCard, { backgroundColor: '#EFF3FC', borderColor: '#DCE3F5' }]}>
+              <View style={st.statIconWrap}><Icon name="people" size={scale(14)} color="#4F63D2" /></View>
+              <Text style={[st.statValue, { color: '#3B4C9E' }]} numberOfLines={1}>{staffCount}</Text>
+              <Text style={[st.statLabel, { color: '#3B4C9E' }]} numberOfLines={1}>Staff</Text>
             </View>
-            <View style={[st.statCard, { backgroundColor: C.primaryLight }]}>
-              <Icon name="wallet" size={scale(20)} color={C.primary} />
-              <Text style={[st.statValue, { color: C.primary }]}>{formatPrice(totalPayable)}</Text>
-              <Text style={st.statLabel}>Payable</Text>
+            <View style={[st.statCard, { backgroundColor: '#ECFDF5', borderColor: '#CFEFDD' }]}>
+              <View style={st.statIconWrap}><Icon name="wallet" size={scale(14)} color={C.success} /></View>
+              <Text style={[st.statValue, { color: '#15803D' }]} numberOfLines={1}>{formatPrice(totalPayable)}</Text>
+              <Text style={[st.statLabel, { color: '#15803D' }]} numberOfLines={1}>Payable</Text>
             </View>
-            <View style={[st.statCard, { backgroundColor: C.successLight }]}>
-              <Icon name="checkmark-done" size={scale(20)} color={C.success} />
-              <Text style={[st.statValue, { color: C.success }]}>{formatPrice(totalPaid)}</Text>
-              <Text style={st.statLabel}>Paid</Text>
+            <View style={[st.statCard, { backgroundColor: '#FEF2F2', borderColor: '#FBD9D9' }]}>
+              <View style={st.statIconWrap}><Icon name="checkmark-done" size={scale(14)} color={C.primary} /></View>
+              <Text style={[st.statValue, { color: '#B91C1C' }]} numberOfLines={1}>{formatPrice(totalPaid)}</Text>
+              <Text style={[st.statLabel, { color: '#B91C1C' }]} numberOfLines={1}>Paid</Text>
             </View>
-            <View style={[st.statCard, { backgroundColor: C.warningLight }]}>
-              <Icon name="time" size={scale(20)} color={C.warning} />
-              <Text style={[st.statValue, { color: C.warning }]}>{formatPrice(totalPending)}</Text>
-              <Text style={st.statLabel}>Pending</Text>
+            <View style={[st.statCard, { backgroundColor: '#FFFBEB', borderColor: '#FBE6B8' }]}>
+              <View style={st.statIconWrap}><Icon name="time" size={scale(14)} color={C.warning} /></View>
+              <Text style={[st.statValue, { color: '#92400E' }]} numberOfLines={1}>{formatPrice(totalPending)}</Text>
+              <Text style={[st.statLabel, { color: '#92400E' }]} numberOfLines={1}>Pending</Text>
             </View>
           </View>
         )}
@@ -569,7 +577,7 @@ export default function StaffSalaryScreen({ navigation }) {
         {salaries.length === 0 ? (
           <View style={st.emptyState}>
             <View style={st.emptyIcon}>
-              <Icon name="cash-outline" size={scale(64)} color={C.muted} />
+              <Icon name="cash-outline" size={scale(40)} color={C.muted} />
             </View>
             <Text style={st.emptyTitle}>No Salaries Generated</Text>
             <Text style={st.emptySubtitle}>
@@ -835,37 +843,39 @@ const st = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: scale(16),
-    paddingVertical: scale(14),
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(8),
     backgroundColor: C.card,
     marginHorizontal: scale(16),
     marginTop: scale(16),
-    borderRadius: scale(14),
+    borderRadius: scale(11),
     borderWidth: 1,
     borderColor: C.border,
   },
   monthBtn: {
-    width: scale(40),
-    height: scale(40),
-    borderRadius: scale(10),
+    width: scale(28),
+    height: scale(28),
+    borderRadius: scale(7),
     backgroundColor: C.bg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   monthBox: { flexDirection: 'row', alignItems: 'center' },
-  monthText: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink, marginLeft: scale(8) },
+  monthText: { fontSize: moderateScale(13), fontWeight: '700', color: C.ink, marginLeft: scale(6) },
 
   // Stats
-  statsRow: { flexDirection: 'row', paddingHorizontal: scale(16), paddingTop: scale(16) },
+  statsRow: { flexDirection: 'row', gap: scale(7), paddingHorizontal: scale(16), paddingTop: scale(16) },
   statCard: {
     flex: 1,
     alignItems: 'center',
-    padding: scale(10),
-    borderRadius: scale(12),
-    marginHorizontal: scale(3),
+    paddingVertical: scale(8),
+    paddingHorizontal: scale(4),
+    borderRadius: scale(11),
+    borderWidth: 1,
   },
-  statValue: { fontSize: moderateScale(14), fontWeight: '800', marginTop: scale(4) },
-  statLabel: { fontSize: moderateScale(9), fontWeight: '600', color: C.muted, marginTop: scale(2) },
+  statIconWrap: { width: scale(20), height: scale(20), borderRadius: scale(6), alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.65)' },
+  statValue: { fontSize: moderateScale(11), fontWeight: '800', marginTop: scale(5) },
+  statLabel: { fontSize: moderateScale(8), fontWeight: '600', marginTop: scale(1) },
 
   // Card List
   cardList: { paddingHorizontal: scale(16), paddingTop: scale(16) },
@@ -874,19 +884,19 @@ const st = StyleSheet.create({
   // Salary Card
   card: {
     backgroundColor: C.card,
-    padding: scale(16),
+    padding: scale(12),
     borderRadius: scale(14),
-    marginBottom: scale(12),
+    marginBottom: scale(10),
     borderWidth: 1,
     borderColor: C.border,
   },
   cardTablet: { width: '48%', marginHorizontal: '1%' },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: scale(12) },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: scale(8) },
   staffInfo: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   staffAvatar: {
-    width: scale(44),
-    height: scale(44),
-    borderRadius: scale(12),
+    width: scale(34),
+    height: scale(34),
+    borderRadius: scale(10),
     backgroundColor: C.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
@@ -905,15 +915,20 @@ const st = StyleSheet.create({
 
   // Amount Row
   amountRow: { flexDirection: 'row', marginBottom: scale(12) },
-  amountItem: { flex: 1, backgroundColor: C.bg, padding: scale(10), borderRadius: scale(8), marginHorizontal: scale(2) },
+  amountItem: { flex: 1, backgroundColor: C.bg, padding: scale(7), borderRadius: scale(7), marginHorizontal: scale(2) },
   amountLabel: { fontSize: moderateScale(10), color: C.muted, marginBottom: scale(2) },
   amountValue: { fontSize: moderateScale(13), fontWeight: '700', color: C.ink },
 
   // Progress
-  progressContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: scale(12) },
-  progressBar: { flex: 1, height: scale(6), backgroundColor: C.border, borderRadius: scale(3), overflow: 'hidden', marginRight: scale(10) },
-  progressFill: { height: '100%', backgroundColor: C.success, borderRadius: scale(3) },
-  progressText: { fontSize: moderateScale(11), color: C.muted, fontWeight: '600' },
+  progressContainer: { padding: scale(9), borderRadius: scale(11), borderWidth: 1, borderColor: '#CFEFDD', marginBottom: scale(12) },
+  progressHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: scale(6) },
+  progressPercent: { fontSize: moderateScale(15), fontWeight: '800', color: C.success, lineHeight: moderateScale(15) },
+  progressPercentSign: { fontSize: moderateScale(8), fontWeight: '700' },
+  progressText: { fontSize: moderateScale(7.5), color: '#15803D', fontWeight: '600', textAlign: 'right', maxWidth: scale(140) },
+  progressTrackWrap: { justifyContent: 'center' },
+  progressBar: { height: scale(6), backgroundColor: '#D7F0DF', borderRadius: scale(3), overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: scale(3) },
+  progressKnob: { position: 'absolute', width: scale(12), height: scale(12), borderRadius: scale(6), backgroundColor: '#fff', borderWidth: 2.5, borderColor: '#16A34A', marginLeft: -scale(6), shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 2, elevation: 2 },
 
   // Extra Row (Allowances/Deductions)
   extraRow: { flexDirection: 'row', marginBottom: scale(12) },
@@ -927,47 +942,47 @@ const st = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: scale(10),
-    borderRadius: scale(10),
+    paddingVertical: scale(7),
+    borderRadius: scale(9),
     backgroundColor: C.infoLight,
-    marginRight: scale(8),
+    marginRight: scale(6),
   },
-  actionBtnText: { fontSize: moderateScale(12), fontWeight: '600', marginLeft: scale(4) },
+  actionBtnText: { fontSize: moderateScale(10.5), fontWeight: '600', marginLeft: scale(3) },
   payBtn: {
     flex: 2,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: scale(10),
-    borderRadius: scale(10),
+    paddingVertical: scale(7),
+    borderRadius: scale(9),
     backgroundColor: C.success,
-    marginRight: scale(8),
+    marginRight: scale(6),
   },
-  payBtnText: { fontSize: moderateScale(12), fontWeight: '700', color: '#fff', marginLeft: scale(4) },
+  payBtnText: { fontSize: moderateScale(10.5), fontWeight: '700', color: '#fff', marginLeft: scale(3) },
   deleteBtn: {
-    width: scale(40),
+    width: scale(32),
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: scale(10),
-    borderRadius: scale(10),
+    paddingVertical: scale(7),
+    borderRadius: scale(9),
     backgroundColor: C.dangerLight,
   },
   slipBtn: {
-    width: scale(40),
+    width: scale(32),
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: scale(10),
-    borderRadius: scale(10),
+    paddingVertical: scale(7),
+    borderRadius: scale(9),
     backgroundColor: C.warningLight,
-    marginRight: scale(8),
+    marginRight: scale(6),
   },
 
   // Empty State
   emptyState: { alignItems: 'center', paddingTop: scale(60), paddingHorizontal: scale(40) },
   emptyIcon: {
-    width: scale(120),
-    height: scale(120),
-    borderRadius: scale(60),
+    width: scale(80),
+    height: scale(80),
+    borderRadius: scale(40),
     backgroundColor: C.border,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1114,9 +1129,9 @@ const st = StyleSheet.create({
   },
   skelStat: {
     flex: 1,
-    height: scale(64),
+    height: scale(56),
     backgroundColor: '#E2E8F0',
-    borderRadius: scale(12),
+    borderRadius: scale(11),
     marginHorizontal: scale(3),
   },
   skelFill: {

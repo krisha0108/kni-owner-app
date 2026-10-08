@@ -11,7 +11,7 @@ import RNFS from 'react-native-fs';
 // Using 'localhost' here requires `adb reverse tcp:3000 tcp:3000` (USB-tethered device) —
 // avoids the WiFi-adapter flakiness that causes intermittent "Network Error" over LAN.
 
-// const LOCAL_IP = '192.168.29.54';
+// const LOCAL_IP = '192.168.31.82';
 
 const LOCAL_IP = 'localhost';
 

@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Base application theme. -->
     <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
@@ -10,6 +10,19 @@
         <item name="android:statusBarColor">#EF3A3A</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowOptOutEdgeToEdgeEnforcement">true</item>
+        <!-- Without this, the gap between one screen unmounting and the next
+             painting falls through to Android's default (black) window
+             background, showing a brief black flash during transitions. -->
+        <item name="android:windowBackground">#FFFFFF</item>
+
+        <!-- Native cold-start splash (Android 12+ SplashScreen API), set directly on
+             AppTheme rather than swapping to a dedicated Theme.SplashScreen — the
+             latter isn't an AppCompat descendant and crashes ReactActivity (it needs
+             Theme.AppCompat). Background matches the Navratri splash's own top
+             gradient color so the OS splash dissolves straight into it. Ignored
+             (no-op, not a crash) below API 31. -->
+        <item name="android:windowSplashScreenBackground" tools:targetApi="31">#fdf2ec</item>
+        <item name="android:windowSplashScreenAnimatedIcon" tools:targetApi="31">@drawable/splash_icon</item>
     </style>
 
 </resources>

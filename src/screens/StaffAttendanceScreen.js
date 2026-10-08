@@ -379,7 +379,7 @@ export default function StaffAttendanceScreen({ navigation }) {
         <View style={st.staffHeader}>
           <View style={st.staffInfo}>
             <View style={st.staffAvatar}>
-              <Icon name="person" size={scale(20)} color={C.primary} />
+              <Icon name="person" size={scale(16)} color={C.primary} />
             </View>
             <View style={st.staffDetails}>
               <Text style={st.staffName}>{member.name}</Text>
@@ -465,10 +465,10 @@ export default function StaffAttendanceScreen({ navigation }) {
         {/* Date Selector */}
         <View style={st.dateSelector}>
           <TouchableOpacity style={st.dateBtn} onPress={() => changeDate(-1)}>
-            <Icon name="chevron-back" size={scale(20)} color={C.ink} />
+            <Icon name="chevron-back" size={scale(14)} color={C.ink} />
           </TouchableOpacity>
           <View style={st.dateBox}>
-            <Icon name="calendar" size={scale(20)} color={C.primary} />
+            <Icon name="calendar" size={scale(14)} color={C.primary} />
             <Text style={st.dateText}>
               {isToday ? 'Today, ' : ''}
               {new Date(selectedDate).toLocaleDateString('en-IN', {
@@ -483,7 +483,7 @@ export default function StaffAttendanceScreen({ navigation }) {
             onPress={() => changeDate(1)}
             disabled={isToday}
           >
-            <Icon name="chevron-forward" size={scale(20)} color={C.ink} />
+            <Icon name="chevron-forward" size={scale(14)} color={C.ink} />
           </TouchableOpacity>
         </View>
 
@@ -491,38 +491,44 @@ export default function StaffAttendanceScreen({ navigation }) {
           <>
             {/* Summary Stats */}
             <View style={st.statsRow}>
-              <View style={[st.statCard, { backgroundColor: C.successLight }]}>
-                <Icon name="checkmark-circle" size={scale(22)} color={C.success} />
-                <Text style={[st.statValue, { color: C.success }]}>{presentCount}</Text>
-                <Text style={st.statLabel}>Present</Text>
+              <View style={[st.statCard, { backgroundColor: '#ECFDF5', borderColor: '#CFEFDD' }]}>
+                <View style={st.statIconWrap}><Icon name="checkmark-circle" size={scale(14)} color={C.success} /></View>
+                <Text style={[st.statValue, { color: '#15803D' }]} numberOfLines={1}>{presentCount}</Text>
+                <Text style={[st.statLabel, { color: '#15803D' }]} numberOfLines={1}>Present</Text>
               </View>
-              <View style={[st.statCard, { backgroundColor: C.dangerLight }]}>
-                <Icon name="close-circle" size={scale(22)} color={C.danger} />
-                <Text style={[st.statValue, { color: C.danger }]}>{absentCount}</Text>
-                <Text style={st.statLabel}>Absent</Text>
+              <View style={[st.statCard, { backgroundColor: '#FEF2F2', borderColor: '#FBD9D9' }]}>
+                <View style={st.statIconWrap}><Icon name="close-circle" size={scale(14)} color={C.danger} /></View>
+                <Text style={[st.statValue, { color: '#B91C1C' }]} numberOfLines={1}>{absentCount}</Text>
+                <Text style={[st.statLabel, { color: '#B91C1C' }]} numberOfLines={1}>Absent</Text>
               </View>
-              <View style={[st.statCard, { backgroundColor: C.warningLight }]}>
-                <Icon name="time" size={scale(22)} color={C.warning} />
-                <Text style={[st.statValue, { color: C.warning }]}>{halfDayCount}</Text>
-                <Text style={st.statLabel}>Half Day</Text>
+              <View style={[st.statCard, { backgroundColor: '#FFFBEB', borderColor: '#FBE6B8' }]}>
+                <View style={st.statIconWrap}><Icon name="time" size={scale(14)} color={C.warning} /></View>
+                <Text style={[st.statValue, { color: '#92400E' }]} numberOfLines={1}>{halfDayCount}</Text>
+                <Text style={[st.statLabel, { color: '#92400E' }]} numberOfLines={1}>Half Day</Text>
               </View>
-              <View style={[st.statCard, { backgroundColor: C.bg }]}>
-                <Icon name="help-circle" size={scale(22)} color={C.muted} />
-                <Text style={[st.statValue, { color: C.muted }]}>{unmarkedCount}</Text>
-                <Text style={st.statLabel}>Pending</Text>
+              <View style={[st.statCard, { backgroundColor: '#EFF3FC', borderColor: '#DCE3F5' }]}>
+                <View style={st.statIconWrap}><Icon name="help-circle" size={scale(14)} color="#4F63D2" /></View>
+                <Text style={[st.statValue, { color: '#3B4C9E' }]} numberOfLines={1}>{unmarkedCount}</Text>
+                <Text style={[st.statLabel, { color: '#3B4C9E' }]} numberOfLines={1}>Pending</Text>
               </View>
             </View>
 
             {/* Progress */}
-            <View style={st.progressContainer}>
+            <LinearGradient colors={['#ECFDF5', '#F0FDF4']} style={st.progressContainer}>
               <View style={st.progressHeader}>
-                <Text style={st.progressText}>{markedCount} of {staff.length} marked</Text>
-                <Text style={st.progressPercent}>{staff.length > 0 ? Math.round((markedCount / staff.length) * 100) : 0}%</Text>
+                <Text style={st.progressPercent}>
+                  {staff.length > 0 ? Math.round((markedCount / staff.length) * 100) : 0}
+                  <Text style={st.progressPercentSign}>%</Text>
+                </Text>
+                <Text style={st.progressText}>{markedCount} of {staff.length} staff{'\n'}marked today</Text>
               </View>
-              <View style={st.progressBar}>
-                <View style={[st.progressFill, { width: `${staff.length > 0 ? (markedCount / staff.length) * 100 : 0}%` }]} />
+              <View style={st.progressTrackWrap}>
+                <View style={st.progressBar}>
+                  <LinearGradient colors={['#4ADE80', '#16A34A']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[st.progressFill, { width: `${staff.length > 0 ? (markedCount / staff.length) * 100 : 0}%` }]} />
+                </View>
+                <View style={[st.progressKnob, { left: `${staff.length > 0 ? (markedCount / staff.length) * 100 : 0}%` }]} />
               </View>
-            </View>
+            </LinearGradient>
 
             {/* Bulk Actions - Only show if there are unmarked staff */}
             {unmarkedCount > 0 && (
@@ -560,7 +566,7 @@ export default function StaffAttendanceScreen({ navigation }) {
         {staff.length === 0 ? (
           <View style={st.emptyState}>
             <View style={st.emptyIcon}>
-              <Icon name="people-outline" size={scale(64)} color={C.muted} />
+              <Icon name="people-outline" size={scale(40)} color={C.muted} />
             </View>
             <Text style={st.emptyTitle}>No Active Staff</Text>
             <Text style={st.emptySubtitle}>Add staff members to mark attendance</Text>
@@ -597,7 +603,7 @@ export default function StaffAttendanceScreen({ navigation }) {
                   style={[st.statusOption, { backgroundColor: status.bg }]}
                   onPress={() => markAttendance(statusModal.id, status.value)}
                 >
-                  <Icon name={status.icon} size={scale(24)} color={status.color} />
+                  <Icon name={status.icon} size={scale(18)} color={status.color} />
                   <Text style={[st.statusOptionText, { color: status.color }]}>{status.label}</Text>
                 </TouchableOpacity>
               ))}
@@ -709,8 +715,8 @@ const st = StyleSheet.create({
   },
   skelStatCard: {
     flex: 1,
-    height: scale(72),
-    borderRadius: scale(12),
+    height: scale(56),
+    borderRadius: scale(11),
     marginHorizontal: scale(3),
     backgroundColor: '#E2E8F0',
   },
@@ -725,9 +731,9 @@ const st = StyleSheet.create({
     borderColor: C.border,
   },
   skelAvatar: {
-    width: scale(40),
-    height: scale(40),
-    borderRadius: scale(10),
+    width: scale(32),
+    height: scale(32),
+    borderRadius: scale(9),
     backgroundColor: '#E2E8F0',
   },
   skelLine: {
@@ -749,24 +755,28 @@ const st = StyleSheet.create({
   },
 
   // Date Selector
-  dateSelector: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: scale(16), paddingVertical: scale(14), backgroundColor: C.card, marginHorizontal: scale(16), marginTop: scale(16), borderRadius: scale(14), borderWidth: 1, borderColor: C.border },
-  dateBtn: { width: scale(40), height: scale(40), borderRadius: scale(10), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
+  dateSelector: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: scale(10), paddingVertical: scale(8), backgroundColor: C.card, marginHorizontal: scale(16), marginTop: scale(16), borderRadius: scale(11), borderWidth: 1, borderColor: C.border },
+  dateBtn: { width: scale(28), height: scale(28), borderRadius: scale(7), backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
   dateBox: { flexDirection: 'row', alignItems: 'center' },
-  dateText: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink, marginLeft: scale(8) },
+  dateText: { fontSize: moderateScale(13), fontWeight: '700', color: C.ink, marginLeft: scale(6) },
 
   // Stats
-  statsRow: { flexDirection: 'row', paddingHorizontal: scale(16), paddingTop: scale(16) },
-  statCard: { flex: 1, alignItems: 'center', padding: scale(10), borderRadius: scale(12), marginHorizontal: scale(3) },
-  statValue: { fontSize: moderateScale(20), fontWeight: '800', marginTop: scale(4) },
-  statLabel: { fontSize: moderateScale(10), fontWeight: '600', color: C.muted, marginTop: scale(2) },
+  statsRow: { flexDirection: 'row', gap: scale(7), paddingHorizontal: scale(16), paddingTop: scale(16) },
+  statCard: { flex: 1, alignItems: 'center', paddingVertical: scale(8), paddingHorizontal: scale(4), borderRadius: scale(11), borderWidth: 1 },
+  statIconWrap: { width: scale(20), height: scale(20), borderRadius: scale(6), alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.65)' },
+  statValue: { fontSize: moderateScale(13), fontWeight: '800', marginTop: scale(5) },
+  statLabel: { fontSize: moderateScale(8.5), fontWeight: '600', marginTop: scale(1) },
 
   // Progress
-  progressContainer: { paddingHorizontal: scale(16), paddingTop: scale(14) },
-  progressHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: scale(6) },
-  progressText: { fontSize: moderateScale(12), color: C.muted },
-  progressPercent: { fontSize: moderateScale(12), fontWeight: '700', color: C.success },
-  progressBar: { height: scale(6), backgroundColor: C.border, borderRadius: scale(3), overflow: 'hidden' },
-  progressFill: { height: '100%', backgroundColor: C.success, borderRadius: scale(3) },
+  progressContainer: { marginHorizontal: scale(16), marginTop: scale(14), padding: scale(14), borderRadius: scale(16), borderWidth: 1, borderColor: '#CFEFDD' },
+  progressHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: scale(10) },
+  progressText: { fontSize: moderateScale(9.5), color: '#15803D', fontWeight: '600', textAlign: 'right', lineHeight: moderateScale(13) },
+  progressPercent: { fontSize: moderateScale(26), fontWeight: '800', color: C.success, lineHeight: moderateScale(26) },
+  progressPercentSign: { fontSize: moderateScale(13), fontWeight: '700' },
+  progressTrackWrap: { justifyContent: 'center' },
+  progressBar: { height: scale(10), backgroundColor: '#D7F0DF', borderRadius: scale(5), overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: scale(5) },
+  progressKnob: { position: 'absolute', width: scale(16), height: scale(16), borderRadius: scale(8), backgroundColor: '#fff', borderWidth: 3, borderColor: '#16A34A', marginLeft: -scale(8), shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 3, elevation: 3 },
 
   // Bulk Actions
   bulkActions: { flexDirection: 'row', paddingHorizontal: scale(16), paddingTop: scale(12) },
@@ -784,7 +794,7 @@ const st = StyleSheet.create({
   staffCardTablet: { width: '48%', marginHorizontal: '1%' },
   staffHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   staffInfo: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  staffAvatar: { width: scale(40), height: scale(40), borderRadius: scale(10), backgroundColor: C.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  staffAvatar: { width: scale(32), height: scale(32), borderRadius: scale(9), backgroundColor: C.primaryLight, alignItems: 'center', justifyContent: 'center' },
   staffDetails: { flex: 1, marginLeft: scale(10) },
   staffName: { fontSize: moderateScale(14), fontWeight: '700', color: C.ink },
   staffRole: { fontSize: moderateScale(11), color: C.muted, marginTop: 1 },
@@ -802,7 +812,7 @@ const st = StyleSheet.create({
 
   // Empty
   emptyState: { alignItems: 'center', paddingTop: scale(60), paddingHorizontal: scale(40) },
-  emptyIcon: { width: scale(120), height: scale(120), borderRadius: scale(60), backgroundColor: C.border, alignItems: 'center', justifyContent: 'center', marginBottom: scale(20) },
+  emptyIcon: { width: scale(80), height: scale(80), borderRadius: scale(40), backgroundColor: C.border, alignItems: 'center', justifyContent: 'center', marginBottom: scale(20) },
   emptyTitle: { fontSize: moderateScale(20), fontWeight: '700', color: C.ink, marginBottom: scale(8) },
   emptySubtitle: { fontSize: moderateScale(14), color: C.muted, textAlign: 'center' },
   emptyBtn: { flexDirection: 'row', alignItems: 'center', marginTop: scale(24), paddingHorizontal: scale(24), paddingVertical: scale(14), backgroundColor: C.primary, borderRadius: scale(14) },
@@ -817,7 +827,7 @@ const st = StyleSheet.create({
   modalSubtitle: { fontSize: moderateScale(14), color: C.muted, paddingHorizontal: scale(20), marginTop: scale(10) },
 
   statusGrid: { flexDirection: 'row', flexWrap: 'wrap', padding: scale(16) },
-  statusOption: { width: '31%', alignItems: 'center', paddingVertical: scale(16), borderRadius: scale(12), margin: '1%' },
+  statusOption: { width: '31%', alignItems: 'center', paddingVertical: scale(10), borderRadius: scale(12), margin: '1%' },
   statusOptionText: { fontSize: moderateScale(11), fontWeight: '700', marginTop: scale(6) },
 
   timeInputs: { padding: scale(20) },

@@ -52,7 +52,7 @@ const C = {
 };
 
 const statusFilters = [
-  { key: 'all', label: 'All', icon: 'grid-outline', color: C.ink },
+  { key: 'all', label: 'All', icon: 'options-outline', color: C.ink },
   { key: 'AVAILABLE', label: 'Available', icon: 'checkmark-circle', color: C.success },
   { key: 'IN_USE', label: 'In Use', icon: 'play-circle', color: C.info },
   { key: 'MAINTENANCE', label: 'Maintenance', icon: 'construct', color: C.warning },
@@ -791,43 +791,51 @@ export default function MyEquipmentScreen({ navigation }) {
                 </View>
               </View>
 
-              {/* Serial Number */}
-              <Text style={st.inputLabel}>Serial Number</Text>
-              <TextInput style={st.input} placeholder="ABC123456" placeholderTextColor={C.muted}
-                value={form.serialNumber} onChangeText={v => setForm(f => ({ ...f, serialNumber: v }))} />
+              {/* Serial Number & Install Location Row */}
+              <View style={st.formRow}>
+                <View style={st.formCol}>
+                  <Text style={st.inputLabel}>Serial Number</Text>
+                  <TextInput style={st.input} placeholder="ABC123456" placeholderTextColor={C.muted}
+                    value={form.serialNumber} onChangeText={v => setForm(f => ({ ...f, serialNumber: v }))} />
+                </View>
+                <View style={st.formCol}>
+                  <Text style={st.inputLabel}>Install Location</Text>
+                  <TextInput style={st.input} placeholder="e.g., Main Kitchen" placeholderTextColor={C.muted}
+                    value={form.installLocation} onChangeText={v => setForm(f => ({ ...f, installLocation: v }))} />
+                </View>
+              </View>
 
-              {/* Install Location */}
-              <Text style={st.inputLabel}>Install Location</Text>
-              <TextInput style={st.input} placeholder="e.g., Main Kitchen" placeholderTextColor={C.muted}
-                value={form.installLocation} onChangeText={v => setForm(f => ({ ...f, installLocation: v }))} />
-
-              {/* Purchase Date */}
-              <Text style={st.inputLabel}>Purchase Date *</Text>
-              <TouchableOpacity style={st.dateBtn} onPress={() => setShowPurchaseDatePicker(true)}>
-                <Icon name="calendar" size={scale(18)} color={C.primary} />
-                <Text style={form.purchaseDate ? st.dateText : st.datePlaceholder}>
-                  {form.purchaseDate ? formatDateDisplay(form.purchaseDate) : 'Select date'}
-                </Text>
-              </TouchableOpacity>
-              {showPurchaseDatePicker && (
-                <DateTimePicker value={form.purchaseDate ? new Date(form.purchaseDate) : new Date()}
-                  mode="date" display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  onChange={onPurchaseDateChange} maximumDate={new Date()} />
-              )}
-
-              {/* Warranty End Date */}
-              <Text style={st.inputLabel}>Warranty End Date</Text>
-              <TouchableOpacity style={st.dateBtn} onPress={() => setShowWarrantyDatePicker(true)}>
-                <Icon name="shield-checkmark" size={scale(18)} color={C.info} />
-                <Text style={form.warrantyEndDate ? st.dateText : st.datePlaceholder}>
-                  {form.warrantyEndDate ? formatDateDisplay(form.warrantyEndDate) : 'Select date'}
-                </Text>
-              </TouchableOpacity>
-              {showWarrantyDatePicker && (
-                <DateTimePicker value={form.warrantyEndDate ? new Date(form.warrantyEndDate) : new Date()}
-                  mode="date" display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  onChange={onWarrantyDateChange} minimumDate={new Date()} />
-              )}
+              {/* Purchase Date & Warranty End Date Row */}
+              <View style={st.formRow}>
+                <View style={st.formCol}>
+                  <Text style={st.inputLabel}>Purchase Date *</Text>
+                  <TouchableOpacity style={st.dateBtn} onPress={() => setShowPurchaseDatePicker(true)}>
+                    <Icon name="calendar" size={scale(18)} color={C.primary} />
+                    <Text style={form.purchaseDate ? st.dateText : st.datePlaceholder} numberOfLines={1}>
+                      {form.purchaseDate ? formatDateDisplay(form.purchaseDate) : 'Select date'}
+                    </Text>
+                  </TouchableOpacity>
+                  {showPurchaseDatePicker && (
+                    <DateTimePicker value={form.purchaseDate ? new Date(form.purchaseDate) : new Date()}
+                      mode="date" display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                      onChange={onPurchaseDateChange} maximumDate={new Date()} />
+                  )}
+                </View>
+                <View style={st.formCol}>
+                  <Text style={st.inputLabel}>Warranty End</Text>
+                  <TouchableOpacity style={st.dateBtn} onPress={() => setShowWarrantyDatePicker(true)}>
+                    <Icon name="shield-checkmark" size={scale(18)} color={C.info} />
+                    <Text style={form.warrantyEndDate ? st.dateText : st.datePlaceholder} numberOfLines={1}>
+                      {form.warrantyEndDate ? formatDateDisplay(form.warrantyEndDate) : 'Select date'}
+                    </Text>
+                  </TouchableOpacity>
+                  {showWarrantyDatePicker && (
+                    <DateTimePicker value={form.warrantyEndDate ? new Date(form.warrantyEndDate) : new Date()}
+                      mode="date" display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                      onChange={onWarrantyDateChange} minimumDate={new Date()} />
+                  )}
+                </View>
+              </View>
 
               {/* Notes */}
               <Text style={st.inputLabel}>Notes</Text>

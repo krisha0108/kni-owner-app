@@ -6,9 +6,9 @@
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView,
   TextInput, ActivityIndicator, Modal, StatusBar,
-  useWindowDimensions, Dimensions, Animated,
+  useWindowDimensions, Dimensions, Animated, Keyboard,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
@@ -17,8 +17,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { api } from '../api/client';
 import { useRestaurant } from '../context/RestaurantContext';
 import { invalidate } from '../utils/focusCache';
-import KniBottomNav from '../components/KniBottomNav';
-import NavigationMenu from '../components/NavigationMenu';
+import CalendarDatePicker from '../components/CalendarDatePicker';
 import { scale, moderateScale } from '../utils/responsive';
 import useKeyboardHeight from '../utils/useKeyboardHeight';
 import AppAlert from '../utils/AppAlert';
@@ -34,6 +33,11 @@ const PLAN_TYPES = [
   { key: 'BASIC', label: 'Basic', desc: 'Preventive maintenance only', bg: '#D1FAE5', color: '#059669', icon: 'shield-outline' },
   { key: 'STANDARD', label: 'Standard', desc: 'Preventive + free breakdowns', bg: '#DBEAFE', color: '#2563EB', icon: 'shield-half-outline' },
   { key: 'PREMIUM', label: 'Premium', desc: 'Full coverage + priority + parts', bg: '#F3E8FF', color: '#7C3AED', icon: 'shield-checkmark' },
+];
+
+const CONTRACT_CATEGORIES = [
+  { key: 'AMC', label: 'AMC', desc: 'Covers service visits; parts/spares charged separately if needed', bg: '#DBEAFE', color: '#2563EB', icon: 'build-outline' },
+  { key: 'CAMC', label: 'CAMC', desc: 'Comprehensive — service visits + parts/spares included', bg: '#F3E8FF', color: '#7C3AED', icon: 'shield-checkmark-outline' },
 ];
 
 const FREQUENCY_OPTIONS = [
@@ -71,13 +75,12 @@ export default function AMCRequestScreen({ navigation }) {
   const { restaurants, selectedRestaurantId } = useRestaurant();
 
   const [step, setStep] = useState(1);
-  const [menuVisible, setMenuVisible] = useState(false);
   const [kitchenModal, setKitchenModal] = useState(false);
-  const [dateModal, setDateModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   // Form state
   const [restaurantId, setRestaurantId] = useState(selectedRestaurantId || '');
+  const [contractCategory, setContractCategory] = useState('');
   const [kitchenType, setKitchenType] = useState('');
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [planType, setPlanType] = useState('');
@@ -92,6 +95,20 @@ export default function AMCRequestScreen({ navigation }) {
   // Active AMC check
   const [activeAMC, setActiveAMC] = useState(null);
   const [checkingAMC, setCheckingAMC] = useState(false);
+
+  const step3ScrollRef = useRef(null);
+
+  // Scroll the Notes field above the keyboard every time it opens - using
+  // the keyboard's own show event (not TextInput onFocus) so this still
+  // fires on a second tap after the keyboard was dismissed once, when the
+  // input can stay logically "focused" without onFocus firing again.
+  useEffect(() => {
+    if (step !== 3) return undefined;
+    const sub = Keyboard.addListener('keyboardDidShow', () => {
+      step3ScrollRef.current?.scrollToEnd({ animated: true });
+    });
+    return () => sub.remove();
+  }, [step]);
 
   const pulse = useRef(new Animated.Value(0.4)).current;
   useEffect(() => {
@@ -132,52 +149,6 @@ export default function AMCRequestScreen({ navigation }) {
     }).catch(() => {}).finally(() => setCategoriesLoading(false));
   }, []);
 
-  // Custom date picker state
-  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const MONTHS_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-  const [pickerDay, setPickerDay] = useState(() => new Date().getDate());
-  const [pickerMonth, setPickerMonth] = useState(() => new Date().getMonth());
-  const [pickerYear, setPickerYear] = useState(() => new Date().getFullYear());
-  const dayListRef = useRef(null);
-  const monthListRef = useRef(null);
-
-  const getDaysInMonth = (m, y) => new Date(y, m + 1, 0).getDate();
-  const daysInPickerMonth = getDaysInMonth(pickerMonth, pickerYear);
-
-  const handleMonthChange = (m) => {
-    const maxDay = getDaysInMonth(m, pickerYear);
-    setPickerMonth(m);
-    if (pickerDay > maxDay) setPickerDay(maxDay);
-  };
-
-  const handleYearChange = (y) => {
-    const maxDay = getDaysInMonth(pickerMonth, y);
-    setPickerYear(y);
-    if (pickerDay > maxDay) setPickerDay(maxDay);
-  };
-
-  const openDateModal = () => {
-    const d = preferredStartDate || new Date();
-    const day = d.getDate();
-    const month = d.getMonth();
-    setPickerDay(day);
-    setPickerMonth(month);
-    setPickerYear(d.getFullYear());
-    setDateModal(true);
-    // Auto-scroll to selected items after modal renders
-    setTimeout(() => {
-      dayListRef.current?.scrollToIndex?.({ index: Math.max(0, day - 3), animated: false });
-      monthListRef.current?.scrollToIndex?.({ index: Math.max(0, month - 2), animated: false });
-    }, 150);
-  };
-
-  const confirmDatePicker = () => {
-    const d = new Date(pickerYear, pickerMonth, pickerDay);
-    d.setHours(0, 0, 0, 0);
-    setPreferredStartDate(d);
-    setDateModal(false);
-  };
-
   const toggleCategory = (catId) => {
     setSelectedCategories(prev =>
       prev.includes(catId) ? prev.filter(id => id !== catId) : [...prev, catId]
@@ -187,7 +158,7 @@ export default function AMCRequestScreen({ navigation }) {
   const selectedRestaurant = restaurants?.find(r => r.id === restaurantId);
 
   const canContinue = step === 1
-    ? restaurantId && kitchenType && selectedCategories.length > 0 && !activeAMC && !checkingAMC
+    ? restaurantId && contractCategory && kitchenType && selectedCategories.length > 0 && !activeAMC && !checkingAMC
     : step === 2
     ? planType && visitFrequency && preferredStartDate
     : true;
@@ -202,6 +173,7 @@ export default function AMCRequestScreen({ navigation }) {
     try {
       const payload = {
         restaurantId,
+        contractCategory,
         kitchenType,
         equipmentCategories: selectedCategories,
         planType,
@@ -266,6 +238,32 @@ export default function AMCRequestScreen({ navigation }) {
         </View>
       ) : null}
 
+      {/* Contract Category: AMC vs CAMC */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Icon name="document-text-outline" size={scale(20)} color={C.purple} />
+          <Text style={styles.sectionTitle}>AMC or CAMC?</Text>
+        </View>
+        {CONTRACT_CATEGORIES.map(cat => (
+          <TouchableOpacity
+            key={cat.key}
+            style={[styles.planCard, contractCategory === cat.key && styles.planCardActive]}
+            onPress={() => setContractCategory(cat.key)}
+          >
+            <View style={[styles.planIconBox, { backgroundColor: cat.bg }]}>
+              <Icon name={cat.icon} size={scale(14)} color={cat.color} />
+            </View>
+            <View style={styles.planInfo}>
+              <Text style={styles.planLabel}>{cat.label}</Text>
+              <Text style={styles.planDesc}>{cat.desc}</Text>
+            </View>
+            {contractCategory === cat.key && (
+              <Icon name="checkmark-circle" size={scale(18)} color={C.purple} />
+            )}
+          </TouchableOpacity>
+        ))}
+      </View>
+
       {/* Kitchen Type */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
@@ -307,19 +305,7 @@ export default function AMCRequestScreen({ navigation }) {
         )}
       </View>
 
-      {/* Continue Button */}
-      <View style={styles.inlineFooter}>
-        <TouchableOpacity
-          style={[styles.continueBtn, !canContinue && styles.continueBtnDisabled]}
-          disabled={!canContinue}
-          onPress={handleNext}
-        >
-          <Text style={styles.continueBtnText}>Continue</Text>
-          <Icon name="arrow-forward" size={scale(18)} color="#fff" />
-        </TouchableOpacity>
-      </View>
-
-      <View style={{ height: scale(120) }} />
+      <View style={{ height: scale(100) }} />
     </ScrollView>
   );
 
@@ -334,18 +320,18 @@ export default function AMCRequestScreen({ navigation }) {
         {PLAN_TYPES.map(plan => (
           <TouchableOpacity
             key={plan.key}
-            style={[styles.planCard, planType === plan.key && { borderColor: C.purple, borderWidth: 2 }]}
+            style={[styles.planCard, planType === plan.key && styles.planCardActive]}
             onPress={() => setPlanType(plan.key)}
           >
             <View style={[styles.planIconBox, { backgroundColor: plan.bg }]}>
-              <Icon name={plan.icon} size={scale(24)} color={plan.color} />
+              <Icon name={plan.icon} size={scale(14)} color={plan.color} />
             </View>
             <View style={styles.planInfo}>
               <Text style={styles.planLabel}>{plan.label}</Text>
               <Text style={styles.planDesc}>{plan.desc}</Text>
             </View>
             {planType === plan.key && (
-              <Icon name="checkmark-circle" size={scale(24)} color={C.purple} />
+              <Icon name="checkmark-circle" size={scale(18)} color={C.purple} />
             )}
           </TouchableOpacity>
         ))}
@@ -371,45 +357,22 @@ export default function AMCRequestScreen({ navigation }) {
       </View>
 
       {/* Start Date */}
-      <View style={styles.section}>
+      <View style={[styles.section, styles.sectionRaised]}>
         <View style={styles.sectionHeader}>
           <Icon name="calendar-outline" size={scale(20)} color={C.purple} />
           <Text style={styles.sectionTitle}>Preferred Start Date</Text>
         </View>
-        <TouchableOpacity style={styles.dropdownBtn} onPress={() => openDateModal()}>
-          <Icon name="calendar" size={scale(20)} color={C.purple} />
-          <Text style={preferredStartDate ? styles.dropdownText : styles.dropdownPlaceholder}>
-            {preferredStartDate ? preferredStartDate.toDateString() : 'Tap to select date'}
-          </Text>
-          <Icon name="chevron-forward" size={scale(20)} color={C.muted} />
-        </TouchableOpacity>
+        <CalendarDatePicker value={preferredStartDate} onChange={setPreferredStartDate} />
       </View>
 
-      {/* Continue Button */}
-      <View style={styles.inlineFooter}>
-        {step > 1 && (
-          <TouchableOpacity style={styles.footerBackBtn} onPress={() => setStep(step - 1)}>
-            <Icon name="arrow-back" size={scale(20)} color={C.ink} />
-          </TouchableOpacity>
-        )}
-        <TouchableOpacity
-          style={[styles.continueBtn, !canContinue && styles.continueBtnDisabled]}
-          disabled={!canContinue}
-          onPress={handleNext}
-        >
-          <Text style={styles.continueBtnText}>Continue</Text>
-          <Icon name="arrow-forward" size={scale(18)} color="#fff" />
-        </TouchableOpacity>
-      </View>
-
-      <View style={{ height: scale(120) }} />
+      <View style={{ height: scale(260) }} />
     </ScrollView>
   );
 
   const renderStep3 = () => {
     const catNames = categories.filter(c => selectedCategories.includes(c.id)).map(c => c.name).join(', ');
     return (
-      <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: scale(40) + keyboardHeight }} keyboardShouldPersistTaps="handled">
+      <ScrollView ref={step3ScrollRef} style={styles.scrollContent} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: keyboardHeight }} keyboardShouldPersistTaps="handled">
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Icon name="document-text-outline" size={scale(20)} color={C.purple} />
@@ -420,6 +383,13 @@ export default function AMCRequestScreen({ navigation }) {
             <View style={styles.reviewRow}>
               <Text style={styles.reviewLabel}>Restaurant</Text>
               <Text style={styles.reviewValue}>{selectedRestaurant?.name || '-'}</Text>
+            </View>
+            <View style={styles.reviewDivider} />
+            <View style={styles.reviewRow}>
+              <Text style={styles.reviewLabel}>Contract Type</Text>
+              <View style={[styles.planBadge, { backgroundColor: CONTRACT_CATEGORIES.find(c => c.key === contractCategory)?.bg || C.bg }]}>
+                <Text style={[styles.planBadgeText, { color: CONTRACT_CATEGORIES.find(c => c.key === contractCategory)?.color || C.ink }]}>{contractCategory || '-'}</Text>
+              </View>
             </View>
             <View style={styles.reviewDivider} />
             <View style={styles.reviewRow}>
@@ -435,7 +405,7 @@ export default function AMCRequestScreen({ navigation }) {
             <View style={styles.reviewRow}>
               <Text style={styles.reviewLabel}>Plan Type</Text>
               <View style={[styles.planBadge, { backgroundColor: PLAN_TYPES.find(p => p.key === planType)?.bg || C.bg }]}>
-                <Text style={{ color: PLAN_TYPES.find(p => p.key === planType)?.color || C.ink, fontWeight: '600', fontSize: moderateScale(12) }}>{planType || '-'}</Text>
+                <Text style={[styles.planBadgeText, { color: PLAN_TYPES.find(p => p.key === planType)?.color || C.ink }]}>{planType || '-'}</Text>
               </View>
             </View>
             <View style={styles.reviewDivider} />
@@ -469,28 +439,7 @@ export default function AMCRequestScreen({ navigation }) {
           />
         </View>
 
-        {/* Submit Button */}
-        <View style={styles.inlineFooter}>
-          <TouchableOpacity style={styles.footerBackBtn} onPress={() => setStep(step - 1)}>
-            <Icon name="arrow-back" size={scale(20)} color={C.ink} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.continueBtn, !canContinue && styles.continueBtnDisabled]}
-            disabled={!canContinue || submitting}
-            onPress={handleNext}
-          >
-            {submitting ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <>
-                <Text style={styles.continueBtnText}>Submit Request</Text>
-                <Icon name="checkmark-circle" size={scale(18)} color="#fff" />
-              </>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        <View style={{ height: scale(120) }} />
+        <View style={{ height: scale(100) }} />
       </ScrollView>
     );
   };
@@ -510,10 +459,7 @@ export default function AMCRequestScreen({ navigation }) {
         >
           <Icon name="chevron-back" size={scale(22)} color="#fff" />
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
-          <Icon name="menu" size={scale(18)} color="#fff" />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { flex: 1, marginLeft: scale(4) }]}>New AMC Request</Text>
+        <Text style={[styles.headerTitle, { flex: 1, marginLeft: scale(8) }]}>New AMC Request</Text>
       </LinearGradient>
 
       {/* Progress Steps */}
@@ -525,7 +471,7 @@ export default function AMCRequestScreen({ navigation }) {
             <View key={s} style={styles.progressItem}>
               <View style={[styles.progressDot, isActive && styles.progressDotActive, isCompleted && styles.progressDotCompleted]}>
                 {isCompleted ? (
-                  <Icon name="checkmark" size={scale(14)} color="#fff" />
+                  <Icon name="checkmark" size={scale(11)} color="#fff" />
                 ) : (
                   <Text style={[styles.progressNum, (isActive || isCompleted) && styles.progressNumActive]}>{s}</Text>
                 )}
@@ -547,6 +493,33 @@ export default function AMCRequestScreen({ navigation }) {
       {step === 1 && renderStep1()}
       {step === 2 && renderStep2()}
       {step === 3 && renderStep3()}
+
+      {/* Sticky Continue/Submit bar - always visible, no scrolling needed.
+          Rises above the keyboard (keyboardHeight) so it's never hidden
+          behind it, e.g. while typing in the Notes field on step 3. */}
+      <View style={[styles.bottomBarWrap, { bottom: Math.max(scale(12), insets.bottom) + keyboardHeight }]}>
+        <View style={styles.bottomBar}>
+          {step > 1 && (
+            <TouchableOpacity style={styles.footerBackBtn} onPress={() => setStep(step - 1)}>
+              <Icon name="arrow-back" size={scale(20)} color={C.ink} />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={[styles.continueBtn, (!canContinue || submitting) && styles.continueBtnDisabled]}
+            disabled={!canContinue || submitting}
+            onPress={handleNext}
+          >
+            {submitting ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <>
+                <Text style={styles.continueBtnText}>{step === 3 ? 'Submit Request' : 'Continue'}</Text>
+                <Icon name={step === 3 ? 'checkmark-circle' : 'arrow-forward'} size={scale(18)} color="#fff" />
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
 
       {/* Kitchen Type Modal */}
       <Modal visible={kitchenModal} transparent animationType="slide" onRequestClose={() => setKitchenModal(false)}>
@@ -572,112 +545,6 @@ export default function AMCRequestScreen({ navigation }) {
         </View>
       </Modal>
 
-      {/* Custom Date Picker Modal */}
-      <Modal visible={dateModal} transparent animationType="slide" onRequestClose={() => setDateModal(false)}>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalSheet}>
-            {/* Header */}
-            <View style={styles.datePickerHeader}>
-              <TouchableOpacity onPress={() => setDateModal(false)}>
-                <Text style={styles.datePickerCancel}>Cancel</Text>
-              </TouchableOpacity>
-              <Text style={styles.datePickerTitle}>Select Date</Text>
-              <TouchableOpacity onPress={confirmDatePicker}>
-                <Text style={styles.datePickerDone}>Done</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Preview */}
-            <View style={styles.datePickerPreview}>
-              <Text style={styles.datePickerPreviewText}>
-                {pickerDay} {MONTHS_FULL[pickerMonth]} {pickerYear}
-              </Text>
-            </View>
-
-            {/* 3-Column Picker */}
-            <View style={styles.datePickerColumns}>
-              {/* Day Column */}
-              <View style={styles.datePickerCol}>
-                <Text style={styles.datePickerColLabel}>Day</Text>
-                <FlatList
-                  ref={dayListRef}
-                  data={Array.from({ length: daysInPickerMonth }, (_, i) => i + 1)}
-                  keyExtractor={(item) => String(item)}
-                  style={styles.datePickerScroll}
-                  showsVerticalScrollIndicator={false}
-                  getItemLayout={(_, index) => ({ length: scale(42), offset: scale(42) * index, index })}
-                  onScrollToIndexFailed={() => {}}
-                  renderItem={({ item: d }) => (
-                    <TouchableOpacity
-                      style={[styles.datePickerItem, pickerDay === d && styles.datePickerItemActive]}
-                      onPress={() => setPickerDay(d)}
-                    >
-                      <Text style={[styles.datePickerItemText, pickerDay === d && styles.datePickerItemTextActive]}>
-                        {d}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                />
-              </View>
-
-              {/* Month Column */}
-              <View style={[styles.datePickerCol, { flex: 1.3 }]}>
-                <Text style={styles.datePickerColLabel}>Month</Text>
-                <FlatList
-                  ref={monthListRef}
-                  data={MONTHS}
-                  keyExtractor={(item) => item}
-                  style={styles.datePickerScroll}
-                  showsVerticalScrollIndicator={false}
-                  getItemLayout={(_, index) => ({ length: scale(42), offset: scale(42) * index, index })}
-                  onScrollToIndexFailed={() => {}}
-                  renderItem={({ item: m, index: i }) => (
-                    <TouchableOpacity
-                      style={[styles.datePickerItem, pickerMonth === i && styles.datePickerItemActive]}
-                      onPress={() => handleMonthChange(i)}
-                    >
-                      <Text style={[styles.datePickerItemText, pickerMonth === i && styles.datePickerItemTextActive]}>
-                        {m}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                />
-              </View>
-
-              {/* Year Column — Stepper for unlimited range */}
-              <View style={styles.datePickerCol}>
-                <Text style={styles.datePickerColLabel}>Year</Text>
-                <View style={styles.yearStepper}>
-                  <TouchableOpacity
-                    style={styles.yearStepperBtn}
-                    onPress={() => handleYearChange(pickerYear + 1)}
-                  >
-                    <Icon name="chevron-up" size={scale(24)} color={C.ink} />
-                  </TouchableOpacity>
-                  <View style={styles.yearStepperValue}>
-                    <Text style={styles.yearStepperText}>{pickerYear}</Text>
-                  </View>
-                  <TouchableOpacity
-                    style={styles.yearStepperBtn}
-                    onPress={() => handleYearChange(pickerYear - 1)}
-                  >
-                    <Icon name="chevron-down" size={scale(24)} color={C.ink} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-
-            {/* Confirm Button */}
-            <TouchableOpacity style={styles.datePickerConfirmBtn} onPress={confirmDatePicker}>
-              <Icon name="checkmark-circle" size={scale(20)} color="#FFFFFF" />
-              <Text style={styles.datePickerConfirmText}>Confirm Date</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
-      <KniBottomNav navigation={navigation} active="equipment" />
     </SafeAreaView>
   );
 }
@@ -719,32 +586,28 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   backBtnPlain: { width: scale(22), height: scale(32), alignItems: 'center', justifyContent: 'center', marginRight: scale(4) },
-  menuBtn: {
-    width: scale(34), height: scale(34), borderRadius: scale(12), backgroundColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center', justifyContent: 'center',
-  },
   headerTitle: { fontSize: moderateScale(18), fontWeight: '800', color: '#fff' },
 
   // Progress
   progressRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    paddingVertical: scale(16), backgroundColor: C.card,
+    paddingVertical: scale(9), backgroundColor: C.card,
   },
   progressItem: { flexDirection: 'row', alignItems: 'center' },
   progressDot: {
-    width: scale(32), height: scale(32), borderRadius: scale(16), backgroundColor: C.border,
+    width: scale(22), height: scale(22), borderRadius: scale(11), backgroundColor: C.border,
     alignItems: 'center', justifyContent: 'center',
   },
   progressDotActive: { backgroundColor: C.purple },
   progressDotCompleted: { backgroundColor: C.ok },
-  progressNum: { fontSize: moderateScale(14), fontWeight: '700', color: C.muted },
+  progressNum: { fontSize: moderateScale(11), fontWeight: '700', color: C.muted },
   progressNumActive: { color: '#fff' },
-  progressLine: { width: scale(40), height: scale(2), backgroundColor: C.border, marginHorizontal: scale(8) },
+  progressLine: { width: scale(26), height: scale(2), backgroundColor: C.border, marginHorizontal: scale(6) },
   progressLineCompleted: { backgroundColor: C.ok },
 
   subtitle: {
-    textAlign: 'center', fontSize: moderateScale(13), color: C.muted,
-    paddingHorizontal: scale(16), paddingBottom: scale(12), backgroundColor: C.card,
+    textAlign: 'center', fontSize: moderateScale(11), color: C.muted,
+    paddingHorizontal: scale(16), paddingBottom: scale(8), backgroundColor: C.card,
   },
 
   // Content
@@ -752,6 +615,7 @@ const styles = StyleSheet.create({
 
   // Section
   section: { marginBottom: scale(20) },
+  sectionRaised: { zIndex: 30, elevation: 30 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: scale(8), marginBottom: scale(12) },
   sectionTitle: { fontSize: moderateScale(16), fontWeight: '800', color: C.ink },
 
@@ -787,16 +651,17 @@ const styles = StyleSheet.create({
   // Plan cards
   planCard: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: C.card,
-    borderRadius: scale(16), padding: scale(16), marginBottom: scale(10),
+    borderRadius: scale(12), padding: scale(9), marginBottom: scale(8),
     borderWidth: 1, borderColor: C.border,
   },
+  planCardActive: { borderColor: C.purple, borderWidth: 1.5 },
   planIconBox: {
-    width: scale(52), height: scale(52), borderRadius: scale(14),
+    width: scale(32), height: scale(32), borderRadius: scale(9),
     alignItems: 'center', justifyContent: 'center',
   },
-  planInfo: { flex: 1, marginLeft: scale(14) },
-  planLabel: { fontSize: moderateScale(16), fontWeight: '700', color: C.ink },
-  planDesc: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(2) },
+  planInfo: { flex: 1, marginLeft: scale(10) },
+  planLabel: { fontSize: moderateScale(13.5), fontWeight: '700', color: C.ink },
+  planDesc: { fontSize: moderateScale(10.5), color: C.muted, marginTop: scale(1) },
 
   // Frequency
   freqRow: { flexDirection: 'row', flexWrap: 'wrap', gap: scale(10) },
@@ -821,6 +686,7 @@ const styles = StyleSheet.create({
   reviewValue: { fontSize: moderateScale(14), fontWeight: '600', color: C.ink, flex: 1, textAlign: 'right' },
   reviewDivider: { height: 1, backgroundColor: C.border },
   planBadge: { paddingHorizontal: scale(10), paddingVertical: scale(4), borderRadius: scale(8) },
+  planBadgeText: { fontWeight: '600', fontSize: moderateScale(12) },
 
   // Text area
   textArea: {
@@ -828,18 +694,25 @@ const styles = StyleSheet.create({
     padding: scale(14), fontSize: moderateScale(15), color: C.text, minHeight: scale(100),
   },
 
-  // Footer
-  inlineFooter: {
-    flexDirection: 'row', gap: scale(10), justifyContent: 'flex-end',
-    paddingHorizontal: scale(16), paddingTop: scale(16), paddingBottom: scale(8),
+  // Sticky bottom bar (floating, always visible - no scrolling needed)
+  bottomBarWrap: {
+    position: 'absolute', left: scale(12), right: scale(12),
+    borderRadius: scale(20), backgroundColor: C.card,
+    shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 18, shadowOffset: { width: 0, height: 8 },
+    elevation: 16,
+  },
+  bottomBar: {
+    flexDirection: 'row', gap: scale(10),
+    paddingHorizontal: scale(14), paddingVertical: scale(12),
+    backgroundColor: C.card, borderRadius: scale(20), overflow: 'hidden',
   },
   footerBackBtn: {
     width: scale(44), height: scale(44), borderRadius: scale(12), backgroundColor: C.bg,
     alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.border,
   },
   continueBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: scale(8),
-    backgroundColor: C.purple, paddingHorizontal: scale(24), paddingVertical: scale(12), borderRadius: scale(12),
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: scale(8),
+    backgroundColor: C.purple, paddingVertical: scale(14), borderRadius: scale(12),
   },
   continueBtnDisabled: { backgroundColor: '#C4B5FD' },
   continueBtnText: { fontSize: moderateScale(14), fontWeight: '700', color: '#fff' },
@@ -870,51 +743,4 @@ const styles = StyleSheet.create({
   },
   modalBtnDisabled: { backgroundColor: '#C4B5FD' },
   modalBtnText: { fontSize: moderateScale(16), fontWeight: '700', color: '#fff' },
-
-  // Custom Date Picker
-  datePickerHeader: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingBottom: scale(12), borderBottomWidth: 1, borderBottomColor: C.border, marginBottom: scale(12),
-  },
-  datePickerCancel: { fontSize: moderateScale(14), color: C.muted, fontWeight: '600' },
-  datePickerTitle: { fontSize: moderateScale(16), fontWeight: '700', color: C.ink },
-  datePickerDone: { fontSize: moderateScale(14), color: C.primary, fontWeight: '700' },
-  datePickerPreview: {
-    backgroundColor: C.ink, borderRadius: scale(12), paddingVertical: scale(14),
-    paddingHorizontal: scale(20), alignItems: 'center', marginBottom: scale(16),
-  },
-  datePickerPreviewText: { fontSize: moderateScale(18), fontWeight: '700', color: '#FFFFFF' },
-  datePickerColumns: { flexDirection: 'row', gap: scale(8), marginBottom: scale(16) },
-  datePickerCol: { flex: 1 },
-  datePickerColLabel: {
-    fontSize: moderateScale(11), fontWeight: '700', color: C.muted, textAlign: 'center',
-    textTransform: 'uppercase', letterSpacing: 1, marginBottom: scale(8),
-  },
-  datePickerScroll: { maxHeight: scale(200) },
-  datePickerItem: {
-    height: scale(38), paddingHorizontal: scale(6),
-    borderRadius: scale(8), alignItems: 'center', justifyContent: 'center', marginBottom: scale(4),
-  },
-  datePickerItemActive: { backgroundColor: C.primary },
-  datePickerItemText: { fontSize: moderateScale(14), fontWeight: '600', color: C.ink },
-  datePickerItemTextActive: { color: '#FFFFFF', fontWeight: '700' },
-  yearStepper: {
-    flex: 1, alignItems: 'center', justifyContent: 'center',
-  },
-  yearStepperBtn: {
-    width: scale(52), height: scale(44), borderRadius: scale(10),
-    backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', marginVertical: scale(6),
-  },
-  yearStepperValue: {
-    backgroundColor: C.primary, borderRadius: scale(12),
-    paddingVertical: scale(16), paddingHorizontal: scale(14), alignItems: 'center',
-  },
-  yearStepperText: {
-    fontSize: moderateScale(20), fontWeight: '800', color: '#FFFFFF',
-  },
-  datePickerConfirmBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: scale(8),
-    backgroundColor: C.primary, borderRadius: scale(12), paddingVertical: scale(14),
-  },
-  datePickerConfirmText: { fontSize: moderateScale(15), fontWeight: '700', color: '#FFFFFF' },
 });

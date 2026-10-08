@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   TextInput,
   ScrollView,
+  useWindowDimensions,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import RazorpayCheckout from 'react-native-razorpay';
@@ -47,6 +48,7 @@ export default function ConfirmQuoteModal({ visible, priceUnlockId, unlockedPric
   const [isProcessing, setIsProcessing] = useState(false);
   const inProgress = useRef(false);
   const keyboardHeight = useKeyboardHeight();
+  const { height: winHeight } = useWindowDimensions();
 
   const cap = Math.max(1, maxQty || 1);
   const qty = Math.max(1, Math.min(quantity, cap));
@@ -145,7 +147,12 @@ export default function ConfirmQuoteModal({ visible, priceUnlockId, unlockedPric
       <View style={st.overlay}>
         <TouchableOpacity style={st.backdrop} activeOpacity={1} onPress={onClose} />
 
-        <View style={st.sheet}>
+        <View
+          style={[
+            st.sheet,
+            { maxHeight: keyboardHeight > 0 ? winHeight - keyboardHeight - scale(20) : winHeight * 0.85 },
+          ]}
+        >
           <View style={st.handleBar} />
 
           <View style={st.header}>
@@ -156,27 +163,27 @@ export default function ConfirmQuoteModal({ visible, priceUnlockId, unlockedPric
           </View>
 
           <ScrollView
-            style={st.body}
-            contentContainerStyle={{ paddingBottom: scale(20) + keyboardHeight }}
+            style={st.bodyScroll}
+            contentContainerStyle={st.body}
             keyboardShouldPersistTaps="handled"
           >
             <View style={st.qtyRow}>
               <Text style={st.label}>Quantity</Text>
               <View style={st.qtyControl}>
                 <TouchableOpacity
-                  style={st.qtyBtn}
+                  style={[st.qtyBtn, (isProcessing || qty <= 1) && st.qtyBtnDisabled]}
                   onPress={() => setQuantity(q => Math.max(1, q - 1))}
-                  disabled={isProcessing}
+                  disabled={isProcessing || qty <= 1}
                 >
-                  <Icon name="remove" size={scale(18)} color={C.primary} />
+                  <Icon name="remove" size={scale(18)} color={(isProcessing || qty <= 1) ? C.muted : C.primary} />
                 </TouchableOpacity>
                 <Text style={st.qtyText}>{qty}</Text>
                 <TouchableOpacity
-                  style={st.qtyBtn}
+                  style={[st.qtyBtn, (isProcessing || qty >= cap) && st.qtyBtnDisabled]}
                   onPress={() => setQuantity(q => Math.min(cap, q + 1))}
                   disabled={isProcessing || qty >= cap}
                 >
-                  <Icon name="add" size={scale(18)} color={C.primary} />
+                  <Icon name="add" size={scale(18)} color={(isProcessing || qty >= cap) ? C.muted : C.primary} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -264,7 +271,8 @@ const st = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  body: { paddingHorizontal: scale(20), paddingTop: scale(16) },
+  bodyScroll: { flexGrow: 0, flexShrink: 1 },
+  body: { paddingHorizontal: scale(20), paddingTop: scale(16), paddingBottom: scale(20) },
   label: { fontSize: moderateScale(14), fontWeight: '600', color: C.ink },
   qtyRow: {
     flexDirection: 'row',
@@ -290,6 +298,9 @@ const st = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: C.border,
+  },
+  qtyBtnDisabled: {
+    backgroundColor: C.bg,
   },
   qtyText: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink, minWidth: scale(20), textAlign: 'center' },
   addressBlock: { marginBottom: scale(16) },

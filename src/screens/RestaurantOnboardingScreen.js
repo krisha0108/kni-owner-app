@@ -354,7 +354,7 @@ const RestaurantOnboarding = ({ navigation, route }) => {
   };
 
   return (
-    <LinearGradient colors={['#f2f4f7', '#dfe7ee']} style={styles.container}>
+    <View style={[styles.container, { backgroundColor: C.bg }]}>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" />
       <TouchableOpacity
         onPress={handleBack}
@@ -430,57 +430,59 @@ const RestaurantOnboarding = ({ navigation, route }) => {
             />
           </View>
 
-          {/* State */}
-          <TouchableOpacity style={styles.inputBox} onPress={() => setShowStatePicker(true)}>
-            <Icon name="map" size={scale(18)} color={C.primary} style={styles.inputIcon} />
-            <Text style={selectedStateName ? { flex: 1, color: C.text, fontSize: moderateScale(15) } : { flex: 1, color: C.muted, fontSize: moderateScale(15) }}>
-              {selectedStateName || 'Select State *'}
-            </Text>
-            <Icon name="chevron-down" size={scale(18)} color={C.muted} />
-          </TouchableOpacity>
+          {/* State + City */}
+          <View style={styles.row2}>
+            <TouchableOpacity style={[styles.inputBox, styles.row2Item]} onPress={() => setShowStatePicker(true)}>
+              <Icon name="map" size={scale(18)} color={C.primary} style={styles.inputIcon} />
+              <Text style={selectedStateName ? { flex: 1, color: C.text, fontSize: moderateScale(15) } : { flex: 1, color: C.muted, fontSize: moderateScale(15) }} numberOfLines={1}>
+                {selectedStateName || 'Select State *'}
+              </Text>
+              <Icon name="chevron-down" size={scale(18)} color={C.muted} />
+            </TouchableOpacity>
 
-          {/* City */}
-          <TouchableOpacity
-            style={styles.inputBox}
-            onPress={() => {
-              if (!selectedStateId) {
-                AppAlert.alert('', 'Please select state first');
-                return;
-              }
-              setShowCityPicker(true);
-            }}
-          >
-            <Icon name="business" size={scale(18)} color={C.primary} style={styles.inputIcon} />
-            <Text style={form.city ? { flex: 1, color: C.text, fontSize: moderateScale(15) } : { flex: 1, color: C.muted, fontSize: moderateScale(15) }}>
-              {form.city || 'Select City *'}
-            </Text>
-            <Icon name="chevron-down" size={scale(18)} color={C.muted} />
-          </TouchableOpacity>
-
-          {/* Pincode */}
-          <View style={styles.inputBox}>
-            <Icon name="location-outline" size={scale(18)} color={C.primary} style={styles.inputIcon} />
-            <TextInput
-              placeholder="Pincode (6 digits, optional)"
-              onFocus={scrollFocusedIntoView}
-              style={styles.input}
-              value={form.pincode}
-              onChangeText={text => handleChange('pincode', text)}
-              placeholderTextColor={C.muted}
-              keyboardType="numeric"
-              maxLength={6}
-              returnKeyType="next"
-            />
+            <TouchableOpacity
+              style={[styles.inputBox, styles.row2Item]}
+              onPress={() => {
+                if (!selectedStateId) {
+                  AppAlert.alert('', 'Please select state first');
+                  return;
+                }
+                setShowCityPicker(true);
+              }}
+            >
+              <Icon name="business" size={scale(18)} color={C.primary} style={styles.inputIcon} />
+              <Text style={form.city ? { flex: 1, color: C.text, fontSize: moderateScale(15) } : { flex: 1, color: C.muted, fontSize: moderateScale(15) }} numberOfLines={1}>
+                {form.city || 'Select City *'}
+              </Text>
+              <Icon name="chevron-down" size={scale(18)} color={C.muted} />
+            </TouchableOpacity>
           </View>
 
-          {/* Outlet Type */}
-          <TouchableOpacity style={styles.inputBox} onPress={() => setShowOutletTypePicker(true)}>
-            <Icon name="storefront" size={scale(18)} color={C.primary} style={styles.inputIcon} />
-            <Text style={form.outletType ? { flex: 1, color: C.text, fontSize: moderateScale(15) } : { flex: 1, color: C.muted, fontSize: moderateScale(15) }}>
-              {form.outletType ? OUTLET_TYPES.find(o => o.key === form.outletType)?.label : 'Select Outlet Type'}
-            </Text>
-            <Icon name="chevron-down" size={scale(18)} color={C.muted} />
-          </TouchableOpacity>
+          {/* Pincode + Outlet Type */}
+          <View style={styles.row2}>
+            <View style={[styles.inputBox, styles.row2Item]}>
+              <Icon name="location-outline" size={scale(18)} color={C.primary} style={styles.inputIcon} />
+              <TextInput
+                placeholder="Pincode"
+                onFocus={scrollFocusedIntoView}
+                style={styles.input}
+                value={form.pincode}
+                onChangeText={text => handleChange('pincode', text)}
+                placeholderTextColor={C.muted}
+                keyboardType="numeric"
+                maxLength={6}
+                returnKeyType="next"
+              />
+            </View>
+
+            <TouchableOpacity style={[styles.inputBox, styles.row2Item]} onPress={() => setShowOutletTypePicker(true)}>
+              <Icon name="storefront" size={scale(18)} color={C.primary} style={styles.inputIcon} />
+              <Text style={form.outletType ? { flex: 1, color: C.text, fontSize: moderateScale(15) } : { flex: 1, color: C.muted, fontSize: moderateScale(15) }} numberOfLines={1}>
+                {form.outletType ? OUTLET_TYPES.find(o => o.key === form.outletType)?.label : 'Outlet Type'}
+              </Text>
+              <Icon name="chevron-down" size={scale(18)} color={C.muted} />
+            </TouchableOpacity>
+          </View>
 
           {/* FSSAI Number */}
           <View style={styles.inputBox}>
@@ -646,7 +648,7 @@ const RestaurantOnboarding = ({ navigation, route }) => {
           </View>
         </View>
       </Modal>
-    </LinearGradient>
+    </View>
   );
 };
 
@@ -694,14 +696,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: scale(30),
   },
   card: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    marginHorizontal: scale(20),
-    borderRadius: scale(20),
-    padding: scale(20),
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: scale(20),
-    elevation: 8,
+    paddingHorizontal: scale(20),
   },
   imageUploadBtn: {
     marginBottom: scale(16),
@@ -754,6 +749,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: scale(14),
     paddingVertical: Platform.OS === 'ios' ? scale(12) : scale(10),
     marginBottom: scale(14),
+  },
+  row2: {
+    flexDirection: 'row',
+    gap: scale(10),
+    marginBottom: scale(14),
+  },
+  row2Item: {
+    flex: 1,
+    marginBottom: 0,
   },
   inputIcon: {
     marginRight: scale(10),

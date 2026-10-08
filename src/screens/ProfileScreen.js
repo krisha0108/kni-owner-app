@@ -2,9 +2,14 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Image, TouchableOpacity,
-  RefreshControl, Animated, Share, Linking, Dimensions, FlatList,
+  RefreshControl, Animated, Share, Linking, Dimensions,
   Modal, TextInput, Switch, ActivityIndicator, StatusBar
 } from 'react-native';
+// Used (instead of the core FlatList) for the horizontal "Your Restaurants"
+// carousel below — it's nested inside this screen's vertical ScrollView, and
+// the core FlatList's horizontal swipe gets swallowed by the outer vertical
+// scroll on Android; gesture-handler's FlatList negotiates the two correctly.
+import { FlatList } from 'react-native-gesture-handler';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
@@ -621,6 +626,7 @@ export default function ProfileScreen({ navigation }) {
           data={hotelsData}
           keyExtractor={i => i.id}
           horizontal
+          nestedScrollEnabled
           showsHorizontalScrollIndicator={false}
           snapToInterval={CARD_W + GAP}
           decelerationRate="fast"

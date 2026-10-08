@@ -1,8 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { api } from '../api/client';
 
 // Auth & Onboarding Screens
 import SplashScreen from '../screens/SplashScreen';
@@ -94,41 +92,14 @@ import SpendingReportsScreen from '../screens/SpendingReportsScreen';
 const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
-  const [isChecking, setIsChecking] = useState(true);
-  const [initialRoute, setInitialRoute] = useState('Splash');
-
-  useEffect(() => {
-    const checkAuthState = async () => {
-      try {
-        const token = await AsyncStorage.getItem('userToken');
-        // Check both possible keys - screens save as 'user', authService saves as 'userData'
-        const userData = await AsyncStorage.getItem('user') || await AsyncStorage.getItem('userData');
-
-        // Wait 2.5 seconds to allow splash animation
-        await new Promise(resolve => setTimeout(resolve, 2500));
-
-        if (token) {
-          api.defaults.headers.common.Authorization = `Bearer ${token}`;
-          setInitialRoute('Home');
-        } else {
-          setInitialRoute('Onboarding');
-        }
-      } catch (error) {
-        console.log('Auth check error:', error);
-        setInitialRoute('Onboarding');
-      } finally {
-        setIsChecking(false);
-      }
-    };
-
-    checkAuthState();
-  }, []);
-
-  if (isChecking) return <SplashScreen />;
-
   return (
     <SafeAreaProvider>
-      <Stack.Navigator initialRouteName={initialRoute} screenOptions={{ headerShown: false }}>
+      {/* Splash is a normal stack screen (not an outer conditional swap) so the
+          navigator/providers mount once up front; Splash itself does the auth
+          check and replaces itself via navigation.reset() when ready. This
+          avoids a full provider+navigator remount exactly when the splash
+          animation tears down, which showed up as a blank gap after splash. */}
+      <Stack.Navigator initialRouteName="Splash" screenOptions={{ headerShown: false }}>
         {/* Auth & Onboarding Screens */}
         <Stack.Screen name="Splash" component={SplashScreen} />
         <Stack.Screen name="Onboarding" component={OnboardingScreen} />

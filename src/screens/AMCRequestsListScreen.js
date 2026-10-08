@@ -17,8 +17,6 @@ import { api } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRestaurant } from '../context/RestaurantContext';
 import { RestaurantSelectorCompact } from '../components/RestaurantSelector';
-import KniBottomNav from '../components/KniBottomNav';
-import NavigationMenu from '../components/NavigationMenu';
 import { scale, moderateScale, isTablet } from '../utils/responsive';
 import { isStale, markFetched } from '../utils/focusCache';
 
@@ -96,7 +94,6 @@ export default function AMCRequestsListScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [requests, setRequests] = useState([]);
   const [activeTab, setActiveTab] = useState('all');
-  const [menuVisible, setMenuVisible] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -209,7 +206,7 @@ export default function AMCRequestsListScreen({ navigation }) {
         onPress={() => setActiveTab(statusKey)}
         activeOpacity={0.7}
       >
-        <Icon name={config.icon} size={13} color={isActive ? '#fff' : config.color} />
+        <Icon name={config.icon} size={scale(12)} color={isActive ? '#fff' : config.color} />
         <Text style={[styles.statusTabLabel, isActive && { color: '#fff' }]}>{config.label}</Text>
         <View style={[styles.statusTabCount, isActive && { backgroundColor: 'rgba(255,255,255,0.3)' }]}>
           <Text style={[styles.statusTabCountText, isActive && { color: '#fff' }]}>{count}</Text>
@@ -235,7 +232,7 @@ export default function AMCRequestsListScreen({ navigation }) {
         <View style={styles.cardHeader}>
           <View style={styles.cardHeaderLeft}>
             <View style={[styles.iconBox, { backgroundColor: config.bg }]}>
-              <Icon name={config.icon} size={20} color={config.color} />
+              <Icon name={config.icon} size={scale(15)} color={config.color} />
             </View>
             <View>
               <Text style={styles.requestId}>#{item.id.slice(0, 8).toUpperCase()}</Text>
@@ -249,21 +246,18 @@ export default function AMCRequestsListScreen({ navigation }) {
 
         <View style={styles.cardBody}>
           <View style={styles.infoRow}>
-            <Icon name="restaurant-outline" size={16} color={C.muted} />
+            <Icon name="restaurant-outline" size={scale(14)} color={C.muted} />
             <Text style={styles.infoText} numberOfLines={1}>{item.restaurant?.name || 'Restaurant'}</Text>
+            <View style={styles.viewBtn}>
+              <Text style={styles.viewBtnText}>View Details</Text>
+              <Icon name="chevron-forward" size={scale(14)} color={C.purple} />
+            </View>
           </View>
           <View style={styles.infoRow}>
             <View style={[styles.planPill, { backgroundColor: planBadge.bg }]}>
               <Text style={{ color: planBadge.color, fontSize: moderateScale(11), fontWeight: '600' }}>{item.planType}</Text>
             </View>
             <Text style={styles.frequencyText}>{item.visitFrequency}</Text>
-          </View>
-        </View>
-
-        <View style={styles.cardFooter}>
-          <View style={styles.viewBtn}>
-            <Text style={styles.viewBtnText}>View Details</Text>
-            <Icon name="chevron-forward" size={16} color={C.purple} />
           </View>
         </View>
       </TouchableOpacity>
@@ -283,10 +277,7 @@ export default function AMCRequestsListScreen({ navigation }) {
               style={styles.backBtnPlain}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Icon name="chevron-back" size={18} color="#fff" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
-              <Icon name="menu" size={18} color="#fff" />
+              <Icon name="chevron-back" size={scale(18)} color="#fff" />
             </TouchableOpacity>
             <Text style={[styles.heroTitle, { flex: 1, marginLeft: scale(10) }]}>AMC Requests</Text>
           </View>
@@ -294,7 +285,6 @@ export default function AMCRequestsListScreen({ navigation }) {
         <ScrollView showsVerticalScrollIndicator={false}>
           <SkeletonRequestsList pulse={pulse} />
         </ScrollView>
-        <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
       </SafeAreaView>
     );
   }
@@ -316,10 +306,7 @@ export default function AMCRequestsListScreen({ navigation }) {
             style={styles.backBtnPlain}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Icon name="chevron-back" size={24} color="#fff" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
-            <Icon name="menu" size={24} color="#fff" />
+            <Icon name="chevron-back" size={scale(18)} color="#fff" />
           </TouchableOpacity>
           <View style={styles.heroTextContainer}>
             <Text style={styles.heroTitle}>AMC Requests</Text>
@@ -365,7 +352,7 @@ export default function AMCRequestsListScreen({ navigation }) {
         ListEmptyComponent={
           <View style={styles.emptyList}>
             <View style={styles.emptyIconBox}>
-              <Icon name="shield-outline" size={48} color={C.muted} />
+              <Icon name="shield-outline" size={scale(32)} color={C.muted} />
             </View>
             <Text style={styles.emptyTitle}>No AMC Requests</Text>
             <Text style={styles.emptySubtitle}>
@@ -384,12 +371,9 @@ export default function AMCRequestsListScreen({ navigation }) {
       {/* FAB */}
       <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('AMCRequest')} activeOpacity={0.8}>
         <LinearGradient colors={[C.purple, C.purpleDark]} style={styles.fabGrad}>
-          <Icon name="add" size={28} color="#fff" />
+          <Icon name="add" size={scale(18)} color="#fff" />
         </LinearGradient>
       </TouchableOpacity>
-
-      <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
-      <KniBottomNav navigation={navigation} active="equipment" />
     </SafeAreaView>
   );
 }
@@ -416,10 +400,6 @@ const styles = StyleSheet.create({
   heroTextContainer: { flex: 1, marginHorizontal: scale(12) },
   heroTitle: { fontSize: moderateScale(18), fontWeight: '700', color: '#fff' },
   heroRestaurantPill: { alignSelf: 'flex-start', marginTop: scale(4) },
-  menuBtn: {
-    width: scale(34), height: scale(34), borderRadius: scale(11),
-    backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center',
-  },
 
   // Stats
   statsRow: {
@@ -460,7 +440,7 @@ const styles = StyleSheet.create({
   },
   cardHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: scale(12) },
   iconBox: {
-    width: scale(44), height: scale(44), borderRadius: scale(12), alignItems: 'center', justifyContent: 'center',
+    width: scale(32), height: scale(32), borderRadius: scale(10), alignItems: 'center', justifyContent: 'center',
   },
   requestId: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink },
   requestDate: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(2) },
@@ -474,16 +454,11 @@ const styles = StyleSheet.create({
   planPill: { paddingHorizontal: scale(10), paddingVertical: scale(3), borderRadius: scale(8) },
   frequencyText: { fontSize: moderateScale(13), color: C.muted, fontWeight: '500' },
 
-  // Card Footer
-  cardFooter: {
-    padding: scale(16), backgroundColor: '#F8FAFC', borderTopWidth: 1, borderTopColor: C.border,
-    alignItems: 'flex-end',
-  },
   viewBtn: {
     flexDirection: 'row', alignItems: 'center', gap: scale(4),
-    backgroundColor: '#F3E8FF', paddingHorizontal: scale(14), paddingVertical: scale(8), borderRadius: scale(20),
+    backgroundColor: '#F3E8FF', paddingHorizontal: scale(10), paddingVertical: scale(5), borderRadius: scale(16),
   },
-  viewBtnText: { fontSize: moderateScale(13), fontWeight: '600', color: C.purple },
+  viewBtnText: { fontSize: moderateScale(11), fontWeight: '600', color: C.purple },
 
   // Loading
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
@@ -492,8 +467,8 @@ const styles = StyleSheet.create({
   // Empty
   emptyList: { alignItems: 'center', paddingTop: scale(60) },
   emptyIconBox: {
-    width: scale(100), height: scale(100), borderRadius: scale(50),
-    backgroundColor: C.border, alignItems: 'center', justifyContent: 'center', marginBottom: scale(20),
+    width: scale(64), height: scale(64), borderRadius: scale(32),
+    backgroundColor: C.border, alignItems: 'center', justifyContent: 'center', marginBottom: scale(16),
   },
   emptyTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink, marginBottom: scale(8) },
   emptySubtitle: { fontSize: moderateScale(14), color: C.muted, textAlign: 'center' },
@@ -504,11 +479,11 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 8,
   },
   fabGrad: {
-    width: scale(56), height: scale(56), borderRadius: scale(28), alignItems: 'center', justifyContent: 'center',
+    width: scale(40), height: scale(40), borderRadius: scale(20), alignItems: 'center', justifyContent: 'center',
   },
 
   // ═══ Skeleton ═══
-  skelIconBox: { width: scale(44), height: scale(44), borderRadius: scale(12), backgroundColor: '#E2E8F0' },
+  skelIconBox: { width: scale(32), height: scale(32), borderRadius: scale(10), backgroundColor: '#E2E8F0' },
   skelPill: { width: scale(60), height: scale(22), borderRadius: scale(12), backgroundColor: '#E2E8F0' },
   skelLine: { height: scale(12), backgroundColor: '#E2E8F0', borderRadius: scale(4) },
 });

@@ -17,8 +17,6 @@ import { api } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRestaurant } from '../context/RestaurantContext';
 import { RestaurantSelectorCompact } from '../components/RestaurantSelector';
-import KniBottomNav from '../components/KniBottomNav';
-import NavigationMenu from '../components/NavigationMenu';
 import { scale, moderateScale, isTablet } from '../utils/responsive';
 import { isStale, markFetched } from '../utils/focusCache';
 
@@ -81,7 +79,6 @@ export default function AMCContractsScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [contracts, setContracts] = useState([]);
   const [activeTab, setActiveTab] = useState('all');
-  const [menuVisible, setMenuVisible] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -191,7 +188,7 @@ export default function AMCContractsScreen({ navigation }) {
         onPress={() => setActiveTab(statusKey)}
         activeOpacity={0.7}
       >
-        <Icon name={config.icon} size={13} color={isActive ? '#fff' : config.color} />
+        <Icon name={config.icon} size={scale(12)} color={isActive ? '#fff' : config.color} />
         <Text style={[styles.statusTabLabel, isActive && { color: '#fff' }]}>{config.label}</Text>
         <View style={[styles.statusTabCount, isActive && { backgroundColor: 'rgba(255,255,255,0.3)' }]}>
           <Text style={[styles.statusTabCountText, isActive && { color: '#fff' }]}>{count}</Text>
@@ -222,7 +219,7 @@ export default function AMCContractsScreen({ navigation }) {
         <View style={styles.cardHeader}>
           <View style={styles.cardHeaderLeft}>
             <View style={[styles.iconBox, { backgroundColor: config.bg }]}>
-              <Icon name={config.icon} size={20} color={config.color} />
+              <Icon name={config.icon} size={scale(15)} color={config.color} />
             </View>
             <View>
               <Text style={styles.contractNum}>{contractNum}</Text>
@@ -236,8 +233,12 @@ export default function AMCContractsScreen({ navigation }) {
 
         <View style={styles.cardBody}>
           <View style={styles.infoRow}>
-            <Icon name="restaurant-outline" size={16} color={C.muted} />
+            <Icon name="restaurant-outline" size={scale(14)} color={C.muted} />
             <Text style={styles.infoText} numberOfLines={1}>{item.restaurant?.name || 'Restaurant'}</Text>
+            <View style={styles.viewBtn}>
+              <Text style={styles.viewBtnText}>View Details</Text>
+              <Icon name="chevron-forward" size={scale(14)} color={C.ok} />
+            </View>
           </View>
 
           {/* Visit Progress */}
@@ -254,25 +255,19 @@ export default function AMCContractsScreen({ navigation }) {
           {/* Date range & Days remaining */}
           <View style={styles.dateRow}>
             <View style={styles.dateItem}>
-              <Icon name="calendar-outline" size={14} color={C.muted} />
+              <Icon name="calendar-outline" size={scale(12)} color={C.muted} />
               <Text style={styles.dateText}>{formatDate(item.startDate)} → {formatDate(item.endDate)}</Text>
             </View>
           </View>
 
           <View style={[styles.daysChip, daysRemaining > 30 ? { backgroundColor: C.ok + '15' } : daysRemaining > 0 ? { backgroundColor: C.warn + '15' } : { backgroundColor: C.danger + '15' }]}>
-            <Icon name="time-outline" size={14} color={daysRemaining > 30 ? C.ok : daysRemaining > 0 ? C.warn : C.danger} />
+            <Icon name="time-outline" size={scale(12)} color={daysRemaining > 30 ? C.ok : daysRemaining > 0 ? C.warn : C.danger} />
             <Text style={{ color: daysRemaining > 30 ? C.ok : daysRemaining > 0 ? C.warn : C.danger, fontSize: moderateScale(12), fontWeight: '600' }}>
               {daysRemaining > 0 ? `${daysRemaining} days remaining` : 'Expired'}
             </Text>
           </View>
         </View>
 
-        <View style={styles.cardFooter}>
-          <View style={styles.viewBtn}>
-            <Text style={styles.viewBtnText}>View Details</Text>
-            <Icon name="chevron-forward" size={16} color={C.ok} />
-          </View>
-        </View>
       </TouchableOpacity>
     );
   };
@@ -290,10 +285,7 @@ export default function AMCContractsScreen({ navigation }) {
               style={styles.backBtnPlain}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Icon name="chevron-back" size={18} color="#fff" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
-              <Icon name="menu" size={18} color="#fff" />
+              <Icon name="chevron-back" size={scale(18)} color="#fff" />
             </TouchableOpacity>
             <Text style={[styles.heroTitle, { flex: 1, marginLeft: scale(10) }]}>AMC Contracts</Text>
           </View>
@@ -301,7 +293,6 @@ export default function AMCContractsScreen({ navigation }) {
         <ScrollView showsVerticalScrollIndicator={false}>
           <SkeletonContractsList pulse={pulse} />
         </ScrollView>
-        <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
       </SafeAreaView>
     );
   }
@@ -319,10 +310,7 @@ export default function AMCContractsScreen({ navigation }) {
             style={styles.backBtnPlain}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Icon name="chevron-back" size={24} color="#fff" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
-            <Icon name="menu" size={24} color="#fff" />
+            <Icon name="chevron-back" size={scale(18)} color="#fff" />
           </TouchableOpacity>
           <View style={styles.heroTextContainer}>
             <Text style={styles.heroTitle}>AMC Contracts</Text>
@@ -366,7 +354,7 @@ export default function AMCContractsScreen({ navigation }) {
         ListEmptyComponent={
           <View style={styles.emptyList}>
             <View style={styles.emptyIconBox}>
-              <Icon name="shield-checkmark-outline" size={48} color={C.muted} />
+              <Icon name="shield-checkmark-outline" size={scale(32)} color={C.muted} />
             </View>
             <Text style={styles.emptyTitle}>No Contracts Found</Text>
             <Text style={styles.emptySubtitle}>
@@ -381,9 +369,6 @@ export default function AMCContractsScreen({ navigation }) {
         maxToRenderPerBatch={10}
         removeClippedSubviews={true}
       />
-
-      <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
-      <KniBottomNav navigation={navigation} active="equipment" />
     </SafeAreaView>
   );
 }
@@ -406,10 +391,6 @@ const styles = StyleSheet.create({
   heroTextContainer: { flex: 1, marginHorizontal: scale(12) },
   heroTitle: { fontSize: moderateScale(18), fontWeight: '700', color: '#fff' },
   heroRestaurantPill: { alignSelf: 'flex-start', marginTop: scale(4) },
-  menuBtn: {
-    width: scale(34), height: scale(34), borderRadius: scale(11),
-    backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center',
-  },
 
   statsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: scale(24) },
   statItem: { flex: 1, alignItems: 'center' },
@@ -441,7 +422,7 @@ const styles = StyleSheet.create({
     padding: scale(16), borderBottomWidth: 1, borderBottomColor: C.border,
   },
   cardHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: scale(12) },
-  iconBox: { width: scale(44), height: scale(44), borderRadius: scale(12), alignItems: 'center', justifyContent: 'center' },
+  iconBox: { width: scale(32), height: scale(32), borderRadius: scale(10), alignItems: 'center', justifyContent: 'center' },
   contractNum: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink },
   contractDate: { fontSize: moderateScale(12), color: C.muted, marginTop: scale(2) },
   statusPill: { paddingHorizontal: scale(10), paddingVertical: scale(5), borderRadius: scale(12) },
@@ -467,28 +448,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: scale(10), paddingVertical: scale(5), borderRadius: scale(10),
   },
 
-  cardFooter: {
-    padding: scale(16), backgroundColor: '#F8FAFC', borderTopWidth: 1, borderTopColor: C.border, alignItems: 'flex-end',
-  },
   viewBtn: {
     flexDirection: 'row', alignItems: 'center', gap: scale(4),
-    backgroundColor: C.ok + '15', paddingHorizontal: scale(14), paddingVertical: scale(8), borderRadius: scale(20),
+    backgroundColor: C.ok + '15', paddingHorizontal: scale(10), paddingVertical: scale(5), borderRadius: scale(16),
   },
-  viewBtnText: { fontSize: moderateScale(13), fontWeight: '600', color: C.ok },
+  viewBtnText: { fontSize: moderateScale(11), fontWeight: '600', color: C.ok },
 
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   loadingText: { fontSize: moderateScale(14), color: C.muted, marginTop: scale(12) },
 
   emptyList: { alignItems: 'center', paddingTop: scale(60) },
   emptyIconBox: {
-    width: scale(100), height: scale(100), borderRadius: scale(50),
-    backgroundColor: C.border, alignItems: 'center', justifyContent: 'center', marginBottom: scale(20),
+    width: scale(64), height: scale(64), borderRadius: scale(32),
+    backgroundColor: C.border, alignItems: 'center', justifyContent: 'center', marginBottom: scale(16),
   },
   emptyTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink, marginBottom: scale(8) },
   emptySubtitle: { fontSize: moderateScale(14), color: C.muted, textAlign: 'center' },
 
   // ═══ Skeleton ═══
-  skelIconBox: { width: scale(44), height: scale(44), borderRadius: scale(12), backgroundColor: '#E2E8F0' },
+  skelIconBox: { width: scale(32), height: scale(32), borderRadius: scale(10), backgroundColor: '#E2E8F0' },
   skelPill: { width: scale(60), height: scale(22), borderRadius: scale(12), backgroundColor: '#E2E8F0' },
   skelLine: { height: scale(12), backgroundColor: '#E2E8F0', borderRadius: scale(4) },
   skelProgressBar: { height: scale(6), backgroundColor: '#E2E8F0', borderRadius: scale(3), marginTop: scale(10) },

@@ -16,8 +16,6 @@ import { api } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRestaurant } from '../context/RestaurantContext';
 import { RestaurantSelectorCompact } from '../components/RestaurantSelector';
-import KniBottomNav from '../components/KniBottomNav';
-import NavigationMenu from '../components/NavigationMenu';
 import { scale, moderateScale } from '../utils/responsive';
 import { usePermissions } from '../utils/usePermissions';
 import { isStale, markFetched } from '../utils/focusCache';
@@ -120,7 +118,6 @@ export default function AMCDashboardScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [data, setData] = useState(null);
   const [breakdowns, setBreakdowns] = useState([]);
-  const [menuVisible, setMenuVisible] = useState(false);
 
   const pulse = useRef(new Animated.Value(0.4)).current;
   useEffect(() => {
@@ -192,9 +189,6 @@ export default function AMCDashboardScreen({ navigation }) {
             >
               <Icon name="chevron-back" size={scale(18)} color="#fff" />
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
-              <Icon name="menu" size={scale(18)} color="#fff" />
-            </TouchableOpacity>
             <View style={[styles.heroTitleRow, { flex: 1, marginLeft: scale(10) }]}>
               <Icon name="shield-checkmark-outline" size={scale(18)} color="#fff" />
               <Text style={styles.heroTitle}>AMC Management</Text>
@@ -204,8 +198,6 @@ export default function AMCDashboardScreen({ navigation }) {
         <ScrollView showsVerticalScrollIndicator={false}>
           <SkeletonDashboard pulse={pulse} />
         </ScrollView>
-        <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
-        <KniBottomNav navigation={navigation} active="equipment" />
       </SafeAreaView>
     );
   }
@@ -230,9 +222,6 @@ export default function AMCDashboardScreen({ navigation }) {
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <Icon name="chevron-back" size={scale(18)} color="#fff" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
-            <Icon name="menu" size={scale(18)} color="#fff" />
           </TouchableOpacity>
           <View style={styles.heroTextContainer}>
             <View style={styles.heroTitleRow}>
@@ -279,7 +268,7 @@ export default function AMCDashboardScreen({ navigation }) {
               onPress={() => navigation.navigate(q.screen)}
             >
               <LinearGradient colors={q.grad} style={styles.qaIcon}>
-                <Icon name={q.icon} size={scale(22)} color="#fff" />
+                <Icon name={q.icon} size={scale(14)} color="#fff" />
               </LinearGradient>
               <Text style={styles.qaLabel}>{q.label}</Text>
             </TouchableOpacity>
@@ -370,7 +359,7 @@ export default function AMCDashboardScreen({ navigation }) {
         {!data && !loading && (
           <View style={styles.emptyContainer}>
             <View style={styles.emptyIconBox}>
-              <Icon name="shield-outline" size={scale(48)} color={C.muted} />
+              <Icon name="shield-outline" size={scale(32)} color={C.muted} />
             </View>
             <Text style={styles.emptyTitle}>No AMC Data</Text>
             <Text style={styles.emptySubtitle}>Start by creating an AMC request</Text>
@@ -379,9 +368,6 @@ export default function AMCDashboardScreen({ navigation }) {
 
         <View style={{ height: scale(20) }} />
       </ScrollView>
-
-      <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
-      <KniBottomNav navigation={navigation} active="equipment" />
     </SafeAreaView>
   );
 }
@@ -419,10 +405,6 @@ const styles = StyleSheet.create({
   },
   heroRestaurantPill: {
     alignSelf: 'flex-start', marginTop: scale(4),
-  },
-  menuBtn: {
-    width: scale(34), height: scale(34), borderRadius: scale(11),
-    backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center',
   },
 
   // Scroll
@@ -470,14 +452,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row', gap: scale(12), marginBottom: scale(20),
   },
   qaItem: {
-    flex: 1, backgroundColor: C.card, borderRadius: scale(16), paddingVertical: scale(16),
+    flex: 1, backgroundColor: C.card, borderRadius: scale(11), paddingVertical: scale(9),
     alignItems: 'center', borderWidth: 1, borderColor: C.border,
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04, shadowRadius: 6, elevation: 2,
   },
   qaIcon: {
-    width: scale(48), height: scale(48), borderRadius: scale(14),
-    alignItems: 'center', justifyContent: 'center', marginBottom: scale(8),
+    width: scale(30), height: scale(30), borderRadius: scale(9),
+    alignItems: 'center', justifyContent: 'center', marginBottom: scale(5),
   },
   qaLabel: {
     fontSize: moderateScale(12), fontWeight: '700', color: C.ink, textAlign: 'center',
@@ -532,8 +514,8 @@ const styles = StyleSheet.create({
   // Empty
   emptyContainer: { alignItems: 'center', paddingTop: scale(40) },
   emptyIconBox: {
-    width: scale(100), height: scale(100), borderRadius: scale(50),
-    backgroundColor: C.border, alignItems: 'center', justifyContent: 'center', marginBottom: scale(20),
+    width: scale(64), height: scale(64), borderRadius: scale(32),
+    backgroundColor: C.border, alignItems: 'center', justifyContent: 'center', marginBottom: scale(16),
   },
   emptyTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink, marginBottom: scale(8) },
   emptySubtitle: { fontSize: moderateScale(14), color: C.muted, textAlign: 'center' },
@@ -542,7 +524,7 @@ const styles = StyleSheet.create({
   skelStatIcon: { width: scale(30), height: scale(30), borderRadius: scale(9), backgroundColor: '#E2E8F0', marginBottom: scale(5) },
   skelStatValue: { width: scale(28), height: scale(12), borderRadius: scale(4), backgroundColor: '#E2E8F0' },
   skelSectionTitle: { width: scale(120), height: scale(16), borderRadius: scale(4), backgroundColor: '#E2E8F0', marginBottom: scale(12), marginTop: scale(8) },
-  skelQaIcon: { width: scale(48), height: scale(48), borderRadius: scale(14), backgroundColor: '#E2E8F0', marginBottom: scale(8) },
+  skelQaIcon: { width: scale(30), height: scale(30), borderRadius: scale(9), backgroundColor: '#E2E8F0', marginBottom: scale(5) },
   skelQaLabel: { width: scale(50), height: scale(10), borderRadius: scale(4), backgroundColor: '#E2E8F0' },
   skelVisitIcon: { width: scale(40), height: scale(40), borderRadius: scale(12), backgroundColor: '#E2E8F0' },
   skelLine: { height: scale(12), backgroundColor: '#E2E8F0', borderRadius: scale(4) },

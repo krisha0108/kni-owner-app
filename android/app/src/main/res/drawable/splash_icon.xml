@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ic_launcher is a full-bleed square PNG with no built-in padding, unlike the
+     adaptive-icon-style assets the SplashScreen API's icon frame expects — shown
+     at full size it renders oversized and, since the source is only 192x192,
+     blurry. Insetting it shrinks the rendered size (sharper, since closer to the
+     source resolution) and gives it the usual breathing room. -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/splash_icon_source"
+    android:insetLeft="30%"
+    android:insetTop="30%"
+    android:insetRight="30%"
+    android:insetBottom="30%" />

@@ -31,6 +31,7 @@ import { useRestaurant } from '../context/RestaurantContext';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 import PriceRequestModal from '../components/PriceRequestModal';
+import ConfirmQuoteModal from '../components/ConfirmQuoteModal';
 
 import { scale, moderateScale } from '../utils/responsive';
 import { usePermissions } from '../utils/usePermissions';
@@ -137,6 +138,7 @@ export default function MarketplaceScreen({ navigation }) {
   const [menuVisible, setMenuVisible] = useState(false);
   const [priceRequestProduct, setPriceRequestProduct] = useState(null);
   const [isPriceRequestOpen, setIsPriceRequestOpen] = useState(false);
+  const [confirmQuoteProduct, setConfirmQuoteProduct] = useState(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -230,7 +232,24 @@ export default function MarketplaceScreen({ navigation }) {
     setPage(1);
     setHasMore(true);
     loadData(true, 1, false);
-  }, [selectedRestaurantId, selectedCategory, loadData]);
+    // loadData intentionally omitted — it's recreated on every selectedCategory
+    // change too, and this effect must only re-run on restaurant switches
+    // (category changes are handled by the effect below, without the skeleton).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedRestaurantId]);
+
+  // Category filter changes only update the product grid — not a full-screen
+  // reload like switching restaurants, so no loading skeleton here.
+  const didMountCategoryEffect = useRef(false);
+  useEffect(() => {
+    if (!didMountCategoryEffect.current) {
+      didMountCategoryEffect.current = true;
+      return;
+    }
+    setPage(1);
+    setHasMore(true);
+    loadData(false, 1, false);
+  }, [selectedCategory, loadData]);
 
   useFocusEffect(
     useCallback(() => {
@@ -332,9 +351,14 @@ export default function MarketplaceScreen({ navigation }) {
   const getCartTotal = () => cart.reduce((total, item) => total + item.product.price * item.quantity, 0);
   const getCartItemQuantity = (productId) => cart.find(i => i.product.id === productId)?.quantity || 0;
 
-  const filteredProducts = products.filter(p =>
-    !search || p.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredProducts = products
+    .filter(p => !search || p.name.toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => {
+      const aInStock = (a.stockQuantity || 0) > 0;
+      const bInStock = (b.stockQuantity || 0) > 0;
+      if (aInStock === bInStock) return 0;
+      return aInStock ? -1 : 1;
+    });
 
   // ==================== RENDER COMPONENTS ====================
 
@@ -467,12 +491,12 @@ export default function MarketplaceScreen({ navigation }) {
         {can('marketplace:create') && (
         <View style={st.cardFooter}>
           {item.priceUnlock?.status === 'UNLOCKED' && !item.priceUnlock.isExpired && item.priceUnlock.unlockedPrice ? (
-            // Negotiated price is unlocked — purchasing must go through the
-            // advance+delivery split-payment flow on the product screen, not
-            // a direct Add to Cart here.
+            // Negotiated price is unlocked — purchasing goes through the
+            // advance+delivery split-payment flow in ConfirmQuoteModal,
+            // opened directly from here (not a plain Add to Cart).
             <TouchableOpacity
               style={st.addToCartBtn}
-              onPress={() => navigation.navigate('MarketplaceProduct', { product: item, restaurantId: selectedRestaurantId })}
+              onPress={() => setConfirmQuoteProduct(item)}
             >
               <Icon name="checkmark-circle-outline" size={scale(16)} color="#fff" />
               <Text style={st.addToCartText}>Confirm Quote</Text>
@@ -772,7 +796,7 @@ export default function MarketplaceScreen({ navigation }) {
           {categories.map((cat) => {
             const isActive = selectedCategory === cat.id;
             const iconName = CATEGORY_ICONS[cat.name] || CATEGORY_ICONS.default;
-            const catCount = products.filter(p => p.category?.id === cat.id).length;
+            const catCount = cat._count?.products ?? 0;
 
             return (
               <TouchableOpacity
@@ -830,6 +854,20 @@ export default function MarketplaceScreen({ navigation }) {
         }}
         onSuccess={() => loadData(false)}
       />
+      <ConfirmQuoteModal
+        visible={!!confirmQuoteProduct}
+        priceUnlockId={confirmQuoteProduct?.priceUnlock?.id}
+        unlockedPrice={confirmQuoteProduct?.priceUnlock?.unlockedPrice}
+        maxQty={Math.max(1, Math.min(
+          confirmQuoteProduct?.stockQuantity || 1,
+          confirmQuoteProduct?.priceUnlock?.quantity ?? (confirmQuoteProduct?.stockQuantity || 1)
+        ))}
+        onClose={() => setConfirmQuoteProduct(null)}
+        onConfirmed={() => {
+          setConfirmQuoteProduct(null);
+          navigation.navigate('MarketplaceOrders', { restaurantId: selectedRestaurantId });
+        }}
+      />
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
       <KniBottomNav navigation={navigation} active="request" cartCount={cart.length} />
     </SafeAreaView>
@@ -838,7 +876,7 @@ export default function MarketplaceScreen({ navigation }) {
 
 // ==================== STYLES ====================
 const st = StyleSheet.create({
-  container: { flex: 1, backgroundColor: C.bg, paddingBottom: scale(100) },
+  container: { flex: 1, backgroundColor: C.bg },
 
   // Hero Section
   heroSection: {

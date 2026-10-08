@@ -60,7 +60,7 @@ const getStatusColor = (s) =>
 const QA = [
   { icon: 'calendar-outline', label: 'Bookings', desc: 'Manage bookings & reservations', tint: '#EF3A3A', tintBg: '#FDEAEA', screen: 'MyBookings', permission: 'bookings:read' },
   { icon: 'receipt-outline', label: 'Expenses', desc: 'Track & manage expenses', tint: '#4F63D2', tintBg: '#E7ECFB', screen: 'Expenses', permission: 'expenses:read' },
-  { icon: 'shield-checkmark-outline', label: 'AMC', desc: 'Maintenance & service', tint: '#EF3A3A', tintBg: '#FDEAEA', screen: 'AMCDashboard', permission: 'amc:read' },
+  { icon: 'people-outline', label: 'Staff', desc: 'Manage your team', tint: '#EF3A3A', tintBg: '#FDEAEA', screen: 'Staff', permission: 'staff:read' },
   { icon: 'headset-outline', label: 'Support', desc: 'Get help & raise tickets', tint: '#4F63D2', tintBg: '#E7ECFB', screen: 'SupportCenter', permission: 'support:read' },
 ];
 

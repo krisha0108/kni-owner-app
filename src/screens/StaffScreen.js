@@ -84,6 +84,12 @@ const STAFF_STATUSES = [
   { value: 'TERMINATED', label: 'Terminated', icon: 'close-circle', color: '#EF4444', bg: '#FEE2E2' },
 ];
 
+const QA = [
+  { icon: 'calendar-outline', label: 'Attendance', grad: ['#3B82F6', '#2563EB'], screen: 'StaffAttendance', permission: 'staff:read' },
+  { icon: 'card-outline', label: 'Salary', grad: ['#10B981', '#059669'], screen: 'StaffSalary', permission: 'staff:read' },
+  { icon: 'receipt-outline', label: 'Vendor Ledger', grad: ['#7C3AED', '#6D28D9'], screen: 'VendorLedger', permission: 'vendor-ledger:read' },
+];
+
 const getRoleConfig = (role) => ROLES.find(r => r.value === role) || ROLES[6];
 const getTypeConfig = (type) => STAFF_TYPES.find(t => t.value === type) || STAFF_TYPES[0];
 const getStatusConfig = (status) => STAFF_STATUSES.find(s => s.value === status) || STAFF_STATUSES[0];
@@ -107,15 +113,15 @@ function SkeletonStaff({ pulse }) {
       <Animated.View style={[st.skelStrip, { opacity: pulse }]} />
       {[1, 2, 3, 4].map(i => (
         <View key={i} style={st.skelCard}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={st.skelRow}>
             <Animated.View style={[st.skelAvatar, { opacity: pulse }]} />
-            <View style={{ marginLeft: scale(9), flex: 1 }}>
-              <Animated.View style={[st.skelLine, { width: '50%', opacity: pulse }]} />
-              <Animated.View style={[st.skelLine, { width: '30%', marginTop: scale(6), opacity: pulse }]} />
+            <View style={st.skelInfoCol}>
+              <Animated.View style={[st.skelLine, st.skelLineLg, { opacity: pulse }]} />
+              <Animated.View style={[st.skelLine, st.skelLineSm, { opacity: pulse }]} />
             </View>
             <Animated.View style={[st.skelBadge, { opacity: pulse }]} />
           </View>
-          <View style={{ flexDirection: 'row', marginTop: scale(10) }}>
+          <View style={st.skelChipRow}>
             <Animated.View style={[st.skelChip, { opacity: pulse }]} />
             <Animated.View style={[st.skelChip, { marginLeft: scale(8), opacity: pulse }]} />
           </View>
@@ -132,7 +138,6 @@ export default function StaffScreen({ navigation }) {
   const isTablet = width >= 768;
   const keyboardHeight = useKeyboardHeight();
   const { can } = usePermissions();
-  const isLargePhone = width >= 400;
   const formScrollRef = useRef(null);
 
   const {
@@ -157,7 +162,6 @@ export default function StaffScreen({ navigation }) {
   const [menuVisible, setMenuVisible] = useState(false);
   const [activeStatusTab, setActiveStatusTab] = useState('all');
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [modalKey, setModalKey] = useState(0);
 
   const pulse = useRef(new Animated.Value(0.4)).current;
 
@@ -189,12 +193,7 @@ export default function StaffScreen({ navigation }) {
 
   const isEditMode = form.id !== null;
 
-  useFocusEffect(useCallback(() => {
-    const key = `Staff-${selectedRestaurant}`;
-    if (isStale(key) || staff.length === 0) { loadData(); markFetched(key); }
-  }, [selectedRestaurant, staff.length]));
-
-  const loadData = async (pageNum = 1, append = false) => {
+  const loadData = useCallback(async (pageNum = 1, append = false) => {
     if (!selectedRestaurant) { setLoading(false); return; }
 
     if (pageNum === 1) setLoading(true);
@@ -232,7 +231,12 @@ export default function StaffScreen({ navigation }) {
       setLoadingMore(false);
       setRefreshing(false);
     }
-  };
+  }, [selectedRestaurant]);
+
+  useFocusEffect(useCallback(() => {
+    const key = `Staff-${selectedRestaurant}`;
+    if (isStale(key) || staff.length === 0) { loadData(); markFetched(key); }
+  }, [selectedRestaurant, staff.length, loadData]));
 
   // Status tab is now client-side only — no refetch needed
 
@@ -245,7 +249,7 @@ export default function StaffScreen({ navigation }) {
   const renderListFooter = () => {
     if (!loadingMore) return null;
     return (
-      <View style={{ padding: 16, alignItems: 'center' }}>
+      <View style={st.listFooterLoader}>
         <ActivityIndicator size="small" color="#EF3A3A" />
       </View>
     );
@@ -268,7 +272,6 @@ export default function StaffScreen({ navigation }) {
   };
 
   const openForm = (item = null) => {
-    setModalKey(k => k + 1); // Force ScrollView re-render
     if (item) {
       const salaryValue = item.monthlySalary ? item.monthlySalary.toString() : item.dailyWage ? item.dailyWage.toString() : '';
       setForm({
@@ -454,7 +457,7 @@ export default function StaffScreen({ navigation }) {
             onPress={() => setActiveStatusTab(statusKey)}
           >
             <Icon name={config.icon} size={scale(12)} color={isActive ? '#fff' : config.color} />
-            <Text style={[st.filterChipText, isActive && { color: '#fff' }]} numberOfLines={1}>{config.label} ({count})</Text>
+            <Text style={[st.filterChipText, isActive && st.chipTextActive]} numberOfLines={1}>{config.label} ({count})</Text>
           </TouchableOpacity>
         );
       })}
@@ -493,6 +496,24 @@ export default function StaffScreen({ navigation }) {
               <Text style={st.statsTileLabel} numberOfLines={1}>{t.label}</Text>
             </View>
           </React.Fragment>
+        ))}
+      </View>
+
+      {/* Quick Actions -- shortcuts to the other staff-related screens */}
+      <Text style={st.sectionTitle}>Quick Actions</Text>
+      <View style={st.qaRow}>
+        {QA.filter(q => !q.permission || can(q.permission)).map((q, i) => (
+          <TouchableOpacity
+            key={i}
+            style={st.qaItem}
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate(q.screen)}
+          >
+            <LinearGradient colors={q.grad} style={st.qaIcon}>
+              <Icon name={q.icon} size={scale(16)} color="#fff" />
+            </LinearGradient>
+            <Text style={st.qaLabel}>{q.label}</Text>
+          </TouchableOpacity>
         ))}
       </View>
 
@@ -704,26 +725,30 @@ export default function StaffScreen({ navigation }) {
               showsVerticalScrollIndicator={true}
               keyboardShouldPersistTaps="handled"
             >
-              {/* Name */}
-              <Text style={st.label}>Full Name *</Text>
-              <TextInput
-                style={st.input}
-                placeholder="Enter staff name"
-                placeholderTextColor={C.muted}
-                value={form.name}
-                onChangeText={v => setForm(f => ({ ...f, name: v }))}
-              />
-
-              {/* Phone */}
-              <Text style={st.label}>Phone Number *</Text>
-              <TextInput
-                style={st.input}
-                placeholder="Enter phone number"
-                placeholderTextColor={C.muted}
-                keyboardType="phone-pad"
-                value={form.phone}
-                onChangeText={v => setForm(f => ({ ...f, phone: v }))}
-              />
+              {/* Name & Phone Row */}
+              <View style={st.formRow}>
+                <View style={st.formCol}>
+                  <Text style={st.label}>Full Name *</Text>
+                  <TextInput
+                    style={st.input}
+                    placeholder="Staff name"
+                    placeholderTextColor={C.muted}
+                    value={form.name}
+                    onChangeText={v => setForm(f => ({ ...f, name: v }))}
+                  />
+                </View>
+                <View style={st.formCol}>
+                  <Text style={st.label}>Phone Number *</Text>
+                  <TextInput
+                    style={st.input}
+                    placeholder="Phone number"
+                    placeholderTextColor={C.muted}
+                    keyboardType="phone-pad"
+                    value={form.phone}
+                    onChangeText={v => setForm(f => ({ ...f, phone: v }))}
+                  />
+                </View>
+              </View>
 
               {/* Role */}
               <Text style={st.label}>Role / Designation *</Text>
@@ -737,7 +762,7 @@ export default function StaffScreen({ navigation }) {
                       onPress={() => setForm(f => ({ ...f, role: role.value }))}
                     >
                       <Icon name={role.icon} size={scale(16)} color={isSelected ? '#fff' : role.color} />
-                      <Text style={[st.roleChipText, isSelected && { color: '#fff' }]}>{role.value}</Text>
+                      <Text style={[st.roleChipText, isSelected && st.chipTextActive]}>{role.value}</Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -755,7 +780,7 @@ export default function StaffScreen({ navigation }) {
                       onPress={() => setForm(f => ({ ...f, staffType: type.value }))}
                     >
                       <Icon name={type.icon} size={scale(16)} color={isSelected ? '#fff' : type.color} />
-                      <Text style={[st.typeChipText, isSelected && { color: '#fff' }]}>{type.label}</Text>
+                      <Text style={[st.typeChipText, isSelected && st.chipTextActive]}>{type.label}</Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -775,7 +800,7 @@ export default function StaffScreen({ navigation }) {
                           onPress={() => setForm(f => ({ ...f, status: s.value }))}
                         >
                           <Icon name={s.icon} size={scale(14)} color={isSelected ? '#fff' : s.color} />
-                          <Text style={[st.statusChipText, isSelected && { color: '#fff' }]}>{s.label}</Text>
+                          <Text style={[st.statusChipText, isSelected && st.chipTextActive]}>{s.label}</Text>
                         </TouchableOpacity>
                       );
                     })}
@@ -783,37 +808,41 @@ export default function StaffScreen({ navigation }) {
                 </>
               )}
 
-              {/* Joining Date */}
-              <Text style={st.label}>Joining Date</Text>
-              <TouchableOpacity style={st.dateBtn} onPress={() => setShowDatePicker(true)}>
-                <Icon name="calendar" size={scale(20)} color={C.primary} />
-                <Text style={st.dateBtnText}>{formatDate(form.joiningDate)}</Text>
-                <Icon name="chevron-down" size={scale(18)} color={C.muted} />
-              </TouchableOpacity>
-              {showDatePicker && (
-                <DateTimePicker
-                  value={form.joiningDate ? new Date(form.joiningDate) : new Date()}
-                  mode="date"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  onChange={onDateChange}
-                  maximumDate={new Date()}
-                />
-              )}
-
-              {/* Salary */}
-              <Text style={st.label}>{form.staffType === 'PART_TIME' ? 'Daily Wage (₹) *' : 'Monthly Salary (₹) *'}</Text>
-              <View style={st.salaryInputRow}>
-                <View style={st.currencyBox}>
-                  <Text style={st.currencyText}>₹</Text>
+              {/* Joining Date & Salary Row */}
+              <View style={st.formRow}>
+                <View style={st.formCol}>
+                  <Text style={st.label}>Joining Date</Text>
+                  <TouchableOpacity style={st.dateBtn} onPress={() => setShowDatePicker(true)}>
+                    <Icon name="calendar" size={scale(20)} color={C.primary} />
+                    <Text style={st.dateBtnText} numberOfLines={1}>{formatDate(form.joiningDate)}</Text>
+                    <Icon name="chevron-down" size={scale(18)} color={C.muted} />
+                  </TouchableOpacity>
+                  {showDatePicker && (
+                    <DateTimePicker
+                      value={form.joiningDate ? new Date(form.joiningDate) : new Date()}
+                      mode="date"
+                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                      onChange={onDateChange}
+                      maximumDate={new Date()}
+                    />
+                  )}
                 </View>
-                <TextInput
-                  style={st.salaryInput}
-                  placeholder={form.staffType === 'PART_TIME' ? 'Enter daily wage' : 'Enter monthly salary'}
-                  placeholderTextColor={C.muted}
-                  keyboardType="numeric"
-                  value={form.salary}
-                  onChangeText={v => setForm(f => ({ ...f, salary: v }))}
-                />
+                <View style={st.formCol}>
+                  <Text style={st.label} numberOfLines={1}>{form.staffType === 'PART_TIME' ? 'Daily Wage (₹) *' : 'Monthly Salary (₹) *'}</Text>
+                  <View style={st.salaryInputRow}>
+                    <View style={st.currencyBox}>
+                      <Text style={st.currencyText}>₹</Text>
+                    </View>
+                    <TextInput
+                      style={st.salaryInput}
+                      placeholder={form.staffType === 'PART_TIME' ? 'Daily wage' : 'Monthly salary'}
+                      placeholderTextColor={C.muted}
+                      keyboardType="numeric"
+                      value={form.salary}
+                      onChangeText={v => setForm(f => ({ ...f, salary: v }))}
+                    />
+                  </View>
+                </View>
               </View>
 
               <View style={{ height: scale(30) }} />
@@ -950,6 +979,21 @@ const st = StyleSheet.create({
   statsTileValue: { fontSize: moderateScale(12.5), fontWeight: '800', color: C.ink },
   statsTileLabel: { fontSize: moderateScale(8.5), color: C.muted, marginTop: scale(1), fontWeight: '500' },
 
+  // Quick Actions
+  sectionTitle: { fontSize: moderateScale(15), fontWeight: '700', color: C.ink, marginHorizontal: scale(12), marginBottom: scale(10) },
+  qaRow: { flexDirection: 'row', gap: scale(8), marginHorizontal: scale(12), marginBottom: scale(14) },
+  qaItem: {
+    flex: 1, backgroundColor: C.card, borderRadius: scale(12), paddingVertical: scale(9),
+    alignItems: 'center', borderWidth: 1, borderColor: C.border,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04, shadowRadius: 6, elevation: 2,
+  },
+  qaIcon: {
+    width: scale(32), height: scale(32), borderRadius: scale(9),
+    alignItems: 'center', justifyContent: 'center', marginBottom: scale(4),
+  },
+  qaLabel: { fontSize: moderateScale(10), fontWeight: '700', color: C.ink, textAlign: 'center' },
+
   // Filters
   filterContainer: { paddingVertical: scale(7), backgroundColor: C.bg },
   filterScroll: { paddingHorizontal: scale(12), gap: scale(6), justifyContent: 'space-between' },
@@ -1013,6 +1057,8 @@ const st = StyleSheet.create({
   // Form
   label: { fontSize: moderateScale(13), fontWeight: '700', color: C.text, marginBottom: scale(10), marginTop: scale(16) },
   input: { backgroundColor: C.bg, borderRadius: scale(12), paddingHorizontal: scale(16), paddingVertical: scale(14), fontSize: moderateScale(15), color: C.text, borderWidth: 1.5, borderColor: C.border },
+  formRow: { flexDirection: 'row', gap: scale(12) },
+  formCol: { flex: 1 },
 
   roleGrid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: scale(-4) },
   roleChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(12), paddingVertical: scale(10), borderRadius: scale(10), backgroundColor: C.bg, borderWidth: 1.5, borderColor: C.border, margin: scale(4) },
@@ -1064,7 +1110,14 @@ const st = StyleSheet.create({
   skelCard: { backgroundColor: C.card, borderRadius: scale(13), padding: scale(11), marginTop: scale(12), borderWidth: 1, borderColor: C.border },
   skelAvatar: { width: scale(40), height: scale(40), borderRadius: scale(11), backgroundColor: '#E2E8F0' },
   skelLine: { height: scale(11), backgroundColor: '#E2E8F0', borderRadius: scale(6) },
+  skelLineLg: { width: '50%' },
+  skelLineSm: { width: '30%', marginTop: scale(6) },
   skelBadge: { width: scale(60), height: scale(18), borderRadius: scale(20), backgroundColor: '#E2E8F0' },
   skelChip: { width: scale(90), height: scale(22), borderRadius: scale(7), backgroundColor: '#E2E8F0' },
   skelActions: { height: scale(32), backgroundColor: '#E2E8F0', borderRadius: scale(9), marginTop: scale(10) },
+  skelRow: { flexDirection: 'row', alignItems: 'center' },
+  skelInfoCol: { marginLeft: scale(9), flex: 1 },
+  skelChipRow: { flexDirection: 'row', marginTop: scale(10) },
+  listFooterLoader: { padding: 16, alignItems: 'center' },
+  chipTextActive: { color: '#fff' },
 });

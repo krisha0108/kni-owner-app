@@ -32,8 +32,8 @@ android {
         applicationId "com.kniapp"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 46
-        versionName "40.3.3"
+        versionCode 47
+        versionName "40.3.4"
     }
 
     signingConfigs {
@@ -66,6 +66,7 @@ android {
 
 dependencies {
     implementation("com.facebook.react:react-android")
+    implementation("androidx.core:core-splashscreen:1.0.1")
     implementation 'com.google.android.gms:play-services-auth:20.7.0'
     // implementation(project(":react-native-google-signin"))
 

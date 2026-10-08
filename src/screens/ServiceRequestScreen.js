@@ -25,7 +25,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
   TextInput, ActivityIndicator, Image, Animated,
-  useWindowDimensions, Dimensions, StatusBar,
+  useWindowDimensions, Dimensions, StatusBar, Keyboard, findNodeHandle,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
@@ -114,6 +114,8 @@ export default function ServiceRequestScreen({ navigation, route }) {
   const [selectedItems, setSelectedItems] = useState(new Map());
   const [paymentSettings, setPaymentSettings] = useState(null);
 
+  const dateScrollRef = useRef(null);
+  const problemBoxRef = useRef(null);
   const pulse = useRef(new Animated.Value(0.4)).current;
 
   useEffect(() => {
@@ -127,6 +129,30 @@ export default function ServiceRequestScreen({ navigation, route }) {
 
   // Flow state
   const [step, setStep] = useState('select'); // select | date | payment | confirm
+
+  // Scroll the Problem Description field above the keyboard every time it
+  // opens on the date step - using the keyboard's own show event (not
+  // TextInput onFocus) so this also fires on a second tap after the
+  // keyboard was dismissed once, when the input can stay logically
+  // "focused" without onFocus firing again. Measures the field's own
+  // position instead of scrollToEnd, which overshoots past it (the bottom
+  // padding here is sized for the date/time dropdowns, not this field) and
+  // pushes it off the top of the screen.
+  useEffect(() => {
+    if (step !== 'date') return undefined;
+    const sub = Keyboard.addListener('keyboardDidShow', () => {
+      const scrollNode = dateScrollRef.current;
+      const targetHandle = findNodeHandle(problemBoxRef.current);
+      if (!scrollNode || !targetHandle) return;
+      problemBoxRef.current?.measureLayout(
+        findNodeHandle(scrollNode),
+        (_x, y) => scrollNode.scrollTo({ y: Math.max(0, y - scale(12)), animated: true }),
+        () => {}
+      );
+    });
+    return () => sub.remove();
+  }, [step]);
+
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [problemDescription, setProblemDescription] = useState('');
@@ -829,9 +855,10 @@ export default function ServiceRequestScreen({ navigation, route }) {
       case 'date':
         return (
           <ScrollView
+            ref={dateScrollRef}
             style={st.scrollContent}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: ((dateModalVisible || timeModalVisible) ? scale(380) : scale(40)) + keyboardHeight }}
+            contentContainerStyle={{ paddingBottom: (dateModalVisible || timeModalVisible) ? scale(380) : scale(40) }}
             keyboardShouldPersistTaps="handled"
           >
             {/* Date Selection */}
@@ -1026,7 +1053,7 @@ export default function ServiceRequestScreen({ navigation, route }) {
                 itself, which would otherwise pop the keyboard on a leaked
                 tap) whenever either floating dropdown is open and may be
                 covering it. */}
-            <View style={st.section} pointerEvents={(dateModalVisible || timeModalVisible) ? 'none' : 'auto'}>
+            <View ref={problemBoxRef} style={st.section} pointerEvents={(dateModalVisible || timeModalVisible) ? 'none' : 'auto'}>
               <View style={st.sectionHeader}>
                 <Icon name="document-text-outline" size={20} color={C.primary} />
                 <Text style={st.sectionTitle}>Problem Description (Optional)</Text>
@@ -1224,8 +1251,11 @@ export default function ServiceRequestScreen({ navigation, route }) {
 
   // Order summary + Continue action -- rendered once at the bottom of the
   // screen (the bottom nav bar is hidden on this screen entirely, per the
-  // client's request, so there's no floating bar left to clear). Hidden
-  // while the keyboard is open so it doesn't sit on top of it.
+  // client's request, so there's no floating bar left to clear). Stays
+  // rendered even while the keyboard is open, with keyboardHeight added to
+  // its own bottom margin to lift it clear - this layout doesn't resize on
+  // its own when the keyboard opens, so without that push the bar would sit
+  // at its normal bottom position, right behind the keyboard.
   // The payment step has its own hero Pay button instead (see 'payment'
   // case above) rather than reusing this Continue bar.
   const renderOrderSummary = () => {
@@ -1233,7 +1263,7 @@ export default function ServiceRequestScreen({ navigation, route }) {
     const canContinue = step === 'select' ? itemCount > 0 : selectedDate && selectedSlot;
 
     return (
-      <View style={[st.inlineSummary, { marginBottom: insets.bottom + scale(16) }]}>
+      <View style={[st.inlineSummary, { marginBottom: insets.bottom + scale(16) + keyboardHeight }]}>
         <View style={st.footerSummary}>
           <View style={st.footerLeft}>
             <Text style={st.footerItems} numberOfLines={1}>{itemCount} items selected</Text>
@@ -1368,10 +1398,11 @@ export default function ServiceRequestScreen({ navigation, route }) {
         renderStepContent()
       )}
 
-      {/* Sticky summary + Continue bar — always visible above the bottom
-          nav, no scrolling needed. Only for select/date; payment has its
-          own hero Pay button and confirm has its own CTA. */}
-      {!isLoading && (step === 'select' || step === 'date') && keyboardHeight === 0 && renderOrderSummary()}
+      {/* Sticky summary + Continue bar — always visible (including while the
+          keyboard is open, e.g. typing in Problem Description), no closing
+          the keyboard needed to reach it. Only for select/date; payment has
+          its own hero Pay button and confirm has its own CTA. */}
+      {!isLoading && (step === 'select' || step === 'date') && renderOrderSummary()}
     </SafeAreaView>
   );
 }

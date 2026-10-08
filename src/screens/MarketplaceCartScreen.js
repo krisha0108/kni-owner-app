@@ -25,8 +25,6 @@ import { useFocusEffect } from '@react-navigation/native';
 import { getImageUrl } from '../api/client';
 import AppAlert from '../utils/AppAlert';
 import cartService from '../services/marketplaceCartService';
-import KniBottomNav from '../components/KniBottomNav';
-import NavigationMenu from '../components/NavigationMenu';
 
 import { scale, moderateScale } from '../utils/responsive';
 import useKeyboardHeight from '../utils/useKeyboardHeight';
@@ -113,7 +111,6 @@ export default function MarketplaceCartScreen({ navigation, route }) {
 
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [menuVisible, setMenuVisible] = useState(false);
   const pulse = useRef(new Animated.Value(0.4)).current;
 
   useEffect(() => {
@@ -157,11 +154,12 @@ export default function MarketplaceCartScreen({ navigation, route }) {
     try {
       if (newQty <= 0) {
         await cartService.removeItem(item.id, restaurantId);
+        setCart(prev => prev.filter(i => i.id !== item.id));
       } else {
         const clamped = Math.min(newQty, item.product.stockQuantity || 999);
-        await cartService.updateItemQuantity(item.id, clamped, restaurantId);
+        const items = await cartService.updateItemQuantity(item.id, clamped, restaurantId);
+        setCart(items || []);
       }
-      await loadCart();
     } catch (error) {
       AppAlert.alert('Error', error.message || 'Failed to update cart');
       console.error('Update cart error:', error);
@@ -264,9 +262,6 @@ export default function MarketplaceCartScreen({ navigation, route }) {
           >
             <Icon name="chevron-back" size={scale(20)} color="#fff" />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={st.menuBtn}>
-            <Icon name="menu" size={scale(18)} color="#fff" />
-          </TouchableOpacity>
           <View style={st.headerCenter}>
             <Text style={st.headerTitle}>Your Cart</Text>
             <Text style={st.headerSubtitle}>Loading...</Text>
@@ -297,9 +292,6 @@ export default function MarketplaceCartScreen({ navigation, route }) {
           >
             <Icon name="chevron-back" size={scale(20)} color="#fff" />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setMenuVisible(true)} style={[st.menuBtn, { marginRight: scale(10) }]}>
-            <Icon name="menu" size={scale(18)} color="#fff" />
-          </TouchableOpacity>
           <Text style={[st.headerTitle, { flex: 1 }]}>Your Cart</Text>
         </LinearGradient>
         <View style={st.emptyState}>
@@ -315,8 +307,6 @@ export default function MarketplaceCartScreen({ navigation, route }) {
             <Text style={st.browseBtnText}>Browse Marketplace</Text>
           </TouchableOpacity>
         </View>
-        <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
-        <KniBottomNav navigation={navigation} active="request" />
       </SafeAreaView>
     );
   }
@@ -334,9 +324,6 @@ export default function MarketplaceCartScreen({ navigation, route }) {
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Icon name="chevron-back" size={scale(20)} color="#fff" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => setMenuVisible(true)} style={st.menuBtn}>
-          <Icon name="menu" size={scale(18)} color="#fff" />
         </TouchableOpacity>
         <View style={st.headerCenter}>
           <Text style={st.headerTitle}>Your Cart</Text>
@@ -451,13 +438,14 @@ export default function MarketplaceCartScreen({ navigation, route }) {
                   </TouchableOpacity>
                   <Text style={st.qtyText}>{item.quantity}</Text>
                   <TouchableOpacity
-                    style={st.qtyBtn}
+                    style={[st.qtyBtn, item.quantity >= (item.product.stockQuantity || 999) && st.qtyBtnDisabled]}
+                    disabled={item.quantity >= (item.product.stockQuantity || 999)}
                     onPress={(e) => {
                       e.stopPropagation();
                       updateCartQuantity(item.product.id, 1);
                     }}
                   >
-                    <Icon name="add" size={scale(16)} color={C.primary} />
+                    <Icon name="add" size={scale(16)} color={item.quantity >= (item.product.stockQuantity || 999) ? C.muted : C.primary} />
                   </TouchableOpacity>
                 </View>
                 <Text style={st.cartItemTotal}>
@@ -493,15 +481,13 @@ export default function MarketplaceCartScreen({ navigation, route }) {
       </ScrollView>
 
       {/* Footer - Grand Total */}
-      <View style={st.footer}>
+      <View style={[st.footer, { paddingBottom: scale(16) + insets.bottom }]}>
         <View style={st.totalRow}>
           <Text style={st.totalLabel}>Grand Total</Text>
           <Text style={st.totalAmount}>{formatPrice(getCartTotal())}</Text>
         </View>
       </View>
 
-      <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
-      <KniBottomNav navigation={navigation} active="request" />
     </SafeAreaView>
   );
 }
@@ -623,7 +609,7 @@ const st = StyleSheet.create({
   },
   bodyContent: {
     padding: scale(16),
-    paddingBottom: scale(120),
+    paddingBottom: scale(24),
   },
 
   // Delivery Section
@@ -788,6 +774,9 @@ const st = StyleSheet.create({
     backgroundColor: C.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  qtyBtnDisabled: {
+    backgroundColor: C.bg,
   },
   qtyText: {
     fontSize: moderateScale(14),
