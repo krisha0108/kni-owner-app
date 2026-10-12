@@ -324,8 +324,20 @@ export default function MyEquipmentScreen({ navigation }) {
   const [subCategories, setSubCategories] = useState([]);
   const [categoryPickerVisible, setCategoryPickerVisible] = useState(false);
   const [subCategoryPickerVisible, setSubCategoryPickerVisible] = useState(false);
+  const [categorySearch, setCategorySearch] = useState('');
+  const [subCategorySearch, setSubCategorySearch] = useState('');
   const [showPurchaseDatePicker, setShowPurchaseDatePicker] = useState(false);
   const [showWarrantyDatePicker, setShowWarrantyDatePicker] = useState(false);
+
+  const filteredCategories = useMemo(() => {
+    const q = categorySearch.trim().toLowerCase();
+    return q ? categories.filter(c => c.name?.toLowerCase().includes(q)) : categories;
+  }, [categories, categorySearch]);
+
+  const filteredSubCategories = useMemo(() => {
+    const q = subCategorySearch.trim().toLowerCase();
+    return q ? subCategories.filter(sc => sc.name?.toLowerCase().includes(q)) : subCategories;
+  }, [subCategories, subCategorySearch]);
 
   // Fetch categories
   const fetchCategories = useCallback(async () => {
@@ -755,27 +767,31 @@ export default function MyEquipmentScreen({ navigation }) {
                 <Text style={st.readOnlyText}>{selectedRestaurant?.name || 'No restaurant'}</Text>
               </View>
 
-              {/* Category */}
-              <Text style={st.inputLabel}>Category *</Text>
-              <TouchableOpacity style={st.pickerBtn} onPress={() => setCategoryPickerVisible(true)}>
-                <Text style={form.categoryId ? st.pickerText : st.pickerPlaceholder}>
-                  {categories.find(c => c.id === form.categoryId)?.name || 'Select category'}
-                </Text>
-                <Icon name="chevron-down" size={scale(18)} color={C.muted} />
-              </TouchableOpacity>
-
-              {/* Subcategory */}
-              <Text style={st.inputLabel}>Subcategory</Text>
-              <TouchableOpacity
-                style={[st.pickerBtn, !form.categoryId && st.pickerBtnDisabled]}
-                onPress={() => form.categoryId && setSubCategoryPickerVisible(true)}
-                disabled={!form.categoryId}
-              >
-                <Text style={form.subCategoryId ? st.pickerText : st.pickerPlaceholder}>
-                  {subCategories.find(sc => sc.id === form.subCategoryId)?.name || 'Select subcategory'}
-                </Text>
-                <Icon name="chevron-down" size={scale(18)} color={C.muted} />
-              </TouchableOpacity>
+              {/* Category & Subcategory Row */}
+              <View style={st.formRow}>
+                <View style={st.formCol}>
+                  <Text style={st.inputLabel}>Category *</Text>
+                  <TouchableOpacity style={st.pickerBtn} onPress={() => { setCategorySearch(''); setCategoryPickerVisible(true); }}>
+                    <Text style={form.categoryId ? st.pickerText : st.pickerPlaceholder} numberOfLines={1}>
+                      {categories.find(c => c.id === form.categoryId)?.name || 'Select category'}
+                    </Text>
+                    <Icon name="chevron-down" size={scale(18)} color={C.muted} />
+                  </TouchableOpacity>
+                </View>
+                <View style={st.formCol}>
+                  <Text style={st.inputLabel}>Subcategory</Text>
+                  <TouchableOpacity
+                    style={[st.pickerBtn, !form.categoryId && st.pickerBtnDisabled]}
+                    onPress={() => { if (form.categoryId) { setSubCategorySearch(''); setSubCategoryPickerVisible(true); } }}
+                    disabled={!form.categoryId}
+                  >
+                    <Text style={form.subCategoryId ? st.pickerText : st.pickerPlaceholder} numberOfLines={1}>
+                      {subCategories.find(sc => sc.id === form.subCategoryId)?.name || 'Select subcategory'}
+                    </Text>
+                    <Icon name="chevron-down" size={scale(18)} color={C.muted} />
+                  </TouchableOpacity>
+                </View>
+              </View>
 
               {/* Brand & Model Row */}
               <View style={st.formRow}>
@@ -842,45 +858,49 @@ export default function MyEquipmentScreen({ navigation }) {
               <TextInput style={[st.input, st.textArea]} placeholder="Additional notes..." placeholderTextColor={C.muted}
                 multiline numberOfLines={3} value={form.notes} onChangeText={v => setForm(f => ({ ...f, notes: v }))} />
 
-              {/* Bill Image */}
-              <Text style={st.inputLabel}>Bill Image</Text>
-              {form.billImageUrl ? (
-                <View style={st.imagePreview}>
-                  <Image source={{ uri: getImageUrl(form.billImageUrl) }} style={st.previewImg} />
-                  <TouchableOpacity style={st.removeImgBtn} onPress={() => setForm(f => ({ ...f, billImageUrl: '' }))}>
-                    <Icon name="close-circle" size={scale(24)} color={C.danger} />
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <TouchableOpacity style={st.uploadBtn} onPress={() => uploadImage('bills')} disabled={uploading}>
-                  {uploading ? <ActivityIndicator size="small" color={C.primary} /> : (
-                    <>
-                      <Icon name="cloud-upload" size={scale(24)} color={C.primary} />
-                      <Text style={st.uploadText}>Upload Bill</Text>
-                    </>
+              {/* Bill Image & Warranty Card Row */}
+              <View style={st.formRow}>
+                <View style={st.formCol}>
+                  <Text style={st.inputLabel}>Bill Image</Text>
+                  {form.billImageUrl ? (
+                    <View style={st.imagePreview}>
+                      <Image source={{ uri: getImageUrl(form.billImageUrl) }} style={st.previewImg} />
+                      <TouchableOpacity style={st.removeImgBtn} onPress={() => setForm(f => ({ ...f, billImageUrl: '' }))}>
+                        <Icon name="close-circle" size={scale(24)} color={C.danger} />
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <TouchableOpacity style={st.uploadBtn} onPress={() => uploadImage('bills')} disabled={uploading}>
+                      {uploading ? <ActivityIndicator size="small" color={C.primary} /> : (
+                        <>
+                          <Icon name="cloud-upload" size={scale(22)} color={C.primary} />
+                          <Text style={st.uploadText} numberOfLines={2}>Upload Bill</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
                   )}
-                </TouchableOpacity>
-              )}
-
-              {/* Warranty Card */}
-              <Text style={st.inputLabel}>Warranty Card</Text>
-              {form.warrantyCardUrl ? (
-                <View style={st.imagePreview}>
-                  <Image source={{ uri: getImageUrl(form.warrantyCardUrl) }} style={st.previewImg} />
-                  <TouchableOpacity style={st.removeImgBtn} onPress={() => setForm(f => ({ ...f, warrantyCardUrl: '' }))}>
-                    <Icon name="close-circle" size={scale(24)} color={C.danger} />
-                  </TouchableOpacity>
                 </View>
-              ) : (
-                <TouchableOpacity style={st.uploadBtn} onPress={() => uploadImage('warranty-cards')} disabled={uploading}>
-                  {uploading ? <ActivityIndicator size="small" color={C.primary} /> : (
-                    <>
-                      <Icon name="shield-checkmark" size={scale(24)} color={C.primary} />
-                      <Text style={st.uploadText}>Upload Warranty Card</Text>
-                    </>
+                <View style={st.formCol}>
+                  <Text style={st.inputLabel}>Warranty Card</Text>
+                  {form.warrantyCardUrl ? (
+                    <View style={st.imagePreview}>
+                      <Image source={{ uri: getImageUrl(form.warrantyCardUrl) }} style={st.previewImg} />
+                      <TouchableOpacity style={st.removeImgBtn} onPress={() => setForm(f => ({ ...f, warrantyCardUrl: '' }))}>
+                        <Icon name="close-circle" size={scale(24)} color={C.danger} />
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <TouchableOpacity style={st.uploadBtn} onPress={() => uploadImage('warranty-cards')} disabled={uploading}>
+                      {uploading ? <ActivityIndicator size="small" color={C.primary} /> : (
+                        <>
+                          <Icon name="shield-checkmark" size={scale(22)} color={C.primary} />
+                          <Text style={st.uploadText} numberOfLines={2}>Upload Warranty Card</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
                   )}
-                </TouchableOpacity>
-              )}
+                </View>
+              </View>
 
               {/* Photos */}
               <Text style={st.inputLabel}>Equipment Photos (Max 5)</Text>
@@ -930,8 +950,26 @@ export default function MyEquipmentScreen({ navigation }) {
                 <Icon name="close" size={scale(24)} color={C.ink} />
               </TouchableOpacity>
             </View>
-            <ScrollView style={st.pickerList}>
-              {categories.map(c => (
+            <View style={st.pickerSearchBar}>
+              <Icon name="search" size={scale(16)} color={C.muted} />
+              <TextInput
+                style={st.pickerSearchInput}
+                placeholder="Type to search..."
+                placeholderTextColor={C.muted}
+                value={categorySearch}
+                onChangeText={setCategorySearch}
+                autoFocus
+              />
+              {categorySearch.length > 0 && (
+                <TouchableOpacity onPress={() => setCategorySearch('')}>
+                  <Icon name="close-circle" size={scale(16)} color={C.muted} />
+                </TouchableOpacity>
+              )}
+            </View>
+            <ScrollView style={st.pickerList} keyboardShouldPersistTaps="handled">
+              {filteredCategories.length === 0 ? (
+                <View style={st.emptyPicker}><Text style={st.emptyPickerText}>No matching categories</Text></View>
+              ) : filteredCategories.map(c => (
                 <TouchableOpacity key={c.id} style={[st.pickerItem, form.categoryId === c.id && st.pickerItemActive]}
                   onPress={() => { setForm(f => ({ ...f, categoryId: c.id, subCategoryId: '' })); setCategoryPickerVisible(false); }}>
                   <Icon name="folder" size={scale(20)} color={form.categoryId === c.id ? C.primary : C.muted} />
@@ -954,10 +992,30 @@ export default function MyEquipmentScreen({ navigation }) {
                 <Icon name="close" size={scale(24)} color={C.ink} />
               </TouchableOpacity>
             </View>
-            <ScrollView style={st.pickerList}>
+            {subCategories.length > 0 && (
+              <View style={st.pickerSearchBar}>
+                <Icon name="search" size={scale(16)} color={C.muted} />
+                <TextInput
+                  style={st.pickerSearchInput}
+                  placeholder="Type to search..."
+                  placeholderTextColor={C.muted}
+                  value={subCategorySearch}
+                  onChangeText={setSubCategorySearch}
+                  autoFocus
+                />
+                {subCategorySearch.length > 0 && (
+                  <TouchableOpacity onPress={() => setSubCategorySearch('')}>
+                    <Icon name="close-circle" size={scale(16)} color={C.muted} />
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+            <ScrollView style={st.pickerList} keyboardShouldPersistTaps="handled">
               {subCategories.length === 0 ? (
                 <View style={st.emptyPicker}><Text style={st.emptyPickerText}>No subcategories</Text></View>
-              ) : subCategories.map(sc => (
+              ) : filteredSubCategories.length === 0 ? (
+                <View style={st.emptyPicker}><Text style={st.emptyPickerText}>No matching subcategories</Text></View>
+              ) : filteredSubCategories.map(sc => (
                 <TouchableOpacity key={sc.id} style={[st.pickerItem, form.subCategoryId === sc.id && st.pickerItemActive]}
                   onPress={() => { setForm(f => ({ ...f, subCategoryId: sc.id })); setSubCategoryPickerVisible(false); }}>
                   <Icon name="layers" size={scale(20)} color={form.subCategoryId === sc.id ? C.primary : C.muted} />
@@ -1090,8 +1148,8 @@ const st = StyleSheet.create({
   formCol: { flex: 1 },
 
   // Image uploads
-  uploadBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: scale(10), backgroundColor: C.bg, borderRadius: scale(12), paddingVertical: scale(20), borderWidth: 2, borderColor: C.border, borderStyle: 'dashed' },
-  uploadText: { fontSize: moderateScale(14), fontWeight: '600', color: C.primary },
+  uploadBtn: { flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: scale(8), backgroundColor: C.bg, borderRadius: scale(12), paddingVertical: scale(18), paddingHorizontal: scale(8), borderWidth: 2, borderColor: C.border, borderStyle: 'dashed' },
+  uploadText: { fontSize: moderateScale(12.5), fontWeight: '600', color: C.primary, textAlign: 'center' },
   imagePreview: { position: 'relative' },
   previewImg: { width: '100%', height: scale(120), borderRadius: scale(12), backgroundColor: C.bg },
   removeImgBtn: { position: 'absolute', top: scale(8), right: scale(8) },
@@ -1112,6 +1170,8 @@ const st = StyleSheet.create({
   pickerModal: { backgroundColor: C.card, borderTopLeftRadius: scale(24), borderTopRightRadius: scale(24), maxHeight: SCREEN_HEIGHT * 0.7 },
   pickerModalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: scale(20), borderBottomWidth: 1, borderBottomColor: C.border },
   pickerModalTitle: { fontSize: moderateScale(18), fontWeight: '700', color: C.ink },
+  pickerSearchBar: { flexDirection: 'row', alignItems: 'center', gap: scale(8), marginHorizontal: scale(16), marginTop: scale(12), paddingHorizontal: scale(12), height: scale(38), backgroundColor: C.bg, borderRadius: scale(10), borderWidth: 1, borderColor: C.border },
+  pickerSearchInput: { flex: 1, fontSize: moderateScale(13.5), color: C.ink, padding: 0 },
   pickerList: { padding: scale(16) },
   pickerItem: { flexDirection: 'row', alignItems: 'center', gap: scale(12), paddingVertical: scale(14), borderBottomWidth: 1, borderBottomColor: C.border },
   pickerItemActive: { backgroundColor: C.primaryLight },
