@@ -32,8 +32,8 @@ android {
         applicationId "com.kniapp"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 47
-        versionName "40.3.4"
+        versionCode 48
+        versionName "40.3.5"
     }
 
     signingConfigs {
