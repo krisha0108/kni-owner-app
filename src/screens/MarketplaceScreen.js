@@ -133,6 +133,7 @@ export default function MarketplaceScreen({ navigation }) {
   const [products, setProducts] = useState([]);
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [sort, setSort] = useState('newest');
   const [categories, setCategories] = useState([]);
   const [cart, setCart] = useState([]);
   const [menuVisible, setMenuVisible] = useState(false);
@@ -186,6 +187,9 @@ export default function MarketplaceScreen({ navigation }) {
       if (selectedCategory && selectedCategory !== 'all') {
         params.append('categoryId', selectedCategory);
       }
+      if (sort && sort !== 'newest') {
+        params.append('sort', sort);
+      }
 
       const response = await api.get(`/owner/marketplace/products?${params}`);
       if (response.data.ok) {
@@ -226,7 +230,7 @@ export default function MarketplaceScreen({ navigation }) {
       setLoadingMore(false);
       setRefreshing(false);
     }
-  }, [selectedRestaurantId, selectedCategory]);
+  }, [selectedRestaurantId, selectedCategory, sort]);
 
   useEffect(() => {
     setPage(1);
@@ -238,7 +242,7 @@ export default function MarketplaceScreen({ navigation }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRestaurantId]);
 
-  // Category filter changes only update the product grid — not a full-screen
+  // Category/sort changes only update the product grid — not a full-screen
   // reload like switching restaurants, so no loading skeleton here.
   const didMountCategoryEffect = useRef(false);
   useEffect(() => {
@@ -249,13 +253,13 @@ export default function MarketplaceScreen({ navigation }) {
     setPage(1);
     setHasMore(true);
     loadData(false, 1, false);
-  }, [selectedCategory, loadData]);
+  }, [selectedCategory, sort, loadData]);
 
   useFocusEffect(
     useCallback(() => {
       if (!selectedRestaurantId) return;
 
-      const productsKey = `Marketplace-products-${selectedRestaurantId}-${selectedCategory}`;
+      const productsKey = `Marketplace-products-${selectedRestaurantId}-${selectedCategory}-${sort}`;
       if (isStale(productsKey)) {
         // Background refresh products - no loading spinner
         loadData(false);
@@ -270,7 +274,7 @@ export default function MarketplaceScreen({ navigation }) {
         loadCart();
         markFetched(cartKey);
       }
-    }, [selectedRestaurantId, selectedCategory, loadData, loadCart])
+    }, [selectedRestaurantId, selectedCategory, sort, loadData, loadCart])
   );
 
   const onRefresh = async () => {
@@ -279,7 +283,7 @@ export default function MarketplaceScreen({ navigation }) {
     setHasMore(true);
     await loadRestaurants({ force: true });
     await loadData(true, 1, false);
-    markFetched(`Marketplace-products-${selectedRestaurantId}-${selectedCategory}`);
+    markFetched(`Marketplace-products-${selectedRestaurantId}-${selectedCategory}-${sort}`);
     markFetched(`Marketplace-cart-${selectedRestaurantId}`);
     await loadCart();
   };
@@ -350,6 +354,16 @@ export default function MarketplaceScreen({ navigation }) {
 
   const getCartTotal = () => cart.reduce((total, item) => total + item.product.price * item.quantity, 0);
   const getCartItemQuantity = (productId) => cart.find(i => i.product.id === productId)?.quantity || 0;
+
+  const SORT_LABELS = { newest: 'Newest', price_asc: 'Price: Low to High', price_desc: 'Price: High to Low' };
+  const openSortPicker = () => {
+    AppAlert.alert('Sort By', null, [
+      { text: 'Newest First', onPress: () => setSort('newest') },
+      { text: 'Price: Low to High', onPress: () => setSort('price_asc') },
+      { text: 'Price: High to Low', onPress: () => setSort('price_desc') },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
 
   const filteredProducts = products
     .filter(p => !search || p.name.toLowerCase().includes(search.toLowerCase()))
@@ -793,24 +807,31 @@ export default function MarketplaceScreen({ navigation }) {
             </Text>
           </TouchableOpacity>
 
-          {categories.map((cat) => {
-            const isActive = selectedCategory === cat.id;
-            const iconName = CATEGORY_ICONS[cat.name] || CATEGORY_ICONS.default;
-            const catCount = cat._count?.products ?? 0;
+          {categories
+            .filter((cat) => (cat._count?.products ?? 0) > 0)
+            .map((cat) => {
+              const isActive = selectedCategory === cat.id;
+              const iconName = CATEGORY_ICONS[cat.name] || CATEGORY_ICONS.default;
+              const catCount = cat._count?.products ?? 0;
 
-            return (
-              <TouchableOpacity
-                key={cat.id}
-                style={[st.categoryChip, isActive && st.categoryChipActive]}
-                onPress={() => setSelectedCategory(cat.id)}
-              >
-                <Icon name={iconName} size={scale(13)} color={isActive ? '#fff' : C.primary} />
-                <Text style={[st.categoryChipText, isActive && st.categoryChipTextActive]}>
-                  {cat.name} ({catCount})
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
+              return (
+                <TouchableOpacity
+                  key={cat.id}
+                  style={[st.categoryChip, isActive && st.categoryChipActive]}
+                  onPress={() => setSelectedCategory(cat.id)}
+                >
+                  <Icon name={iconName} size={scale(13)} color={isActive ? '#fff' : C.primary} />
+                  <Text style={[st.categoryChipText, isActive && st.categoryChipTextActive]}>
+                    {cat.name} ({catCount})
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+
+          <TouchableOpacity style={[st.categoryChip, st.sortChip]} onPress={openSortPicker}>
+            <Icon name="swap-vertical" size={scale(13)} color={C.primary} />
+            <Text style={st.categoryChipText}>{SORT_LABELS[sort]}</Text>
+          </TouchableOpacity>
         </ScrollView>
       </View>
 
@@ -979,6 +1000,10 @@ const st = StyleSheet.create({
   },
   categoryChipTextActive: {
     color: '#fff',
+  },
+  sortChip: {
+    borderStyle: 'dashed',
+    borderColor: C.primary,
   },
 
   // Products List

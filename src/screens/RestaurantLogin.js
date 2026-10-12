@@ -8,8 +8,6 @@ import {
   Image,
   ScrollView,
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
   Modal,
   StatusBar,
 } from 'react-native';
@@ -23,7 +21,9 @@ import notificationService from '../services/notificationService';
 import AppAlert from '../utils/AppAlert';
 
 import { scale, moderateScale } from '../utils/responsive';
+import useKeyboardHeight from '../utils/useKeyboardHeight';
 export default function RestaurantLogin({ navigation }) {
+  const keyboardHeight = useKeyboardHeight();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [secureText, setSecureText] = useState(true);
@@ -251,29 +251,39 @@ export default function RestaurantLogin({ navigation }) {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" />
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+
+      {/* Hero */}
+      <LinearGradient
+        colors={['#EF3A3A', '#D42E2E', '#1D2254']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.hero}
       >
-        {/* Logo */}
-        <View style={styles.logoContainer}>
+        <View style={styles.logoCircle}>
           <Image
-            source={require('../assets/images/logo.png')}
+            source={require('../assets/images/kni-icon.png')}
             style={styles.logo}
             resizeMode="contain"
           />
-          <Text style={styles.title}>Restaurant Owner Login</Text>
-          <Text style={styles.subtitle}>Welcome back! Sign in to continue</Text>
         </View>
+        <Text style={styles.brandWordmark}>KITCHEN NETWORK INTERNATIONAL</Text>
+        <Text style={styles.welcomeTitle}>Welcome Back</Text>
+        <Text style={styles.welcomeSubtitle}>Sign in to manage your restaurant</Text>
+      </LinearGradient>
 
-        {/* Login Form */}
-        <View style={styles.formContainer}>
-          {/* Email Input */}
+      {/* Sheet */}
+      <View style={styles.sheetWrap}>
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: scale(40) + keyboardHeight }]}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.dragHandle} />
+
+          {/* Login Form */}
+          <View style={styles.formContainer}>
+            {/* Email Input */}
           <View style={styles.inputContainer}>
             <Icon name="mail-outline" size={scale(20)} color="#666" style={styles.inputIcon} />
             <TextInput
@@ -334,11 +344,7 @@ export default function RestaurantLogin({ navigation }) {
           </TouchableOpacity>
 
           {/* Divider */}
-          <View style={styles.dividerContainer}>
-            <View style={styles.divider} />
-            <Text style={styles.dividerText}>OR</Text>
-            <View style={styles.divider} />
-          </View>
+          <Text style={styles.dividerPlainText}>or continue with</Text>
 
           {/* Google Sign-In Button */}
           <TouchableOpacity
@@ -363,8 +369,9 @@ export default function RestaurantLogin({ navigation }) {
               <Text style={styles.registerLink}>Sign Up</Text>
             </TouchableOpacity>
           </View>
-        </View>
-      </ScrollView>
+          </View>
+        </ScrollView>
+      </View>
 
       {/* Add-phone modal (shown to Google users without a mobile number) */}
       <Modal
@@ -416,7 +423,7 @@ export default function RestaurantLogin({ navigation }) {
           </View>
         </View>
       </Modal>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -504,29 +511,75 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(13.5),
     fontWeight: '600',
   },
+  hero: {
+    paddingTop: scale(56),
+    paddingBottom: scale(32),
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderBottomLeftRadius: scale(36),
+    borderBottomRightRadius: scale(36),
+  },
+  logoCircle: {
+    width: scale(84),
+    height: scale(84),
+    borderRadius: scale(42),
+    backgroundColor: '#FFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: scale(14),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: scale(6) },
+    shadowOpacity: 0.2,
+    shadowRadius: scale(12),
+    elevation: 8,
+  },
+  logo: {
+    width: scale(60),
+    height: scale(60),
+    borderRadius: scale(30),
+  },
+  brandWordmark: {
+    fontSize: moderateScale(11),
+    fontWeight: '800',
+    color: 'rgba(255,255,255,0.85)',
+    letterSpacing: 1.4,
+    marginBottom: scale(2),
+  },
+  welcomeTitle: {
+    fontSize: moderateScale(21),
+    fontWeight: '800',
+    color: '#FFF',
+  },
+  welcomeSubtitle: {
+    fontSize: moderateScale(12.5),
+    color: 'rgba(255,255,255,0.85)',
+    marginTop: scale(4),
+  },
+  sheetWrap: {
+    flex: 1,
+    backgroundColor: '#FFF',
+    marginTop: scale(-26),
+    borderTopLeftRadius: scale(32),
+    borderTopRightRadius: scale(32),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: scale(-4) },
+    shadowOpacity: 0.05,
+    shadowRadius: scale(12),
+    elevation: 6,
+  },
+  dragHandle: {
+    width: scale(40),
+    height: scale(4),
+    borderRadius: scale(2),
+    backgroundColor: '#E6E6E6',
+    alignSelf: 'center',
+    marginTop: scale(12),
+    marginBottom: scale(10),
+  },
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: scale(24),
-    paddingVertical: scale(40),
-  },
-  logoContainer: {
-    alignItems: 'center',
-    marginBottom: scale(40),
-  },
-  logo: {
-    width: scale(100),
-    height: scale(100),
-    marginBottom: scale(16),
-  },
-  title: {
-    fontSize: moderateScale(28),
-    fontWeight: 'bold',
-    color: '#1A1A1A',
-    marginBottom: scale(8),
-  },
-  subtitle: {
-    fontSize: moderateScale(14),
-    color: '#666',
+    paddingTop: scale(6),
   },
   formContainer: {
     width: '100%',
@@ -534,13 +587,11 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF',
-    borderRadius: scale(12),
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+    backgroundColor: '#F7F7F9',
+    borderRadius: scale(14),
     paddingHorizontal: scale(16),
-    marginBottom: scale(16),
-    height: scale(56),
+    marginBottom: scale(14),
+    height: scale(52),
   },
   inputIcon: {
     marginRight: scale(12),
@@ -564,13 +615,13 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   loginButton: {
-    backgroundColor: '#EF3A3A',
-    borderRadius: scale(12),
-    height: scale(56),
+    backgroundColor: '#1D2254',
+    borderRadius: scale(14),
+    height: scale(52),
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: scale(8),
-    shadowColor: '#EF3A3A',
+    marginTop: scale(6),
+    shadowColor: '#1D2254',
     shadowOffset: { width: 0, height: scale(4) },
     shadowOpacity: 0.3,
     shadowRadius: scale(8),
@@ -584,31 +635,21 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(16),
     fontWeight: '600',
   },
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: scale(24),
-  },
-  divider: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#E0E0E0',
-  },
-  dividerText: {
-    marginHorizontal: scale(16),
+  dividerPlainText: {
+    textAlign: 'center',
+    fontSize: moderateScale(12.5),
     color: '#999',
-    fontSize: moderateScale(14),
-    fontWeight: '500',
+    marginVertical: scale(14),
   },
   googleButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FFF',
-    borderRadius: scale(12),
+    borderRadius: scale(14),
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    height: scale(56),
+    borderColor: '#E6E6E6',
+    height: scale(50),
     marginBottom: scale(24),
   },
   googleButtonDisabled: {

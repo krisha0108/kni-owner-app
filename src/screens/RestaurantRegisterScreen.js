@@ -5,6 +5,7 @@ import {
   Image, ScrollView, ActivityIndicator, StatusBar
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import LinearGradient from 'react-native-linear-gradient';
 import { api } from '../api/client';
 import auth from '@react-native-firebase/auth';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
@@ -270,15 +271,31 @@ export default function RestaurantRegisterScreen({ navigation }) {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: scale(40) + keyboardHeight }} keyboardShouldPersistTaps="handled">
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" />
-      {/* Logo */}
-      <Image
-        source={require('../assets/images/kni-logo.png')}
-        style={styles.logo}
-      />
-      <Text style={styles.title}>Create Owner Account</Text>
-      <Text style={styles.subtitle}>Manage your restaurants with ease</Text>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+
+      {/* Hero */}
+      <LinearGradient
+        colors={['#EF3A3A', '#D42E2E', '#1D2254']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.hero}
+      >
+        <View style={styles.logoCircle}>
+          <Image
+            source={require('../assets/images/kni-icon.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </View>
+        <Text style={styles.heroTitle}>Create Owner Account</Text>
+        <Text style={styles.heroSubtitle}>Manage your restaurants with ease</Text>
+      </LinearGradient>
+
+      {/* Sheet */}
+      <View style={styles.sheetWrap}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: scale(24), paddingTop: scale(16), paddingBottom: scale(40) + keyboardHeight }} keyboardShouldPersistTaps="handled">
+      <View style={styles.dragHandle} />
 
       {/* Google Sign-In */}
       <TouchableOpacity
@@ -297,11 +314,7 @@ export default function RestaurantRegisterScreen({ navigation }) {
       </TouchableOpacity>
 
       {/* Divider */}
-      <View style={styles.divider}>
-        <View style={styles.dividerLine} />
-        <Text style={styles.dividerText}>or register with email</Text>
-        <View style={styles.dividerLine} />
-      </View>
+      <Text style={styles.dividerPlainText}>or register with email</Text>
 
       {/* Name Field */}
       <View style={styles.inputWrapper}>
@@ -455,47 +468,90 @@ export default function RestaurantRegisterScreen({ navigation }) {
           Sign In
         </Text>
       </Text>
-    </ScrollView>
+      </ScrollView>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: C.bg,
-    padding: scale(20)
+    backgroundColor: '#fff',
+  },
+  hero: {
+    paddingTop: scale(50),
+    paddingBottom: scale(26),
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderBottomLeftRadius: scale(30),
+    borderBottomRightRadius: scale(30),
+  },
+  logoCircle: {
+    width: scale(56),
+    height: scale(56),
+    borderRadius: scale(28),
+    backgroundColor: '#FFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: scale(10),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: scale(5) },
+    shadowOpacity: 0.2,
+    shadowRadius: scale(10),
+    elevation: 6,
   },
   logo: {
-    width: scale(100),
-    height: scale(100),
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(20),
+  },
+  heroTitle: {
+    fontSize: moderateScale(19),
+    fontWeight: '800',
+    color: '#FFF',
+  },
+  heroSubtitle: {
+    fontSize: moderateScale(12),
+    color: 'rgba(255,255,255,0.85)',
+    marginTop: scale(3),
+  },
+  sheetWrap: {
+    flex: 1,
+    backgroundColor: '#FFF',
+    marginTop: scale(-18),
+    borderTopLeftRadius: scale(26),
+    borderTopRightRadius: scale(26),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: scale(-4) },
+    shadowOpacity: 0.05,
+    shadowRadius: scale(12),
+    elevation: 6,
+  },
+  dragHandle: {
+    width: scale(36),
+    height: scale(4),
+    borderRadius: scale(2),
+    backgroundColor: '#E6E6E6',
     alignSelf: 'center',
-    resizeMode: 'contain',
-    marginTop: scale(20),
-    marginBottom: scale(12)
+    marginTop: scale(12),
+    marginBottom: scale(12),
   },
-  title: {
-    fontSize: moderateScale(24),
-    fontWeight: '700',
-    color: C.ink,
+  dividerPlainText: {
     textAlign: 'center',
-    marginBottom: scale(8)
-  },
-  subtitle: {
-    fontSize: moderateScale(14),
-    color: C.muted,
-    textAlign: 'center',
-    marginBottom: scale(24),
+    fontSize: moderateScale(11.5),
+    color: '#AAA',
+    marginVertical: scale(10),
   },
   googleBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: C.card,
-    borderRadius: scale(12),
+    borderRadius: scale(13),
     borderWidth: 1,
-    borderColor: C.border,
+    borderColor: '#EEE',
     paddingVertical: scale(14),
-    marginBottom: scale(16),
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -516,32 +572,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: moderateScale(15),
   },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: scale(20),
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: C.border,
-  },
-  dividerText: {
-    marginHorizontal: scale(12),
-    color: C.muted,
-    fontSize: moderateScale(13),
-    fontWeight: '500',
-  },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: C.card,
-    borderColor: C.border,
-    borderWidth: 1,
-    borderRadius: scale(12),
+    backgroundColor: '#F7F7F9',
+    borderRadius: scale(13),
     paddingHorizontal: scale(14),
     paddingVertical: scale(4),
-    marginBottom: scale(14),
+    marginBottom: scale(12),
   },
   icon: { marginRight: scale(10) },
   input: {
@@ -574,12 +612,12 @@ const styles = StyleSheet.create({
     marginLeft: scale(6),
   },
   registerButton: {
-    backgroundColor: C.primary,
-    paddingVertical: scale(16),
-    borderRadius: scale(12),
+    backgroundColor: C.ink,
+    paddingVertical: scale(15),
+    borderRadius: scale(14),
     alignItems: 'center',
-    marginTop: scale(8),
-    shadowColor: C.primary,
+    marginTop: scale(6),
+    shadowColor: C.ink,
     shadowOffset: { width: 0, height: scale(4) },
     shadowOpacity: 0.3,
     shadowRadius: scale(8),
@@ -592,8 +630,9 @@ const styles = StyleSheet.create({
   },
   footerText: {
     textAlign: 'center',
-    marginTop: scale(24),
+    marginTop: scale(14),
+    marginBottom: scale(4),
     color: C.muted,
-    fontSize: moderateScale(14)
+    fontSize: moderateScale(13.5)
   },
 });

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, StatusBar, Animated, Easing, Dimensions, Platform } from 'react-native';
+import { View, Text, Image, StyleSheet, StatusBar, Animated, Easing, Dimensions, Platform } from 'react-native';
 import Svg, {
   Circle, Path, G, Rect, Defs, RadialGradient, Stop, Line, Ellipse, ClipPath,
 } from 'react-native-svg';
@@ -264,9 +264,11 @@ const SplashScreen = ({ navigation }) => {
             <Mandala size={mandalaSize} />
           </Animated.View>
           <Animated.View style={[styles.badgeCenter, badgeAnimStyle]}>
-            <View style={[styles.logoBadge, { width: logoBadgeSize, height: logoBadgeSize, borderRadius: logoBadgeSize / 2 }]}>
-              <Text style={styles.logoBadgeText}>KNI</Text>
-            </View>
+            <Image
+              source={require('../assets/images/kni-icon.png')}
+              style={{ width: logoBadgeSize, height: logoBadgeSize }}
+              resizeMode="contain"
+            />
           </Animated.View>
         </View>
 
@@ -360,21 +362,6 @@ const styles = StyleSheet.create({
     bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  logoBadge: {
-    backgroundColor: '#ED1C24',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#ED1C24',
-    shadowOpacity: 0.35,
-    shadowOffset: { width: 0, height: 3 },
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  logoBadgeText: {
-    color: '#ffffff',
-    fontWeight: '800',
-    fontSize: moderateScale(13),
   },
   brandTitle: {
     textAlign: 'center',
