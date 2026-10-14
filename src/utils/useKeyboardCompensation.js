@@ -34,8 +34,20 @@ export default function useKeyboardCompensation() {
     if (keyboardHeight === 0) baselineHeightRef.current = height;
   }, [keyboardHeight, height]);
 
-  const windowAlreadyResized = keyboardHeight > 0 && (baselineHeightRef.current - height) >= keyboardHeight * 0.6;
-  const keyboardCompensation = windowAlreadyResized ? 0 : keyboardHeight;
+  // Proportional, not a yes/no switch - subtract however much the window
+  // has ALREADY shrunk from the keyboard height, rather than deciding
+  // "resized" vs "not resized" off a fixed threshold. A binary threshold is
+  // fragile to timing: the keyboard-height listener and useWindowDimensions
+  // update from two separate native events and don't always land in the
+  // same render, so a render caught between them can wrongly read "not
+  // resized yet" and hand back full compensation even on a device that
+  // does resize - reproducing the exact double-push gap this hook exists
+  // to prevent. This formula instead self-corrects once both values have
+  // settled (which they have by the time anyone is looking at the screen):
+  // no resize yet -> full keyboardHeight; full resize -> ~0; partial ->
+  // just the remainder still needed.
+  const alreadyMadeRoom = Math.max(0, baselineHeightRef.current - height);
+  const keyboardCompensation = Math.max(0, keyboardHeight - alreadyMadeRoom);
 
   return { keyboardHeight, keyboardCompensation };
 }

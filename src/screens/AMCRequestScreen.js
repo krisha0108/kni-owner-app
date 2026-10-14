@@ -30,7 +30,6 @@ const C = {
 };
 
 const PLAN_TYPES = [
-  { key: 'BASIC', label: 'Basic', desc: 'Preventive maintenance only', bg: '#D1FAE5', color: '#059669', icon: 'shield-outline' },
   { key: 'STANDARD', label: 'Standard', desc: 'Preventive + free breakdowns', bg: '#DBEAFE', color: '#2563EB', icon: 'shield-half-outline' },
   { key: 'PREMIUM', label: 'Premium', desc: 'Full coverage + priority + parts', bg: '#F3E8FF', color: '#7C3AED', icon: 'shield-checkmark' },
 ];
