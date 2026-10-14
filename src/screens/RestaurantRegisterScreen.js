@@ -14,7 +14,7 @@ import messaging from '@react-native-firebase/messaging';
 import AppAlert from '../utils/AppAlert';
 
 import { scale, moderateScale } from '../utils/responsive';
-import useKeyboardHeight from '../utils/useKeyboardHeight';
+import useKeyboardCompensation from '../utils/useKeyboardCompensation';
 const C = {
   primary: '#EF3A3A',
   ink: '#1D2254',
@@ -41,7 +41,7 @@ export default function RestaurantRegisterScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [passwordErrors, setPasswordErrors] = useState([]);
-  const keyboardHeight = useKeyboardHeight();
+  const { keyboardCompensation: keyboardHeight } = useKeyboardCompensation();
 
   useEffect(() => {
     GoogleSignin.configure({

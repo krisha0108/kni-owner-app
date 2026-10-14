@@ -18,7 +18,7 @@ import { api, downloadAuthenticatedFile } from '../api/client';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 import { scale, moderateScale } from '../utils/responsive';
-import useKeyboardHeight from '../utils/useKeyboardHeight';
+import useKeyboardCompensation from '../utils/useKeyboardCompensation';
 import { invalidate } from '../utils/focusCache';
 import AppAlert from '../utils/AppAlert';
 
@@ -106,7 +106,7 @@ export default function AMCContractDetailScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const { contractId } = route.params || {};
 
-  const keyboardHeight = useKeyboardHeight();
+  const { keyboardCompensation: keyboardHeight } = useKeyboardCompensation();
   const [contract, setContract] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);

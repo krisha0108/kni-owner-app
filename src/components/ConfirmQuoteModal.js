@@ -15,7 +15,7 @@ import RazorpayCheckout from 'react-native-razorpay';
 import { api } from '../api/client';
 import { scale, moderateScale } from '../utils/responsive';
 import AppAlert from '../utils/AppAlert';
-import useKeyboardHeight from '../utils/useKeyboardHeight';
+import useKeyboardCompensation from '../utils/useKeyboardCompensation';
 
 const C = {
   primary: '#7C3AED',
@@ -47,7 +47,7 @@ export default function ConfirmQuoteModal({ visible, priceUnlockId, unlockedPric
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const inProgress = useRef(false);
-  const keyboardHeight = useKeyboardHeight();
+  const { keyboardHeight, keyboardCompensation } = useKeyboardCompensation();
   const { height: winHeight } = useWindowDimensions();
 
   const cap = Math.max(1, maxQty || 1);
@@ -150,7 +150,7 @@ export default function ConfirmQuoteModal({ visible, priceUnlockId, unlockedPric
         <View
           style={[
             st.sheet,
-            { maxHeight: keyboardHeight > 0 ? winHeight - keyboardHeight - scale(20) : winHeight * 0.85 },
+            { maxHeight: keyboardHeight > 0 ? winHeight - keyboardCompensation - scale(20) : winHeight * 0.85 },
           ]}
         >
           <View style={st.handleBar} />

@@ -21,9 +21,9 @@ import notificationService from '../services/notificationService';
 import AppAlert from '../utils/AppAlert';
 
 import { scale, moderateScale } from '../utils/responsive';
-import useKeyboardHeight from '../utils/useKeyboardHeight';
+import useKeyboardCompensation from '../utils/useKeyboardCompensation';
 export default function RestaurantLogin({ navigation }) {
-  const keyboardHeight = useKeyboardHeight();
+  const { keyboardCompensation: keyboardHeight } = useKeyboardCompensation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [secureText, setSecureText] = useState(true);

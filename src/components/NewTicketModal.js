@@ -4,13 +4,13 @@ import { Modal, View, Text, ScrollView, TouchableOpacity, TextInput, Image, Styl
 import Icon from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { scale, moderateScale } from '../utils/responsive';
-import useKeyboardHeight from '../utils/useKeyboardHeight';
+import useKeyboardCompensation from '../utils/useKeyboardCompensation';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 function NewTicketModal({ visible, onClose, onSubmit, theme }) {
   const { C, R, W } = theme;
-  const keyboardHeight = useKeyboardHeight();
+  const { keyboardCompensation: keyboardHeight } = useKeyboardCompensation();
 
   // ✅ Hooks are always at the top, never conditional
   const [title, setTitle] = useState('');

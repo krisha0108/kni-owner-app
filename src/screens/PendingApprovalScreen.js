@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   RefreshControl,
   ScrollView,
-  Modal,
   Dimensions,
   StatusBar,
   Animated,
@@ -17,6 +16,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import { api } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
+import { RestaurantSelectorCard } from '../components/RestaurantSelector';
 
 import { scale, moderateScale } from '../utils/responsive';
 import { isStale, markFetched } from '../utils/focusCache';
@@ -177,7 +177,6 @@ export default function PendingApprovalScreen({ navigation }) {
   }, [pulse]);
   const [restaurants, setRestaurants] = useState([]);
   const [currentRestaurant, setCurrentRestaurant] = useState(null);
-  const [restaurantPickerVisible, setRestaurantPickerVisible] = useState(false);
 
   const loadData = useCallback(async (restaurantId = null) => {
     try {
@@ -220,18 +219,27 @@ export default function PendingApprovalScreen({ navigation }) {
     }
   }, []);
 
+  // currentRestaurant?.id (not the whole currentRestaurant object) in the
+  // deps below - loadData sets a brand-new restaurant object on every
+  // fetch (found via .find() on a freshly-fetched array), even when it's
+  // the same restaurant, so depending on the object itself made this
+  // callback's identity change on every fetch. useFocusEffect re-runs
+  // whenever that identity changes while the screen is focused, which
+  // called loadData again, produced another new object, and looped
+  // forever - continuously showing the loading skeleton, worst (visibly
+  // endless) when items.length stays 0 (no pending approvals).
+  const currentRestaurantId = currentRestaurant?.id;
   useFocusEffect(
     useCallback(() => {
-      const key = `PendingApproval-${currentRestaurant?.id}`;
+      const key = `PendingApproval-${currentRestaurantId}`;
       if (isStale(key) || items.length === 0) {
-        loadData(currentRestaurant?.id);
+        loadData(currentRestaurantId);
         markFetched(key);
       }
-    }, [loadData, currentRestaurant, items.length])
+    }, [loadData, currentRestaurantId, items.length])
   );
 
   const selectRestaurant = (restaurant) => {
-    setRestaurantPickerVisible(false);
     if (restaurant.id !== currentRestaurant?.id) {
       setCurrentRestaurant(restaurant);
       setItems([]);
@@ -430,26 +438,18 @@ export default function PendingApprovalScreen({ navigation }) {
         </TouchableOpacity>
       </LinearGradient>
 
-      {/* Restaurant Selector - Fixed */}
+      {/* Restaurant Selector - Fixed. Uses the same shared picker as Home
+          (anchored dropdown + Add New Restaurant), fed this screen's own
+          restaurant list (all statuses, not just APPROVED) since a
+          still-pending restaurant needs to stay selectable here. */}
       {currentRestaurant && (
-        <TouchableOpacity
-          style={styles.restaurantBanner}
-          onPress={() => restaurants.length > 1 && setRestaurantPickerVisible(true)}
-          activeOpacity={restaurants.length > 1 ? 0.7 : 1}
-        >
-          <View style={styles.restaurantIconBox}>
-            <Icon name="restaurant" size={scale(13)} color={C.primary} />
-          </View>
-          <Text style={styles.restaurantName} numberOfLines={1}>
-            {currentRestaurant.name}
-          </Text>
-          {restaurants.length > 1 && (
-            <View style={styles.switchPill}>
-              <Icon name="swap-horizontal" size={scale(11)} color={C.primary} />
-              <Text style={styles.switchText}>Switch</Text>
-            </View>
-          )}
-        </TouchableOpacity>
+        <View style={{ paddingHorizontal: scale(16), marginTop: scale(10) }}>
+          <RestaurantSelectorCard
+            restaurantsOverride={restaurants}
+            selectedOverride={currentRestaurant}
+            onSelectOverride={selectRestaurant}
+          />
+        </View>
       )}
 
       {/* Summary Stats -- one compact non-scrolling row of 4 tiles instead
@@ -539,81 +539,6 @@ export default function PendingApprovalScreen({ navigation }) {
         initialNumToRender={10}
         maxToRenderPerBatch={10}
       />
-
-      {/* Restaurant Picker Modal */}
-      <Modal visible={restaurantPickerVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.pickerSheet}>
-            {/* Modal Header */}
-            <View style={styles.modalDragBar} />
-            <View style={styles.modalHeader}>
-              <View>
-                <Text style={styles.modalTitle}>Select Restaurant</Text>
-                <Text style={styles.modalSubtitle}>{restaurants.length} restaurants available</Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => setRestaurantPickerVisible(false)}
-                style={styles.modalCloseBtn}
-              >
-                <Icon name="close" size={scale(20)} color={C.muted} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView
-              style={styles.pickerBody}
-              contentContainerStyle={{ paddingBottom: scale(30) }}
-              showsVerticalScrollIndicator={false}
-            >
-              {restaurants.map((restaurant) => {
-                const isSelected = restaurant.id === currentRestaurant?.id;
-                return (
-                  <TouchableOpacity
-                    key={restaurant.id}
-                    style={[
-                      styles.restaurantOption,
-                      isSelected && styles.restaurantOptionSelected,
-                    ]}
-                    onPress={() => selectRestaurant(restaurant)}
-                    activeOpacity={0.7}
-                  >
-                    <LinearGradient
-                      colors={isSelected ? [C.primary, C.primaryDark] : ['#FEE2E2', '#FEE2E2']}
-                      style={styles.restaurantOptionIcon}
-                    >
-                      <Icon
-                        name="restaurant"
-                        size={scale(20)}
-                        color={isSelected ? '#fff' : C.primary}
-                      />
-                    </LinearGradient>
-                    <View style={styles.restaurantOptionInfo}>
-                      <Text
-                        style={[
-                          styles.restaurantOptionName,
-                          isSelected && styles.restaurantOptionNameSelected,
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {restaurant.name}
-                      </Text>
-                      {restaurant.address && (
-                        <Text style={styles.restaurantOptionAddress} numberOfLines={1}>
-                          <Icon name="location-outline" size={scale(11)} color={C.muted} /> {restaurant.address}
-                        </Text>
-                      )}
-                    </View>
-                    {isSelected && (
-                      <View style={styles.selectedCheck}>
-                        <Icon name="checkmark" size={scale(16)} color="#fff" />
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }

@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl,
-  ActivityIndicator, Animated, Modal, ScrollView, TextInput, Linking, Dimensions,
+  ActivityIndicator, Animated, ScrollView, TextInput, Linking, Dimensions,
   StatusBar,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,6 +15,7 @@ import { usePermissions } from '../utils/usePermissions';
 import { isStale, markFetched } from '../utils/focusCache';
 import AppAlert from '../utils/AppAlert';
 import NavigationMenu from '../components/NavigationMenu';
+import { RestaurantSelectorCard } from '../components/RestaurantSelector';
 const { width: W, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const C = {
@@ -121,7 +122,6 @@ export default function SupportCenter({ navigation }) {
   const [tickets, setTickets] = useState([]);
   const [restaurants, setRestaurants] = useState([]);
   const [currentRestaurant, setCurrentRestaurant] = useState(null);
-  const [restaurantPickerVisible, setRestaurantPickerVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const [page, setPage] = useState(1);
@@ -229,7 +229,6 @@ export default function SupportCenter({ navigation }) {
   }, [loadData, currentRestaurant?.id, tickets.length]));
 
   const selectRestaurant = (r) => {
-    setRestaurantPickerVisible(false);
     if (r.id !== currentRestaurant?.id) {
       setCurrentRestaurant(r);
       setTickets([]);
@@ -494,24 +493,17 @@ export default function SupportCenter({ navigation }) {
         </TouchableOpacity>
       </LinearGradient>
 
-      {/* ─── Restaurant Banner ─── */}
+      {/* ─── Restaurant Selector -- shared picker (anchored dropdown + Add
+          New Restaurant), fed this screen's own restaurant list (all
+          statuses) since a still-pending restaurant must stay selectable. ─── */}
       {currentRestaurant && (
-        <TouchableOpacity
-          style={st.restaurantBanner}
-          onPress={() => restaurants.length > 1 && setRestaurantPickerVisible(true)}
-          activeOpacity={restaurants.length > 1 ? 0.7 : 1}
-        >
-          <View style={st.restaurantIconBox}>
-            <Icon name="restaurant" size={scale(13)} color={C.primary} />
-          </View>
-          <Text style={st.restaurantName} numberOfLines={1}>{currentRestaurant.name}</Text>
-          {restaurants.length > 1 && (
-            <View style={st.switchPill}>
-              <Icon name="swap-horizontal" size={scale(11)} color={C.primary} />
-              <Text style={st.switchText}>Switch</Text>
-            </View>
-          )}
-        </TouchableOpacity>
+        <View style={{ paddingHorizontal: scale(16), marginTop: scale(10) }}>
+          <RestaurantSelectorCard
+            restaurantsOverride={restaurants}
+            selectedOverride={currentRestaurant}
+            onSelectOverride={selectRestaurant}
+          />
+        </View>
       )}
 
       {/* ─── Summary Strip -- one compact non-scrolling row of 4 tiles
@@ -625,52 +617,6 @@ export default function SupportCenter({ navigation }) {
         </TouchableOpacity>
       )}
 
-      {/* ═══════════ RESTAURANT PICKER ═══════════ */}
-      <Modal visible={restaurantPickerVisible} animationType="slide" transparent>
-        <View style={st.modalOverlay}>
-          <View style={st.pickerSheet}>
-            <View style={st.modalDragBar} />
-            <View style={st.modalHeaderRow}>
-              <View>
-                <Text style={st.modalTitle}>Select Restaurant</Text>
-                <Text style={st.modalSubtitle}>{restaurants.length} restaurants available</Text>
-              </View>
-              <TouchableOpacity onPress={() => setRestaurantPickerVisible(false)} style={st.modalCloseBtn}>
-                <Icon name="close" size={scale(20)} color={C.muted} />
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={st.pickerBody} contentContainerStyle={{ paddingBottom: scale(30) }}>
-              {restaurants.map((r) => {
-                const isSel = r.id === currentRestaurant?.id;
-                return (
-                  <TouchableOpacity
-                    key={r.id}
-                    style={[st.restaurantOption, isSel && st.restaurantOptionSel]}
-                    onPress={() => selectRestaurant(r)}
-                    activeOpacity={0.7}
-                  >
-                    <LinearGradient
-                      colors={isSel ? [C.primary, C.primaryDark] : ['#FEE2E2', '#FEE2E2']}
-                      style={st.restaurantOptIcon}
-                    >
-                      <Icon name="restaurant" size={scale(20)} color={isSel ? '#fff' : C.primary} />
-                    </LinearGradient>
-                    <View style={st.restaurantOptInfo}>
-                      <Text style={[st.restaurantOptName, isSel && { color: C.primary }]} numberOfLines={1}>{r.name}</Text>
-                      {r.address ? <Text style={st.restaurantOptAddr} numberOfLines={1}>{r.address}</Text> : null}
-                    </View>
-                    {isSel && (
-                      <View style={st.selectedCheck}>
-                        <Icon name="checkmark" size={scale(16)} color="#fff" />
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
       <NavigationMenu visible={menuVisible} onClose={() => setMenuVisible(false)} navigation={navigation} />
     </SafeAreaView>
   );

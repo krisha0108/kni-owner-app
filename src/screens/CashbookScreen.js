@@ -24,7 +24,7 @@ import NavigationMenu from '../components/NavigationMenu';
 import { scale, moderateScale } from '../utils/responsive';
 import { usePermissions } from '../utils/usePermissions';
 import AppAlert from '../utils/AppAlert';
-import useKeyboardHeight from '../utils/useKeyboardHeight';
+import useKeyboardCompensation from '../utils/useKeyboardCompensation';
 // Premium Color Palette
 const C = {
   primary: '#EF3A3A',
@@ -110,7 +110,7 @@ export default function CashbookScreen({ navigation }) {
   const isTablet = width >= 768;
   const { can } = usePermissions();
   const gridColumns = isTablet ? 2 : 1;
-  const keyboardHeight = useKeyboardHeight();
+  const { keyboardHeight, keyboardCompensation } = useKeyboardCompensation();
   const formScrollRef = useRef(null);
 
   const {
@@ -696,7 +696,7 @@ export default function CashbookScreen({ navigation }) {
         }}
       >
         <View style={st.modalOverlay}>
-          <View style={[st.modalContent, { height: Math.round(keyboardHeight > 0 ? winHeight - keyboardHeight - scale(24) : winHeight * 0.85) }]}>
+          <View style={[st.modalContent, { height: Math.round(keyboardHeight > 0 ? winHeight - keyboardCompensation - scale(24) : winHeight * 0.85) }]}>
             {/* Modal Header */}
             <LinearGradient colors={[C.gradient1, C.gradient2]} style={st.modalHeader}>
               <Text style={st.modalTitle}>{form.id ? 'Edit Entry' : 'Add Entry'}</Text>

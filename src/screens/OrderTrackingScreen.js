@@ -22,6 +22,7 @@ import AppAlert from '../utils/AppAlert';
 import { useFocusEffect } from '@react-navigation/native';
 import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
+import { RestaurantSelectorCard } from '../components/RestaurantSelector';
 
 import { scale, moderateScale } from '../utils/responsive';
 import { isStale, markFetched } from '../utils/focusCache';
@@ -207,7 +208,6 @@ export default function OrderTrackingScreen({ navigation }) {
 
   const [restaurants, setRestaurants] = useState([]);
   const [currentRestaurant, setCurrentRestaurant] = useState(null);
-  const [restaurantPickerVisible, setRestaurantPickerVisible] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [serviceStatusFilter, setServiceStatusFilter] = useState('all');
@@ -331,18 +331,27 @@ export default function OrderTrackingScreen({ navigation }) {
     }
   }, []);
 
+  // currentRestaurant?.id (not the whole currentRestaurant object) in the
+  // deps below - loadData sets a brand-new restaurant object on every
+  // fetch (found via .find() on a freshly-fetched array), even when it's
+  // the same restaurant, so depending on the object itself made this
+  // callback's identity change on every fetch. useFocusEffect re-runs
+  // whenever that identity changes while the screen is focused, which
+  // called loadData again, produced another new object, and looped
+  // forever - continuously flipping loading/content, worst (visibly
+  // endless) when trackingItems.length stays 0 (no bookings/orders).
+  const currentRestaurantId = currentRestaurant?.id;
   useFocusEffect(
     useCallback(() => {
-      const key = `OrderTracking-${currentRestaurant?.id}`;
+      const key = `OrderTracking-${currentRestaurantId}`;
       if (isStale(key) || trackingItems.length === 0) {
-        loadData(currentRestaurant?.id);
+        loadData(currentRestaurantId);
         markFetched(key);
       }
-    }, [loadData, currentRestaurant, trackingItems.length])
+    }, [loadData, currentRestaurantId, trackingItems.length])
   );
 
   const selectRestaurant = (restaurant) => {
-    setRestaurantPickerVisible(false);
     if (restaurant.id !== currentRestaurant?.id) {
       setCurrentRestaurant(restaurant);
       setServiceBookings([]);
@@ -638,27 +647,17 @@ export default function OrderTrackingScreen({ navigation }) {
         </View>
       </LinearGradient>
 
-      {/* Restaurant Banner - Fixed */}
+      {/* Restaurant Selector - Fixed. Shared picker (anchored dropdown +
+          Add New Restaurant), fed this screen's own restaurant list (all
+          statuses) since a still-pending restaurant must stay selectable. */}
       {currentRestaurant && (
-        <TouchableOpacity
-          style={s.restBanner}
-          onPress={() => restaurants.length > 1 && setRestaurantPickerVisible(true)}
-          activeOpacity={restaurants.length > 1 ? 0.7 : 1}
-        >
-          <View style={s.restIconBox}>
-            <Icon name="restaurant" size={scale(13)} color={C.primary} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={s.restName} numberOfLines={1}>{currentRestaurant.name}</Text>
-            <Text style={s.restSub}>Tracking orders for this restaurant</Text>
-          </View>
-          {restaurants.length > 1 && (
-            <View style={s.restSwitch}>
-              <Icon name="swap-horizontal" size={scale(11)} color={C.primary} />
-              <Text style={s.restSwitchText}>Switch</Text>
-            </View>
-          )}
-        </TouchableOpacity>
+        <View style={{ paddingHorizontal: scale(16), marginTop: scale(10) }}>
+          <RestaurantSelectorCard
+            restaurantsOverride={restaurants}
+            selectedOverride={currentRestaurant}
+            onSelectOverride={selectRestaurant}
+          />
+        </View>
       )}
 
       {/* Tabs - Fixed */}
@@ -1033,57 +1032,6 @@ export default function OrderTrackingScreen({ navigation }) {
                     </View>
                     {isSelected && (
                       <View style={s.pickerCheck}>
-                        <Icon name="checkmark" size={scale(14)} color="#fff" />
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-
-      {/* ========== RESTAURANT PICKER MODAL ========== */}
-      <Modal visible={restaurantPickerVisible} animationType="slide" transparent>
-        <View style={s.pickerOverlay}>
-          <View style={s.pickerSheet}>
-            <View style={s.modalDragBar} />
-            <View style={s.modalHeader}>
-              <View>
-                <Text style={s.modalTitle}>Select Restaurant</Text>
-                <Text style={s.modalSubtitle}>{restaurants.length} restaurants</Text>
-              </View>
-              <TouchableOpacity onPress={() => setRestaurantPickerVisible(false)} style={s.modalCloseBtn}>
-                <Icon name="close" size={scale(20)} color={C.muted} />
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={{ padding: scale(16) }} contentContainerStyle={{ paddingBottom: scale(30) }}>
-              {restaurants.map((restaurant) => {
-                const isSelected = restaurant.id === currentRestaurant?.id;
-                return (
-                  <TouchableOpacity
-                    key={restaurant.id}
-                    style={[s.restOption, isSelected && s.restOptionSelected]}
-                    onPress={() => selectRestaurant(restaurant)}
-                    activeOpacity={0.7}
-                  >
-                    <LinearGradient
-                      colors={isSelected ? [C.primary, C.primaryDark] : ['#FEE2E2', '#FEE2E2']}
-                      style={s.restOptionIcon}
-                    >
-                      <Icon name="restaurant" size={scale(18)} color={isSelected ? '#fff' : C.primary} />
-                    </LinearGradient>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[s.restOptionName, isSelected && { color: C.primary }]} numberOfLines={1}>
-                        {restaurant.name}
-                      </Text>
-                      {restaurant.address && (
-                        <Text style={s.restOptionAddr} numberOfLines={1}>{restaurant.address}</Text>
-                      )}
-                    </View>
-                    {isSelected && (
-                      <View style={s.restSelectedCheck}>
                         <Icon name="checkmark" size={scale(14)} color="#fff" />
                       </View>
                     )}

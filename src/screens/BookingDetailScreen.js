@@ -33,7 +33,7 @@ import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 import { scale, verticalScale, moderateScale, isTablet } from '../utils/responsive';
 import AppAlert from '../utils/AppAlert';
-import useKeyboardHeight from '../utils/useKeyboardHeight';
+import useKeyboardCompensation from '../utils/useKeyboardCompensation';
 
 const C = {
   primary: '#EF3A3A',
@@ -122,7 +122,7 @@ export default function BookingDetailScreen({ navigation, route }) {
   const { bookingId } = route.params || {};
   const { width } = useWindowDimensions();
   const isTabletDevice = isTablet(width);
-  const keyboardHeight = useKeyboardHeight();
+  const { keyboardCompensation: keyboardHeight } = useKeyboardCompensation();
 
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);

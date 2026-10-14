@@ -27,7 +27,7 @@ import AppAlert from '../utils/AppAlert';
 import cartService from '../services/marketplaceCartService';
 
 import { scale, moderateScale } from '../utils/responsive';
-import useKeyboardHeight from '../utils/useKeyboardHeight';
+import useKeyboardCompensation from '../utils/useKeyboardCompensation';
 
 const C = {
   primary: '#EF3A3A',
@@ -106,7 +106,7 @@ function SkeletonCart({ pulse }) {
 
 export default function MarketplaceCartScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
-  const keyboardHeight = useKeyboardHeight();
+  const { keyboardCompensation: keyboardHeight } = useKeyboardCompensation();
   const { restaurantId } = route.params || {};
 
   const [cart, setCart] = useState([]);

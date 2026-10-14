@@ -21,7 +21,7 @@ import { api, uploadFile } from '../api/client';
 import { scale, moderateScale } from '../utils/responsive';
 import { invalidate } from '../utils/focusCache';
 import AppAlert from '../utils/AppAlert';
-import useKeyboardHeight from '../utils/useKeyboardHeight';
+import useKeyboardCompensation from '../utils/useKeyboardCompensation';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const C = {
@@ -49,7 +49,7 @@ const CATEGORY_OPTIONS = ['General', 'Equipment', 'Billing', 'Service', 'Account
 
 export default function CreateSupportTicketScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
-  const keyboardHeight = useKeyboardHeight();
+  const { keyboardCompensation: keyboardHeight } = useKeyboardCompensation();
   const { restaurantId } = route.params || {};
   const [formData, setFormData] = useState({ title: '', equipmentName: '', category: 'General', description: '' });
   const [ticketImageUri, setTicketImageUri] = useState('');

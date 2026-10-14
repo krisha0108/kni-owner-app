@@ -35,7 +35,7 @@ import AppAlert from '../utils/AppAlert';
 
 import { scale, moderateScale } from '../utils/responsive';
 import { usePermissions } from '../utils/usePermissions';
-import useKeyboardHeight from '../utils/useKeyboardHeight';
+import useKeyboardCompensation from '../utils/useKeyboardCompensation';
 import { isStale, markFetched } from '../utils/focusCache';
 // Premium Color Palette
 const C = {
@@ -136,7 +136,7 @@ export default function StaffScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { width, height: winHeight } = useWindowDimensions();
   const isTablet = width >= 768;
-  const keyboardHeight = useKeyboardHeight();
+  const { keyboardHeight, keyboardCompensation } = useKeyboardCompensation();
   const { can } = usePermissions();
   const formScrollRef = useRef(null);
 
@@ -710,7 +710,7 @@ export default function StaffScreen({ navigation }) {
         }}
       >
         <View style={st.modalOverlay}>
-          <View style={[st.modalContent, { height: Math.round(keyboardHeight > 0 ? winHeight - keyboardHeight - scale(24) : winHeight * 0.9) }]}>
+          <View style={[st.modalContent, { height: Math.round(keyboardHeight > 0 ? winHeight - keyboardCompensation - scale(24) : winHeight * 0.9) }]}>
             <View style={st.modalHeader}>
               <Text style={st.modalTitle}>{isEditMode ? 'Edit Staff' : 'Add Staff'}</Text>
               <TouchableOpacity onPress={() => setModalVisible(false)} style={st.modalClose}>

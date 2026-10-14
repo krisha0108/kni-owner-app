@@ -37,7 +37,7 @@ import { api, uploadFile } from '../api/client';
 import { useRestaurant } from '../context/RestaurantContext';
 import OfferSelector from '../components/OfferSelector';
 import { scale, moderateScale, getContainerMaxWidth } from '../utils/responsive';
-import useKeyboardHeight from '../utils/useKeyboardHeight';
+import useKeyboardCompensation from '../utils/useKeyboardCompensation';
 import { invalidate } from '../utils/focusCache';
 import AppAlert from '../utils/AppAlert';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -100,9 +100,9 @@ export default function ServiceRequestScreen({ navigation, route }) {
   } = route.params || {};
 
   // Responsive dimensions
-  const { width, height } = useWindowDimensions();
+  const { width } = useWindowDimensions();
   const containerMaxWidth = getContainerMaxWidth(width);
-  const keyboardHeight = useKeyboardHeight();
+  const { keyboardHeight, keyboardCompensation } = useKeyboardCompensation();
 
   // Restaurant context
   const { selectedRestaurant, selectedRestaurantId } = useRestaurant();
@@ -1079,7 +1079,7 @@ export default function ServiceRequestScreen({ navigation, route }) {
           <ScrollView
             style={st.scrollContent}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: scale(40) + keyboardHeight }}
+            contentContainerStyle={{ paddingBottom: scale(40) + keyboardCompensation }}
             keyboardShouldPersistTaps="handled"
           >
             {/* Tip Selection — comes before the hero so the Pay button below
@@ -1252,10 +1252,11 @@ export default function ServiceRequestScreen({ navigation, route }) {
   // Order summary + Continue action -- rendered once at the bottom of the
   // screen (the bottom nav bar is hidden on this screen entirely, per the
   // client's request, so there's no floating bar left to clear). Stays
-  // rendered even while the keyboard is open, with keyboardHeight added to
-  // its own bottom margin to lift it clear - this layout doesn't resize on
-  // its own when the keyboard opens, so without that push the bar would sit
-  // at its normal bottom position, right behind the keyboard.
+  // rendered even while the keyboard is open, with keyboardCompensation
+  // added to its own bottom margin to lift it clear of the keyboard - only
+  // on devices where the OS doesn't already resize the window for us (see
+  // windowAlreadyResized above); on devices where it does, adding it again
+  // would double-push the bar off the keyboard, leaving a gap.
   // The payment step has its own hero Pay button instead (see 'payment'
   // case above) rather than reusing this Continue bar.
   const renderOrderSummary = () => {
@@ -1263,7 +1264,7 @@ export default function ServiceRequestScreen({ navigation, route }) {
     const canContinue = step === 'select' ? itemCount > 0 : selectedDate && selectedSlot;
 
     return (
-      <View style={[st.inlineSummary, { marginBottom: insets.bottom + scale(16) + keyboardHeight }]}>
+      <View style={[st.inlineSummary, { marginBottom: insets.bottom + scale(16) + keyboardCompensation }]}>
         <View style={st.footerSummary}>
           <View style={st.footerLeft}>
             <Text style={st.footerItems} numberOfLines={1}>{itemCount} items selected</Text>

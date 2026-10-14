@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ScrollView, Platform,
-  ActivityIndicator, Image, Modal, Dimensions, BackHandler, Keyboard, StatusBar
+  ActivityIndicator, Image, Modal, Dimensions, BackHandler, StatusBar
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary } from 'react-native-image-picker';
@@ -11,6 +11,7 @@ import { api, uploadFile } from '../api/client';
 import { useRestaurant } from '../context/RestaurantContext';
 import { invalidate } from '../utils/focusCache';
 import AppAlert from '../utils/AppAlert';
+import useKeyboardCompensation from '../utils/useKeyboardCompensation';
 
 import { scale, moderateScale } from '../utils/responsive';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -75,22 +76,11 @@ const RestaurantOnboarding = ({ navigation, route }) => {
     return () => sub.remove();
   }, [navigation]);
 
-  // Track keyboard height so we can pad the form's bottom by exactly that much.
-  // This lets the whole form scroll above the keyboard even when the OS window
-  // doesn't resize (common on Android with the new architecture / edge-to-edge).
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-  useEffect(() => {
-    const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvt = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-    const showSub = Keyboard.addListener(showEvt, (e) =>
-      setKeyboardHeight(e?.endCoordinates?.height || 0)
-    );
-    const hideSub = Keyboard.addListener(hideEvt, () => setKeyboardHeight(0));
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, []);
+  // Pad the form's bottom so it scrolls above the keyboard even when the OS
+  // window doesn't resize for it (common on Android with the new architecture
+  // / edge-to-edge) - keyboardCompensation is 0 instead on devices where the
+  // OS already resized, so this doesn't double up there.
+  const { keyboardCompensation: keyboardHeight } = useKeyboardCompensation();
 
   // Auto-scroll the focused input above the keyboard. Falls back gracefully
   // (no-op) if the scroll responder isn't available; the keyboard-height

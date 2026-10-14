@@ -19,7 +19,7 @@ import { useRestaurant } from '../context/RestaurantContext';
 import { invalidate } from '../utils/focusCache';
 import CalendarDatePicker from '../components/CalendarDatePicker';
 import { scale, moderateScale } from '../utils/responsive';
-import useKeyboardHeight from '../utils/useKeyboardHeight';
+import useKeyboardCompensation from '../utils/useKeyboardCompensation';
 import AppAlert from '../utils/AppAlert';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -71,7 +71,7 @@ function SkeletonChips({ pulse }) {
 
 export default function AMCRequestScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const keyboardHeight = useKeyboardHeight();
+  const { keyboardCompensation } = useKeyboardCompensation();
   const { restaurants, selectedRestaurantId } = useRestaurant();
 
   const [step, setStep] = useState(1);
@@ -372,7 +372,7 @@ export default function AMCRequestScreen({ navigation }) {
   const renderStep3 = () => {
     const catNames = categories.filter(c => selectedCategories.includes(c.id)).map(c => c.name).join(', ');
     return (
-      <ScrollView ref={step3ScrollRef} style={styles.scrollContent} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: keyboardHeight }} keyboardShouldPersistTaps="handled">
+      <ScrollView ref={step3ScrollRef} style={styles.scrollContent} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: keyboardCompensation }} keyboardShouldPersistTaps="handled">
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Icon name="document-text-outline" size={scale(20)} color={C.purple} />
@@ -495,9 +495,14 @@ export default function AMCRequestScreen({ navigation }) {
       {step === 3 && renderStep3()}
 
       {/* Sticky Continue/Submit bar - always visible, no scrolling needed.
-          Rises above the keyboard (keyboardHeight) so it's never hidden
-          behind it, e.g. while typing in the Notes field on step 3. */}
-      <View style={[styles.bottomBarWrap, { bottom: Math.max(scale(12), insets.bottom) + keyboardHeight }]}>
+          Rises above the keyboard (keyboardCompensation) so it's never
+          hidden behind it, e.g. while typing in the Notes field on step 3.
+          Uses keyboardCompensation, not the raw keyboard height, because
+          some Android devices already resize the window for the keyboard
+          (windowSoftInputMode="adjustResize") - adding the raw height on
+          top of that would double-push this bar, leaving a gap above the
+          keyboard. */}
+      <View style={[styles.bottomBarWrap, { bottom: Math.max(scale(12), insets.bottom) + keyboardCompensation }]}>
         <View style={styles.bottomBar}>
           {step > 1 && (
             <TouchableOpacity style={styles.footerBackBtn} onPress={() => setStep(step - 1)}>

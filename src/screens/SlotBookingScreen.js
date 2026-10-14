@@ -11,7 +11,7 @@ import { api } from '../api/client';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRestaurant } from '../context/RestaurantContext';
 import { scale, verticalScale, moderateScale, isTablet, getContainerMaxWidth } from '../utils/responsive';
-import useKeyboardHeight from '../utils/useKeyboardHeight';
+import useKeyboardCompensation from '../utils/useKeyboardCompensation';
 import { invalidate } from '../utils/focusCache';
 import AppAlert from '../utils/AppAlert';
 import OfferSelector from '../components/OfferSelector';
@@ -99,7 +99,7 @@ export default function SlotBookingScreen({ navigation, route }) {
     loop.start();
     return () => loop.stop();
   }, [pulse]);
-  const keyboardHeight = useKeyboardHeight();
+  const { keyboardCompensation: keyboardHeight } = useKeyboardCompensation();
 
   const today = startOfDay(new Date());
 

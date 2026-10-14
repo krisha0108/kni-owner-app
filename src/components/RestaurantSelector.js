@@ -12,6 +12,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useRestaurant } from '../context/RestaurantContext';
@@ -113,17 +114,23 @@ export function RestaurantSelectorCompact({ style, dark }) {
 // RestaurantSelectorBar (which is bolder/heavier - thick colored border,
 // solid icon fill) for screens that want a quieter look; same underlying
 // switch-restaurant modal either way.
-export function RestaurantSelectorCard({ style }) {
+//
+// By default reads/writes the global RestaurantContext (only APPROVED
+// restaurants). A few screens (Pending Approvals, Track Bookings, Support
+// Center) need to show/switch between restaurants of ANY status - e.g. the
+// owner's own still-pending restaurant - which the global context never
+// includes. Those pass restaurantsOverride/selectedOverride/onSelectOverride
+// to drive this same UI off their own locally-fetched restaurant list
+// instead, without duplicating the picker UI.
+export function RestaurantSelectorCard({ style, restaurantsOverride, selectedOverride, onSelectOverride }) {
   const [modalVisible, setModalVisible] = useState(false);
   const [anchor, setAnchor] = useState(null);
   const triggerRef = useRef(null);
-  const {
-    restaurants,
-    selectedRestaurant,
-    selectRestaurant,
-    loading,
-    hasMultipleRestaurants,
-  } = useRestaurant();
+  const context = useRestaurant();
+  const isOverride = restaurantsOverride !== undefined;
+  const restaurants = isOverride ? restaurantsOverride : context.restaurants;
+  const selectedRestaurant = isOverride ? selectedOverride : context.selectedRestaurant;
+  const loading = isOverride ? false : context.loading;
 
   if (loading) {
     return (
@@ -143,7 +150,12 @@ export function RestaurantSelectorCard({ style }) {
   }
 
   const handleSelect = (restaurantId) => {
-    selectRestaurant(restaurantId);
+    if (isOverride) {
+      const restaurant = restaurants.find((r) => r.id === restaurantId);
+      if (restaurant) onSelectOverride?.(restaurant);
+    } else {
+      context.selectRestaurant(restaurantId);
+    }
     setModalVisible(false);
   };
 
@@ -164,16 +176,14 @@ export function RestaurantSelectorCard({ style }) {
           <Text style={styles.cardLabel}>Current Restaurant</Text>
           <Text style={styles.cardName} numberOfLines={1}>{selectedRestaurant.name}</Text>
         </View>
-        {hasMultipleRestaurants && (
-          <TouchableOpacity
-            style={styles.cardChangeBtn}
-            onPress={openDropdown}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.cardChangeBtnText}>Change</Text>
-            <Icon name="chevron-forward" size={13} color={C.primary} />
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity
+          style={styles.cardChangeBtn}
+          onPress={openDropdown}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.cardChangeBtnText}>Change</Text>
+          <Icon name="chevron-forward" size={13} color={C.primary} />
+        </TouchableOpacity>
       </View>
 
       <RestaurantDropdown
@@ -353,12 +363,18 @@ export function RestaurantSelectorChips({ style }) {
 // only its content is positioned to look like an attached dropdown.
 function RestaurantDropdown({ visible, onClose, restaurants, selectedId, onSelect, anchor }) {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const [query, setQuery] = useState('');
 
   useEffect(() => {
     if (!visible) setQuery('');
   }, [visible]);
+
+  const handleAddNew = () => {
+    onClose();
+    navigation.navigate('RestaurantOnboarding', { isFirstRestaurant: false });
+  };
 
   if (!visible || !anchor) return null;
 
@@ -389,6 +405,7 @@ function RestaurantDropdown({ visible, onClose, restaurants, selectedId, onSelec
           </View>
         )}
         <FlatList
+          style={styles.ddList}
           data={filtered}
           keyExtractor={(item) => item.id}
           keyboardShouldPersistTaps="handled"
@@ -415,6 +432,15 @@ function RestaurantDropdown({ visible, onClose, restaurants, selectedId, onSelec
           }}
           ListEmptyComponent={<Text style={styles.ddEmpty}>No restaurant found</Text>}
         />
+        <TouchableOpacity style={styles.ddAddNew} onPress={handleAddNew} activeOpacity={0.7}>
+          <View style={styles.ddAddNewIcon}>
+            <Icon name="add" size={16} color="#fff" />
+          </View>
+          <View style={styles.ddItemContent}>
+            <Text style={styles.ddAddNewTitle}>Add New Restaurant</Text>
+            <Text style={styles.ddAddNewSubtitle}>Register another outlet under your account</Text>
+          </View>
+        </TouchableOpacity>
       </View>
     </Modal>
   );
@@ -684,6 +710,9 @@ const styles = StyleSheet.create({
     color: C.text,
     padding: 0,
   },
+  ddList: {
+    flexShrink: 1,
+  },
   ddItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -727,6 +756,35 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 12,
     color: C.muted,
+  },
+  ddAddNew: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    backgroundColor: '#FFF9F5',
+    borderTopWidth: 1.5,
+    borderTopColor: '#FBC8C8',
+    borderStyle: 'dashed',
+  },
+  ddAddNewIcon: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: C.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ddAddNewTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: C.primary,
+  },
+  ddAddNewSubtitle: {
+    fontSize: 10.5,
+    color: C.muted,
+    marginTop: 1,
   },
 });
 

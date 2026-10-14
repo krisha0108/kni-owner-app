@@ -20,7 +20,7 @@ import KniBottomNav from '../components/KniBottomNav';
 import NavigationMenu from '../components/NavigationMenu';
 import CounterOfferModal from '../components/CounterOfferModal';
 import { scale, moderateScale } from '../utils/responsive';
-import useKeyboardHeight from '../utils/useKeyboardHeight';
+import useKeyboardCompensation from '../utils/useKeyboardCompensation';
 import { invalidate } from '../utils/focusCache';
 import AppAlert from '../utils/AppAlert';
 
@@ -100,7 +100,7 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const { requestId } = route.params || {};
 
-  const keyboardHeight = useKeyboardHeight();
+  const { keyboardCompensation: keyboardHeight } = useKeyboardCompensation();
   const [request, setRequest] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
