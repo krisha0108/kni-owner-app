@@ -417,7 +417,7 @@ export default function VendorLedgerScreen({ navigation }) {
   if (loading && !refreshing) {
     return (
       <SafeAreaView style={st.container} edges={['left', 'right']}>
-        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <StatusBar translucent barStyle="light-content" backgroundColor={C.primary} />
         <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
           <View style={st.headerBlobA} pointerEvents="none" />
           <View style={st.headerBlobB} pointerEvents="none" />
@@ -445,7 +445,7 @@ export default function VendorLedgerScreen({ navigation }) {
   if (!hasRestaurants) {
     return (
       <SafeAreaView style={st.container} edges={['left', 'right']}>
-        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <StatusBar translucent barStyle="light-content" backgroundColor={C.primary} />
         <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
           <View style={st.headerBlobA} pointerEvents="none" />
           <View style={st.headerBlobB} pointerEvents="none" />
@@ -473,7 +473,7 @@ export default function VendorLedgerScreen({ navigation }) {
 
   return (
     <SafeAreaView style={st.container} edges={['left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+      <StatusBar translucent barStyle="light-content" backgroundColor={C.primary} />
 
       {/* Header */}
       <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
@@ -571,7 +571,7 @@ export default function VendorLedgerScreen({ navigation }) {
       {/* Add Entry Modal - Full screen (no transparent) to fix Android scroll */}
       <Modal visible={entryModal} animationType="slide" onRequestClose={() => setEntryModal(false)}>
         <SafeAreaView style={{ flex: 1, backgroundColor: C.card }} edges={['top']}>
-            <StatusBar barStyle="dark-content" backgroundColor="transparent" />
+            <StatusBar translucent barStyle="dark-content" backgroundColor="transparent" />
             {/* Modal Header */}
             <View style={st.modalHeader}>
               <Text style={st.modalTitle}>Add {getEntryConfig(form.entryType).label}</Text>

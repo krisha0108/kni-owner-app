@@ -150,7 +150,7 @@ export default function OffersScreen({ navigation }) {
   if (loading && !refreshing) {
     return (
       <SafeAreaView style={styles.container} edges={['left', 'right']}>
-        <StatusBar barStyle="light-content" backgroundColor={C.primaryDark} />
+        <StatusBar translucent barStyle="light-content" backgroundColor={C.primaryDark} />
         <LinearGradient colors={[C.primary, C.primaryDark]} style={styles.heroHeader}>
           <View style={styles.heroBlobA} pointerEvents="none" />
           <View style={styles.heroBlobB} pointerEvents="none" />
@@ -177,7 +177,7 @@ export default function OffersScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor={C.primaryDark} />
+      <StatusBar translucent barStyle="light-content" backgroundColor={C.primaryDark} />
 
       <LinearGradient colors={[C.primary, C.primaryDark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroHeader}>
         <View style={styles.heroBlobA} pointerEvents="none" />

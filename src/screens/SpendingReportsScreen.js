@@ -190,7 +190,7 @@ export default function SpendingReportsScreen({ navigation }) {
   if (loading && !refreshing) {
     return (
       <SafeAreaView style={st.container} edges={['left', 'right']}>
-        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <StatusBar translucent barStyle="light-content" backgroundColor={C.primary} />
         <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
           <View style={st.headerBlobA} pointerEvents="none" />
           <View style={st.headerBlobB} pointerEvents="none" />
@@ -220,7 +220,7 @@ export default function SpendingReportsScreen({ navigation }) {
   if (!hasRestaurants) {
     return (
       <SafeAreaView style={st.container} edges={['left', 'right']}>
-        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <StatusBar translucent barStyle="light-content" backgroundColor={C.primary} />
         <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
           <View style={st.headerBlobA} pointerEvents="none" />
           <View style={st.headerBlobB} pointerEvents="none" />
@@ -246,7 +246,7 @@ export default function SpendingReportsScreen({ navigation }) {
 
   return (
     <SafeAreaView style={st.container} edges={['left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+      <StatusBar translucent barStyle="light-content" backgroundColor={C.primary} />
       {/* Header */}
       <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
         <View style={st.headerBlobA} pointerEvents="none" />

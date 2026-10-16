@@ -144,7 +144,7 @@ export default function AddExpenseScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor={C.gradient1} />
+      <StatusBar translucent barStyle="light-content" backgroundColor={C.gradient1} />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <LinearGradient colors={[C.gradient1, C.gradient2]} style={[st.header, { paddingTop: insets.top + scale(10) }]}>
           <View style={st.headerBlobA} pointerEvents="none" />

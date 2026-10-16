@@ -235,7 +235,7 @@ const SplashScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar backgroundColor="#fdf2ec" barStyle="dark-content" />
+      <StatusBar translucent backgroundColor="#fdf2ec" barStyle="dark-content" />
 
       <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
         <Defs>

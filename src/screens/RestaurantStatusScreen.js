@@ -379,7 +379,7 @@ export default function RestaurantStatusScreen({ navigation, route }) {
   if (loading) {
     return (
       <SafeAreaView style={styles.container} edges={['left', 'right']}>
-        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <StatusBar translucent barStyle="light-content" backgroundColor={C.primary} />
         <LinearGradient
           colors={[C.primary, C.primaryDark]}
           style={[styles.header, { paddingTop: insets.top + scale(14) }]}
@@ -411,7 +411,7 @@ export default function RestaurantStatusScreen({ navigation, route }) {
   if (!restaurant) {
     return (
       <SafeAreaView style={styles.container} edges={['left', 'right']}>
-        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <StatusBar translucent barStyle="light-content" backgroundColor={C.primary} />
         <LinearGradient
           colors={[C.primary, C.primaryDark]}
           style={[styles.header, { paddingTop: insets.top + scale(14) }]}
@@ -456,7 +456,7 @@ export default function RestaurantStatusScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+      <StatusBar translucent barStyle="light-content" backgroundColor={C.primary} />
       {/* Gradient Header */}
       <LinearGradient
         colors={[C.primary, C.primaryDark]}

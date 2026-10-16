@@ -267,7 +267,7 @@ export default function AMCRequestsListScreen({ navigation }) {
   if ((loading || restaurantsLoading) && !refreshing) {
     return (
       <SafeAreaView style={styles.container} edges={['left', 'right']}>
-        <StatusBar barStyle="light-content" backgroundColor={C.purple} />
+        <StatusBar translucent barStyle="light-content" backgroundColor={C.purple} />
         <LinearGradient colors={[C.purple, C.purpleDark]} style={[styles.heroHeader, { paddingTop: insets.top }]}>
           <View style={styles.heroBlobA} pointerEvents="none" />
           <View style={styles.heroBlobB} pointerEvents="none" />
@@ -291,7 +291,7 @@ export default function AMCRequestsListScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor={C.purple} />
+      <StatusBar translucent barStyle="light-content" backgroundColor={C.purple} />
 
       <LinearGradient
         colors={[C.purple, C.purpleDark]}

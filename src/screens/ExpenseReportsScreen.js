@@ -287,7 +287,7 @@ export default function ExpenseReportsScreen({ navigation }) {
   if (loading && !refreshing) {
     return (
       <SafeAreaView style={styles.container} edges={['left', 'right']}>
-        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <StatusBar translucent barStyle="light-content" backgroundColor={C.primary} />
         <LinearGradient colors={[C.primary, C.primaryDark]} style={[styles.header, { paddingTop: insets.top + scale(12) }]}>
           <View style={styles.headerBlobA} pointerEvents="none" />
           <View style={styles.headerBlobB} pointerEvents="none" />
@@ -317,7 +317,7 @@ export default function ExpenseReportsScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+      <StatusBar translucent barStyle="light-content" backgroundColor={C.primary} />
       {/* Header */}
       <LinearGradient colors={[C.primary, C.primaryDark]} style={[styles.header, { paddingTop: insets.top + scale(12) }]}>
         <View style={styles.headerBlobA} pointerEvents="none" />

@@ -549,7 +549,7 @@ export default function CashbookScreen({ navigation }) {
   if (loading && !refreshing && entries.length === 0) {
     return (
       <SafeAreaView style={st.container} edges={['left', 'right']}>
-        <StatusBar barStyle="light-content" backgroundColor={C.gradient1} />
+        <StatusBar translucent barStyle="light-content" backgroundColor={C.gradient1} />
         <LinearGradient colors={[C.gradient1, C.gradient2]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
           <View style={st.headerBlobA} pointerEvents="none" />
           <View style={st.headerBlobB} pointerEvents="none" />
@@ -581,7 +581,7 @@ export default function CashbookScreen({ navigation }) {
   if (!hasRestaurants) {
     return (
       <SafeAreaView style={st.container} edges={['left', 'right']}>
-        <StatusBar barStyle="light-content" backgroundColor={C.gradient1} />
+        <StatusBar translucent barStyle="light-content" backgroundColor={C.gradient1} />
         <LinearGradient colors={[C.gradient1, C.gradient2]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
           <View style={st.headerBlobA} pointerEvents="none" />
           <View style={st.headerBlobB} pointerEvents="none" />
@@ -616,7 +616,7 @@ export default function CashbookScreen({ navigation }) {
   // ==================== MAIN RENDER ====================
   return (
     <SafeAreaView style={st.container} edges={['left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor={C.gradient1} />
+      <StatusBar translucent barStyle="light-content" backgroundColor={C.gradient1} />
 
       {/* Header */}
       <LinearGradient colors={[C.gradient1, C.gradient2]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>

@@ -425,7 +425,7 @@ export default function ProfileScreen({ navigation }) {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['left', 'right']}>
-      <StatusBar barStyle={darkStatusBar ? 'dark-content' : 'light-content'} backgroundColor={darkStatusBar ? C.card : C.primary} />
+      <StatusBar translucent barStyle={darkStatusBar ? 'dark-content' : 'light-content'} backgroundColor={darkStatusBar ? C.card : C.primary} />
 
       <Animated.ScrollView
         onScroll={Animated.event(
@@ -761,7 +761,7 @@ function SkeletonProfileView({ insetsBottom = 0 }) {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+      <StatusBar translucent barStyle="light-content" backgroundColor={C.primary} />
       <ScrollView contentContainerStyle={{ paddingBottom: insetsBottom + 120 }} showsVerticalScrollIndicator={false}>
         <Animated.View style={{ height: HERO_H, backgroundColor: '#CBD5E1', opacity: pulse }} />
         <View style={st.stickyContainer}>

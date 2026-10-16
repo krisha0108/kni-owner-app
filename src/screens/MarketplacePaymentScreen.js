@@ -309,7 +309,7 @@ export default function MarketplacePaymentScreen({ navigation, route }) {
   if (razorpaySuccess) {
     return (
       <SafeAreaView style={st.container} edges={['left', 'right']}>
-        <StatusBar barStyle="light-content" backgroundColor={C.gradient1} />
+        <StatusBar translucent barStyle="light-content" backgroundColor={C.gradient1} />
         <LinearGradient colors={[C.gradient1, C.gradient2]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
           <View style={st.headerBlobA} pointerEvents="none" />
           <View style={st.headerBlobB} pointerEvents="none" />
@@ -366,7 +366,7 @@ export default function MarketplacePaymentScreen({ navigation, route }) {
   if (manualPaymentSuccess) {
     return (
       <SafeAreaView style={st.container} edges={['top']}>
-        <StatusBar barStyle="dark-content" backgroundColor="transparent" />
+        <StatusBar translucent barStyle="dark-content" backgroundColor="transparent" />
         <ScrollView contentContainerStyle={st.statusContainer}>
           <View style={[st.statusIconCircle, { backgroundColor: C.warningLight }]}>
             <Icon name="time" size={scale(48)} color={C.warning} />
@@ -400,7 +400,7 @@ export default function MarketplacePaymentScreen({ navigation, route }) {
   // ==================== MAIN PAYMENT VIEW ====================
   return (
     <SafeAreaView style={st.container} edges={['left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+      <StatusBar translucent barStyle="light-content" backgroundColor={C.primary} />
 
       {/* Header */}
       <LinearGradient colors={[C.gradient1, C.gradient2]} style={[st.heroHeader, { paddingTop: insets.top + scale(20) }]}>

@@ -708,7 +708,7 @@ export default function MarketplaceOrdersScreen({ navigation }) {
   if ((loading || restaurantsLoading) && !refreshing) {
     return (
       <SafeAreaView style={styles.container} edges={['left', 'right']}>
-        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <StatusBar translucent barStyle="light-content" backgroundColor={C.primary} />
         <LinearGradient
           colors={[C.gradient1, C.gradient2]}
           start={{ x: 0, y: 0 }}
@@ -755,7 +755,7 @@ export default function MarketplaceOrdersScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+      <StatusBar translucent barStyle="light-content" backgroundColor={C.primary} />
 
       {/* Premium Hero Header */}
       <LinearGradient

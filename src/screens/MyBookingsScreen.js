@@ -284,7 +284,7 @@ export default function MyBookingsScreen({ navigation }) {
   if ((loading || restaurantsLoading) && !refreshing) {
     return (
       <SafeAreaView style={styles.container} edges={['left', 'right']}>
-        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <StatusBar translucent barStyle="light-content" backgroundColor={C.primary} />
         <LinearGradient colors={[C.primary, C.primaryDark]} style={[styles.heroHeader, { paddingTop: insets.top + scale(6) }]}>
           <View style={styles.heroBlobA} pointerEvents="none" />
           <View style={styles.heroBlobB} pointerEvents="none" />
@@ -312,7 +312,7 @@ export default function MyBookingsScreen({ navigation }) {
   if (!hasRestaurants) {
     return (
       <SafeAreaView style={styles.container} edges={['left', 'right']}>
-        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <StatusBar translucent barStyle="light-content" backgroundColor={C.primary} />
         <LinearGradient colors={[C.primary, C.primaryDark]} style={[styles.heroHeader, { paddingTop: insets.top + scale(6) }]}>
           <View style={styles.heroBlobA} pointerEvents="none" />
           <View style={styles.heroBlobB} pointerEvents="none" />
@@ -345,7 +345,7 @@ export default function MyBookingsScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+      <StatusBar translucent barStyle="light-content" backgroundColor={C.primary} />
 
       {/* Hero Header */}
       <LinearGradient

@@ -103,7 +103,7 @@ export default function CreateSupportTicketScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+      <StatusBar translucent barStyle="light-content" backgroundColor={C.primary} />
       <LinearGradient colors={[C.primary, C.primaryDark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[st.header, { paddingTop: insets.top + scale(10) }]}>
         <View style={st.headerBlobA} pointerEvents="none" />
         <View style={st.headerBlobB} pointerEvents="none" />

@@ -581,7 +581,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
   if (loading) {
     return (
       <SafeAreaView style={st.container} edges={['top']}>
-        <StatusBar barStyle="dark-content" backgroundColor="transparent" />
+        <StatusBar translucent barStyle="dark-content" backgroundColor="transparent" />
         <ScrollView showsVerticalScrollIndicator={false}>
           <SkeletonEquipmentProfile pulse={pulse} />
         </ScrollView>
@@ -592,7 +592,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
   if (!equipment) {
     return (
       <SafeAreaView style={st.container} edges={['top']}>
-        <StatusBar barStyle="dark-content" backgroundColor="transparent" />
+        <StatusBar translucent barStyle="dark-content" backgroundColor="transparent" />
         <View style={st.header}>
           <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home'))} style={st.backBtn}>
             <Icon name="arrow-back" size={scale(22)} color={C.ink} />
@@ -686,7 +686,7 @@ export default function EquipmentProfileScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={st.container} edges={['top', 'left', 'right']}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" />
+      <StatusBar translucent barStyle="dark-content" backgroundColor="transparent" />
 
       {/* Hero Header */}
       {photoUrls.length > 0 ? (

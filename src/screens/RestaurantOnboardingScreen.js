@@ -345,7 +345,7 @@ const RestaurantOnboarding = ({ navigation, route }) => {
 
   return (
     <View style={[styles.container, { backgroundColor: C.bg }]}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" />
+      <StatusBar translucent barStyle="dark-content" backgroundColor="transparent" />
       <TouchableOpacity
         onPress={handleBack}
         style={styles.floatBackBtn}

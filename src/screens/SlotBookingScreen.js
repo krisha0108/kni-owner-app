@@ -427,7 +427,7 @@ export default function SlotBookingScreen({ navigation, route }) {
   if (restaurantsLoading) {
     return (
       <SafeAreaView style={st.container} edges={['left', 'right']}>
-        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <StatusBar translucent barStyle="light-content" backgroundColor={C.primary} />
         <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
           <View style={st.headerBlobA} pointerEvents="none" />
           <View style={st.headerBlobB} pointerEvents="none" />
@@ -444,7 +444,7 @@ export default function SlotBookingScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={st.container} edges={['left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+      <StatusBar translucent barStyle="light-content" backgroundColor={C.primary} />
       <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.header, { paddingTop: insets.top + scale(12) }]}>
         <View style={st.headerBlobA} pointerEvents="none" />
         <View style={st.headerBlobB} pointerEvents="none" />

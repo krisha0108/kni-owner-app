@@ -407,7 +407,7 @@ export default function HomeScreen({ navigation }) {
      ═══════════════════════════════════════════════════════════════════════ */
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+      <StatusBar translucent barStyle="light-content" backgroundColor={C.primary} />
 
       {/* ══════ GRADIENT HEADER ══════ */}
       <LinearGradient

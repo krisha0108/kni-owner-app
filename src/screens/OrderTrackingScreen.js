@@ -592,7 +592,7 @@ export default function OrderTrackingScreen({ navigation }) {
   if (loading && !refreshing) {
     return (
       <SafeAreaView style={s.container} edges={['left', 'right']}>
-        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <StatusBar translucent barStyle="light-content" backgroundColor={C.primary} />
         <LinearGradient colors={[C.primary, C.primaryDark]} style={[s.header, { paddingTop: insets.top + scale(10) }]}>
           <View style={s.headerBlobA} pointerEvents="none" />
           <View style={s.headerBlobB} pointerEvents="none" />
@@ -617,7 +617,7 @@ export default function OrderTrackingScreen({ navigation }) {
 
   return (
     <SafeAreaView style={s.container} edges={['left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+      <StatusBar translucent barStyle="light-content" backgroundColor={C.primary} />
       {/* Gradient Header */}
       <LinearGradient
         colors={[C.primary, C.primaryDark]}

@@ -266,7 +266,7 @@ export default function KhatabookScreen({ navigation }) {
   if ((loading || restaurantsLoading) && !refreshing) {
     return (
       <SafeAreaView style={st.container} edges={['left', 'right']}>
-        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <StatusBar translucent barStyle="light-content" backgroundColor={C.primary} />
         <LinearGradient
           colors={[C.gradient1, C.gradient2]}
           start={{ x: 0, y: 0 }}
@@ -295,7 +295,7 @@ export default function KhatabookScreen({ navigation }) {
   /* ─── MAIN RENDER ─── */
   return (
     <SafeAreaView style={st.container} edges={['left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+      <StatusBar translucent barStyle="light-content" backgroundColor={C.primary} />
 
       {/* ═══ Premium Gradient Hero Header ═══ */}
       <LinearGradient

@@ -135,7 +135,7 @@ export default function SearchScreen({ navigation }) {
   /* ──────── Render ──────── */
   return (
     <SafeAreaView style={st.container} edges={['left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+      <StatusBar translucent barStyle="light-content" backgroundColor={C.primary} />
       {/* ── Search Bar ── */}
       <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.searchBarRow, { paddingTop: insets.top + scale(10) }]}>
         <View style={st.headerBlobA} pointerEvents="none" />

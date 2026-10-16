@@ -328,7 +328,7 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
   if (loading && !refreshing) {
     return (
       <SafeAreaView style={styles.container} edges={['left', 'right']}>
-        <StatusBar barStyle="light-content" backgroundColor={C.purple} />
+        <StatusBar translucent barStyle="light-content" backgroundColor={C.purple} />
         <LinearGradient colors={[C.purple, C.purpleDark]} style={[styles.heroHeader, { paddingTop: insets.top }]}>
           <View style={styles.heroBlobA} pointerEvents="none" />
           <View style={styles.heroBlobB} pointerEvents="none" />
@@ -360,7 +360,7 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
   if (!request) {
     return (
       <SafeAreaView style={styles.container} edges={['left', 'right']}>
-        <StatusBar barStyle="light-content" backgroundColor={C.purple} />
+        <StatusBar translucent barStyle="light-content" backgroundColor={C.purple} />
         <LinearGradient colors={[C.purple, C.purpleDark]} style={[styles.heroHeader, { paddingTop: insets.top }]}>
           <View style={styles.heroBlobA} pointerEvents="none" />
           <View style={styles.heroBlobB} pointerEvents="none" />
@@ -394,7 +394,7 @@ export default function AMCRequestDetailScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor={C.purple} />
+      <StatusBar translucent barStyle="light-content" backgroundColor={C.purple} />
 
       {/* Hero */}
       <LinearGradient colors={[C.purple, C.purpleDark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.heroHeader, { paddingTop: insets.top }]}>

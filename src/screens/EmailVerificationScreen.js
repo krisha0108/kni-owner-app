@@ -173,7 +173,7 @@ export default function EmailVerificationScreen({ route, navigation }) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" />
+      <StatusBar translucent barStyle="dark-content" backgroundColor="transparent" />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"

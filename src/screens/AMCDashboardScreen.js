@@ -177,7 +177,7 @@ export default function AMCDashboardScreen({ navigation }) {
   if ((loading || restaurantsLoading) && !refreshing && !data) {
     return (
       <SafeAreaView style={styles.container} edges={['left', 'right']}>
-        <StatusBar barStyle="light-content" backgroundColor={C.purple} />
+        <StatusBar translucent barStyle="light-content" backgroundColor={C.purple} />
         <LinearGradient colors={[C.purple, C.purpleDark]} style={[styles.heroHeader, { paddingTop: insets.top + scale(6) }]}>
           <View style={styles.heroBlobA} pointerEvents="none" />
           <View style={styles.heroBlobB} pointerEvents="none" />
@@ -204,7 +204,7 @@ export default function AMCDashboardScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor={C.purple} />
+      <StatusBar translucent barStyle="light-content" backgroundColor={C.purple} />
 
       {/* Hero Header */}
       <LinearGradient

@@ -43,7 +43,7 @@ export default function NotificationDetail({ navigation, route }) {
   if (!notification) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['left', 'right']}>
-        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <StatusBar translucent barStyle="light-content" backgroundColor={C.primary} />
         <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.headerGrad, { paddingTop: insets.top + scale(14) }]}>
           <View style={st.headerBlobA} pointerEvents="none" />
           <View style={st.headerBlobB} pointerEvents="none" />
@@ -85,7 +85,7 @@ export default function NotificationDetail({ navigation, route }) {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+      <StatusBar translucent barStyle="light-content" backgroundColor={C.primary} />
       {/* Gradient Header */}
       <LinearGradient colors={[C.primary, C.primaryDark]} style={[st.headerGrad, { paddingTop: insets.top + scale(14) }]}>
         <View style={st.headerBlobA} pointerEvents="none" />

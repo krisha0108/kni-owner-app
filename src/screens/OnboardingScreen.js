@@ -35,7 +35,7 @@ const OnboardingScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" />
+      <StatusBar translucent barStyle="dark-content" backgroundColor="transparent" />
       <Onboarding
         bottomBarHighlight={false}
         showSkip={true}

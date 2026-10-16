@@ -349,7 +349,7 @@ export default function BookingDetailScreen({ navigation, route }) {
   if (loading && !refreshing) {
     return (
       <SafeAreaView style={styles.container} edges={['left', 'right']}>
-        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <StatusBar translucent barStyle="light-content" backgroundColor={C.primary} />
         <LinearGradient colors={[C.primary, C.primaryDark]} style={[styles.heroHeader, { paddingTop: insets.top }]}>
           <View style={styles.heroContent}>
             <TouchableOpacity
@@ -377,7 +377,7 @@ export default function BookingDetailScreen({ navigation, route }) {
   if (!booking) {
     return (
       <SafeAreaView style={styles.container} edges={['left', 'right']}>
-        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <StatusBar translucent barStyle="light-content" backgroundColor={C.primary} />
         <LinearGradient colors={[C.primary, C.primaryDark]} style={[styles.heroHeader, { paddingTop: insets.top }]}>
           <View style={styles.heroContent}>
             <TouchableOpacity
@@ -442,7 +442,7 @@ export default function BookingDetailScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+      <StatusBar translucent barStyle="light-content" backgroundColor={C.primary} />
 
       {/* Hero Header with Status */}
       <LinearGradient

@@ -390,7 +390,7 @@ export default function PendingApprovalScreen({ navigation }) {
   if (loading && !refreshing) {
     return (
       <SafeAreaView style={styles.container} edges={['left', 'right']}>
-        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <StatusBar translucent barStyle="light-content" backgroundColor={C.primary} />
         <LinearGradient
           colors={[C.primary, C.primaryDark]}
           start={{ x: 0, y: 0 }}
@@ -412,7 +412,7 @@ export default function PendingApprovalScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+      <StatusBar translucent barStyle="light-content" backgroundColor={C.primary} />
       {/* Gradient Header */}
       <LinearGradient
         colors={[C.primary, C.primaryDark]}

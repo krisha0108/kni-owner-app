@@ -209,7 +209,7 @@ export default function RestaurantView({ navigation, route }) {
   if (loading) {
     return (
       <SafeAreaView style={st.container} edges={['top']}>
-        <StatusBar barStyle="dark-content" backgroundColor="transparent" />
+        <StatusBar translucent barStyle="dark-content" backgroundColor="transparent" />
         <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
           <SkeletonRestaurant pulse={pulse} />
         </ScrollView>
@@ -227,7 +227,7 @@ export default function RestaurantView({ navigation, route }) {
 
   return (
     <SafeAreaView style={st.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" />
+      <StatusBar translucent barStyle="dark-content" backgroundColor="transparent" />
 
       {/* Hero Section with Image — static, doesn't scroll with the list */}
       <View style={st.heroSection}>

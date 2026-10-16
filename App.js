@@ -10,9 +10,10 @@
 //     </NavigationContainer>
 //   );
 // }
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import AppNavigator from './src/navigation/AppNavigator';
 import { RestaurantProvider } from './src/context/RestaurantContext';
 import ErrorBoundary from './src/components/ErrorBoundary';
@@ -21,11 +22,15 @@ import AppAlertHost from './src/components/AppAlertHost';
 import AppAlert from './src/utils/AppAlert';
 import { getMessaging, requestPermission as requestFCMPermission, onNotificationOpenedApp, getInitialNotification, AuthorizationStatus } from '@react-native-firebase/messaging';
 import notifee, { AndroidImportance } from '@notifee/react-native';
-import { PermissionsAndroid, Platform } from 'react-native';
+import { PermissionsAndroid, Platform, Modal } from 'react-native';
 import notificationService from './src/services/notificationService';
+import { checkForceUpdate, checkPlayStoreUpdate } from './src/services/appUpdateService';
+import ForceUpdateScreen from './src/screens/ForceUpdateScreen';
 
 export default function App() {
   const navigationRef = useRef(null);
+  const [updateInfo, setUpdateInfo] = useState(null);
+  const [showReminder, setShowReminder] = useState(false);
 
   useNotifications(); // app-wide notification handling
 
@@ -36,16 +41,56 @@ export default function App() {
     }
   }, []);
 
+  // App Version / Force Update - see src/services/appUpdateService.js for
+  // the two checks this combines (Admin Panel kill-switch + Play Store's
+  // own automatic update detection).
+  useEffect(() => {
+    (async () => {
+      const info = await checkForceUpdate();
+      if (info) {
+        setUpdateInfo(info);
+        if (!info.blocking) setShowReminder(true);
+      }
+      checkPlayStoreUpdate();
+    })();
+  }, []);
+
+  // A mandatory update replaces the entire app - nothing else should be
+  // reachable (no navigation, no back button) until the user updates.
+  if (updateInfo?.blocking) {
+    return (
+      <ForceUpdateScreen
+        message={updateInfo.message}
+        storeUrl={updateInfo.storeUrl}
+        latestVersionName={updateInfo.latestVersionName}
+        dismissible={false}
+      />
+    );
+  }
+
   return (
     <ErrorBoundary>
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <OfflineBanner />
-        <RestaurantProvider>
-          <NavigationContainer ref={navigationRef}>
-            <AppNavigator />
-          </NavigationContainer>
-        </RestaurantProvider>
-        <AppAlertHost />
+        <KeyboardProvider statusBarTranslucent navigationBarTranslucent>
+          <OfflineBanner />
+          <RestaurantProvider>
+            <NavigationContainer ref={navigationRef}>
+              <AppNavigator />
+            </NavigationContainer>
+          </RestaurantProvider>
+          <AppAlertHost />
+          {updateInfo && !updateInfo.blocking && (
+            <Modal visible={showReminder} animationType="slide" onRequestClose={() => setShowReminder(false)}>
+              <ForceUpdateScreen
+                message={updateInfo.message}
+                storeUrl={updateInfo.storeUrl}
+                latestVersionName={updateInfo.latestVersionName}
+                dismissible
+                onDismiss={() => setShowReminder(false)}
+              />
+            </Modal>
+          )}
+        </KeyboardProvider>
       </GestureHandlerRootView>
     </ErrorBoundary>
   );

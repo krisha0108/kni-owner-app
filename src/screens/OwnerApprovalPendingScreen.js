@@ -27,7 +27,7 @@ export default function OwnerApprovalPendingScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" />
+      <StatusBar translucent barStyle="dark-content" backgroundColor="transparent" />
       <View style={styles.content}>
         <LinearGradient
           colors={rejected ? ['#FEE2E2', '#FECACA'] : ['#FEF3C7', '#FDE68A']}

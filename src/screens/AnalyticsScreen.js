@@ -172,7 +172,7 @@ export default function AnalyticsScreen({ navigation }) {
   if ((loading || restaurantsLoading) && !refreshing) {
     return (
       <SafeAreaView style={styles.container} edges={['left', 'right']}>
-        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <StatusBar translucent barStyle="light-content" backgroundColor={C.primary} />
         <LinearGradient colors={[C.primary, C.primaryDark]} style={[styles.header, { paddingTop: insets.top + scale(12) }]}>
           <View style={styles.headerBlobA} pointerEvents="none" />
           <View style={styles.headerBlobB} pointerEvents="none" />
@@ -204,7 +204,7 @@ export default function AnalyticsScreen({ navigation }) {
   if (!hasRestaurants) {
     return (
       <SafeAreaView style={styles.container} edges={['left', 'right']}>
-        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <StatusBar translucent barStyle="light-content" backgroundColor={C.primary} />
         <LinearGradient colors={[C.primary, C.primaryDark]} style={[styles.header, { paddingTop: insets.top + scale(12) }]}>
           <View style={styles.headerBlobA} pointerEvents="none" />
           <View style={styles.headerBlobB} pointerEvents="none" />
@@ -233,7 +233,7 @@ export default function AnalyticsScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+      <StatusBar translucent barStyle="light-content" backgroundColor={C.primary} />
       <LinearGradient colors={[C.primary, C.primaryDark]} style={[styles.header, { paddingTop: insets.top + scale(12) }]}>
         <View style={styles.headerBlobA} pointerEvents="none" />
         <View style={styles.headerBlobB} pointerEvents="none" />
@@ -356,27 +356,48 @@ export default function AnalyticsScreen({ navigation }) {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Equipment & Services</Text>
             <View style={styles.metricCard}>
-              <View style={styles.metricRow}>
+              <TouchableOpacity
+                style={styles.metricRow}
+                activeOpacity={0.6}
+                onPress={() => navigation.navigate('Home', { screen: 'EquipmentTab' })}
+              >
                 <View style={styles.metricLeft}>
                   <Icon name="hardware-chip" size={scale(20)} color={C.primary} />
                   <Text style={styles.metricLabel}>Total Equipment</Text>
                 </View>
-                <Text style={styles.metricValue}>{summary.equipment?.count || 0}</Text>
-              </View>
-              <View style={styles.metricRow}>
+                <View style={styles.metricRight}>
+                  <Text style={styles.metricValue}>{summary.equipment?.count || 0}</Text>
+                  <Icon name="chevron-forward" size={scale(18)} color={C.muted} />
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.metricRow}
+                activeOpacity={0.6}
+                onPress={() => navigation.navigate('AMCContracts')}
+              >
                 <View style={styles.metricLeft}>
                   <Icon name="shield-checkmark" size={scale(20)} color={C.info} />
                   <Text style={styles.metricLabel}>Active AMCs</Text>
                 </View>
-                <Text style={styles.metricValue}>{summary.amcSubscriptions?.count || 0}</Text>
-              </View>
-              <View style={styles.metricRow}>
+                <View style={styles.metricRight}>
+                  <Text style={styles.metricValue}>{summary.amcSubscriptions?.count || 0}</Text>
+                  <Icon name="chevron-forward" size={scale(18)} color={C.muted} />
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.metricRow, styles.metricRowLast]}
+                activeOpacity={0.6}
+                onPress={() => navigation.navigate('MarketplaceOrders')}
+              >
                 <View style={styles.metricLeft}>
                   <Icon name="cart-outline" size={scale(20)} color={C.ok} />
                   <Text style={styles.metricLabel}>Marketplace Orders</Text>
                 </View>
-                <Text style={styles.metricValue}>{summary.marketplaceOrders?.count || 0}</Text>
-              </View>
+                <View style={styles.metricRight}>
+                  <Text style={styles.metricValue}>{summary.marketplaceOrders?.count || 0}</Text>
+                  <Icon name="chevron-forward" size={scale(18)} color={C.muted} />
+                </View>
+              </TouchableOpacity>
             </View>
           </View>
         )}
@@ -576,7 +597,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
+  metricRowLast: { borderBottomWidth: 0 },
   metricLeft: { flexDirection: 'row', alignItems: 'center', gap: scale(12) },
+  metricRight: { flexDirection: 'row', alignItems: 'center', gap: scale(6) },
   metricLabel: { fontSize: moderateScale(14), color: C.text },
   metricValue: { fontSize: moderateScale(16), fontWeight: '700', color: C.ink },
 

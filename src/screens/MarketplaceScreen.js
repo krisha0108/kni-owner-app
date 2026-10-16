@@ -684,7 +684,7 @@ export default function MarketplaceScreen({ navigation }) {
   if ((loading || restaurantsLoading) && !refreshing) {
     return (
       <SafeAreaView style={st.container} edges={['left', 'right']}>
-        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <StatusBar translucent barStyle="light-content" backgroundColor={C.primary} />
         <LinearGradient colors={[C.gradient1, C.gradient2]} style={[st.loadingHero, { paddingTop: insets.top + scale(24) }]}>
           <Text style={st.heroTitle}>Marketplace</Text>
         </LinearGradient>
@@ -699,7 +699,7 @@ export default function MarketplaceScreen({ navigation }) {
   if (!selectedRestaurantId) {
     return (
       <SafeAreaView style={st.container} edges={['left', 'right']}>
-        <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+        <StatusBar translucent barStyle="light-content" backgroundColor={C.primary} />
         <LinearGradient colors={[C.gradient1, C.gradient2]} style={[st.loadingHero, { paddingTop: insets.top + scale(24) }]}>
           <Text style={st.heroTitle}>Marketplace</Text>
         </LinearGradient>
@@ -718,7 +718,7 @@ export default function MarketplaceScreen({ navigation }) {
   // ==================== MAIN RENDER ====================
   return (
     <SafeAreaView style={st.container} edges={['left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor={C.primary} />
+      <StatusBar translucent barStyle="light-content" backgroundColor={C.primary} />
 
       {/* Fixed Hero Header */}
       <LinearGradient
