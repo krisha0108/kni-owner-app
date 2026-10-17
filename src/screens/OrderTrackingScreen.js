@@ -213,6 +213,14 @@ export default function OrderTrackingScreen({ navigation }) {
   const [serviceStatusFilter, setServiceStatusFilter] = useState('all');
   const [orderStatusFilter, setOrderStatusFilter] = useState('all');
   const [statusPickerVisible, setStatusPickerVisible] = useState(false);
+  const [statusDropdownTop, setStatusDropdownTop] = useState(0);
+  const filterTriggerRef = useRef(null);
+  const openStatusDropdown = () => {
+    filterTriggerRef.current?.measureInWindow((x, y, w, h) => {
+      setStatusDropdownTop(y + h + scale(6));
+      setStatusPickerVisible(true);
+    });
+  };
 
   const [selectedService, setSelectedService] = useState(null);
   const [serviceDetailVisible, setServiceDetailVisible] = useState(false);
@@ -461,6 +469,7 @@ export default function OrderTrackingScreen({ navigation }) {
   const currentStatusOptions = activeTab === 'services' ? SERVICE_STATUSES : ORDER_STATUSES;
   const currentStatusFilter = activeTab === 'services' ? serviceStatusFilter : orderStatusFilter;
   const setCurrentStatusFilter = activeTab === 'services' ? setServiceStatusFilter : setOrderStatusFilter;
+  const currentStatusConfig = activeTab === 'services' ? SERVICE_STATUS_CONFIG : ORDER_STATUS_CONFIG;
 
   // Stats
   const activeServices = serviceBookings.filter(b => !['COMPLETED', 'CANCELLED'].includes(b.status)).length;
@@ -651,7 +660,7 @@ export default function OrderTrackingScreen({ navigation }) {
           Add New Restaurant), fed this screen's own restaurant list (all
           statuses) since a still-pending restaurant must stay selectable. */}
       {currentRestaurant && (
-        <View style={{ paddingHorizontal: scale(16), marginTop: scale(10) }}>
+        <View style={{ paddingHorizontal: scale(16), marginTop: scale(10), marginBottom: scale(10) }}>
           <RestaurantSelectorCard
             restaurantsOverride={restaurants}
             selectedOverride={currentRestaurant}
@@ -661,61 +670,83 @@ export default function OrderTrackingScreen({ navigation }) {
       )}
 
       {/* Tabs - Fixed */}
-      <View style={s.tabBar}>
-        <TouchableOpacity
-          style={[s.tab, activeTab === 'services' && s.tabActive]}
-          onPress={() => setActiveTab('services')}
-          activeOpacity={0.7}
-        >
-          <Icon name="construct" size={scale(13)} color={activeTab === 'services' ? '#fff' : C.muted} />
-          <Text style={[s.tabText, activeTab === 'services' && s.tabTextActive]}>Services</Text>
-          {activeServices > 0 && (
-            <View style={[s.tabCountBadge, activeTab === 'services' && s.tabCountBadgeActive]}>
-              <Text style={[s.tabCountText, activeTab === 'services' && s.tabCountTextActive]}>
-                {activeServices}
-              </Text>
+      <View style={s.tabRow}>
+        <TouchableOpacity activeOpacity={0.85} onPress={() => setActiveTab('services')} style={{ flex: 1 }}>
+          {activeTab === 'services' ? (
+            <LinearGradient
+              colors={[C.primaryDark, '#B91C1C']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[s.tabCard, s.tabCardActiveGradient]}
+            >
+              {activeServices > 0 && (
+                <View style={s.tabBadgeFloat}>
+                  <Text style={s.tabBadgeFloatText}>{activeServices}</Text>
+                </View>
+              )}
+              <Icon name="construct" size={scale(13)} color="#fff" />
+              <Text style={s.tabLabelActive}>Services</Text>
+            </LinearGradient>
+          ) : (
+            <View style={[s.tabCard, s.tabCardInactive]}>
+              <Icon name="construct" size={scale(13)} color={C.muted} />
+              <Text style={s.tabLabelInactive}>Services</Text>
             </View>
           )}
         </TouchableOpacity>
-        <TouchableOpacity
-          style={[s.tab, activeTab === 'orders' && s.tabActive]}
-          onPress={() => setActiveTab('orders')}
-          activeOpacity={0.7}
-        >
-          <Icon name="bag" size={scale(13)} color={activeTab === 'orders' ? '#fff' : C.muted} />
-          <Text style={[s.tabText, activeTab === 'orders' && s.tabTextActive]}>Orders</Text>
-          {activeOrders > 0 && (
-            <View style={[s.tabCountBadge, activeTab === 'orders' && s.tabCountBadgeActive]}>
-              <Text style={[s.tabCountText, activeTab === 'orders' && s.tabCountTextActive]}>
-                {activeOrders}
-              </Text>
+        <TouchableOpacity activeOpacity={0.85} onPress={() => setActiveTab('orders')} style={{ flex: 1 }}>
+          {activeTab === 'orders' ? (
+            <LinearGradient
+              colors={[C.primaryDark, '#B91C1C']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[s.tabCard, s.tabCardActiveGradient]}
+            >
+              {activeOrders > 0 && (
+                <View style={s.tabBadgeFloat}>
+                  <Text style={s.tabBadgeFloatText}>{activeOrders}</Text>
+                </View>
+              )}
+              <Icon name="bag" size={scale(13)} color="#fff" />
+              <Text style={s.tabLabelActive}>Orders</Text>
+            </LinearGradient>
+          ) : (
+            <View style={[s.tabCard, s.tabCardInactive]}>
+              <Icon name="bag" size={scale(13)} color={C.muted} />
+              <Text style={s.tabLabelInactive}>Orders</Text>
             </View>
           )}
         </TouchableOpacity>
       </View>
 
-      {/* Search & Filter - Fixed */}
-      <View style={s.filterBar}>
-        <View style={s.searchBox}>
-          <Icon name="search" size={scale(13)} color={C.muted} />
+      {/* Search & Filter - Fixed, merged bar */}
+      <View style={s.searchFilterBar}>
+        <View style={s.searchFilterInput}>
+          <Icon name="search" size={scale(12)} color={C.muted} />
           <TextInput
             style={s.searchInput}
             placeholder={activeTab === 'services' ? 'Search by ID or equipment...' : 'Search by ID, vendor, item...'}
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={C.muted}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Icon name="close-circle" size={scale(13)} color={C.muted} />
+              <Icon name="close-circle" size={scale(12)} color={C.muted} />
             </TouchableOpacity>
           )}
         </View>
-        <TouchableOpacity style={s.filterBtn} onPress={() => setStatusPickerVisible(true)}>
-          <Icon name="funnel" size={scale(12)} color={C.primary} />
-          <Text style={s.filterBtnText} numberOfLines={1}>
+        <View style={s.searchFilterDivider} />
+        <TouchableOpacity
+          ref={filterTriggerRef}
+          style={[s.searchFilterBtn, statusPickerVisible && s.searchFilterBtnActive]}
+          onPress={openStatusDropdown}
+        >
+          <Icon name="funnel" size={scale(11)} color={C.primary} />
+          <Text style={s.searchFilterBtnText} numberOfLines={1}>
             {currentStatusOptions.find(st => st.value === currentStatusFilter)?.label || 'Filter'}
           </Text>
+          <Icon name={statusPickerVisible ? 'chevron-up' : 'chevron-down'} size={scale(10)} color={C.ink} />
         </TouchableOpacity>
       </View>
 
@@ -1000,46 +1031,44 @@ export default function OrderTrackingScreen({ navigation }) {
         </View>
       </Modal>
 
-      {/* ========== STATUS PICKER MODAL ========== */}
-      <Modal visible={statusPickerVisible} animationType="slide" transparent>
-        <View style={s.pickerOverlay}>
-          <View style={s.pickerSheet}>
-            <View style={s.modalDragBar} />
-            <View style={s.modalHeader}>
-              <View>
-                <Text style={s.modalTitle}>Filter by Status</Text>
-                <Text style={s.modalSubtitle}>Select a status to filter</Text>
-              </View>
-              <TouchableOpacity onPress={() => setStatusPickerVisible(false)} style={s.modalCloseBtn}>
-                <Icon name="close" size={scale(20)} color={C.muted} />
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={{ padding: scale(16) }} contentContainerStyle={{ paddingBottom: scale(30) }}>
-              {currentStatusOptions.map((status) => {
-                const isSelected = status.value === currentStatusFilter;
-                return (
-                  <TouchableOpacity
-                    key={status.value}
-                    style={[s.pickerOption, isSelected && s.pickerOptionSelected]}
-                    onPress={() => { setCurrentStatusFilter(status.value); setStatusPickerVisible(false); }}
-                    activeOpacity={0.7}
-                  >
-                    <View style={s.pickerOptionLeft}>
-                      <Icon name={status.icon} size={scale(18)} color={isSelected ? C.primary : C.muted} />
-                      <Text style={[s.pickerOptionText, isSelected && s.pickerOptionTextSelected]}>
-                        {status.label}
-                      </Text>
+      {/* ========== STATUS FILTER DROPDOWN (anchored, not a full-screen modal) ========== */}
+      <Modal visible={statusPickerVisible} animationType="fade" transparent onRequestClose={() => setStatusPickerVisible(false)}>
+        <TouchableOpacity
+          style={s.statusDdBackdrop}
+          activeOpacity={1}
+          onPress={() => setStatusPickerVisible(false)}
+        />
+        <View style={[s.statusDdCard, { top: statusDropdownTop }]}>
+          <ScrollView style={{ maxHeight: scale(300) }} showsVerticalScrollIndicator={false} bounces={false}>
+            {currentStatusOptions.map((status, index) => {
+              const isSelected = status.value === currentStatusFilter;
+              const cfg = currentStatusConfig[status.value];
+              const chipBg = isSelected ? C.primary : (cfg?.bg || '#F1F5F9');
+              const chipColor = isSelected ? '#fff' : (cfg?.color || C.muted);
+              return (
+                <TouchableOpacity
+                  key={status.value}
+                  style={[
+                    s.statusDdRow,
+                    index > 0 && s.statusDdRowBorder,
+                    isSelected && s.statusDdRowSelected,
+                  ]}
+                  onPress={() => { setCurrentStatusFilter(status.value); setStatusPickerVisible(false); }}
+                  activeOpacity={0.7}
+                >
+                  <View style={s.statusDdRowLeft}>
+                    <View style={[s.statusDdIconBox, { backgroundColor: chipBg }]}>
+                      <Icon name={status.icon} size={scale(13)} color={chipColor} />
                     </View>
-                    {isSelected && (
-                      <View style={s.pickerCheck}>
-                        <Icon name="checkmark" size={scale(14)} color="#fff" />
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
+                    <Text style={[s.statusDdText, isSelected && s.statusDdTextSelected]} numberOfLines={1}>
+                      {status.label}
+                    </Text>
+                  </View>
+                  {isSelected && <Icon name="checkmark" size={scale(14)} color={C.primary} />}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
         </View>
       </Modal>
 
@@ -1056,7 +1085,6 @@ const s = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: scale(16),
     paddingBottom: scale(16),
     overflow: 'hidden',
@@ -1073,8 +1101,11 @@ const s = StyleSheet.create({
   },
   headerBtnPlain: { width: scale(22), height: scale(32), alignItems: 'center', justifyContent: 'center' },
   headerCenter: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    marginLeft: scale(10),
     gap: scale(7),
   },
   headerTitle: {
@@ -1142,81 +1173,89 @@ const s = StyleSheet.create({
   },
   restSwitchText: { fontSize: moderateScale(10.5), fontWeight: '700', color: C.primary },
 
-  // Tabs
-  tabBar: {
+  // Tabs - Bold Gradient Cards
+  tabRow: {
     flexDirection: 'row',
-    gap: scale(8),
+    gap: scale(10),
     paddingHorizontal: scale(16),
-    paddingVertical: scale(7),
-    backgroundColor: C.card,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
+    paddingTop: scale(2),
   },
-  tab: {
-    flex: 1,
-    flexDirection: 'row',
+  tabCard: {
+    position: 'relative',
+    width: '100%',
+    minHeight: scale(40),
+    borderRadius: scale(12),
     alignItems: 'center',
     justifyContent: 'center',
-    gap: scale(5),
     paddingVertical: scale(7),
-    borderRadius: scale(10),
-    backgroundColor: '#F8FAFC',
+    gap: scale(2),
+  },
+  tabCardInactive: {
+    backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
-    borderColor: C.border,
+    borderColor: '#ECEEF2',
   },
-  tabActive: {
-    backgroundColor: C.primary,
-    borderColor: C.primary,
+  tabCardActiveGradient: {
+    shadowColor: C.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.28,
+    shadowRadius: 10,
+    elevation: 5,
   },
-  tabText: { fontSize: moderateScale(11.5), fontWeight: '700', color: C.muted },
-  tabTextActive: { color: '#fff' },
-  tabCountBadge: {
-    backgroundColor: '#FEF3C7',
-    paddingHorizontal: scale(5),
-    paddingVertical: 1,
-    borderRadius: scale(7),
+  tabLabelActive: { fontSize: moderateScale(11), fontWeight: '800', color: '#fff' },
+  tabLabelInactive: { fontSize: moderateScale(11), fontWeight: '700', color: C.muted },
+  tabBadgeFloat: {
+    position: 'absolute',
+    top: -scale(5),
+    right: -scale(5),
+    backgroundColor: C.ink,
+    minWidth: scale(16),
+    height: scale(16),
+    borderRadius: scale(8),
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: scale(4),
+    borderWidth: 1.5,
+    borderColor: C.bg,
   },
-  tabCountBadgeActive: {
-    backgroundColor: 'rgba(255,255,255,0.3)',
-  },
-  tabCountText: { fontSize: moderateScale(9), fontWeight: '700', color: '#D97706' },
-  tabCountTextActive: { color: '#fff' },
+  tabBadgeFloatText: { fontSize: moderateScale(8.5), fontWeight: '800', color: '#fff' },
 
-  // Filter Bar
-  filterBar: {
+  // Search + Filter - merged single bar
+  searchFilterBar: {
     flexDirection: 'row',
-    gap: scale(8),
-    paddingHorizontal: scale(16),
-    paddingVertical: scale(7),
+    alignItems: 'center',
+    minHeight: scale(36),
     backgroundColor: C.card,
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEEFF2',
+    borderRadius: scale(11),
+    marginHorizontal: scale(16),
+    marginTop: scale(2),
+    marginBottom: scale(10),
+    paddingHorizontal: scale(4),
+    shadowColor: '#141432',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.07,
+    shadowRadius: 10,
+    elevation: 2,
   },
-  searchBox: {
+  searchFilterInput: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: scale(6),
-    backgroundColor: '#F8FAFC',
-    borderRadius: scale(9),
-    paddingHorizontal: scale(9),
-    paddingVertical: scale(5),
-    borderWidth: 1,
-    borderColor: C.border,
+    paddingHorizontal: scale(10),
   },
-  searchInput: { flex: 1, fontSize: moderateScale(11.5), color: C.text, padding: 0 },
-  filterBtn: {
+  searchInput: { flex: 1, fontSize: moderateScale(11), color: C.text, padding: 0 },
+  searchFilterDivider: { width: 1, height: scale(16), backgroundColor: '#ECEEF2' },
+  searchFilterBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: scale(4),
-    paddingHorizontal: scale(9),
-    paddingVertical: scale(5),
-    backgroundColor: '#FFF5F5',
-    borderRadius: scale(9),
-    borderWidth: 1.5,
-    borderColor: '#FECACA',
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(6),
+    borderRadius: scale(8),
   },
-  filterBtnText: { fontSize: moderateScale(11), fontWeight: '700', color: C.primary, maxWidth: scale(70) },
+  searchFilterBtnActive: { backgroundColor: '#FFF5F5' },
+  searchFilterBtnText: { fontSize: moderateScale(11), fontWeight: '800', color: C.ink, maxWidth: scale(65) },
 
   list: { paddingHorizontal: scale(16), paddingTop: scale(10), paddingBottom: scale(100), flexGrow: 1 },
 
@@ -1324,36 +1363,6 @@ const s = StyleSheet.create({
     alignItems: 'center',
   },
   detailCloseBtnText: { fontSize: moderateScale(14), fontWeight: '700', color: C.ink },
-
-  // Picker modal styles
-  modalDragBar: {
-    width: scale(40),
-    height: scale(4),
-    borderRadius: scale(2),
-    backgroundColor: '#D1D5DB',
-    alignSelf: 'center',
-    marginTop: scale(12),
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: scale(20),
-    paddingTop: scale(14),
-    paddingBottom: scale(14),
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
-  },
-  modalTitle: { fontSize: moderateScale(18), fontWeight: '800', color: C.ink },
-  modalSubtitle: { fontSize: moderateScale(12), color: C.muted, marginTop: 1 },
-  modalCloseBtn: {
-    width: scale(36),
-    height: scale(36),
-    borderRadius: scale(18),
-    backgroundColor: '#F3F4F6',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
 
   // Modal Status Banner
   modalStatusBanner: {
@@ -1542,48 +1551,49 @@ const s = StyleSheet.create({
     color: '#DC2626',
   },
 
-  // Picker Sheet
-  pickerOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
+  // Status Filter Dropdown (anchored, replaces the old bottom-sheet modal)
+  statusDdBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(15,17,38,0.28)',
   },
-  pickerSheet: {
+  statusDdCard: {
+    position: 'absolute',
+    right: scale(16),
+    width: Math.min(scale(210), width - scale(32)),
     backgroundColor: C.card,
-    borderTopLeftRadius: scale(28),
-    borderTopRightRadius: scale(28),
-    maxHeight: SCREEN_HEIGHT * 0.7,
+    borderRadius: scale(14),
+    overflow: 'hidden',
+    shadowColor: '#141432',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.20,
+    shadowRadius: 20,
+    elevation: 12,
   },
-  pickerOption: {
+  statusDdRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: scale(14),
-    marginBottom: scale(8),
-    borderRadius: scale(14),
-    borderWidth: 1.5,
-    borderColor: C.border,
-    backgroundColor: '#FAFBFC',
+    paddingHorizontal: scale(12),
+    paddingVertical: scale(10),
   },
-  pickerOptionSelected: {
-    borderColor: C.primary,
-    backgroundColor: '#FFF5F5',
-  },
-  pickerOptionLeft: {
+  statusDdRowBorder: { borderTopWidth: 1, borderTopColor: '#F3F4F6' },
+  statusDdRowSelected: { backgroundColor: '#FFF5F5' },
+  statusDdRowLeft: {
+    flex: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: scale(10),
+    gap: scale(8),
   },
-  pickerOptionText: { fontSize: moderateScale(15), fontWeight: '600', color: C.ink },
-  pickerOptionTextSelected: { color: C.primary },
-  pickerCheck: {
-    width: scale(26),
-    height: scale(26),
-    borderRadius: scale(13),
-    backgroundColor: C.primary,
+  statusDdIconBox: {
+    width: scale(24),
+    height: scale(24),
+    borderRadius: scale(7),
     alignItems: 'center',
     justifyContent: 'center',
   },
+  statusDdText: { flex: 1, fontSize: moderateScale(12.5), fontWeight: '600', color: '#374151' },
+  statusDdTextSelected: { fontWeight: '700', color: C.ink },
 
   // Restaurant Picker
   restOption: {
